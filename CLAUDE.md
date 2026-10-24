@@ -6,7 +6,7 @@ Servidor y clientes propios (web, Android, Android TV) para reproducir una bibli
 
 - Autor y mantenedor único: **Catlinux**. Nunca otro usuario como autor/coautor en el historial.
 - Licencia: **GPL-3.0** con la condición adicional del artículo 7 (conservar atribución de Catlinux). Ver [LICENSE](LICENSE) y [docs/es/licencias-y-creditos.md](docs/es/licencias-y-creditos.md).
-- Servidor en **Go**. Web y Android/TV: pila a decidir todavía (ver `docs/es/arquitectura.md`).
+- Pila: servidor en **Go**; web en **TypeScript + SvelteKit** + hls.js; Android/Android TV en **Kotlin + Jetpack Compose** + Media3/ExoPlayer (libmpv opcional). Ver `docs/es/arquitectura.md`.
 - Dirección visual de la interfaz: **«Marquesina»** (cine de barrio de los 50-60, serif Fraunces, carteles ilustrados propios, nunca fotos de terceros). Ver la sección «Dirección visual» del README.
 - Documentación en castellano e inglés, siempre sincronizada. Commits en castellano.
 - Plataformas: web, Android, Android TV. Nada más por ahora (ver «Fuera de alcance» en el README).

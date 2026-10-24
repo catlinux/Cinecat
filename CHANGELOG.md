@@ -7,6 +7,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.0.5] - 2026-10-25
+
+### Añadido
+- Pila tecnológica de la Fase 0 completada: web en **TypeScript + SvelteKit** + hls.js; Android/Android TV en **Kotlin + Jetpack Compose** + Media3/ExoPlayer (libmpv opcional).
+
 ## [0.0.4] - 2026-10-24
 
 ### Añadido
@@ -36,7 +41,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 - `README`, `TODO`, `CONTRIBUTING`, `SECURITY`, `AUTHORS` y `CREDITS`.
 - Decisiones de partida: servidor y clientes propios; web, Android y Android TV; H.265 preferido con H.264 de reserva; metadatos en español de España a partir de bases de datos existentes.
 
-[Sin publicar]: https://github.com/catlinux/cinecat/compare/v0.0.4...HEAD
+[Sin publicar]: https://github.com/catlinux/cinecat/compare/v0.0.5...HEAD
+[0.0.5]: https://github.com/catlinux/cinecat/compare/v0.0.4...v0.0.5
 [0.0.4]: https://github.com/catlinux/cinecat/compare/v0.0.3...v0.0.4
 [0.0.3]: https://github.com/catlinux/cinecat/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/catlinux/cinecat/compare/v0.0.1...v0.0.2

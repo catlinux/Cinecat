@@ -4,7 +4,7 @@
 
 **Languages / Idiomas:** [Español](README.md) · English
 
-**Status:** design phase. Version `0.0.4` (documentation only, no code yet).
+**Status:** design phase. Version `0.0.5` (documentation only, no code yet).
 
 ---
 

@@ -2,7 +2,7 @@
 
 [English](../en/architecture.md) · [Volver al README](../../README.md)
 
-> Estado: **propuesta de diseño**. Nada de esto está implementado. Servidor: **Go** (decidido). Web y Android: a decidir en la Fase 0.
+> Estado: **propuesta de diseño**. Nada de esto está implementado.
 
 ## Visión general
 
@@ -29,13 +29,13 @@
 - **API:** REST, versionada y documentada con OpenAPI (contrato primero). Los clientes se escriben contra el contrato.
 - **Base de datos:** local y simple al principio (por ejemplo SQLite).
 
-## Pila tecnológica
+## Pila tecnológica (decidida)
 
 | Parte | Elección | Nota |
 |---|---|---|
-| Servidor | **Go** (decidido) | Binario único, despliegue sencillo en Debian y Docker, concurrencia nativa para gestionar procesos FFmpeg, mantenimiento cómodo en solitario. |
-| Web | TypeScript con un framework moderno + hls.js o Shaka (a decidir en Fase 0) | Diseño propio, sin plantillas genéricas. |
-| Android / TV | Kotlin + Jetpack Compose (+ librerías para TV) + Media3/ExoPlayer, libmpv opcional (a decidir en Fase 0) | Comprobar licencias antes de usar cada pieza. |
+| Servidor | **Go** | Binario único, despliegue sencillo en Debian y Docker, concurrencia nativa para gestionar procesos FFmpeg, mantenimiento cómodo en solitario. |
+| Web | **TypeScript + SvelteKit** + hls.js | Menos JavaScript de cliente que un framework más pesado (importante para TV y móviles modestos), rutas y SSR sencillos. hls.js ya verificado como Apache-2.0. Diseño propio «Marquesina», sin plantillas genéricas. |
+| Android / Android TV | **Kotlin + Jetpack Compose** (con Compose for TV) + **Media3/ExoPlayer**, libmpv opcional como alternativa de descodificación por software | Un único código base Compose para Android y Android TV. Media3 ya verificado como Apache-2.0; comprobar la licencia de libmpv según la compilación antes de integrarlo. |
 
 ## Seguridad
 

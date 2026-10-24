@@ -5,12 +5,10 @@
 Prioridades: 🔴 bloqueante · 🟠 próxima fase · 🟢 más adelante.
 
 ## Antes de escribir código
-- 🔴 Definir la pila tecnológica de web y Android (propuestas en [arquitectura](docs/es/arquitectura.md); servidor ya decidido: Go).
+- 🟠 Activar en GitHub los avisos de seguridad privados (private vulnerability reporting).
 
 ## Riesgos conocidos, aceptados
 - Existe una app Android inactiva desde 2015 llamada «CineCat» (F-Droid, catálogo de cine catalán con datos de la Generalitat; sin registro de marca). Mismo nombre, ámbito distinto. Se mantiene el nombre Cinecat; riesgo de confusión menor, sin acción pendiente.
-- 🟠 Crear `CLAUDE.md` con las normas del proyecto.
-- 🟠 Activar en GitHub los avisos de seguridad privados (private vulnerability reporting).
 
 ## Producto
 - 🟠 Servidor mínimo: biblioteca, identificación de películas y series, metadatos en `es-ES`.
