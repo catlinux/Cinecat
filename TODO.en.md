@@ -5,8 +5,10 @@
 Priorities: 🔴 blocking · 🟠 next phase · 🟢 later.
 
 ## Before writing code
-- 🔴 Check that the name **Cinecat** is free (GitHub, Google Play, trademarks).
 - 🔴 Define the technology stack for web and Android (proposals in [architecture](docs/en/architecture.md); server already decided: Go).
+
+## Known, accepted risks
+- There is an inactive Android app from 2015 called "CineCat" (F-Droid, Catalan film catalog using Generalitat open data; no trademark registration). Same name, different scope. Keeping the name Cinecat; minor confusion risk, no action pending.
 - 🟠 Create `CLAUDE.md` with the project rules.
 - 🟠 Enable private vulnerability reporting on GitHub.
 

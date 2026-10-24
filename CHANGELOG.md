@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.0.4] - 2026-10-24
+
+### Añadido
+- `CLAUDE.md` del proyecto con las decisiones ya tomadas, la tabla de licencias de terceros y qué no hacer.
+- Comprobación del nombre «Cinecat»: sin marca registrada ni repositorio en conflicto; se documenta como riesgo aceptado la existencia de una app Android inactiva desde 2015 con el mismo nombre.
+
 ## [0.0.3] - 2026-10-24
 
 ### Añadido
@@ -30,7 +36,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 - `README`, `TODO`, `CONTRIBUTING`, `SECURITY`, `AUTHORS` y `CREDITS`.
 - Decisiones de partida: servidor y clientes propios; web, Android y Android TV; H.265 preferido con H.264 de reserva; metadatos en español de España a partir de bases de datos existentes.
 
-[Sin publicar]: https://github.com/catlinux/cinecat/compare/v0.0.3...HEAD
+[Sin publicar]: https://github.com/catlinux/cinecat/compare/v0.0.4...HEAD
+[0.0.4]: https://github.com/catlinux/cinecat/compare/v0.0.3...v0.0.4
 [0.0.3]: https://github.com/catlinux/cinecat/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/catlinux/cinecat/compare/v0.0.1...v0.0.2
 [0.0.1]: https://github.com/catlinux/cinecat/releases/tag/v0.0.1
