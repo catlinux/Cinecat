@@ -2,7 +2,7 @@
 
 [Español](../es/arquitectura.md) · [Back to README](../../README.en.md)
 
-> Status: **design proposal**. None of this is implemented. The technology stack is decided in Phase 0.
+> Status: **design proposal**. None of this is implemented. Server: **Go** (decided). Web and Android: to be decided in Phase 0.
 
 ## Overview
 
@@ -29,13 +29,13 @@
 - **API:** REST, versioned and documented with OpenAPI (contract first). Clients are written against the contract.
 - **Database:** local and simple at first (for example SQLite).
 
-## Technology stack (proposals, to be decided in Phase 0)
+## Technology stack
 
-| Part | Options | Note |
+| Part | Choice | Note |
 |---|---|---|
-| Server | Go, Rust, Kotlin (Ktor) or TypeScript | Weigh easy deployment on Debian and Docker, concurrency and one-person maintainability. |
-| Web | TypeScript with a modern framework + hls.js or Shaka | Own design, no generic templates. |
-| Android / TV | Kotlin + Jetpack Compose (+ TV libraries) + Media3/ExoPlayer, optional libmpv | Check licenses before using each piece. |
+| Server | **Go** (decided) | Single binary, easy deployment on Debian and Docker, native concurrency for managing FFmpeg processes, comfortable one-person maintenance. |
+| Web | TypeScript with a modern framework + hls.js or Shaka (to be decided in Phase 0) | Own design, no generic templates. |
+| Android / TV | Kotlin + Jetpack Compose (+ TV libraries) + Media3/ExoPlayer, optional libmpv (to be decided in Phase 0) | Check licenses before using each piece. |
 
 ## Security
 

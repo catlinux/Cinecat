@@ -27,7 +27,7 @@ Quien guarda su propia biblioteca de vídeo en casa suele acabar usando un servi
 | 7 | **Interfaz propia y distinta** a lo habitual en proyectos generados con IA. |
 | 8 | Documentación en **castellano e inglés**, commits en **castellano**, versiones **x.y.z**. |
 | 9 | Autor y mantenedor único: **Catlinux**. |
-| 10 | Licencia **compatible con el código GPL** que se reutilice, preservando autoría y créditos. Se elige antes de publicar código. |
+| 10 | Licencia: **GPL-3.0 con atribución** (artículo 7), preservando autoría y créditos. |
 
 ## Fuera de alcance por ahora
 

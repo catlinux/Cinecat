@@ -2,7 +2,7 @@
 
 [English](../en/architecture.md) · [Volver al README](../../README.md)
 
-> Estado: **propuesta de diseño**. Nada de esto está implementado. La pila tecnológica se decide en la Fase 0.
+> Estado: **propuesta de diseño**. Nada de esto está implementado. Servidor: **Go** (decidido). Web y Android: a decidir en la Fase 0.
 
 ## Visión general
 
@@ -29,13 +29,13 @@
 - **API:** REST, versionada y documentada con OpenAPI (contrato primero). Los clientes se escriben contra el contrato.
 - **Base de datos:** local y simple al principio (por ejemplo SQLite).
 
-## Pila tecnológica (propuestas, a decidir en la Fase 0)
+## Pila tecnológica
 
-| Parte | Opciones | Nota |
+| Parte | Elección | Nota |
 |---|---|---|
-| Servidor | Go, Rust, Kotlin (Ktor) o TypeScript | Se valora despliegue sencillo en Debian y Docker, concurrencia y mantenimiento por una sola persona. |
-| Web | TypeScript con un framework moderno + hls.js o Shaka | Diseño propio, sin plantillas genéricas. |
-| Android / TV | Kotlin + Jetpack Compose (+ librerías para TV) + Media3/ExoPlayer, libmpv opcional | Comprobar licencias antes de usar cada pieza. |
+| Servidor | **Go** (decidido) | Binario único, despliegue sencillo en Debian y Docker, concurrencia nativa para gestionar procesos FFmpeg, mantenimiento cómodo en solitario. |
+| Web | TypeScript con un framework moderno + hls.js o Shaka (a decidir en Fase 0) | Diseño propio, sin plantillas genéricas. |
+| Android / TV | Kotlin + Jetpack Compose (+ librerías para TV) + Media3/ExoPlayer, libmpv opcional (a decidir en Fase 0) | Comprobar licencias antes de usar cada pieza. |
 
 ## Seguridad
 

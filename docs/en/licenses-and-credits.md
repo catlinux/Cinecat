@@ -6,8 +6,8 @@
 
 ## Status
 
-- **Project license: to be decided.** It is chosen **before** the first line of code is published.
-- As of 0.0.1 **no code has been copied** from other projects.
+- **Project license: GPL-3.0**, with an additional section 7 term requiring Catlinux's authorship notices to be preserved. See [LICENSE](../../LICENSE).
+- As of this decision **no code has been copied** from other projects. Only literal code from GPL-3.0-or-later or MPL-2.0 projects (compatible) may be copied; GPL-2.0-only code (such as Jellyfin and its official clients, unless a specific file states "or later") may only be used as **inspiration**, rewritten from scratch.
 
 ## What we want
 
@@ -30,15 +30,24 @@ Several reference projects (Jellyfin and its official clients, Wholphin, Findroi
 - For our own code, GPLv3 allows adding, as an additional condition, **preservation of author attributions** in the legal notices that applications display. This is one of the options to weigh when choosing the license.
 - The apps will have an **"About"** screen with author, version, license and third-party credits (including TMDB).
 
-## License options to weigh (Phase 0)
+## Decision (2026-10-24)
 
-| Option | Advantages | To keep in mind |
+**GPL-3.0, with the additional section 7 term** requiring Catlinux's authorship notices to be preserved in any copy or modified version (About screens, credits, legal notices). Full text in [LICENSE](../../LICENSE).
+
+Licenses verified for the candidate projects (checked on their official repository, not from memory):
+
+| Project | Confirmed license | What it means for Cinecat |
 |---|---|---|
-| GPL-3.0 (with additional attributions) | Strong copyleft; allows a condition to preserve authorship. | Not mixable with "GPL-2.0 only" code. |
-| GPL-2.0 | Compatible with Jellyfin code if it is "2.0 only". | Older; without GPLv3's patent clauses. |
-| AGPL-3.0 | Closes the network-service gap (useful for a server). | Same mixing limits as GPL-3.0. |
+| Jellyfin (server) | GPL-2.0 | Inspiration only; no literal copying without checking file-by-file for an "or later" mark |
+| Jellyfin Android TV | GPL-2.0 | Inspiration only |
+| Wholphin | GPL-2.0 | Inspiration only |
+| Findroid | GPL-3.0 | Literal copying allowed, with credits and copyright notices |
+| Intro Skipper | GPL-3.0 | Literal copying allowed, with credits and copyright notices |
+| Streamyfin | MPL-2.0 | Compatible; literal copying allowed respecting MPL-2.0 in the affected files |
+| Media3/ExoPlayer, hls.js, Shaka Player | Apache-2.0 | Compatible; literal copying allowed with their notices |
+| Vidstack | MIT | Compatible; literal copying allowed with their notices |
 
-The decision is made after listing **which specific code** will be reused. It is applied with `LICENSE`, SPDX headers in files and the license field in package metadata.
+It is applied with a root `LICENSE` file, SPDX headers (`SPDX-License-Identifier: GPL-3.0-or-later`) in our own source files, and the license field in package metadata where applicable.
 
 ## Rules for reusing third-party code
 

@@ -7,7 +7,7 @@
 ## Fase 0: preparación (`0.0.x`)
 
 - Documentación inicial bilingüe (**hecho en `0.0.1`**).
-- Elegir licencia, comprobar el nombre, decidir la pila tecnológica, convención de commits y dirección de diseño.
+- Comprobar el nombre, decidir la pila tecnológica, convención de commits y dirección de diseño. Licencia ya decidida (GPL-3.0 con atribución).
 - Crear `CLAUDE.md` y la estructura del repositorio de código.
 
 ## Fase 1: servidor mínimo (`0.1.0`)

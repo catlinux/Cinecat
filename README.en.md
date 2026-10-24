@@ -4,7 +4,7 @@
 
 **Languages / Idiomas:** [Español](README.md) · English
 
-**Status:** design phase. Version `0.0.2` (documentation only, no code yet).
+**Status:** design phase. Version `0.0.3` (documentation only, no code yet).
 
 ---
 
@@ -48,7 +48,7 @@ Other: [CHANGELOG](CHANGELOG.en.md) · [TODO](TODO.en.md) · [Contributing](CONT
 
 ## License
 
-**To be decided.** Since we want to reuse free code from other projects (several GPL-licensed), the final license will be one compatible with that code that always preserves authorship and credits. It will be applied before the first line of code is published. See [licenses and credits](docs/en/licenses-and-credits.md).
+**GPL-3.0**, with an additional term (permitted under its section 7) requiring Catlinux's authorship notices to be preserved in any copy or modified version. See [LICENSE](LICENSE) and [licenses and credits](docs/en/licenses-and-credits.md).
 
 ## Authorship
 

@@ -27,7 +27,7 @@ People who keep their own video library at home usually end up using someone els
 | 7 | **Own, distinctive interface**, unlike what is usual in AI-generated projects. |
 | 8 | Documentation in **Spanish and English**, commits in **Spanish**, versions **x.y.z**. |
 | 9 | Single author and maintainer: **Catlinux**. |
-| 10 | License **compatible with the GPL code** that gets reused, preserving authorship and credits. Chosen before publishing code. |
+| 10 | License: **GPL-3.0 with attribution** (section 7), preserving authorship and credits. |
 
 ## Out of scope for now
 

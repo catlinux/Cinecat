@@ -7,7 +7,7 @@
 ## Phase 0: preparation (`0.0.x`)
 
 - Initial bilingual documentation (**done in `0.0.1`**).
-- Choose the license, check the name, decide the technology stack, commit convention and design direction.
+- Check the name, decide the technology stack, commit convention and design direction. License already decided (GPL-3.0 with attribution).
 - Create `CLAUDE.md` and the code repository structure.
 
 ## Phase 1: minimal server (`0.1.0`)

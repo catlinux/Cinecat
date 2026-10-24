@@ -4,7 +4,7 @@
 
 **Idiomas / Languages:** Español · [English](README.en.md)
 
-**Estado:** fase de diseño. Versión `0.0.2` (solo documentación, todavía no hay código).
+**Estado:** fase de diseño. Versión `0.0.3` (solo documentación, todavía no hay código).
 
 ---
 
@@ -48,7 +48,7 @@ Otros: [CHANGELOG](CHANGELOG.md) · [TODO](TODO.md) · [Cómo contribuir](CONTRI
 
 ## Licencia
 
-**Pendiente de elegir.** Como queremos aprovechar código libre de otros proyectos (varios con licencia GPL), la licencia final será una compatible con ese código y que conserve siempre la autoría y los créditos. Se aplicará antes de publicar la primera línea de código. Ver [licencias y créditos](docs/es/licencias-y-creditos.md).
+**GPL-3.0**, con una condición adicional (permitida por su artículo 7) que obliga a conservar los avisos de autoría de Catlinux en cualquier copia o versión modificada. Ver [LICENSE](LICENSE) y [licencias y créditos](docs/es/licencias-y-creditos.md).
 
 ## Autoría
 

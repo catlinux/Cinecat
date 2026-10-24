@@ -5,10 +5,8 @@
 Priorities: 🔴 blocking · 🟠 next phase · 🟢 later.
 
 ## Before writing code
-- 🔴 **Choose the license** (compatible with the GPL code we want to reuse, and preserving authorship and credits). See [licenses and credits](docs/en/licenses-and-credits.md).
 - 🔴 Check that the name **Cinecat** is free (GitHub, Google Play, trademarks).
-- 🔴 Disable Claude Code's automatic co-author trailer in commits and set Catlinux's `user.name` / `noreply` email.
-- 🔴 Define the technology stack for the server, web and Android (proposals in [architecture](docs/en/architecture.md)).
+- 🔴 Define the technology stack for web and Android (proposals in [architecture](docs/en/architecture.md); server already decided: Go).
 - 🟠 Create `CLAUDE.md` with the project rules.
 - 🟠 Enable private vulnerability reporting on GitHub.
 

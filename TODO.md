@@ -5,10 +5,8 @@
 Prioridades: 🔴 bloqueante · 🟠 próxima fase · 🟢 más adelante.
 
 ## Antes de escribir código
-- 🔴 **Elegir la licencia** (compatible con el código GPL que queramos reutilizar, y que conserve autoría y créditos). Ver [licencias y créditos](docs/es/licencias-y-creditos.md).
 - 🔴 Comprobar que el nombre **Cinecat** está libre (GitHub, Google Play, marcas).
-- 🔴 Desactivar la coautoría automática de Claude Code en los commits y fijar `user.name` / correo `noreply` de Catlinux.
-- 🔴 Definir la pila tecnológica del servidor, web y Android (propuestas en [arquitectura](docs/es/arquitectura.md)).
+- 🔴 Definir la pila tecnológica de web y Android (propuestas en [arquitectura](docs/es/arquitectura.md); servidor ya decidido: Go).
 - 🟠 Crear `CLAUDE.md` con las normas del proyecto.
 - 🟠 Activar en GitHub los avisos de seguridad privados (private vulnerability reporting).
 
