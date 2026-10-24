@@ -10,7 +10,6 @@ Priorities: 🔴 blocking · 🟠 next phase · 🟢 later.
 - 🔴 Disable Claude Code's automatic co-author trailer in commits and set Catlinux's `user.name` / `noreply` email.
 - 🔴 Define the technology stack for the server, web and Android (proposals in [architecture](docs/en/architecture.md)).
 - 🟠 Create `CLAUDE.md` with the project rules.
-- 🟠 Propose 2-3 design directions for the interface and pick one.
 - 🟠 Enable private vulnerability reporting on GitHub.
 
 ## Product

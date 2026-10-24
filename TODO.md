@@ -10,7 +10,6 @@ Prioridades: 🔴 bloqueante · 🟠 próxima fase · 🟢 más adelante.
 - 🔴 Desactivar la coautoría automática de Claude Code en los commits y fijar `user.name` / correo `noreply` de Catlinux.
 - 🔴 Definir la pila tecnológica del servidor, web y Android (propuestas en [arquitectura](docs/es/arquitectura.md)).
 - 🟠 Crear `CLAUDE.md` con las normas del proyecto.
-- 🟠 Proponer 2-3 direcciones de diseño para la interfaz y elegir una.
 - 🟠 Activar en GitHub los avisos de seguridad privados (private vulnerability reporting).
 
 ## Producto

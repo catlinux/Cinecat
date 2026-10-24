@@ -4,7 +4,7 @@
 
 **Idiomas / Languages:** Español · [English](README.en.md)
 
-**Estado:** fase de diseño. Versión `0.0.1` (solo documentación, todavía no hay código).
+**Estado:** fase de diseño. Versión `0.0.2` (solo documentación, todavía no hay código).
 
 ---
 
@@ -26,6 +26,12 @@ Nace porque las soluciones existentes funcionan, pero su interfaz y algunas deci
 ## Fuera de alcance por ahora
 
 Televisión en directo y contenido de internet. Fotos y presentaciones llegarán en versiones posteriores. Otras plataformas distintas de web, Android y Android TV, también más adelante.
+
+## Dirección visual
+
+**Elegida: «Marquesina».** Cine de barrio de los años 50-60: rojo granate y crema cálidos, acentos dorados y naranjas, tipografía serif de carácter (Fraunces) para los títulos. Carteles propios ilustrados (ninguno es una foto real) con escenas e iluminación variadas para dar colorido a la biblioteca.
+
+Maqueta de referencia: [artboard "Marquesina" en Claude](https://claude.ai/artifact/J2o3AdQxPbN9woGjUfWQFk) (enlace privado del mantenedor; se sustituirá por capturas en `docs/` cuando haya interfaz real).
 
 ## Documentación
 
