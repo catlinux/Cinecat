@@ -16,7 +16,7 @@ Convención de commits: `tipo: descripción en castellano` (`feat`, `fix`, `docs
 - **Ejecutor:** AgentRelay, esfuerzo bajo.
 - **Versión/CHANGELOG:** `0.1.0-dev.1` (parche sobre la base 0.0.5; sigue sin ser una versión publicada) — Añadido: esqueleto del servidor Go, configuración y `/healthz`.
 
-## Paso 2 — Esquema de base de datos y migraciones
+## Paso 2 — Esquema de base de datos y migraciones [x] hecho (ejecución 20261025-021856-35ab)
 
 - **Archivos:** `internal/store/migrations/0001_init.sql` (o la convención que fije el ejecutor con una librería de migraciones ligera para SQLite, p. ej. `golang-migrate` o `goose` — comprobar licencia, ambas MIT/Apache-2.0), `internal/store/store.go`.
 - **Qué hace:** define las tablas mínimas: `users` (id, username, password_hash argon2id, role, created_at), `sessions` (id, user_id, token_hash, expires_at), `libraries` (id, path, name), `media_items` (id, library_id, path, title, year, kind: película/serie/episodio, tmdb_id nullable), `playback_state` (user_id, media_item_id, position_seconds, updated_at). Nunca guardar contraseñas ni tokens en claro.
