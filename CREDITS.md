@@ -46,7 +46,6 @@ Cinecat builds on the work of other people and projects. This list includes **al
 | [TypeScript](https://www.typescriptlang.org) 5.9.3 | Lenguaje del cliente web / Web client language | Apache-2.0 |
 | [svelte-check](https://github.com/sveltejs/language-tools) 4.7.7 | Comprobación de tipos de Svelte / Svelte type checking | MIT |
 | [Vitest](https://vitest.dev) 5.0.5 | Pruebas unitarias del cliente web / Web client unit tests | MIT |
-| [Caddy](https://caddyserver.com) 2 | Proxy inverso en el despliegue Docker (HTTPS automático) / Reverse proxy in the Docker deployment (automatic HTTPS) | Apache-2.0 |
 
 **TMDB:** This product uses the TMDB API but is not endorsed or certified by TMDB.
 

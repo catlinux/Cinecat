@@ -4,6 +4,8 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
+    ports:
+      - "127.0.0.1:${CINECAT_API_PORT:-8080}:8080"
     volumes:
       - cinecat_data:/data
       - ${CINECAT_MEDIA_PATH}:/media:ro
@@ -17,29 +19,13 @@ services:
       context: ./web
       dockerfile: Dockerfile
     restart: unless-stopped
+    ports:
+      - "127.0.0.1:${CINECAT_WEB_PORT:-8081}:3000"
     environment:
       PUBLIC_API_URL: ""
       PROTOCOL_HEADER: x-forwarded-proto
     depends_on:
       - servidor
 
-  proxy:
-    image: caddy:2-alpine
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    environment:
-      CINECAT_DOMAIN: ${CINECAT_DOMAIN:-:80}
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      - servidor
-      - web
-
 volumes:
   cinecat_data:
-  caddy_data:
-  caddy_config:

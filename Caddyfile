@@ -1,8 +1,0 @@
-{$CINECAT_DOMAIN::80} {
-	handle /api/* {
-		reverse_proxy servidor:8080
-	}
-	handle {
-		reverse_proxy web:3000
-	}
-}

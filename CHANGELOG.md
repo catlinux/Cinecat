@@ -7,6 +7,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.3.1] - 2026-10-25
+
+### Cambiado
+- El despliegue Docker ya no lleva Caddy como proxy propio: el Apache que ya gestiona otros vhosts del Debian hace de proxy inverso hacia el servidor y el cliente web (vhost de ejemplo en `deploy/video.warcrafted.com.conf`). `docker-compose.yml` publica ambos contenedores solo en `127.0.0.1` (puertos `CINECAT_API_PORT`/`CINECAT_WEB_PORT`, nunca expuestos directamente a la red). `.env.deploy.example` y `docs/es/despliegue.md`/`docs/en/deployment.md` actualizados con los dos pasos (contenedores + vhost de Apache).
+
 ## [0.3.0] - 2026-10-25
 
 ### Añadido
