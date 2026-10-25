@@ -7,6 +7,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.2.0-dev.2] - 2026-10-25
+
+### Añadido
+- Cliente de API tipado y gestión de sesión del cliente web: login y logout mediante form actions de SvelteKit, token guardado en cookie httpOnly con SameSite=Lax y Secure bajo HTTPS, URL del servidor por `PUBLIC_API_URL` y página de login «Marquesina» con mensajes para credenciales incorrectas y bloqueo temporal.
+
 ## [0.2.0-dev.1] - 2026-10-25
 
 ### Añadido

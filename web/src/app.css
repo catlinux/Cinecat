@@ -196,6 +196,130 @@ footer {
 	overflow-wrap: anywhere;
 }
 
+.login {
+	width: min(30rem, 100%);
+}
+
+.login-card {
+	padding: clamp(1.5rem, 5vw, 2.75rem);
+	border: 3px double var(--granate);
+	border-radius: 4px;
+	background: linear-gradient(180deg, rgba(253, 247, 234, 0.92), rgba(245, 234, 212, 0.92));
+	box-shadow: 0 1.5rem 3rem -2rem var(--sombra);
+	text-align: center;
+}
+
+.login-card h1 {
+	margin: 0.3rem 0 0.8rem;
+	font-family: 'Fraunces', Georgia, serif;
+	font-size: clamp(2.6rem, 8vw, 3.8rem);
+	font-weight: 700;
+	line-height: 1;
+	color: var(--granate);
+	font-variation-settings:
+		'opsz' 96,
+		'SOFT' 40,
+		'WONK' 1;
+}
+
+.login-lede {
+	margin: 0 auto;
+	max-width: 22rem;
+	font-size: 0.95rem;
+	line-height: 1.6;
+	color: #5b3835;
+}
+
+.login-form {
+	display: grid;
+	gap: 1rem;
+	margin-top: 1.6rem;
+	text-align: left;
+}
+
+.login-form label {
+	display: grid;
+	gap: 0.35rem;
+	font-size: 0.72rem;
+	font-weight: 600;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--granate);
+}
+
+.login-form input {
+	padding: 0.7rem 0.8rem;
+	border: 1px solid rgba(90, 26, 31, 0.4);
+	border-radius: 3px;
+	background: var(--crema-clara);
+	color: var(--tinta);
+	font-family: 'Inter', system-ui, sans-serif;
+	font-size: 1rem;
+	letter-spacing: normal;
+	text-transform: none;
+}
+
+.login-form button,
+.logout-form button {
+	width: 100%;
+	padding: 0.8rem 1rem;
+	border: 1px solid var(--granate-oscuro);
+	border-radius: 3px;
+	background: var(--granate);
+	color: var(--crema-clara);
+	font-family: 'Inter', system-ui, sans-serif;
+	font-size: 0.78rem;
+	font-weight: 600;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	cursor: pointer;
+}
+
+.login-form button:hover {
+	background: var(--granate-oscuro);
+}
+
+.logout-form {
+	margin-top: 1.2rem;
+}
+
+.logout-form .secondary {
+	border-color: var(--granate);
+	background: transparent;
+	color: var(--granate);
+}
+
+.logout-form .secondary:hover {
+	background: rgba(90, 26, 31, 0.08);
+}
+
+.error {
+	margin: 1.2rem 0 0;
+	padding: 0.7rem 0.8rem;
+	border-left: 4px solid var(--naranja);
+	border-radius: 2px;
+	background: rgba(209, 104, 47, 0.12);
+	color: #7a2f18;
+	font-size: 0.9rem;
+	line-height: 1.45;
+	text-align: left;
+}
+
+.login-note {
+	margin: 1.5rem 0 0;
+	font-size: 0.68rem;
+	letter-spacing: 0.18em;
+	text-transform: uppercase;
+	color: #7a514c;
+}
+
+.login-form input:focus-visible,
+.login-form button:focus-visible,
+.logout-form button:focus-visible {
+	outline: 3px solid var(--naranja);
+	outline-offset: 2px;
+}
+
 @media (prefers-reduced-motion: no-preference) {
 	.hero {
 		animation: rise 0.7s ease-out both;

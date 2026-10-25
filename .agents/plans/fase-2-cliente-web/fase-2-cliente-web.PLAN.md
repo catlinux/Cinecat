@@ -17,7 +17,7 @@ Cada paso es autocontenido. Al completarlo, el ejecutor lo marca `[x]` aquí y a
 - **Versión/CHANGELOG:** `0.2.0-dev.1` — Añadido: esqueleto del cliente web SvelteKit.
 - **Hecho:** ejecución `20261025-153448-d856` (2026-10-25).
 
-## Paso 2 — Cliente de API y gestión de sesión
+## [x] Paso 2 — Cliente de API y gestión de sesión
 
 - **Archivos:** `web/src/lib/api.ts`, `web/src/lib/session.ts`, `web/src/routes/login/+page.svelte`.
 - **Qué hace:** cliente TypeScript tipado contra `api/openapi.yaml` (generado o escrito a mano, a decidir por el ejecutor; si genera tipos, documentar la herramienta y su licencia) para `POST /auth/login`, `POST /auth/logout` y las llamadas autenticadas (cabecera `Authorization: Bearer`). El token de sesión se guarda en una cookie `httpOnly` gestionada por el propio SvelteKit (nunca en `localStorage`, para reducir el riesgo de robo de token por XSS) con el flag `Secure` cuando se sirve por HTTPS. Página de login con el estilo «Marquesina»: hero cálido, formulario simple, mensaje de error claro en credenciales incorrectas o bloqueo temporal (429).
@@ -25,6 +25,7 @@ Cada paso es autocontenido. Al completarlo, el ejecutor lo marca `[x]` aquí y a
 - **Ejecutor:** AgentRelay, esfuerzo medio.
 - **Dependencias:** Paso 1, y el plan de administración del servidor cerrado (para tener un usuario real).
 - **Versión/CHANGELOG:** `0.2.0-dev.2` — Añadido: inicio de sesión y gestión de sesión del cliente web.
+- **Hecho:** ejecución `20261025-155339-3ad6` (2026-10-25).
 
 ## Paso 3 — Biblioteca y fichas
 

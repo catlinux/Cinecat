@@ -7,6 +7,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.2.0-dev.2] - 2026-10-25
+
+### Added
+- Typed API client and session management for the web client: login and logout through SvelteKit form actions, token stored in an httpOnly cookie with SameSite=Lax and Secure over HTTPS, server URL via `PUBLIC_API_URL`, and a "Marquesina" login page with messages for wrong credentials and temporary lockout.
+
 ## [0.2.0-dev.1] - 2026-10-25
 
 ### Added
