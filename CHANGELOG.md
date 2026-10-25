@@ -7,6 +7,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.1.1] - 2026-10-25
+
+### Añadido
+- Alta automática del primer usuario administrador al arrancar el servidor contra una base de datos sin usuarios: contraseña por `CINECAT_ADMIN_PASSWORD` o generada aleatoriamente (144 bits) y mostrada una sola vez en el log.
+
 ## [0.1.0] - 2026-10-25
 
 Cierra la Fase 1: servidor mínimo funcional (sin clientes todavía).
@@ -57,7 +62,8 @@ Cierra la Fase 1: servidor mínimo funcional (sin clientes todavía).
 - `README`, `TODO`, `CONTRIBUTING`, `SECURITY`, `AUTHORS` y `CREDITS`.
 - Decisiones de partida: servidor y clientes propios; web, Android y Android TV; H.265 preferido con H.264 de reserva; metadatos en español de España a partir de bases de datos existentes.
 
-[Sin publicar]: https://github.com/catlinux/cinecat/compare/v0.1.0...HEAD
+[Sin publicar]: https://github.com/catlinux/cinecat/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/catlinux/cinecat/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/catlinux/cinecat/compare/v0.0.5...v0.1.0
 [0.0.5]: https://github.com/catlinux/cinecat/compare/v0.0.4...v0.0.5
 [0.0.4]: https://github.com/catlinux/cinecat/compare/v0.0.3...v0.0.4

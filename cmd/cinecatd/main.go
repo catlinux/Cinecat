@@ -49,6 +49,21 @@ func main() {
 		log.Fatalf("cinecatd: %v", err)
 	}
 
+	bootstrap, err := auth.BootstrapAdmin(ctx, st.DB(), os.Getenv(auth.EnvAdminPassword))
+	if err != nil {
+		log.Fatalf("cinecatd: %v", err)
+	}
+	if bootstrap.Created {
+		if bootstrap.GeneratedPassword != "" {
+			log.Printf("cinecatd: creado el usuario administrador %q con esta contraseña temporal (se muestra solo esta vez): %s",
+				bootstrap.Username, bootstrap.GeneratedPassword)
+			log.Printf("cinecatd: cambia la contraseña del administrador en cuanto inicies sesión")
+		} else {
+			log.Printf("cinecatd: creado el usuario administrador %q con la contraseña de %s",
+				bootstrap.Username, auth.EnvAdminPassword)
+		}
+	}
+
 	authSvc := auth.New(st.DB())
 	playSvc, err := playback.New(playback.Options{})
 	if err != nil {

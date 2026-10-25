@@ -6,7 +6,7 @@ Decisiones ya fijadas: licencia GPL-3.0+atribución, servidor en Go, API REST ve
 
 Cada paso es autocontenido. Al completarlo, el ejecutor lo marca `[x]` aquí y añade su entrada en `CHANGELOG.md`/`CHANGELOG.en.md` y `VERSION`, en el mismo commit. Commits: `tipo: descripción en castellano`.
 
-## Paso A — Alta del primer usuario administrador
+## Paso A — Alta del primer usuario administrador [x] hecho (ejecución 20261025-063041-6b23)
 
 - **Archivos:** `internal/auth/http.go` o un nuevo `internal/auth/bootstrap.go`, `cmd/cinecatd/main.go`.
 - **Qué hace:** si la tabla `users` está vacía al arrancar el servidor, genera un usuario `admin` con una contraseña aleatoria (nunca fija ni derivada de nada predecible) y la imprime **una sola vez** en el log de arranque con un aviso claro de que debe cambiarse; si ya hay usuarios, no hace nada. Alternativa a valorar por el ejecutor y documentar la elegida: un flag `--create-admin` que pide la contraseña por variable de entorno `CINECAT_ADMIN_PASSWORD` en el primer arranque, en vez de generarla sola. Decide una de las dos (o ambas) y justifícalo en el informe; no expongas esto como endpoint HTTP público sin autenticar.
