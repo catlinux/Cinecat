@@ -75,6 +75,33 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/auth/me:
+    get:
+      summary: Devuelve el usuario de la sesión actual
+      description: |
+        Permite al cliente saber quién está autenticado y con qué rol, sin
+        decodificar nada del lado cliente (el token es opaco).
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Usuario autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUserResponse'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/auth/password:
     post:
       summary: Cambia la contraseña del usuario autenticado
@@ -590,6 +617,20 @@ components:
         expires_at:
           type: string
           format: date-time
+      additionalProperties: false
+    CurrentUserResponse:
+      type: object
+      required:
+        - username
+        - role
+      properties:
+        username:
+          type: string
+        role:
+          type: string
+          enum:
+            - admin
+            - user
       additionalProperties: false
     Library:
       type: object
