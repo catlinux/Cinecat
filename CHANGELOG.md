@@ -7,6 +7,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.4.0] - 2026-10-25
+
+### Añadido
+- Pantalla «Mi cuenta» en el cliente web para cambiar la contraseña: formulario con contraseña actual, nueva y repetición, validación local de coincidencia y longitud mínima (8 caracteres), mensajes claros para errores de la API y confirmación de éxito sin cerrar la sesión actual. Enlace «Mi cuenta» en la cabecera solo cuando hay sesión.
+
 ## [0.3.5] - 2026-10-25
 
 ### Añadido

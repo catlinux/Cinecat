@@ -181,6 +181,28 @@ video:focus-visible,
 	color: var(--boton-texto);
 }
 
+.marquee-tools {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.account-link {
+	padding: 0.35rem 0.55rem;
+	border-bottom: 1px solid var(--borde-medio);
+	color: var(--granate);
+	font-size: 0.68rem;
+	font-weight: 600;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	text-decoration: none;
+}
+
+.account-link:hover {
+	border-color: var(--granate);
+}
+
 .eyebrow {
 	margin: 0;
 	font-size: 0.72rem;
@@ -407,6 +429,18 @@ footer {
 	border-radius: 2px;
 	background: var(--fondo-error);
 	color: var(--texto-error);
+	font-size: 0.9rem;
+	line-height: 1.45;
+	text-align: left;
+}
+
+.success {
+	margin: 1.2rem 0 0;
+	padding: 0.7rem 0.8rem;
+	border-left: 4px solid var(--dorado);
+	border-radius: 2px;
+	background: var(--tinte);
+	color: var(--texto-tenue);
 	font-size: 0.9rem;
 	line-height: 1.45;
 	text-align: left;

@@ -99,6 +99,19 @@ export class ApiClient {
 		await this.request<void>('/api/v1/auth/logout', { method: 'POST', token, empty: true });
 	}
 
+	async changePassword(
+		currentPassword: string,
+		newPassword: string,
+		token: string
+	): Promise<void> {
+		await this.request<void>('/api/v1/auth/password', {
+			method: 'POST',
+			body: { current_password: currentPassword, new_password: newPassword },
+			token,
+			empty: true
+		});
+	}
+
 	async get<T>(path: string, token?: string): Promise<T> {
 		return this.request<T>(path, { token });
 	}

@@ -7,6 +7,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-25
+
+### Added
+- "My account" screen in the web client to change the password: form with current, new and repeated password, local validation of matching values and minimum length (8 characters), clear API error messages and a success confirmation without closing the current session. "Mi cuenta" link in the header only when a session exists.
+
 ## [0.3.5] - 2026-10-25
 
 ### Added

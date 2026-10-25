@@ -1,9 +1,11 @@
 <script lang="ts">
 	import '../app.css';
+	import type { Snippet } from 'svelte';
+	import type { LayoutData } from './$types';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import { apiBaseUrl } from '$lib/config';
 
-	let { children } = $props();
+	let { data, children }: { data: LayoutData; children: Snippet } = $props();
 </script>
 
 <svelte:head>
@@ -16,7 +18,12 @@
 			<p class="eyebrow">Cine de barrio · Biblioteca personal</p>
 			<a class="wordmark" href="/">Cinecat</a>
 		</div>
-		<ThemeToggle />
+		<div class="marquee-tools">
+			{#if data.hasSession}
+				<a class="account-link" href="/account">Mi cuenta</a>
+			{/if}
+			<ThemeToggle />
+		</div>
 	</header>
 
 	<main>
