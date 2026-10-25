@@ -7,6 +7,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.3.5] - 2026-10-25
+
+### Added
+- `POST /api/v1/auth/password`: lets an authenticated user change their own password by checking the current one (401 if it does not match, 400 if the new one is shorter than 8 characters), without invalidating the current session or any other live sessions.
+
 ## [0.3.4] - 2026-10-25
 
 ### Changed

@@ -7,6 +7,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.3.5] - 2026-10-25
+
+### Añadido
+- `POST /api/v1/auth/password`: permite al usuario autenticado cambiar su propia contraseña comprobando la actual (401 si no coincide, 400 si la nueva tiene menos de 8 caracteres) y sin invalidar la sesión ni el resto de sesiones vigentes.
+
 ## [0.3.4] - 2026-10-25
 
 ### Cambiado

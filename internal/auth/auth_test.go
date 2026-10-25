@@ -375,3 +375,67 @@ func TestLogoutHandler(t *testing.T) {
 		t.Fatalf("sin token: código = %d", rec.Code)
 	}
 }
+
+func TestChangePassword(t *testing.T) {
+	svc, db, _ := newTestService(t)
+	userID := createUser(t, db, "ana", "Clave-vieja-1", "user")
+	ctx := context.Background()
+
+	if err := svc.ChangePassword(ctx, userID, "Clave-vieja-1", "Clave-nueva-1"); err != nil {
+		t.Fatalf("ChangePassword: %v", err)
+	}
+
+	var hash string
+	if err := db.QueryRow(`SELECT password_hash FROM users WHERE id = ?`, userID).Scan(&hash); err != nil {
+		t.Fatalf("leer hash: %v", err)
+	}
+	if ok, err := VerifyPassword(hash, "Clave-nueva-1"); err != nil || !ok {
+		t.Fatalf("la contraseña nueva no valida: %v, %v", ok, err)
+	}
+	if ok, _ := VerifyPassword(hash, "Clave-vieja-1"); ok {
+		t.Fatal("la contraseña antigua no debe seguir valiendo")
+	}
+}
+
+func TestChangePasswordActualIncorrecta(t *testing.T) {
+	svc, db, _ := newTestService(t)
+	userID := createUser(t, db, "ana", "Clave-vieja-1", "user")
+	ctx := context.Background()
+
+	var before string
+	if err := db.QueryRow(`SELECT password_hash FROM users WHERE id = ?`, userID).Scan(&before); err != nil {
+		t.Fatalf("leer hash: %v", err)
+	}
+
+	err := svc.ChangePassword(ctx, userID, "incorrecta", "Clave-nueva-1")
+	if !errors.Is(err, ErrInvalidCurrentPassword) {
+		t.Fatalf("error = %v, se esperaba ErrInvalidCurrentPassword", err)
+	}
+
+	var after string
+	if err := db.QueryRow(`SELECT password_hash FROM users WHERE id = ?`, userID).Scan(&after); err != nil {
+		t.Fatalf("leer hash: %v", err)
+	}
+	if after != before {
+		t.Fatal("el hash no debe cambiar con una contraseña actual incorrecta")
+	}
+}
+
+func TestChangePasswordDemasiadoCorta(t *testing.T) {
+	svc, db, _ := newTestService(t)
+	userID := createUser(t, db, "ana", "Clave-vieja-1", "user")
+
+	err := svc.ChangePassword(context.Background(), userID, "Clave-vieja-1", "corta")
+	if !errors.Is(err, ErrPasswordTooShort) {
+		t.Fatalf("error = %v, se esperaba ErrPasswordTooShort", err)
+	}
+}
+
+func TestChangePasswordUsuarioInexistente(t *testing.T) {
+	svc, _, _ := newTestService(t)
+
+	err := svc.ChangePassword(context.Background(), 999999, "lo-que-sea", "Clave-nueva-1")
+	if !errors.Is(err, ErrInvalidSession) {
+		t.Fatalf("error = %v, se esperaba ErrInvalidSession", err)
+	}
+}

@@ -16,6 +16,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"golang.org/x/crypto/argon2"
 )
@@ -44,11 +45,16 @@ const (
 // Errores públicos del paquete. Los mensajes no distinguen entre usuario
 // inexistente y contraseña incorrecta a propósito.
 var (
-	ErrInvalidCredentials = errors.New("auth: usuario o contraseña incorrectos")
-	ErrAccountLocked      = errors.New("auth: acceso bloqueado temporalmente por intentos fallidos")
-	ErrInvalidSession     = errors.New("auth: sesión no válida")
-	ErrSessionExpired     = errors.New("auth: sesión caducada")
+	ErrInvalidCredentials     = errors.New("auth: usuario o contraseña incorrectos")
+	ErrAccountLocked          = errors.New("auth: acceso bloqueado temporalmente por intentos fallidos")
+	ErrInvalidSession         = errors.New("auth: sesión no válida")
+	ErrSessionExpired         = errors.New("auth: sesión caducada")
+	ErrInvalidCurrentPassword = errors.New("auth: la contraseña actual no es correcta")
+	ErrPasswordTooShort       = errors.New("auth: la contraseña nueva es demasiado corta")
 )
+
+// minPasswordLength es la longitud mínima de una contraseña nueva, en caracteres.
+const minPasswordLength = 8
 
 // User es un usuario autenticado.
 type User struct {
@@ -314,6 +320,45 @@ func (s *Service) Logout(ctx context.Context, token string) error {
 		`DELETE FROM sessions WHERE token_hash = ?`, hashToken(token),
 	); err != nil {
 		return fmt.Errorf("auth: cerrar sesión: %w", err)
+	}
+	return nil
+}
+
+// ChangePassword comprueba la contraseña actual del usuario y, si coincide,
+// guarda la nueva. No toca las sesiones: la actual y las demás siguen siendo
+// válidas hasta que caduquen.
+func (s *Service) ChangePassword(ctx context.Context, userID int64, currentPassword, newPassword string) error {
+	if utf8.RuneCountInString(newPassword) < minPasswordLength {
+		return ErrPasswordTooShort
+	}
+
+	var currentHash string
+	err := s.db.QueryRowContext(ctx,
+		`SELECT password_hash FROM users WHERE id = ?`, userID,
+	).Scan(&currentHash)
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+		return ErrInvalidSession
+	case err != nil:
+		return fmt.Errorf("auth: consultar la contraseña actual: %w", err)
+	}
+
+	valid, err := VerifyPassword(currentHash, currentPassword)
+	if err != nil {
+		return err
+	}
+	if !valid {
+		return ErrInvalidCurrentPassword
+	}
+
+	newHash, err := HashPassword(newPassword)
+	if err != nil {
+		return err
+	}
+	if _, err := s.db.ExecContext(ctx,
+		`UPDATE users SET password_hash = ? WHERE id = ?`, newHash, userID,
+	); err != nil {
+		return fmt.Errorf("auth: actualizar la contraseña: %w", err)
 	}
 	return nil
 }

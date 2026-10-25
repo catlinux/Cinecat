@@ -16,6 +16,11 @@ type loginRequest struct {
 	Password string `json:"password"`
 }
 
+type changePasswordRequest struct {
+	CurrentPassword string `json:"current_password"`
+	NewPassword     string `json:"new_password"`
+}
+
 type loginResponse struct {
 	Token     string    `json:"token"`
 	ExpiresAt time.Time `json:"expires_at"`
@@ -50,6 +55,52 @@ func (s *Service) LoginHandler() http.Handler {
 		default:
 			writeJSON(w, http.StatusOK, loginResponse{Token: token, ExpiresAt: expiresAt})
 		}
+	})
+}
+
+// ChangePasswordHandler atiende POST /api/v1/auth/password. Requiere la sesión
+// Bearer del usuario cuya contraseña se cambia.
+func (s *Service) ChangePasswordHandler() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		token := bearerToken(r)
+		if token == "" {
+			writeError(w, http.StatusUnauthorized, "falta el token de sesión")
+			return
+		}
+
+		user, err := s.Authenticate(r.Context(), token)
+		if err != nil {
+			if errors.Is(err, ErrInvalidSession) || errors.Is(err, ErrSessionExpired) {
+				writeError(w, http.StatusUnauthorized, "sesión no válida")
+				return
+			}
+			log.Printf("auth: error interno al validar la sesión: %v", err)
+			writeError(w, http.StatusInternalServerError, "error interno")
+			return
+		}
+
+		var req changePasswordRequest
+		if err := decodeJSON(w, r, &req); err != nil {
+			writeError(w, http.StatusBadRequest, "petición no válida")
+			return
+		}
+
+		if err := s.ChangePassword(r.Context(), user.ID, req.CurrentPassword, req.NewPassword); err != nil {
+			switch {
+			case errors.Is(err, ErrPasswordTooShort):
+				writeError(w, http.StatusBadRequest, "la contraseña nueva debe tener al menos 8 caracteres")
+			case errors.Is(err, ErrInvalidCurrentPassword):
+				writeError(w, http.StatusUnauthorized, "la contraseña actual no es correcta")
+			case errors.Is(err, ErrInvalidSession):
+				writeError(w, http.StatusUnauthorized, "sesión no válida")
+			default:
+				log.Printf("auth: error interno al cambiar la contraseña: %v", err)
+				writeError(w, http.StatusInternalServerError, "error interno")
+			}
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
 	})
 }
 

@@ -104,6 +104,7 @@ func newHandler(authSvc *auth.Service, api *library.API) http.Handler {
 	if authSvc != nil {
 		mux.Handle("POST /api/v1/auth/login", authSvc.LoginHandler())
 		mux.Handle("POST /api/v1/auth/logout", authSvc.LogoutHandler())
+		mux.Handle("POST /api/v1/auth/password", authSvc.ChangePasswordHandler())
 	}
 	if api != nil {
 		api.Register(mux)
