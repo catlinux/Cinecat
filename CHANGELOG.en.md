@@ -7,6 +7,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-25
+
+### Added
+- `/admin/libraries` panel for admin-role users: lists libraries, creates a new one (name and path), deletes it with confirmation and runs the full scan showing libraries, files, updated entries and warnings. "Bibliotecas" link in the header only for administrators, with the role obtained from `GET /api/v1/auth/me`; users without the role get a clear 403.
+
 ## [0.4.1] - 2026-10-25
 
 ### Added

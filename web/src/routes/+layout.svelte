@@ -19,6 +19,9 @@
 			<a class="wordmark" href="/">Cinecat</a>
 		</div>
 		<div class="marquee-tools">
+			{#if data.isAdmin}
+				<a class="account-link" href="/admin/libraries">Bibliotecas</a>
+			{/if}
 			{#if data.hasSession}
 				<a class="account-link" href="/account">Mi cuenta</a>
 			{/if}

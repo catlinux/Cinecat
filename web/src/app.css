@@ -678,11 +678,13 @@ footer {
 	border-radius: 3px;
 	background: var(--boton-fondo);
 	color: var(--boton-texto);
+	font-family: 'Inter', system-ui, sans-serif;
 	font-size: 0.78rem;
 	font-weight: 600;
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
 	text-decoration: none;
+	cursor: pointer;
 }
 
 .button:hover {
@@ -750,6 +752,145 @@ footer {
 
 	.detail-poster {
 		width: min(14rem, 70%);
+	}
+}
+
+.admin {
+	width: min(64rem, 100%);
+}
+
+.admin-head {
+	margin-bottom: 1.6rem;
+}
+
+.admin-head h1 {
+	margin: 0.2rem 0 0.3rem;
+	font-family: 'Fraunces', Georgia, serif;
+	font-size: clamp(2.4rem, 7vw, 4rem);
+	font-weight: 700;
+	line-height: 0.95;
+	color: var(--granate);
+	font-variation-settings:
+		'opsz' 120,
+		'SOFT' 40,
+		'WONK' 1;
+}
+
+.admin-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1.4fr) minmax(18rem, 1fr);
+	gap: 1.5rem;
+	margin-top: 1.5rem;
+	align-items: start;
+}
+
+.admin-card {
+	padding: clamp(1rem, 3vw, 1.75rem);
+	border: 1px solid var(--borde-suave);
+	border-radius: 4px;
+	background: var(--superficie);
+	box-shadow: 0 1rem 2rem -1.6rem var(--sombra);
+}
+
+.admin-card h2 {
+	margin: 0.2rem 0 1rem;
+	font-family: 'Fraunces', Georgia, serif;
+	font-size: 1.5rem;
+	font-weight: 600;
+	color: var(--granate);
+}
+
+.admin-list {
+	display: grid;
+	gap: 0.75rem;
+	margin: 0 0 1rem;
+	padding: 0;
+	list-style: none;
+}
+
+.admin-item {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	padding: 0.75rem 0;
+	border-bottom: 1px dashed var(--borde-suave);
+}
+
+.admin-item:last-child {
+	border-bottom: 0;
+}
+
+.admin-item-name {
+	margin: 0;
+	font-family: 'Fraunces', Georgia, serif;
+	font-size: 1.1rem;
+	font-weight: 600;
+	color: var(--granate);
+}
+
+.admin-item-path {
+	margin: 0.15rem 0 0;
+	font-size: 0.78rem;
+	line-height: 1.4;
+	color: var(--texto-apagado);
+	overflow-wrap: anywhere;
+}
+
+.admin-note {
+	margin: 0.8rem 0 0;
+	font-size: 0.85rem;
+	line-height: 1.5;
+	color: var(--texto-apagado);
+}
+
+.admin-toolbar {
+	margin-top: 1rem;
+}
+
+.button-danger {
+	padding: 0.5rem 0.8rem;
+	border: 1px solid var(--naranja);
+	border-radius: 3px;
+	background: transparent;
+	color: var(--naranja);
+	font-family: 'Inter', system-ui, sans-serif;
+	font-size: 0.7rem;
+	font-weight: 600;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	cursor: pointer;
+}
+
+.button-danger:hover {
+	background: var(--tinte);
+}
+
+.scan-result {
+	margin-top: 1.2rem;
+	padding: 1rem 1.1rem;
+	border-left: 4px solid var(--dorado);
+	border-radius: 2px;
+	background: var(--tinte);
+	color: var(--texto-tenue);
+	font-size: 0.9rem;
+}
+
+.scan-result p {
+	margin: 0;
+	line-height: 1.5;
+}
+
+.scan-result ul {
+	margin: 0.5rem 0 0;
+	padding-left: 1.1rem;
+	font-size: 0.85rem;
+}
+
+@media (max-width: 900px) {
+	.admin-grid {
+		grid-template-columns: 1fr;
 	}
 }
 

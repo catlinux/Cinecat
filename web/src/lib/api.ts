@@ -54,6 +54,11 @@ export interface ScanResult {
 	warnings: string[];
 }
 
+export interface CurrentUserResponse {
+	username: string;
+	role: 'admin' | 'user';
+}
+
 // Error del servidor o de red. status 0 significa que no se pudo contactar.
 export class ApiError extends Error {
 	readonly status: number;
@@ -110,6 +115,26 @@ export class ApiClient {
 			token,
 			empty: true
 		});
+	}
+
+	async getCurrentUser(token: string): Promise<CurrentUserResponse> {
+		return this.get<CurrentUserResponse>('/api/v1/auth/me', token);
+	}
+
+	async listLibraries(token: string): Promise<LibrariesResponse> {
+		return this.get<LibrariesResponse>('/api/v1/libraries', token);
+	}
+
+	async createLibrary(name: string, path: string, token: string): Promise<Library> {
+		return this.post<Library>('/api/v1/libraries', { name, path }, token);
+	}
+
+	async deleteLibrary(id: number, token: string): Promise<void> {
+		await this.delete(`/api/v1/libraries/${id}`, token);
+	}
+
+	async scanLibraries(token: string): Promise<ScanResult> {
+		return this.post<ScanResult>('/api/v1/libraries/scan', undefined, token);
 	}
 
 	async get<T>(path: string, token?: string): Promise<T> {

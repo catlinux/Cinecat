@@ -7,6 +7,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.5.0] - 2026-10-25
+
+### Añadido
+- Panel `/admin/libraries` para usuarios con rol admin: lista las bibliotecas, permite crear una nueva (nombre y ruta), borrarla con confirmación y lanzar el escaneo completo mostrando bibliotecas, archivos, entradas actualizadas y avisos. Enlace «Bibliotecas» en la cabecera solo para administradores, con el rol obtenido de `GET /api/v1/auth/me`; los usuarios sin rol reciben un 403 claro.
+
 ## [0.4.1] - 2026-10-25
 
 ### Añadido
