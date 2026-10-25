@@ -27,7 +27,7 @@ Cada paso es autocontenido. Al completarlo, el ejecutor lo marca `[x]` aquí y a
 - **Versión/CHANGELOG:** `0.2.0-dev.2` — Añadido: inicio de sesión y gestión de sesión del cliente web.
 - **Hecho:** ejecución `20261025-155339-3ad6` (2026-10-25).
 
-## Paso 3 — Biblioteca y fichas
+## [x] Paso 3 — Biblioteca y fichas
 
 - **Archivos:** `web/src/routes/+page.svelte` (biblioteca/inicio), `web/src/routes/items/[id]/+page.svelte` (ficha), `web/src/lib/components/PosterCard.svelte`.
 - **Qué hace:** pantalla de biblioteca con el layout ya prototipado en la maqueta «Marquesina» (hero de «continuar viendo», carruseles de carteles). Como `internal/metadata` (TMDB) todavía no está conectado al servidor, los carteles reales pueden no existir aún: diseña el `PosterCard` para mostrar el cartel si `media_items` llega a tener uno asociado, y un estado de respaldo con el título tipografiado sobre un fondo de color derivado del propio título (no una ilustración SVG fija como la maqueta, que era solo de referencia visual) cuando no hay cartel. Ficha de ítem: título, año, tipo, y botón «Reproducir» que llama a `GET /items/{id}/play` y redirige según el `mode` devuelto (`direct` o `remux`).
@@ -35,6 +35,7 @@ Cada paso es autocontenido. Al completarlo, el ejecutor lo marca `[x]` aquí y a
 - **Ejecutor:** AgentRelay, esfuerzo medio.
 - **Dependencias:** Paso 2.
 - **Versión/CHANGELOG:** `0.2.0-dev.3` — Añadido: pantalla de biblioteca y ficha de ítem.
+- **Hecho:** ejecución `20261025-160624-3455` (2026-10-25).
 
 ## Paso 4 — Reproductor con hls.js
 

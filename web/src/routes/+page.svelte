@@ -1,21 +1,41 @@
-<section class="hero">
-	<p class="kicker">Hoy en la marquesina</p>
-	<h1>Cinecat</h1>
-	<p class="lede">
-		Tu colección de películas y series, ordenada, en casa y sin depender de nadie. La sala abre en la
-		próxima sesión.
-	</p>
+<script lang="ts">
+	import PosterCard from '$lib/components/PosterCard.svelte';
+	import type { PageData } from './$types';
 
-	<div class="ticket">
-		<span>
-			<strong>Entrada general</strong>
-			<small>Sesión continua</small>
-		</span>
-		<span>
-			<strong>Butaca libre</strong>
-			<small>Palomitas aparte</small>
-		</span>
+	let { data }: { data: PageData } = $props();
+</script>
+
+<svelte:head>
+	<title>Biblioteca · Cinecat</title>
+</svelte:head>
+
+<section class="library">
+	<div class="library-head">
+		<p class="kicker">Cartelera</p>
+		<h1>Tu biblioteca</h1>
+		<p class="library-count">
+			{data.total} {data.total === 1 ? 'título en cartel' : 'títulos en cartel'}
+		</p>
 	</div>
 
-	<p class="stamp">Próximamente</p>
+	{#if data.errorMessage}
+		<p class="error" role="alert">{data.errorMessage}</p>
+	{/if}
+
+	{#if data.items.length > 0}
+		<div class="poster-grid">
+			{#each data.items as item (item.id)}
+				<PosterCard {item} />
+			{/each}
+		</div>
+	{:else if !data.errorMessage}
+		<div class="empty-state">
+			<p class="kicker">Sala vacía</p>
+			<h2>Todavía no hay nada en cartel</h2>
+			<p>
+				Crea una biblioteca, lánzala desde el servidor y vuelve a pasar por taquilla. Los carteles
+				aparecerán aquí.
+			</p>
+		</div>
+	{/if}
 </section>

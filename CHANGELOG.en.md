@@ -7,6 +7,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.2.0-dev.3] - 2026-10-25
+
+### Added
+- Library screen on the landing page (grid of `PosterCard` with a typographic fallback poster and a stable colour derived from the title) and item detail page with metadata and a "Play" button leading to a provisional playback route that shows the mode and the signed URL. Protected pages redirect to `/login` without a session.
+
 ## [0.2.0-dev.2] - 2026-10-25
 
 ### Added

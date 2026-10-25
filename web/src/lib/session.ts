@@ -1,3 +1,4 @@
+import { redirect } from '@sveltejs/kit';
 import type { Cookies } from '@sveltejs/kit';
 
 export const SESSION_COOKIE = 'cinecat_session';
@@ -28,6 +29,15 @@ export function getSessionToken(cookies: Cookies): string | null {
 
 export function clearSessionCookie(cookies: Cookies, secure: boolean): void {
 	cookies.delete(SESSION_COOKIE, { path: '/', secure });
+}
+
+// Devuelve el token de la sesión o manda a la página de login. Se usa en las
+// cargas de las páginas protegidas.
+export function requireSessionToken(locals: App.Locals): string {
+	if (!locals.sessionToken) {
+		redirect(303, '/login');
+	}
+	return locals.sessionToken;
 }
 
 function maxAgeFrom(expiresAt: string): number {

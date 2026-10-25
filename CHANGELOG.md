@@ -7,6 +7,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.2.0-dev.3] - 2026-10-25
+
+### Añadido
+- Pantalla de biblioteca en la portada (grid de `PosterCard` con cartel de respaldo tipografiado y color estable derivado del título) y ficha de ítem con metadatos y botón «Reproducir» hacia una ruta de reproducción provisional que muestra el modo y la URL firmada. Las páginas protegidas redirigen a `/login` sin sesión.
+
 ## [0.2.0-dev.2] - 2026-10-25
 
 ### Añadido
