@@ -7,6 +7,13 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.2.0] - 2026-10-25
+
+Cierra la Fase 2: cliente web funcional con inicio de sesión, biblioteca, fichas y reproductor.
+
+### Añadido
+- Modo claro/oscuro/sistema conmutable y persistido en `localStorage`, con aplicación antes del primer pintado para evitar parpadeos. Paleta oscura «Marquesina» coherente con la clara, contraste de texto revisado (≥ 4.5:1), foco visible unificado para enlaces, botones, campos y vídeo, y conmutador accesible en todas las páginas.
+
 ## [0.2.0-dev.4] - 2026-10-25
 
 ### Añadido

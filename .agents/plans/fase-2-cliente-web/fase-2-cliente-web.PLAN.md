@@ -47,7 +47,7 @@ Cada paso es autocontenido. Al completarlo, el ejecutor lo marca `[x]` aquí y a
 - **Versión/CHANGELOG:** `0.2.0-dev.4` — Añadido: reproductor web con hls.js para remux y `<video>` nativo para directa.
 - **Hecho:** ejecución `20261025-161406-ad19` (2026-10-25).
 
-## Paso 5 — Modo claro/oscuro y accesibilidad básica
+## [x] Paso 5 — Modo claro/oscuro y accesibilidad básica
 
 - **Archivos:** `web/src/lib/theme.ts`, hojas de estilo ya creadas en los pasos anteriores.
 - **Qué hace:** variante oscura de la paleta «Marquesina» (coherente con los tonos ya usados en la maqueta: granate/crema con dorado en claro, análogo más oscuro para el modo noche), conmutable y persistida en `localStorage` (uso legítimo de almacenamiento del navegador para preferencia de interfaz, no para datos de sesión). Revisión de contraste de texto (mínimo 4.5:1) y que los controles del reproductor sean operables por teclado.
@@ -55,6 +55,8 @@ Cada paso es autocontenido. Al completarlo, el ejecutor lo marca `[x]` aquí y a
 - **Ejecutor:** AgentRelay, esfuerzo bajo.
 - **Dependencias:** Paso 3.
 - **Versión/CHANGELOG:** `0.2.0` — cierra la Fase 2. Añadido: modo claro/oscuro y accesibilidad básica del cliente web.
+- **Hecho:** ejecución `20261025-195430-724a` (2026-10-25).
+- **Cierre:** con este paso la Fase 2 queda cerrada en la versión `0.2.0`.
 
 ## Fuera de alcance de esta fase (van después, según el roadmap)
 

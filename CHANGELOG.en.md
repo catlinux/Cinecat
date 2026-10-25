@@ -7,6 +7,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-25
+
+Closes Phase 2: functional web client with login, library, item pages and player.
+
+### Added
+- Switchable light/dark/system theme persisted in `localStorage`, applied before first paint to avoid flashes. Dark "Marquesina" palette consistent with the light one, reviewed text contrast (≥ 4.5:1), unified visible focus for links, buttons, fields and video, and an accessible switcher on every page.
+
 ## [0.2.0-dev.4] - 2026-10-25
 
 ### Added

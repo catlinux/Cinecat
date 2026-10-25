@@ -9,6 +9,27 @@
 			name="description"
 			content="Cinecat: tu biblioteca personal de cine y series, con el encanto de las marquesinas de barrio."
 		/>
+		<script>
+			// Aplica el tema antes de pintar para evitar el parpadeo del tema claro.
+			(function () {
+				var stored = null;
+				try {
+					stored = window.localStorage.getItem('cinecat-theme');
+				} catch (error) {
+					stored = null;
+				}
+				var preference = stored === 'light' || stored === 'dark' ? stored : 'system';
+				var prefersDark = false;
+				try {
+					prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+				} catch (error) {
+					prefersDark = false;
+				}
+				var theme = preference === 'dark' || (preference === 'system' && prefersDark) ? 'dark' : 'light';
+				document.documentElement.dataset.theme = theme;
+				document.documentElement.style.colorScheme = theme;
+			})();
+		</script>
 		<link
 			rel="preload"
 			href="/fonts/Fraunces-Variable.ttf"

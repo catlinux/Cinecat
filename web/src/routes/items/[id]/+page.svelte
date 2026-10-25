@@ -35,6 +35,5 @@
 		{/if}
 
 		<a class="button" href={`/items/${item.id}/play`}>Reproducir</a>
-		<p class="detail-note">El reproductor llegará en el siguiente paso.</p>
 	</div>
 </section>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import '../app.css';
+	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import { apiBaseUrl } from '$lib/config';
 
 	let { children } = $props();
@@ -11,8 +12,11 @@
 
 <div class="shell">
 	<header class="marquee">
-		<p class="eyebrow">Cine de barrio · Biblioteca personal</p>
-		<a class="wordmark" href="/">Cinecat</a>
+		<div class="marquee-brand">
+			<p class="eyebrow">Cine de barrio · Biblioteca personal</p>
+			<a class="wordmark" href="/">Cinecat</a>
+		</div>
+		<ThemeToggle />
 	</header>
 
 	<main>
