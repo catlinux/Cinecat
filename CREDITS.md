@@ -4,13 +4,13 @@
 
 Cinecat se apoya en el trabajo de otras personas y proyectos. Aquí se listan **todos** los que han servido de inspiración o de los que se reutilice código, datos o recursos. Esta lista se mantiene al día y se mostrará también en la pantalla «Acerca de» de las apps.
 
-**Estado a 0.0.1:** no se ha copiado ningún código; todo lo de la tabla es **inspiración, referencia o fuente de datos prevista**. Cuando se reutilice código se anotará aquí el origen, la versión o commit, la licencia y los archivos afectados, y se conservarán sus avisos de copyright.
+**Estado a 0.2.0-dev.1:** no se ha copiado código de otros proyectos. Se usan las dependencias y tipografías anotadas en la tabla; de las fuentes se incluyen los archivos OFL junto a los TTF en `web/static/fonts/`. Cuando se reutilice código se anotará aquí el origen, la versión o commit, la licencia y los archivos afectados, y se conservarán sus avisos de copyright.
 
 ## English
 
 Cinecat builds on the work of other people and projects. This list includes **all** projects that have inspired it or whose code, data or resources are reused. It is kept up to date and will also appear on the "About" screen of the apps.
 
-**Status at 0.0.1:** no code has been copied; everything in the table is **inspiration, reference or planned data source**. When code is reused, the origin, version or commit, license and affected files will be recorded here, and their copyright notices preserved.
+**Status at 0.2.0-dev.1:** no code has been copied from other projects. The dependencies and typefaces listed in the table are in use; the OFL files are shipped next to the TTF files in `web/static/fonts/`. When code is reused, the origin, version or commit, license and affected files will be recorded here, and their copyright notices preserved.
 
 ## Tabla / Table
 
@@ -36,6 +36,15 @@ Cinecat builds on the work of other people and projects. This list includes **al
 | [Fanart.tv](https://fanart.tv) | Arte adicional / Extra artwork | Términos de la API / API terms |
 | [modernc.org/sqlite](https://gitlab.com/cznic/sqlite) | Driver SQLite en Go puro usado por el servidor / Pure-Go SQLite driver used by the server | BSD-3-Clause |
 | [golang.org/x/crypto](https://github.com/golang/crypto) | Hash de contraseñas con argon2id / Password hashing with argon2id | BSD-3-Clause |
+| [Fraunces](https://github.com/undercasetype/Fraunces) variable | Tipografía de títulos del cliente web, empaquetada en `web/static/fonts/Fraunces-Variable.ttf` / Web client display typeface, bundled | OFL-1.1 (`web/static/fonts/OFL-Fraunces.txt`) |
+| [Inter](https://github.com/rsms/inter) variable | Tipografía de texto del cliente web, empaquetada en `web/static/fonts/Inter-Variable.ttf` / Web client body typeface, bundled | OFL-1.1 (`web/static/fonts/OFL-Inter.txt`) |
+| [SvelteKit](https://svelte.dev) 2.70.3 | Framework del cliente web / Web client framework | MIT |
+| [Svelte](https://svelte.dev) 5.57.2 | Componentes del cliente web / Web components | MIT |
+| [Vite](https://vite.dev) 7.3.7 | Empaquetador y servidor de desarrollo del cliente web / Bundler and dev server | MIT |
+| [@sveltejs/adapter-node](https://github.com/sveltejs/kit/tree/main/packages/adapter-node) 5.5.7 | Despliegue del cliente web en Node / Node deployment for the web client | MIT |
+| [@sveltejs/vite-plugin-svelte](https://github.com/sveltejs/vite-plugin-svelte) 6.2.4 | Integración de Svelte con Vite / Svelte–Vite integration | MIT |
+| [TypeScript](https://www.typescriptlang.org) 5.9.3 | Lenguaje del cliente web / Web client language | Apache-2.0 |
+| [svelte-check](https://github.com/sveltejs/language-tools) 4.7.7 | Comprobación de tipos de Svelte / Svelte type checking | MIT |
 
 **TMDB:** This product uses the TMDB API but is not endorsed or certified by TMDB.
 

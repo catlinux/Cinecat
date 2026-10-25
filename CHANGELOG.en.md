@@ -7,6 +7,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.2.0-dev.1] - 2026-10-25
+
+### Added
+- Web client skeleton in `web/`: SvelteKit + TypeScript with `@sveltejs/adapter-node`, Fraunces and Inter typefaces bundled locally (OFL-1.1), and the "Marquesina" visual direction on the landing page. The server base URL is configured with `PUBLIC_API_URL` (see `web/.env.example`).
+
 ## [0.1.3] - 2026-10-25
 
 ### Added

@@ -1,0 +1,226 @@
+@font-face {
+	font-family: 'Fraunces';
+	src: url('/fonts/Fraunces-Variable.ttf') format('truetype');
+	font-weight: 100 900;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Inter';
+	src: url('/fonts/Inter-Variable.ttf') format('truetype');
+	font-weight: 100 900;
+	font-style: normal;
+	font-display: swap;
+}
+
+:root {
+	--crema: #f5ead4;
+	--crema-clara: #fdf7ea;
+	--granate: #5a1a1f;
+	--granate-oscuro: #3a1013;
+	--dorado: #c99a2e;
+	--naranja: #d1682f;
+	--tinta: #2b1719;
+	--sombra: rgba(58, 16, 19, 0.18);
+
+	font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+	color: var(--tinta);
+	background-color: var(--crema);
+	font-synthesis: none;
+	text-rendering: optimizeLegibility;
+	-webkit-font-smoothing: antialiased;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	min-height: 100%;
+}
+
+body {
+	min-height: 100vh;
+	background:
+		radial-gradient(circle at 12% 8%, rgba(201, 154, 46, 0.18), transparent 32rem),
+		radial-gradient(circle at 88% 92%, rgba(90, 26, 31, 0.12), transparent 30rem),
+		var(--crema);
+}
+
+a {
+	color: inherit;
+}
+
+.shell {
+	display: flex;
+	flex-direction: column;
+	min-height: 100vh;
+	max-width: 72rem;
+	margin: 0 auto;
+	padding: 1.5rem clamp(1rem, 4vw, 3rem) 2rem;
+}
+
+.marquee {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 0.75rem 2rem;
+	padding: 0.85rem 0;
+	border-top: 4px double var(--granate);
+	border-bottom: 4px double var(--granate);
+}
+
+.eyebrow {
+	margin: 0;
+	font-size: 0.72rem;
+	font-weight: 600;
+	letter-spacing: 0.28em;
+	text-transform: uppercase;
+	color: var(--granate);
+}
+
+.wordmark {
+	font-family: 'Fraunces', Georgia, serif;
+	font-size: 1.6rem;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	color: var(--granate);
+	text-decoration: none;
+}
+
+main {
+	display: grid;
+	flex: 1;
+	place-items: center;
+	padding: clamp(2rem, 8vh, 5rem) 0;
+}
+
+.hero {
+	width: min(46rem, 100%);
+	text-align: center;
+}
+
+.kicker {
+	margin: 0;
+	font-size: 0.75rem;
+	font-weight: 600;
+	letter-spacing: 0.32em;
+	text-transform: uppercase;
+	color: var(--naranja);
+}
+
+.hero h1 {
+	margin: 0.4rem 0 1.2rem;
+	font-family: 'Fraunces', Georgia, serif;
+	font-size: clamp(4rem, 16vw, 9rem);
+	font-weight: 700;
+	line-height: 0.9;
+	letter-spacing: -0.02em;
+	color: var(--granate);
+	font-variation-settings:
+		'opsz' 144,
+		'SOFT' 40,
+		'WONK' 1;
+}
+
+.lede {
+	max-width: 34rem;
+	margin: 0 auto;
+	font-size: clamp(1rem, 2.2vw, 1.2rem);
+	line-height: 1.65;
+	color: #4a2a2b;
+}
+
+.ticket {
+	display: flex;
+	justify-content: space-between;
+	gap: 1rem;
+	width: min(28rem, 100%);
+	margin: 2.4rem auto 0;
+	padding: 1rem 1.4rem;
+	border: 1px dashed var(--dorado);
+	border-radius: 4px;
+	background: linear-gradient(180deg, rgba(253, 247, 234, 0.9), rgba(245, 234, 212, 0.9));
+	box-shadow: 0 1rem 2rem -1.5rem var(--sombra);
+	text-align: left;
+}
+
+.ticket span {
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+}
+
+.ticket strong {
+	font-family: 'Fraunces', Georgia, serif;
+	font-size: 1rem;
+	color: var(--granate);
+}
+
+.ticket small {
+	font-size: 0.72rem;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: #7a514c;
+}
+
+.stamp {
+	display: inline-block;
+	margin-top: 2rem;
+	padding: 0.35rem 0.9rem;
+	border: 2px solid var(--naranja);
+	color: var(--naranja);
+	font-size: 0.7rem;
+	font-weight: 600;
+	letter-spacing: 0.2em;
+	text-transform: uppercase;
+	transform: rotate(-3deg);
+}
+
+footer {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	gap: 0.5rem 1.5rem;
+	padding-top: 1rem;
+	border-top: 1px solid rgba(90, 26, 31, 0.25);
+	font-size: 0.78rem;
+	color: #6b4442;
+}
+
+.server {
+	overflow-wrap: anywhere;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	.hero {
+		animation: rise 0.7s ease-out both;
+	}
+
+	@keyframes rise {
+		from {
+			opacity: 0;
+			transform: translateY(0.75rem);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+}
+
+@media (max-width: 480px) {
+	.marquee {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.35rem;
+	}
+
+	.ticket {
+		flex-direction: column;
+	}
+}

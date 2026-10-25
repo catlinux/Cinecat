@@ -7,6 +7,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.2.0-dev.1] - 2026-10-25
+
+### Añadido
+- Esqueleto del cliente web en `web/`: SvelteKit + TypeScript con `@sveltejs/adapter-node`, tipografías Fraunces e Inter empaquetadas localmente (OFL-1.1) y dirección visual «Marquesina» en la portada. La URL base del servidor se configura con `PUBLIC_API_URL` (ver `web/.env.example`).
+
 ## [0.1.3] - 2026-10-25
 
 ### Añadido

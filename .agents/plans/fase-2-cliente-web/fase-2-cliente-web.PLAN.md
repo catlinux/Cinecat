@@ -8,13 +8,14 @@ Decisiones ya fijadas: **TypeScript + SvelteKit** + hls.js (ver `docs/es/arquite
 
 Cada paso es autocontenido. Al completarlo, el ejecutor lo marca `[x]` aquí y añade su entrada en `CHANGELOG.md`/`CHANGELOG.en.md` y `VERSION`, en el mismo commit. Commits: `tipo: descripción en castellano`.
 
-## Paso 1 — Esqueleto del proyecto SvelteKit
+## [x] Paso 1 — Esqueleto del proyecto SvelteKit
 
 - **Archivos:** nuevo directorio `web/` en la raíz (`web/package.json`, `web/svelte.config.js`, `web/src/app.html`, `web/src/routes/+layout.svelte`, `web/.gitignore` para `node_modules`/`build`).
 - **Qué hace:** inicializa un proyecto SvelteKit en TypeScript (adaptador estático o node, a decidir por el ejecutor según el despliegue previsto en `docs/es/arquitectura.md` — Debian/Docker, detrás de un proxy inverso; documentar la elección), con las fuentes de **Fraunces** e **Inter** servidas localmente (nunca cargadas desde Google Fonts en tiempo de ejecución, para cumplir «sin telemetría ni conexiones salientes» del README) y comprobadas sus licencias (ambas son OFL, verificar en el repositorio real antes de incluirlas, anotar en `CREDITS.md`). Variable de entorno o archivo de configuración para apuntar a la URL base del servidor Cinecat (nunca hardcodeada).
 - **Criterio de terminado:** `npm run build` genera la app sin errores; `npm run dev` arranca y sirve una página con el texto «Cinecat» en la tipografía Fraunces.
 - **Ejecutor:** AgentRelay, esfuerzo bajo.
 - **Versión/CHANGELOG:** `0.2.0-dev.1` — Añadido: esqueleto del cliente web SvelteKit.
+- **Hecho:** ejecución `20261025-153448-d856` (2026-10-25).
 
 ## Paso 2 — Cliente de API y gestión de sesión
 
