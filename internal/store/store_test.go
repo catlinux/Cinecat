@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"io/fs"
 	"path/filepath"
 	"testing"
 )
@@ -81,8 +82,12 @@ func TestMigrateEsIdempotente(t *testing.T) {
 		`SELECT count(*) FROM schema_migrations`).Scan(&applied); err != nil {
 		t.Fatalf("contar migraciones: %v", err)
 	}
-	if applied != 1 {
-		t.Fatalf("migraciones registradas = %d, se esperaba 1", applied)
+	expected, err := fs.Glob(migrations, "migrations/*.sql")
+	if err != nil {
+		t.Fatalf("listar migraciones embebidas: %v", err)
+	}
+	if applied != len(expected) {
+		t.Fatalf("migraciones registradas = %d, se esperaban %d", applied, len(expected))
 	}
 }
 

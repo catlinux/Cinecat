@@ -34,7 +34,7 @@ Convención de commits: `tipo: descripción en castellano` (`feat`, `fix`, `docs
 - **Dependencias:** Paso 2.
 - **Versión/CHANGELOG:** `0.1.0-dev.3` — Añadido: autenticación con argon2id y sesiones de vida corta.
 
-## Paso 4 — Escaneo de biblioteca y análisis de nombres
+## Paso 4 — Escaneo de biblioteca y análisis de nombres [x] hecho (ejecución 20261025-024356-06eb; añadió la migración 0002 con las columnas `season`/`episode` en `media_items`, no prevista en el Paso 2)
 
 - **Archivos:** `internal/library/scanner.go`, `internal/library/nameparser.go`, tests con nombres de archivo variados (incluyendo rutas con caracteres especiales, espacios, `-` inicial — ver riesgo de inyección de argumentos en `docs/es/arquitectura.md` punto 9, aplica también aquí por si se reusa el parser para construir comandos).
 - **Qué hace:** recorre una o más rutas configuradas como `libraries`, detecta archivos de vídeo por extensión, extrae título/año/temporada/episodio del nombre de archivo y carpeta. Decidir aquí (y documentarlo en el propio código, una línea) si se usa una librería de terceros para el análisis de nombres o se escribe propia; si es de terceros, comprobar su licencia exacta antes de añadirla (ver tabla de `CLAUDE.md`: MIT y Apache-2.0 son compatibles, LGPL-3.0 como `guessit` necesita revisión aparte porque es un enlace a biblioteca, no texto copiado — está en Python, así que en Go la alternativa real es escribir el analizador propio).

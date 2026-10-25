@@ -8,6 +8,7 @@ Prioridades: 🔴 bloqueante · 🟠 próxima fase · 🟢 más adelante.
 - 🟠 Activar en GitHub los avisos de seguridad privados (private vulnerability reporting).
 - 🔴 El bloqueo por intentos fallidos de login (`internal/auth`) se indexa por nombre de usuario, no por IP: cualquiera puede bloquear la cuenta de otro usuario legítimo enviando 5 logins fallidos con su `username`. Revisar antes de exponer el servidor a internet (por ejemplo, combinando usuario+IP o añadiendo límite por IP).
 - 🟠 No hay todavía forma de crear usuarios (ni endpoint ni comando); para probar el login hay que insertar el usuario y su hash argon2id directamente en la base de datos.
+- 🟠 No hay todavía endpoints ni CLI para dar de alta bibliotecas (`libraries`) ni para lanzar el escaneo (`internal/library`); el paquete queda listo para conectarlo en el Paso 6 (API) o antes.
 
 ## Riesgos conocidos, aceptados
 - Existe una app Android inactiva desde 2015 llamada «CineCat» (F-Droid, catálogo de cine catalán con datos de la Generalitat; sin registro de marca). Mismo nombre, ámbito distinto. Se mantiene el nombre Cinecat; riesgo de confusión menor, sin acción pendiente.
