@@ -52,7 +52,7 @@ Convención de commits: `tipo: descripción en castellano` (`feat`, `fix`, `docs
 - **Dependencias:** Paso 4.
 - **Versión/CHANGELOG:** `0.1.0-dev.5` — Añadido: cliente de metadatos TMDB con caché y prioridad de idioma.
 
-## Paso 6 — Contrato OpenAPI y API versionada
+## Paso 6 — Contrato OpenAPI y API versionada [x] hecho (ejecución 20261025-051215-6682; sin permisos por rol/biblioteca todavía, metadata sin conectar — ver TODO.md)
 
 - **Archivos:** `api/openapi.yaml`, handlers HTTP bajo `/api/v1/` que implementan el contrato (biblioteca: listar, ficha de un ítem; auth del Paso 3).
 - **Qué hace:** define el contrato primero (OpenAPI 3.x) para los endpoints ya implementados (`/auth/login`, `/auth/logout`, `GET /api/v1/libraries`, `GET /api/v1/items`, `GET /api/v1/items/{id}`) y los handlers que lo cumplen. Versión de la API en la ruta (`/api/v1/`), coherente con `VERSION` del proyecto pero independiente de ella.

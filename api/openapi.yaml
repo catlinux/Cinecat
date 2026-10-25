@@ -1,0 +1,320 @@
+openapi: 3.0.3
+info:
+  title: Cinecat API
+  version: 0.1.0
+  description: |
+    API REST de Cinecat, el servidor de una biblioteca de vídeo personal.
+    Todas las rutas están versionadas bajo `/api/v1/`, de forma independiente
+    de la versión del propio servidor. Los endpoints de biblioteca exigen una
+    sesión válida enviada como `Authorization: Bearer <token>`.
+servers:
+  - url: /
+paths:
+  /api/v1/auth/login:
+    post:
+      summary: Inicia sesión
+      description: |
+        Comprueba usuario y contraseña y devuelve un token de sesión de vida
+        corta. Tras varios intentos fallidos seguidos, responde 429 con un
+        bloqueo temporal.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Sesión creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Petición no válida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Usuario o contraseña incorrectos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Demasiados intentos fallidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/auth/logout:
+    post:
+      summary: Cierra la sesión actual
+      description: Invalida el token enviado en la cabecera `Authorization`.
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Sesión invalidada
+        '401':
+          description: Falta el token de sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/libraries:
+    get:
+      summary: Lista las bibliotecas
+      description: Devuelve todas las bibliotecas dadas de alta, ordenadas por nombre.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Bibliotecas disponibles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LibrariesResponse'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/items:
+    get:
+      summary: Lista los ítems de las bibliotecas
+      description: |
+        Devuelve las entradas de `media_items` con paginación simple. El orden
+        es estable por `id`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          description: Número máximo de ítems a devolver.
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+        - name: offset
+          in: query
+          description: Número de ítems a saltar.
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Página de ítems
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemsResponse'
+        '400':
+          description: Parámetros de paginación no válidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/items/{id}:
+    get:
+      summary: Ficha de un ítem
+      description: Devuelve una entrada de `media_items` por su identificador.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        '200':
+          description: Ítem encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaItem'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No existe un ítem con ese identificador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Mensaje de error para el cliente.
+      additionalProperties: false
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+          format: password
+      additionalProperties: false
+    LoginResponse:
+      type: object
+      required:
+        - token
+        - expires_at
+      properties:
+        token:
+          type: string
+          description: Token de sesión en claro; no se vuelve a poder consultar.
+        expires_at:
+          type: string
+          format: date-time
+      additionalProperties: false
+    Library:
+      type: object
+      required:
+        - id
+        - name
+        - path
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        path:
+          type: string
+      additionalProperties: false
+    LibrariesResponse:
+      type: object
+      required:
+        - libraries
+      properties:
+        libraries:
+          type: array
+          items:
+            $ref: '#/components/schemas/Library'
+      additionalProperties: false
+    MediaItem:
+      type: object
+      required:
+        - id
+        - library_id
+        - path
+        - title
+        - year
+        - kind
+        - season
+        - episode
+        - tmdb_id
+      properties:
+        id:
+          type: integer
+          format: int64
+        library_id:
+          type: integer
+          format: int64
+        path:
+          type: string
+        title:
+          type: string
+        year:
+          type: integer
+          nullable: true
+        kind:
+          type: string
+          enum:
+            - movie
+            - series
+            - episode
+        season:
+          type: integer
+          nullable: true
+        episode:
+          type: integer
+          nullable: true
+        tmdb_id:
+          type: integer
+          format: int64
+          nullable: true
+      additionalProperties: false
+    ItemsResponse:
+      type: object
+      required:
+        - items
+        - total
+        - limit
+        - offset
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MediaItem'
+        total:
+          type: integer
+          format: int64
+        limit:
+          type: integer
+        offset:
+          type: integer
+      additionalProperties: false

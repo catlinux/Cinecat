@@ -11,6 +11,9 @@ Prioridades: 🔴 bloqueante · 🟠 próxima fase · 🟢 más adelante.
 - 🟠 No hay todavía endpoints ni CLI para dar de alta bibliotecas (`libraries`) ni para lanzar el escaneo (`internal/library`); el paquete queda listo para conectarlo en el Paso 6 (API) o antes.
 - 🟠 El cliente de metadatos (`internal/metadata`) solo busca películas (`/search/movie`); falta el endpoint de series/episodios de TMDB para identificar `media_items.kind = 'series'/'episode'`. Tampoco está conectado todavía al escaneo ni al servidor.
 - El TTL de caché de TMDB (7 días, `internal/metadata`) es un valor de partida sin verificar contra los términos vigentes de la API: revisar antes de producción.
+- 🟠 Los endpoints `GET /api/v1/libraries|items` no filtran por rol ni por biblioteca: cualquier usuario autenticado ve todo. La arquitectura prevé permisos por biblioteca (Fase 3+); implementar antes de un uso multiusuario real.
+- `internal/metadata` (TMDB) sigue sin conectarse a los endpoints ni al escaneo; de momento `media_items.tmdb_id` solo se rellena a mano.
+- Pequeña duplicación: `bearerToken()` está repetida en `internal/auth/http.go` e `internal/library/http.go`; se podría extraer a un sitio común cuando haya un tercer consumidor.
 
 ## Riesgos conocidos, aceptados
 - Existe una app Android inactiva desde 2015 llamada «CineCat» (F-Droid, catálogo de cine catalán con datos de la Generalitat; sin registro de marca). Mismo nombre, ámbito distinto. Se mantiene el nombre Cinecat; riesgo de confusión menor, sin acción pendiente.

@@ -15,6 +15,7 @@ import (
 
 	"github.com/catlinux/cinecat/internal/auth"
 	"github.com/catlinux/cinecat/internal/config"
+	"github.com/catlinux/cinecat/internal/library"
 	"github.com/catlinux/cinecat/internal/store"
 )
 
@@ -47,9 +48,12 @@ func main() {
 		log.Fatalf("cinecatd: %v", err)
 	}
 
+	authSvc := auth.New(st.DB())
+	api := library.NewAPI(st.DB(), authSvc)
+
 	srv := &http.Server{
 		Addr:              cfg.ListenAddr,
-		Handler:           newHandler(auth.New(st.DB())),
+		Handler:           newHandler(authSvc, api),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
@@ -59,7 +63,7 @@ func main() {
 	}
 }
 
-func newHandler(authSvc *auth.Service) http.Handler {
+func newHandler(authSvc *auth.Service, api *library.API) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
@@ -69,6 +73,9 @@ func newHandler(authSvc *auth.Service) http.Handler {
 	if authSvc != nil {
 		mux.Handle("POST /api/v1/auth/login", authSvc.LoginHandler())
 		mux.Handle("POST /api/v1/auth/logout", authSvc.LogoutHandler())
+	}
+	if api != nil {
+		api.Register(mux)
 	}
 	return mux
 }
