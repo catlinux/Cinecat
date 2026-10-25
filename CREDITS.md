@@ -35,6 +35,7 @@ Cinecat builds on the work of other people and projects. This list includes **al
 | [TheTVDB](https://thetvdb.com) | Metadatos de series (complemento) / Series metadata (supplement) | Términos de la API / API terms |
 | [Fanart.tv](https://fanart.tv) | Arte adicional / Extra artwork | Términos de la API / API terms |
 | [modernc.org/sqlite](https://gitlab.com/cznic/sqlite) | Driver SQLite en Go puro usado por el servidor / Pure-Go SQLite driver used by the server | BSD-3-Clause |
+| [golang.org/x/crypto](https://github.com/golang/crypto) | Hash de contraseñas con argon2id / Password hashing with argon2id | BSD-3-Clause |
 
 **TMDB:** This product uses the TMDB API but is not endorsed or certified by TMDB.
 

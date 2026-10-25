@@ -17,22 +17,28 @@ import (
 // Variables de entorno reconocidas. Las claves de API y demás secretos se
 // pasan por aquí o por el archivo de configuración local, nunca por el código.
 const (
-	EnvConfigFile = "CINECAT_CONFIG"
-	EnvListenAddr = "CINECAT_LISTEN_ADDR"
+	EnvConfigFile   = "CINECAT_CONFIG"
+	EnvListenAddr   = "CINECAT_LISTEN_ADDR"
+	EnvDatabasePath = "CINECAT_DB_PATH"
 )
 
-// DefaultListenAddr es la dirección de escucha cuando no se configura otra.
-const DefaultListenAddr = ":8080"
+// Valores por defecto cuando no se configura otra cosa.
+const (
+	DefaultListenAddr   = ":8080"
+	DefaultDatabasePath = "cinecat.db"
+)
 
 // Config agrupa los ajustes de arranque del servidor.
 type Config struct {
 	// ListenAddr es la dirección y puerto donde escucha el servidor HTTP.
 	ListenAddr string `json:"listen_addr"`
+	// DatabasePath es el archivo SQLite con la base de datos.
+	DatabasePath string `json:"database_path"`
 }
 
 // Default devuelve la configuración por defecto.
 func Default() Config {
-	return Config{ListenAddr: DefaultListenAddr}
+	return Config{ListenAddr: DefaultListenAddr, DatabasePath: DefaultDatabasePath}
 }
 
 // Load construye la configuración a partir de los valores por defecto, del
@@ -53,6 +59,9 @@ func Load(configPath string) (Config, error) {
 
 	if v := strings.TrimSpace(os.Getenv(EnvListenAddr)); v != "" {
 		cfg.ListenAddr = v
+	}
+	if v := strings.TrimSpace(os.Getenv(EnvDatabasePath)); v != "" {
+		cfg.DatabasePath = v
 	}
 
 	if err := cfg.validate(); err != nil {
@@ -77,12 +86,18 @@ func (c *Config) mergeFile(path string) error {
 	if file.ListenAddr != "" {
 		c.ListenAddr = file.ListenAddr
 	}
+	if file.DatabasePath != "" {
+		c.DatabasePath = file.DatabasePath
+	}
 	return nil
 }
 
 func (c Config) validate() error {
 	if strings.TrimSpace(c.ListenAddr) == "" {
 		return errors.New("config: listen_addr no puede estar vacío")
+	}
+	if strings.TrimSpace(c.DatabasePath) == "" {
+		return errors.New("config: database_path no puede estar vacío")
 	}
 	return nil
 }

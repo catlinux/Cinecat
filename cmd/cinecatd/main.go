@@ -2,6 +2,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -12,7 +13,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/catlinux/cinecat/internal/auth"
 	"github.com/catlinux/cinecat/internal/config"
+	"github.com/catlinux/cinecat/internal/store"
 )
 
 // version se puede fijar en tiempo de compilación con
@@ -34,9 +37,19 @@ func main() {
 		log.Fatalf("cinecatd: %v", err)
 	}
 
+	ctx := context.Background()
+	st, err := store.Open(ctx, cfg.DatabasePath)
+	if err != nil {
+		log.Fatalf("cinecatd: %v", err)
+	}
+	defer st.Close()
+	if err := st.Migrate(ctx); err != nil {
+		log.Fatalf("cinecatd: %v", err)
+	}
+
 	srv := &http.Server{
 		Addr:              cfg.ListenAddr,
-		Handler:           newHandler(),
+		Handler:           newHandler(auth.New(st.DB())),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
@@ -46,13 +59,17 @@ func main() {
 	}
 }
 
-func newHandler() http.Handler {
+func newHandler(authSvc *auth.Service) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintln(w, "ok")
 	})
+	if authSvc != nil {
+		mux.Handle("POST /api/v1/auth/login", authSvc.LoginHandler())
+		mux.Handle("POST /api/v1/auth/logout", authSvc.LogoutHandler())
+	}
 	return mux
 }
 

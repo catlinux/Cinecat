@@ -25,7 +25,7 @@ Convención de commits: `tipo: descripción en castellano` (`feat`, `fix`, `docs
 - **Dependencias:** Paso 1.
 - **Versión/CHANGELOG:** `0.1.0-dev.2` — Añadido: esquema de base de datos y migraciones iniciales.
 
-## Paso 3 — Usuarios, contraseñas y sesiones
+## Paso 3 — Usuarios, contraseñas y sesiones [x] hecho (ejecución 20261025-023620-a67a; riesgo pendiente: bloqueo por usuario, no por IP — ver TODO.md)
 
 - **Archivos:** `internal/auth/auth.go`, `internal/auth/auth_test.go`, endpoints HTTP `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`.
 - **Qué hace:** hash de contraseña con argon2id (librería `golang.org/x/crypto/argon2`, BSD-3-Clause, compatible), generación de tokens de sesión aleatorios de vida corta (p. ej. 24h, renovables), invalidación en logout, límite de intentos fallidos con bloqueo temporal (ver `docs/es/arquitectura.md`, punto 3). Sin PIN todavía (es para perfiles, Fase 2).
