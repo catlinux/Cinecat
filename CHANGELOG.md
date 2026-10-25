@@ -7,6 +7,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.3.4] - 2026-10-25
+
+### Cambiado
+- `docs/es/despliegue.md`/`docs/en/deployment.md` y `.env.deploy.example` explican cómo dar de alta varias bibliotecas (p. ej. películas y series) cuando `CINECAT_MEDIA_PATH` apunta a un disco o carpeta que las contiene a todas como subcarpetas, en vez de asumir una sola biblioteca en la raíz montada.
+
 ## [0.3.3] - 2026-10-25
 
 ### Añadido

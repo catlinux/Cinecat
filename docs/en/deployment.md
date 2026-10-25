@@ -18,7 +18,7 @@ cd Cinecat
 cp .env.deploy.example .env
 ```
 
-Edit `.env` and set at least `CINECAT_MEDIA_PATH` (the real path to your library). The `CINECAT_API_PORT`/`CINECAT_WEB_PORT` ports (8080/8081 by default) only need changing if you already use them for something else on that Debian box.
+Edit `.env` and set at least `CINECAT_MEDIA_PATH` (the real path to the disk or folder containing your libraries, e.g. `/media` if that's where the disk with `Multimedia/Pelis` and `Multimedia/Series` inside it is mounted). The `CINECAT_API_PORT`/`CINECAT_WEB_PORT` ports (8080/8081 by default) only need changing if you already use them for something else on that Debian box.
 
 ```sh
 docker compose up -d --build
@@ -54,11 +54,18 @@ RequestHeader set X-Forwarded-Proto "https"
 
 then reload Apache (`sudo systemctl reload apache2`). If you skip this, the session cookie won't be marked `Secure` over HTTPS.
 
-Open `https://video.warcrafted.com/`. Log in as `admin`, create a library pointing to `/media` (the container-internal path: Docker maps it to `CINECAT_MEDIA_PATH` for you) and trigger a scan from the interface itself or with:
+Open `https://video.warcrafted.com/`. Log in as `admin` and create a library for each real folder inside `CINECAT_MEDIA_PATH` (Docker mounts it as `/media` inside the container). For example, with `Multimedia/Pelis` and `Multimedia/Series` inside the mounted disk:
+
+- "Películas" library → path `/media/Multimedia/Pelis`
+- "Series" library → path `/media/Multimedia/Series`
+
+Trigger a scan for each one from the interface itself, or with:
 
 ```sh
 curl -X POST https://video.warcrafted.com/api/v1/libraries/scan -H "Authorization: Bearer <your token>"
 ```
+
+(the scan walks every registered library in a single call, no need to repeat it per library).
 
 ## Applying a new version
 

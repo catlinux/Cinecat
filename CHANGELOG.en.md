@@ -7,6 +7,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.3.4] - 2026-10-25
+
+### Changed
+- `docs/es/despliegue.md`/`docs/en/deployment.md` and `.env.deploy.example` explain how to register several libraries (e.g. movies and series) when `CINECAT_MEDIA_PATH` points to a disk or folder that contains all of them as subfolders, instead of assuming a single library at the mounted root.
+
 ## [0.3.3] - 2026-10-25
 
 ### Added
