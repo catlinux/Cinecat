@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/catlinux/cinecat/internal/metadata"
 )
 
 // videoExtensions son las extensiones que se consideran vídeo.
@@ -23,12 +25,21 @@ func IsVideoFile(name string) bool {
 
 // Scanner recorre las bibliotecas dadas de alta y puebla media_items.
 type Scanner struct {
-	db *sql.DB
+	db   *sql.DB
+	omdb *metadata.OMDbClient
 }
 
 // New crea un escáner sobre la base de datos indicada.
 func New(db *sql.DB) *Scanner {
 	return &Scanner{db: db}
+}
+
+// WithOMDb activa la consulta de metadatos de OMDb para películas. Si no se
+// llama, el escáner se comporta exactamente como antes y no hace peticiones
+// externas.
+func (s *Scanner) WithOMDb(client *metadata.OMDbClient) *Scanner {
+	s.omdb = client
+	return s
 }
 
 // Result resume un escaneo. Warnings recoge rutas ilegibles o bibliotecas
@@ -136,12 +147,57 @@ func (s *Scanner) scanLibrary(ctx context.Context, libraryID int64, root string,
 		}
 		res.Files++
 		res.Upserted++
+
+		if s.omdb != nil && media.Kind == KindMovie {
+			s.enrichMovie(ctx, libraryID, path, media, res)
+		}
 		return nil
 	})
 	if err != nil {
 		return fmt.Errorf("library: escanear %q: %w", root, err)
 	}
 	return nil
+}
+
+// enrichMovie busca sinopsis y cartel en OMDb solo si el ítem todavía no los
+// tiene. Los fallos de metadatos se acumulan como avisos, nunca abortan el
+// escaneo.
+func (s *Scanner) enrichMovie(ctx context.Context, libraryID int64, path string, media Media, res *Result) {
+	if s.omdb == nil {
+		return
+	}
+
+	var overview, poster sql.NullString
+	if err := s.db.QueryRowContext(ctx,
+		`SELECT overview, poster_url FROM media_items WHERE library_id = ? AND path = ?`,
+		libraryID, path,
+	).Scan(&overview, &poster); err != nil {
+		res.Warnings = append(res.Warnings, fmt.Sprintf("%s: no se pudo comprobar los metadatos: %v", path, err))
+		return
+	}
+	if strings.TrimSpace(overview.String) != "" || strings.TrimSpace(poster.String) != "" {
+		return
+	}
+
+	result, err := s.omdb.Search(ctx, media.Title, media.Year)
+	if err != nil {
+		res.Warnings = append(res.Warnings, fmt.Sprintf("%s: %v", path, err))
+		return
+	}
+
+	var overviewValue, posterValue any
+	if strings.TrimSpace(result.Plot) != "" {
+		overviewValue = result.Plot
+	}
+	if strings.TrimSpace(result.PosterURL) != "" {
+		posterValue = result.PosterURL
+	}
+	if _, err := s.db.ExecContext(ctx,
+		`UPDATE media_items SET overview = ?, poster_url = ? WHERE library_id = ? AND path = ?`,
+		overviewValue, posterValue, libraryID, path,
+	); err != nil {
+		res.Warnings = append(res.Warnings, fmt.Sprintf("%s: no se pudieron guardar los metadatos: %v", path, err))
+	}
 }
 
 func upsertMediaItem(ctx context.Context, db *sql.DB, libraryID int64, path string, media Media) error {

@@ -31,7 +31,8 @@ Cinecat builds on the work of other people and projects. This list includes **al
 | [hunch](https://docs.rs/crate/hunch/latest) | Alternativa en Rust para el mismo fin / Rust alternative for the same purpose | MIT |
 | [guessit](https://github.com/guessit-io/guessit) | Alternativa para identificar nombres / Alternative for name parsing | LGPL-3.0 |
 | [Intro Skipper](https://github.com/intro-skipper) | Idea: detección de intros por audio / Idea: audio-based intro detection | GPL-3.0 |
-| [TMDB](https://www.themoviedb.org) | Metadatos e imágenes (fuente principal) / Metadata and images (main source) | Términos de uso de la API / API terms of use |
+| [TMDB](https://www.themoviedb.org) | Metadatos e imágenes (cliente preparado, sin conectar) / Metadata and images (client prepared, not wired) | Términos de uso de la API / API terms of use |
+| [OMDb API](https://www.omdbapi.com) | Metadatos de películas: sinopsis y URL de cartel / Movie metadata: plot and poster URL | Términos de uso de la API; datos derivados de IMDb, restringidos a uso personal y no comercial / API terms of use; data derived from IMDb, restricted to personal, non-commercial use |
 | [TheTVDB](https://thetvdb.com) | Metadatos de series (complemento) / Series metadata (supplement) | Términos de la API / API terms |
 | [Fanart.tv](https://fanart.tv) | Arte adicional / Extra artwork | Términos de la API / API terms |
 | [modernc.org/sqlite](https://gitlab.com/cznic/sqlite) | Driver SQLite en Go puro usado por el servidor / Pure-Go SQLite driver used by the server | BSD-3-Clause |

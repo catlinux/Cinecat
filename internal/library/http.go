@@ -99,15 +99,17 @@ type librariesResponse struct {
 }
 
 type mediaItemDTO struct {
-	ID        int64  `json:"id"`
-	LibraryID int64  `json:"library_id"`
-	Path      string `json:"path"`
-	Title     string `json:"title"`
-	Year      *int   `json:"year"`
-	Kind      string `json:"kind"`
-	Season    *int   `json:"season"`
-	Episode   *int   `json:"episode"`
-	TMDBID    *int64 `json:"tmdb_id"`
+	ID        int64   `json:"id"`
+	LibraryID int64   `json:"library_id"`
+	Path      string  `json:"path"`
+	Title     string  `json:"title"`
+	Year      *int    `json:"year"`
+	Kind      string  `json:"kind"`
+	Season    *int    `json:"season"`
+	Episode   *int    `json:"episode"`
+	TMDBID    *int64  `json:"tmdb_id"`
+	Overview  *string `json:"overview"`
+	PosterURL *string `json:"poster_url"`
 }
 
 type itemsResponse struct {
@@ -289,7 +291,7 @@ func (a *API) handleItems(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows, err := a.db.QueryContext(r.Context(), `
-		SELECT id, library_id, path, title, year, kind, season, episode, tmdb_id
+		SELECT id, library_id, path, title, year, kind, season, episode, tmdb_id, overview, poster_url
 		  FROM media_items
 		 ORDER BY id
 		 LIMIT ? OFFSET ?`, limit, offset)
@@ -332,7 +334,7 @@ func (a *API) handleItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	row := a.db.QueryRowContext(r.Context(), `
-		SELECT id, library_id, path, title, year, kind, season, episode, tmdb_id
+		SELECT id, library_id, path, title, year, kind, season, episode, tmdb_id, overview, poster_url
 		  FROM media_items
 		 WHERE id = ?`, id)
 
@@ -351,10 +353,11 @@ func (a *API) handleItem(w http.ResponseWriter, r *http.Request) {
 func scanItem(scan func(dest ...any) error) (mediaItemDTO, error) {
 	var item mediaItemDTO
 	var year, season, episode, tmdbID sql.NullInt64
+	var overview, posterURL sql.NullString
 
 	err := scan(
 		&item.ID, &item.LibraryID, &item.Path, &item.Title, &year, &item.Kind,
-		&season, &episode, &tmdbID,
+		&season, &episode, &tmdbID, &overview, &posterURL,
 	)
 	if err != nil {
 		return mediaItemDTO{}, err
@@ -367,7 +370,17 @@ func scanItem(scan func(dest ...any) error) (mediaItemDTO, error) {
 		value := tmdbID.Int64
 		item.TMDBID = &value
 	}
+	item.Overview = stringPointer(overview)
+	item.PosterURL = stringPointer(posterURL)
 	return item, nil
+}
+
+func stringPointer(v sql.NullString) *string {
+	if !v.Valid || strings.TrimSpace(v.String) == "" {
+		return nil
+	}
+	value := v.String
+	return &value
 }
 
 func intPointer(v sql.NullInt64) *int {

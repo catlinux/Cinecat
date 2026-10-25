@@ -10,6 +10,7 @@ func TestLoadDefaults(t *testing.T) {
 	t.Setenv(EnvConfigFile, "")
 	t.Setenv(EnvListenAddr, "")
 	t.Setenv(EnvTMDBAPIKey, "")
+	t.Setenv(EnvOMDbAPIKey, "")
 
 	cfg, err := Load("")
 	if err != nil {
@@ -20,6 +21,9 @@ func TestLoadDefaults(t *testing.T) {
 	}
 	if cfg.TMDBAPIKey != "" {
 		t.Fatalf("TMDBAPIKey = %q, se esperaba vacía por defecto", cfg.TMDBAPIKey)
+	}
+	if cfg.OMDbAPIKey != "" {
+		t.Fatalf("OMDbAPIKey = %q, se esperaba vacía por defecto", cfg.OMDbAPIKey)
 	}
 }
 
@@ -70,6 +74,31 @@ func TestLoadClaveTMDB(t *testing.T) {
 	}
 	if cfg.TMDBAPIKey != "desde-entorno" {
 		t.Fatalf("TMDBAPIKey = %q, se esperaba la del entorno", cfg.TMDBAPIKey)
+	}
+}
+
+func TestLoadClaveOMDb(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	if err := os.WriteFile(path, []byte(`{"omdb_api_key":"desde-archivo"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv(EnvOMDbAPIKey, "")
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.OMDbAPIKey != "desde-archivo" {
+		t.Fatalf("OMDbAPIKey = %q, se esperaba la del archivo", cfg.OMDbAPIKey)
+	}
+
+	t.Setenv(EnvOMDbAPIKey, "desde-entorno")
+	cfg, err = Load(path)
+	if err != nil {
+		t.Fatalf("Load con entorno: %v", err)
+	}
+	if cfg.OMDbAPIKey != "desde-entorno" {
+		t.Fatalf("OMDbAPIKey = %q, se esperaba la del entorno", cfg.OMDbAPIKey)
 	}
 }
 

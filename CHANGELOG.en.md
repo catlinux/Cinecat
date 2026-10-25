@@ -7,6 +7,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-25
+
+### Added
+- OMDb metadata for movies during scanning (`CINECAT_OMDB_API_KEY`): plot and poster URL, with an on-disk search cache, avoiding repeat queries for items that already have data and for series/episodes. Exposed as `overview` and `poster_url` in `GET /api/v1/items` and `GET /api/v1/items/{id}`. OMDb misses or failures are reported as scan warnings.
+
 ## [0.5.0] - 2026-10-25
 
 ### Added

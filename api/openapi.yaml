@@ -734,6 +734,12 @@ components:
           type: integer
           format: int64
           nullable: true
+        overview:
+          type: string
+          nullable: true
+        poster_url:
+          type: string
+          nullable: true
       additionalProperties: false
     ItemsResponse:
       type: object

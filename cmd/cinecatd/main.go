@@ -16,6 +16,7 @@ import (
 	"github.com/catlinux/cinecat/internal/auth"
 	"github.com/catlinux/cinecat/internal/config"
 	"github.com/catlinux/cinecat/internal/library"
+	"github.com/catlinux/cinecat/internal/metadata"
 	"github.com/catlinux/cinecat/internal/playback"
 	"github.com/catlinux/cinecat/internal/store"
 )
@@ -80,7 +81,18 @@ func main() {
 		log.Fatalf("cinecatd: %v", err)
 	}
 	defer playSvc.Close()
-	api := library.NewAPI(st.DB(), authSvc, playSvc, library.New(st.DB()))
+
+	scanner := library.New(st.DB())
+	if cfg.OMDbAPIKey != "" {
+		omdb, err := metadata.NewOMDbClient(metadata.OMDbOptions{APIKey: cfg.OMDbAPIKey})
+		if err != nil {
+			log.Printf("cinecatd: metadatos de OMDb desactivados: %v", err)
+		} else {
+			scanner = scanner.WithOMDb(omdb)
+		}
+	}
+
+	api := library.NewAPI(st.DB(), authSvc, playSvc, scanner)
 
 	srv := &http.Server{
 		Addr:              cfg.ListenAddr,

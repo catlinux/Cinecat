@@ -7,6 +7,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.6.0] - 2026-10-25
+
+### Añadido
+- Metadatos de OMDb para películas durante el escaneo (`CINECAT_OMDB_API_KEY`): sinopsis y URL del cartel, con caché en disco de las búsquedas, sin repetir consultas para ítems que ya tienen datos ni para series/episodios. Se exponen como `overview` y `poster_url` en `GET /api/v1/items` y `GET /api/v1/items/{id}`. Los fallos o ausencias de OMDb quedan como avisos del escaneo.
+
 ## [0.5.0] - 2026-10-25
 
 ### Añadido
