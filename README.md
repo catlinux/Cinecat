@@ -43,6 +43,7 @@ Maqueta de referencia: [artboard "Marquesina" en Claude](https://claude.ai/artif
 | Metadatos | [metadatos](docs/es/metadatos.md) | [metadata](docs/en/metadata.md) |
 | Licencias y créditos | [licencias-y-creditos](docs/es/licencias-y-creditos.md) | [licenses-and-credits](docs/en/licenses-and-credits.md) |
 | Hoja de ruta | [hoja-de-ruta](docs/es/hoja-de-ruta.md) | [roadmap](docs/en/roadmap.md) |
+| Despliegue con Docker | [despliegue](docs/es/despliegue.md) | [deployment](docs/en/deployment.md) |
 
 Otros: [CHANGELOG](CHANGELOG.md) · [TODO](TODO.md) · [Cómo contribuir](CONTRIBUTING.md) · [Seguridad](SECURITY.md) · [Créditos](CREDITS.md) · [Autores](AUTHORS)
 

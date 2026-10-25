@@ -7,6 +7,9 @@ const config = {
 	kit: {
 		// El cliente web se sirve desde un proceso Node detrás del proxy inverso
 		// (Debian/Docker), igual que el servidor: no es una app estática.
+		// La variable de entorno PROTOCOL_HEADER (ver docker-compose.yml) hace
+		// que el servidor Node generado lea X-Forwarded-Proto de Caddy, para
+		// que las cookies Secure se fijen bien aunque Node solo vea HTTP.
 		adapter: adapter()
 	}
 };

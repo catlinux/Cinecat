@@ -17,8 +17,8 @@ Prioridades: 🔴 bloqueante · 🟠 próxima fase · 🟢 más adelante.
 - 🔴 El remux a HLS (`internal/playback`) nunca se ha probado con FFmpeg real: el equipo de desarrollo usado en la Fase 1 no tiene FFmpeg instalado y esos tests se saltaron siempre con `t.Skip()`. Ejecutar la suite completa en una máquina con FFmpeg antes de confiar en la reproducción de `.mkv`/`.avi`/`.mov`/`.ts`/`.m2ts`.
 - 🟠 El remux se genera completo y de forma síncrona en la primera petición de la playlist: un archivo largo tarda en empezar a reproducirse. La segmentación bajo demanda queda para más adelante.
 - 🟠 El remux copia solo vídeo y audio; los subtítulos se descartan (se abordarán en la Fase 3, según el diseño de reproducción).
-- 🟠 El cliente web (`web/`) decide la cookie `Secure` según `event.url.protocol`; detrás de un proxy inverso que termina TLS (despliegue previsto en Debian/Docker), hay que configurar `PROTOCOL_HEADER` (por ejemplo a `x-forwarded-proto`) en `@sveltejs/adapter-node` para que `event.url` refleje HTTPS real. Revisar al escribir la guía de despliegue.
-- 🟠 El reproductor web usa hls.js para el remux, que descarga la playlist y los segmentos por XHR directamente contra `PUBLIC_API_URL`; si el cliente web y el servidor Cinecat no comparten origen (dominios/puertos distintos), el servidor necesitará cabeceras CORS, que hoy no envía. Revisar al escribir la guía de despliegue (servir ambos tras el mismo proxy evita el problema).
+- El cliente web (`web/`) decide la cookie `Secure` según `event.url.protocol`; el despliegue Docker (`docker-compose.yml`, ver [despliegue](docs/es/despliegue.md)) ya pasa `PROTOCOL_HEADER=x-forwarded-proto` al contenedor `web` para que funcione detrás de Caddy. Resuelto para este despliegue; revisar si algún día se sirve sin ese proxy.
+- El reproductor web usa hls.js para el remux, que descarga la playlist y los segmentos por XHR contra `PUBLIC_API_URL`; el despliegue Docker evita el problema de CORS sirviendo servidor y cliente bajo el mismo origen (Caddy enruta `/api/*` al servidor Go y el resto al cliente web, con `PUBLIC_API_URL` vacío). El servidor Go sigue sin enviar cabeceras CORS: si algún día se despliega sin ese proxy unificando el origen, habrá que añadirlas.
 
 ## Riesgos conocidos, aceptados
 - Existe una app Android inactiva desde 2015 llamada «CineCat» (F-Droid, catálogo de cine catalán con datos de la Generalitat; sin registro de marca). Mismo nombre, ámbito distinto. Se mantiene el nombre Cinecat; riesgo de confusión menor, sin acción pendiente.
@@ -36,7 +36,7 @@ Prioridades: 🔴 bloqueante · 🟠 próxima fase · 🟢 más adelante.
 ## Documentación
 - 🟠 Guía de usuario y glosario «para tontos» cuando exista algo que probar.
 - 🟠 Código de conducta.
-- 🟢 Capturas de pantalla y guía de despliegue con Docker.
+- 🟢 Capturas de pantalla del cliente web.
 
 ## Mantenimiento de documentos
 - Mantener sincronizadas las versiones en español e inglés de cada documento.

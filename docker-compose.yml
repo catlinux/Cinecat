@@ -1,0 +1,45 @@
+services:
+  servidor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    volumes:
+      - cinecat_data:/data
+      - ${CINECAT_MEDIA_PATH}:/media:ro
+    environment:
+      CINECAT_DB_PATH: /data/cinecat.db
+      CINECAT_TMDB_API_KEY: ${CINECAT_TMDB_API_KEY:-}
+      CINECAT_ADMIN_PASSWORD: ${CINECAT_ADMIN_PASSWORD:-}
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      PUBLIC_API_URL: ""
+      PROTOCOL_HEADER: x-forwarded-proto
+    depends_on:
+      - servidor
+
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      CINECAT_DOMAIN: ${CINECAT_DOMAIN:-:80}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - servidor
+      - web
+
+volumes:
+  cinecat_data:
+  caddy_data:
+  caddy_config:

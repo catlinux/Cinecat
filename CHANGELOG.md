@@ -7,6 +7,16 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.3.0] - 2026-10-25
+
+### Añadido
+- Despliegue con Docker Compose: `Dockerfile` del servidor Go (con FFmpeg instalado en la imagen), `web/Dockerfile` del cliente web, `docker-compose.yml` con Caddy como proxy único delante de ambos (mismo origen, sin necesidad de CORS), script `scripts/actualizar.sh` para aplicar versiones nuevas sin perder datos, y guía de despliegue en `docs/es/despliegue.md`.
+- Soporte de `CINECAT_ADMIN_PASSWORD` documentado en el flujo de despliegue para fijar la contraseña del administrador en el primer arranque sin depender del log.
+- Versión real incrustada en el binario del servidor en el `Dockerfile` (antes mostraba «desconocida» en un binario compilado sin `-ldflags`).
+
+### Cambiado
+- `docker-compose.yml` pasa `PROTOCOL_HEADER=x-forwarded-proto` al contenedor del cliente web (variable que ya soporta `@sveltejs/adapter-node`), de forma que la cookie de sesión se marca `Secure` correctamente detrás de Caddy.
+
 ## [0.2.0] - 2026-10-25
 
 Cierra la Fase 2: cliente web funcional con inicio de sesión, biblioteca, fichas y reproductor.

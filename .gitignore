@@ -1,6 +1,7 @@
 # Creado por AgentRelay para no confirmar secretos en el repositorio.
 .env
 .env.*
+!.env.*.example
 *.pem
 *.key
 *.p12
