@@ -43,7 +43,7 @@ Convención de commits: `tipo: descripción en castellano` (`feat`, `fix`, `docs
 - **Dependencias:** Paso 2.
 - **Versión/CHANGELOG:** `0.1.0-dev.4` — Añadido: escaneo de biblioteca y análisis de nombres de archivo.
 
-## Paso 5 — Cliente de metadatos TMDB (es-ES)
+## Paso 5 — Cliente de metadatos TMDB (es-ES) [x] hecho (ejecución 20261025-050001-246c; solo /search/movie, sin conectar al servidor todavía — ver TODO.md)
 
 - **Archivos:** `internal/metadata/tmdb.go`, `internal/metadata/tmdb_test.go` (con un servidor HTTP de prueba simulando la API, nunca llamadas reales en los tests).
 - **Qué hace:** busca por título/año en `es-ES`, pide carteles en varios idiomas a la vez y aplica la prioridad `es-ES → español genérico → inglés → sin idioma` (ver `docs/es/metadatos.md`), cachea resultados e imágenes en disco respetando el límite de conservación de TMDB (revisar los términos vigentes antes de implementar el TTL de caché — si hay duda, parar y preguntar, no inventar un plazo). La clave de API se lee de configuración (Paso 1), nunca en el repositorio.

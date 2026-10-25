@@ -20,6 +20,7 @@ const (
 	EnvConfigFile   = "CINECAT_CONFIG"
 	EnvListenAddr   = "CINECAT_LISTEN_ADDR"
 	EnvDatabasePath = "CINECAT_DB_PATH"
+	EnvTMDBAPIKey   = "CINECAT_TMDB_API_KEY"
 )
 
 // Valores por defecto cuando no se configura otra cosa.
@@ -34,6 +35,9 @@ type Config struct {
 	ListenAddr string `json:"listen_addr"`
 	// DatabasePath es el archivo SQLite con la base de datos.
 	DatabasePath string `json:"database_path"`
+	// TMDBAPIKey es la clave de la API de TMDB; se lee de fuera del
+	// repositorio y no se valida aquí porque es opcional hasta que se use.
+	TMDBAPIKey string `json:"tmdb_api_key,omitempty"`
 }
 
 // Default devuelve la configuración por defecto.
@@ -63,6 +67,9 @@ func Load(configPath string) (Config, error) {
 	if v := strings.TrimSpace(os.Getenv(EnvDatabasePath)); v != "" {
 		cfg.DatabasePath = v
 	}
+	if v := strings.TrimSpace(os.Getenv(EnvTMDBAPIKey)); v != "" {
+		cfg.TMDBAPIKey = v
+	}
 
 	if err := cfg.validate(); err != nil {
 		return Config{}, err
@@ -88,6 +95,9 @@ func (c *Config) mergeFile(path string) error {
 	}
 	if file.DatabasePath != "" {
 		c.DatabasePath = file.DatabasePath
+	}
+	if file.TMDBAPIKey != "" {
+		c.TMDBAPIKey = file.TMDBAPIKey
 	}
 	return nil
 }
