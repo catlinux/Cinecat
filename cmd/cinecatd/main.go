@@ -26,11 +26,21 @@ var version string
 
 func main() {
 	showVersion := flag.Bool("version", false, "imprime la versión y sale")
+	hashPassword := flag.String("hash-password", "", "genera el hash argon2id de la contraseña indicada y sale (uso: actualizar password_hash a mano)")
 	configPath := flag.String("config", "", "ruta al archivo de configuración (fuera del repositorio)")
 	flag.Parse()
 
 	if *showVersion {
 		fmt.Println(applicationVersion())
+		return
+	}
+
+	if *hashPassword != "" {
+		hash, err := auth.HashPassword(*hashPassword)
+		if err != nil {
+			log.Fatalf("cinecatd: %v", err)
+		}
+		fmt.Println(hash)
 		return
 	}
 

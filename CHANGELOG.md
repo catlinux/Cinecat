@@ -7,6 +7,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.3.3] - 2026-10-25
+
+### Añadido
+- Flag `cinecatd --hash-password <contraseña>`: genera el hash argon2id en formato PHC y lo imprime, para fijar manualmente `password_hash` en la base de datos (p. ej. con `sqlite3` dentro del contenedor) mientras no existe todavía un endpoint ni pantalla para cambiar la contraseña desde la interfaz.
+
 ## [0.3.2] - 2026-10-25
 
 ### Corregido

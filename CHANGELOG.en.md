@@ -7,6 +7,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-10-25
+
+### Added
+- `cinecatd --hash-password <password>` flag: prints the argon2id hash in PHC format, to manually set `password_hash` in the database (e.g. with `sqlite3` inside the container) while there's still no endpoint or screen to change the password from the interface.
+
 ## [0.3.2] - 2026-10-25
 
 ### Fixed
