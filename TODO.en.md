@@ -18,6 +18,7 @@ Priorities: 🔴 blocking · 🟠 next phase · 🟢 later.
 - 🟠 The remux is generated fully and synchronously on the first playlist request: a long file takes a while to start playing. On-demand segmentation is left for later.
 - 🟠 The remux only copies video and audio; subtitles are dropped (to be addressed in Phase 3, per the playback design).
 - 🟠 The web client (`web/`) decides the `Secure` cookie flag from `event.url.protocol`; behind a reverse proxy terminating TLS (the planned Debian/Docker deployment), `PROTOCOL_HEADER` (e.g. to `x-forwarded-proto`) must be configured in `@sveltejs/adapter-node` so `event.url` reflects real HTTPS. Revisit when writing the deployment guide.
+- 🟠 The web player uses hls.js for remux, which fetches the playlist and segments via XHR directly against `PUBLIC_API_URL`; if the web client and the Cinecat server don't share an origin (different domains/ports), the server will need CORS headers, which it doesn't send today. Revisit when writing the deployment guide (serving both behind the same proxy avoids the issue).
 
 ## Known, accepted risks
 - There is an inactive Android app from 2015 called "CineCat" (F-Droid, Catalan film catalog using Generalitat open data; no trademark registration). Same name, different scope. Keeping the name Cinecat; minor confusion risk, no action pending.

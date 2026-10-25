@@ -7,6 +7,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.2.0-dev.4] - 2026-10-25
+
+### Added
+- Real web player on the playback route: native `<video>` with controls for `mode: "direct"` and hls.js 1.7.3 (Apache-2.0) for `mode: "remux"`, with native HLS on Safari/iOS, a clear message when the browser cannot play HLS, `hls.destroy()` cleanup on unmount, and dark cinema styling around the video.
+
 ## [0.2.0-dev.3] - 2026-10-25
 
 ### Added

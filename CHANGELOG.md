@@ -7,6 +7,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.2.0-dev.4] - 2026-10-25
+
+### Añadido
+- Reproductor web real en la ruta de reproducción: `<video>` nativo con controles para `mode: "direct"` y hls.js 1.7.3 (Apache-2.0) para `mode: "remux"`, con HLS nativo en Safari/iOS, mensaje claro si el navegador no soporta HLS, limpieza de `hls.destroy()` al salir y estilos de sala oscura alrededor del vídeo.
+
 ## [0.2.0-dev.3] - 2026-10-25
 
 ### Añadido

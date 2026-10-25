@@ -37,7 +37,7 @@ Cada paso es autocontenido. Al completarlo, el ejecutor lo marca `[x]` aquí y a
 - **Versión/CHANGELOG:** `0.2.0-dev.3` — Añadido: pantalla de biblioteca y ficha de ítem.
 - **Hecho:** ejecución `20261025-160624-3455` (2026-10-25).
 
-## Paso 4 — Reproductor con hls.js
+## [x] Paso 4 — Reproductor con hls.js
 
 - **Archivos:** `web/src/lib/components/Player.svelte`, `web/src/routes/items/[id]/play/+page.svelte`.
 - **Qué hace:** reproductor que usa el elemento `<video>` nativo para `mode: "direct"` y hls.js para `mode: "remux"` (comprobando antes `Hls.isSupported()`; en Safari/iOS, que soportan HLS nativo, usa el `<video>` directo con la URL de la playlist). Controles básicos: play/pausa, barra de progreso, volumen, pantalla completa. Guarda la posición de reproducción llamando a una actualización periódica (si no existe aún el endpoint para `playback_state`, el ejecutor debe señalarlo como incidencia y dejarlo para un paso posterior, sin bloquear el resto).
@@ -45,6 +45,7 @@ Cada paso es autocontenido. Al completarlo, el ejecutor lo marca `[x]` aquí y a
 - **Ejecutor:** AgentRelay, esfuerzo medio.
 - **Dependencias:** Paso 3.
 - **Versión/CHANGELOG:** `0.2.0-dev.4` — Añadido: reproductor web con hls.js para remux y `<video>` nativo para directa.
+- **Hecho:** ejecución `20261025-161406-ad19` (2026-10-25).
 
 ## Paso 5 — Modo claro/oscuro y accesibilidad básica
 

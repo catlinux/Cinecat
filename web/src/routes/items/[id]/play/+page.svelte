@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Player from '$lib/components/Player.svelte';
 	import { formatExpiry } from '$lib/media';
 	import type { PageData } from './$types';
 
@@ -15,20 +16,15 @@
 
 <a class="back" href={`/items/${data.item.id}`}>← Volver a la ficha</a>
 
-<section class="play-placeholder">
-	<p class="kicker">Sesión preparada</p>
+<section class="play-page">
+	<p class="kicker">{modeLabel}</p>
 	<h1>{data.item.title}</h1>
 
-	{#if data.play}
-		<p class="detail-meta">{modeLabel} · Enlace válido hasta {formatExpiry(data.play.expires_at)}</p>
-		<p class="detail-note">
-			El reproductor se añadirá en el siguiente paso. Mientras tanto, este es el enlace firmado y de
-			vida corta que ha devuelto el servidor:
-		</p>
-		<code class="play-url">{data.playUrl}</code>
-		<a class="button" href={data.playUrl ?? '#'} target="_blank" rel="noreferrer">
-			Abrir URL firmada
-		</a>
+	{#if data.play && data.playUrl}
+		<p class="detail-meta">Enlace válido hasta {formatExpiry(data.play.expires_at)}</p>
+		<div class="player-stage">
+			<Player src={data.playUrl} mode={data.play.mode} title={data.item.title} />
+		</div>
 	{:else}
 		<p class="error" role="alert">{data.playError}</p>
 	{/if}

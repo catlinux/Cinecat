@@ -23,7 +23,7 @@ Cinecat builds on the work of other people and projects. This list includes **al
 | [Streamyfin](https://github.com/streamyfin/streamyfin) | Candidato a reutilización de código / Candidate for code reuse | MPL-2.0 |
 | [Media3 / ExoPlayer](https://github.com/androidx/media) | Reproductor de Android / Android player | Apache-2.0 |
 | [mpv](https://mpv.io) / libmpv | Reproductor alternativo en Android / Alternative Android player | por verificar según compilación / to verify per build |
-| [hls.js](https://github.com/video-dev/hls.js) | Reproducción HLS en navegador / HLS playback in browsers | Apache-2.0 |
+| [hls.js](https://github.com/video-dev/hls.js) 1.7.3 | Reproducción HLS en el reproductor web (en uso) / HLS playback in the web player (in use) | Apache-2.0 |
 | [Shaka Player](https://github.com/shaka-project/shaka-player) | Alternativa para navegador / Browser alternative | Apache-2.0 |
 | [Vidstack](https://vidstack.io) | Interfaz del reproductor web / Web player UI | MIT |
 | [FFmpeg](https://ffmpeg.org) | Herramienta externa de conversión (no se distribuye en el repositorio) / External conversion tool (not distributed in the repository) | LGPL/GPL según compilación / depending on build |
