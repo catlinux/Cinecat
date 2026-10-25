@@ -105,7 +105,7 @@ func newTestServer(t *testing.T) *testServer {
 		}
 	})
 
-	server := httptest.NewServer(newHandler(authSvc, library.NewAPI(st.DB(), authSvc, playSvc)))
+	server := httptest.NewServer(newHandler(authSvc, library.NewAPI(st.DB(), authSvc, playSvc, library.New(st.DB()))))
 	t.Cleanup(server.Close)
 
 	return &testServer{Server: server, db: st.DB(), clock: clock}
@@ -434,6 +434,84 @@ func TestBorrarBibliotecaInexistente(t *testing.T) {
 	status, body := doJSON(t, http.MethodDelete, server.URL+"/api/v1/libraries/999999", token, nil)
 	if status != http.StatusNotFound {
 		t.Fatalf("código = %d, se esperaba 404; cuerpo = %s", status, body)
+	}
+}
+
+func TestScanBibliotecasAdmin(t *testing.T) {
+	server := newTestServer(t)
+	createTestUser(t, server.db, "ana", "Clave-segura-1")
+	token := loginToken(t, server.URL, "ana", "Clave-segura-1")
+
+	libDir := t.TempDir()
+	for _, name := range []string{"Pelicula (1999).mkv", "Otra.mp4", "notas.txt"} {
+		if err := os.WriteFile(filepath.Join(libDir, name), []byte("x"), 0o644); err != nil {
+			t.Fatalf("crear archivo: %v", err)
+		}
+	}
+
+	status, body := doJSON(t, http.MethodPost, server.URL+"/api/v1/libraries", token,
+		map[string]string{"name": "Peliculas", "path": libDir})
+	if status != http.StatusCreated {
+		t.Fatalf("crear biblioteca: código = %d, cuerpo = %s", status, body)
+	}
+
+	status, body = doJSON(t, http.MethodPost, server.URL+"/api/v1/libraries/scan", token, nil)
+	if status != http.StatusOK {
+		t.Fatalf("scan: código = %d, cuerpo = %s", status, body)
+	}
+	var result struct {
+		Libraries int      `json:"libraries"`
+		Files     int      `json:"files"`
+		Upserted  int      `json:"upserted"`
+		Warnings  []string `json:"warnings"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		t.Fatalf("respuesta de scan: %v", err)
+	}
+	if result.Libraries != 1 || result.Files != 2 || result.Upserted != 2 {
+		t.Fatalf("resultado de scan inesperado: %+v", result)
+	}
+	if len(result.Warnings) != 0 {
+		t.Fatalf("avisos inesperados: %v", result.Warnings)
+	}
+
+	var items int
+	if err := server.db.QueryRow(`SELECT count(*) FROM media_items`).Scan(&items); err != nil {
+		t.Fatalf("contar ítems: %v", err)
+	}
+	if items != 2 {
+		t.Fatalf("media_items = %d, se esperaban 2", items)
+	}
+
+	// Un segundo escaneo no duplica entradas.
+	if status, body := doJSON(t, http.MethodPost, server.URL+"/api/v1/libraries/scan", token, nil); status != http.StatusOK {
+		t.Fatalf("segundo scan: código = %d, cuerpo = %s", status, body)
+	}
+	if err := server.db.QueryRow(`SELECT count(*) FROM media_items`).Scan(&items); err != nil {
+		t.Fatalf("contar ítems tras el segundo scan: %v", err)
+	}
+	if items != 2 {
+		t.Fatalf("tras el segundo scan hay %d ítems, se esperaban 2", items)
+	}
+}
+
+func TestScanBibliotecasNonAdmin(t *testing.T) {
+	server := newTestServer(t)
+	createTestUserWithRole(t, server.db, "ana", "Clave-segura-1", "user")
+	token := loginToken(t, server.URL, "ana", "Clave-segura-1")
+
+	status, body := doJSON(t, http.MethodPost, server.URL+"/api/v1/libraries/scan", token, nil)
+	if status != http.StatusForbidden {
+		t.Fatalf("código = %d, se esperaba 403; cuerpo = %s", status, body)
+	}
+}
+
+func TestScanBibliotecasSinSesion(t *testing.T) {
+	server := newTestServer(t)
+
+	status, body := doJSON(t, http.MethodPost, server.URL+"/api/v1/libraries/scan", "", nil)
+	if status != http.StatusUnauthorized {
+		t.Fatalf("código = %d, se esperaba 401; cuerpo = %s", status, body)
 	}
 }
 

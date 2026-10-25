@@ -8,7 +8,7 @@ Priorities: 🔴 blocking · 🟠 next phase · 🟢 later.
 - 🟠 Enable private vulnerability reporting on GitHub.
 - 🔴 The login failed-attempt lockout (`internal/auth`) is keyed by username, not IP: anyone can lock out another legitimate user's account by sending 5 failed logins with their `username`. Review before exposing the server to the internet (e.g. combine username+IP or add a per-IP limit).
 - 🟠 There is no way yet to create users (no endpoint or command); testing login requires inserting the user and their argon2id hash directly into the database.
-- 🟠 There are no endpoints or CLI yet to register libraries (`libraries`) or to trigger a scan (`internal/library`); the package is ready to be wired up in Step 6 (API) or earlier.
+- 🟠 The API scan (`POST /api/v1/libraries/scan`) is synchronous: with large libraries the request can take a long time. The asynchronous version with progress is still pending.
 - 🟠 The metadata client (`internal/metadata`) only searches movies (`/search/movie`); the TMDB series/episode endpoint is still missing to identify `media_items.kind = 'series'/'episode'`. Also not yet wired into the scanner or the server.
 - The TMDB cache TTL (7 days, `internal/metadata`) is a starting value not checked against the API's current terms: review before production.
 - 🟠 The `GET /api/v1/libraries|items` endpoints do not filter by role or by library: any authenticated user sees everything. The architecture plans per-library permissions (Phase 3+); implement before real multi-user use.

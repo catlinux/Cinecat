@@ -28,17 +28,21 @@ type API struct {
 	db       *sql.DB
 	auth     *auth.Service
 	playback *playback.Service
+	scanner  *Scanner
 }
 
 // NewAPI crea los handlers de la API de biblioteca.
-func NewAPI(db *sql.DB, authSvc *auth.Service, playSvc *playback.Service) *API {
-	return &API{db: db, auth: authSvc, playback: playSvc}
+func NewAPI(db *sql.DB, authSvc *auth.Service, playSvc *playback.Service, scanner *Scanner) *API {
+	return &API{db: db, auth: authSvc, playback: playSvc, scanner: scanner}
 }
 
 // Register monta los endpoints versionados en el mux indicado.
 func (a *API) Register(mux *http.ServeMux) {
 	mux.Handle("GET /api/v1/libraries", a.requireSession(a.handleLibraries))
 	mux.Handle("POST /api/v1/libraries", a.requireAdmin(a.handleCreateLibrary))
+	if a.scanner != nil {
+		mux.Handle("POST /api/v1/libraries/scan", a.requireAdmin(a.handleScanLibraries))
+	}
 	mux.Handle("DELETE /api/v1/libraries/{id}", a.requireAdmin(a.handleDeleteLibrary))
 	mux.Handle("GET /api/v1/items", a.requireSession(a.handleItems))
 	mux.Handle("GET /api/v1/items/{id}", a.requireSession(a.handleItem))
@@ -233,6 +237,33 @@ func (a *API) handleDeleteLibrary(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+type scanResponse struct {
+	Libraries int      `json:"libraries"`
+	Files     int      `json:"files"`
+	Upserted  int      `json:"upserted"`
+	Warnings  []string `json:"warnings"`
+}
+
+func (a *API) handleScanLibraries(w http.ResponseWriter, r *http.Request) {
+	result, err := a.scanner.Scan(r.Context())
+	if err != nil {
+		log.Printf("library: escanear bibliotecas: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
+
+	warnings := result.Warnings
+	if warnings == nil {
+		warnings = []string{}
+	}
+	writeJSON(w, http.StatusOK, scanResponse{
+		Libraries: result.Libraries,
+		Files:     result.Files,
+		Upserted:  result.Upserted,
+		Warnings:  warnings,
+	})
 }
 
 func decodeJSONBody(w http.ResponseWriter, r *http.Request, dst any) error {

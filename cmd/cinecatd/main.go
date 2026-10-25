@@ -70,7 +70,7 @@ func main() {
 		log.Fatalf("cinecatd: %v", err)
 	}
 	defer playSvc.Close()
-	api := library.NewAPI(st.DB(), authSvc, playSvc)
+	api := library.NewAPI(st.DB(), authSvc, playSvc, library.New(st.DB()))
 
 	srv := &http.Server{
 		Addr:              cfg.ListenAddr,

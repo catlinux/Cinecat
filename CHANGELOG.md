@@ -7,6 +7,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.1.3] - 2026-10-25
+
+### Añadido
+- `POST /api/v1/libraries/scan`, restringido a administradores: dispara un escaneo síncrono de todas las bibliotecas y devuelve el número de bibliotecas recorridas, archivos encontrados y entradas actualizadas, junto con los avisos de rutas ilegibles.
+
 ## [0.1.2] - 2026-10-25
 
 ### Añadido

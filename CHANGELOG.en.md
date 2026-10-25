@@ -7,6 +7,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-10-25
+
+### Added
+- `POST /api/v1/libraries/scan`, restricted to administrators: triggers a synchronous scan of all libraries and returns the number of libraries walked, files found and entries updated, along with warnings for unreadable paths.
+
 ## [0.1.2] - 2026-10-25
 
 ### Added

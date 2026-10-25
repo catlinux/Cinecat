@@ -23,7 +23,7 @@ Cada paso es autocontenido. Al completarlo, el ejecutor lo marca `[x]` aquí y a
 - **Dependencias:** Paso A (para poder probar con un admin real).
 - **Versión/CHANGELOG:** parche — Añadido: `POST`/`DELETE /api/v1/libraries`, con comprobación de rol admin.
 
-## Paso C — Disparar un escaneo por API
+## [x] Paso C — Disparar un escaneo por API
 
 - **Archivos:** `internal/library/http.go`, `api/openapi.yaml`, `cmd/cinecatd/main.go` (inyectar `library.Scanner` en `library.API`, como ya se hizo con `playback.Service`).
 - **Qué hace:** añade `POST /api/v1/libraries/scan` (admin únicamente) que ejecuta `Scanner.Scan(ctx)` de forma síncrona y devuelve el `Result` (bibliotecas, archivos, advertencias) como JSON. Si tarda mucho con bibliotecas grandes es un problema conocido y aceptado para esta versión (documentarlo en TODO.md); la versión asíncrona con progreso queda para más adelante.
@@ -31,6 +31,7 @@ Cada paso es autocontenido. Al completarlo, el ejecutor lo marca `[x]` aquí y a
 - **Ejecutor:** AgentRelay, esfuerzo bajo.
 - **Dependencias:** Pasos A y B.
 - **Versión/CHANGELOG:** parche — Añadido: `POST /api/v1/libraries/scan`.
+- **Hecho:** ejecución `20261025-151558-6923` (2026-10-25).
 
 ## Al cerrar
 

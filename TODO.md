@@ -8,7 +8,7 @@ Prioridades: 🔴 bloqueante · 🟠 próxima fase · 🟢 más adelante.
 - 🟠 Activar en GitHub los avisos de seguridad privados (private vulnerability reporting).
 - 🔴 El bloqueo por intentos fallidos de login (`internal/auth`) se indexa por nombre de usuario, no por IP: cualquiera puede bloquear la cuenta de otro usuario legítimo enviando 5 logins fallidos con su `username`. Revisar antes de exponer el servidor a internet (por ejemplo, combinando usuario+IP o añadiendo límite por IP).
 - 🟠 No hay todavía forma de crear usuarios (ni endpoint ni comando); para probar el login hay que insertar el usuario y su hash argon2id directamente en la base de datos.
-- 🟠 No hay todavía endpoints ni CLI para dar de alta bibliotecas (`libraries`) ni para lanzar el escaneo (`internal/library`); el paquete queda listo para conectarlo en el Paso 6 (API) o antes.
+- 🟠 El escaneo por API (`POST /api/v1/libraries/scan`) es síncrono: con bibliotecas grandes la petición puede tardar mucho. La versión asíncrona con progreso queda pendiente.
 - 🟠 El cliente de metadatos (`internal/metadata`) solo busca películas (`/search/movie`); falta el endpoint de series/episodios de TMDB para identificar `media_items.kind = 'series'/'episode'`. Tampoco está conectado todavía al escaneo ni al servidor.
 - El TTL de caché de TMDB (7 días, `internal/metadata`) es un valor de partida sin verificar contra los términos vigentes de la API: revisar antes de producción.
 - 🟠 Los endpoints `GET /api/v1/libraries|items` no filtran por rol ni por biblioteca: cualquier usuario autenticado ve todo. La arquitectura prevé permisos por biblioteca (Fase 3+); implementar antes de un uso multiusuario real.
