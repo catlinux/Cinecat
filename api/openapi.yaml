@@ -190,11 +190,192 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/items/{id}/play:
+    get:
+      summary: Prepara la reproducción de un ítem
+      description: |
+        Elige entre reproducción directa (el contenedor se puede servir tal
+        cual) y remux a HLS fMP4 (sin recodificar), y devuelve una URL firmada
+        de vida corta. La URL apunta a `/api/v1/stream/...` y no requiere la
+        cabecera de sesión: la autorización es la propia firma.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        '200':
+          description: URL de reproducción preparada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayResponse'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No existe el ítem o el archivo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '415':
+          description: Contenedor no soportado para reproducción
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: FFmpeg no está disponible para el remux
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/stream/{id}:
+    get:
+      summary: Sirve el archivo directo o la playlist remux
+      description: |
+        Endpoint de las URLs firmadas. Con modo directo sirve el archivo con
+        soporte de rangos HTTP; con modo remux sirve la playlist HLS. Una firma
+        ausente, manipulada o caducada se rechaza con 403.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/StreamId'
+        - $ref: '#/components/parameters/SignatureExp'
+        - $ref: '#/components/parameters/Signature'
+      responses:
+        '200':
+          description: Archivo o playlist
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+            application/vnd.apple.mpegurl:
+              schema:
+                type: string
+        '206':
+          description: Parte del archivo directo (petición con Range)
+        '403':
+          description: Firma no válida o URL caducada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No existe el ítem o el archivo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: FFmpeg no está disponible para el remux
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/stream/{id}/{file}:
+    get:
+      summary: Sirve la playlist, el init o un segmento del remux
+      description: |
+        Archivos del remux HLS fMP4: `playlist.m3u8`, `init.mp4` o
+        `segment_XXXXX.m4s`. La playlist que se entrega lleva la firma en las
+        URLs de sus segmentos.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/StreamId'
+        - name: file
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/SignatureExp'
+        - $ref: '#/components/parameters/Signature'
+      responses:
+        '200':
+          description: Archivo del remux
+          content:
+            application/vnd.apple.mpegurl:
+              schema:
+                type: string
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '403':
+          description: Firma no válida o URL caducada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Nombre de archivo no válido o inexistente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: FFmpeg no está disponible para el remux
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
+  parameters:
+    StreamId:
+      name: id
+      in: path
+      required: true
+      description: Identificador del ítem.
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+    SignatureExp:
+      name: exp
+      in: query
+      required: true
+      description: Caducidad de la URL, en segundos desde la época Unix.
+      schema:
+        type: integer
+        format: int64
+    Signature:
+      name: sig
+      in: query
+      required: true
+      description: Firma HMAC-SHA256 del ítem y la caducidad.
+      schema:
+        type: string
   schemas:
     Error:
       type: object
@@ -317,4 +498,25 @@ components:
           type: integer
         offset:
           type: integer
+      additionalProperties: false
+    PlayResponse:
+      type: object
+      required:
+        - url
+        - mode
+        - expires_at
+      properties:
+        url:
+          type: string
+          description: |
+            URL relativa firmada. Para modo directo apunta al archivo; para
+            remux, a la playlist HLS.
+        mode:
+          type: string
+          enum:
+            - direct
+            - remux
+        expires_at:
+          type: string
+          format: date-time
       additionalProperties: false

@@ -14,6 +14,9 @@ Prioridades: 🔴 bloqueante · 🟠 próxima fase · 🟢 más adelante.
 - 🟠 Los endpoints `GET /api/v1/libraries|items` no filtran por rol ni por biblioteca: cualquier usuario autenticado ve todo. La arquitectura prevé permisos por biblioteca (Fase 3+); implementar antes de un uso multiusuario real.
 - `internal/metadata` (TMDB) sigue sin conectarse a los endpoints ni al escaneo; de momento `media_items.tmdb_id` solo se rellena a mano.
 - Pequeña duplicación: `bearerToken()` está repetida en `internal/auth/http.go` e `internal/library/http.go`; se podría extraer a un sitio común cuando haya un tercer consumidor.
+- 🔴 El remux a HLS (`internal/playback`) nunca se ha probado con FFmpeg real: el equipo de desarrollo usado en la Fase 1 no tiene FFmpeg instalado y esos tests se saltaron siempre con `t.Skip()`. Ejecutar la suite completa en una máquina con FFmpeg antes de confiar en la reproducción de `.mkv`/`.avi`/`.mov`/`.ts`/`.m2ts`.
+- 🟠 El remux se genera completo y de forma síncrona en la primera petición de la playlist: un archivo largo tarda en empezar a reproducirse. La segmentación bajo demanda queda para más adelante.
+- 🟠 El remux copia solo vídeo y audio; los subtítulos se descartan (se abordarán en la Fase 3, según el diseño de reproducción).
 
 ## Riesgos conocidos, aceptados
 - Existe una app Android inactiva desde 2015 llamada «CineCat» (F-Droid, catálogo de cine catalán con datos de la Generalitat; sin registro de marca). Mismo nombre, ámbito distinto. Se mantiene el nombre Cinecat; riesgo de confusión menor, sin acción pendiente.

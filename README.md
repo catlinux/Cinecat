@@ -4,7 +4,7 @@
 
 **Idiomas / Languages:** Español · [English](README.en.md)
 
-**Estado:** fase de diseño. Versión `0.0.5` (solo documentación, todavía no hay código).
+**Estado:** servidor mínimo funcional (Fase 1 completa), sin clientes todavía. Versión `0.1.0`.
 
 ---
 

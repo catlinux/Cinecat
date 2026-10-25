@@ -6,13 +6,21 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/catlinux/cinecat/internal/auth"
 	"github.com/catlinux/cinecat/internal/library"
+	"github.com/catlinux/cinecat/internal/playback"
 	"github.com/catlinux/cinecat/internal/store"
 )
 
@@ -40,7 +48,29 @@ func TestHealthzRechazaOtrosMetodos(t *testing.T) {
 
 type testServer struct {
 	*httptest.Server
-	db *sql.DB
+	db    *sql.DB
+	clock *fakeClock
+}
+
+type fakeClock struct {
+	mu  sync.Mutex
+	now time.Time
+}
+
+func newFakeClock() *fakeClock {
+	return &fakeClock{now: time.Date(2026, time.January, 1, 12, 0, 0, 0, time.UTC)}
+}
+
+func (c *fakeClock) Now() time.Time {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.now
+}
+
+func (c *fakeClock) Advance(d time.Duration) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.now = c.now.Add(d)
 }
 
 func newTestServer(t *testing.T) *testServer {
@@ -61,10 +91,24 @@ func newTestServer(t *testing.T) *testServer {
 	}
 
 	authSvc := auth.New(st.DB())
-	server := httptest.NewServer(newHandler(authSvc, library.NewAPI(st.DB(), authSvc)))
+	clock := newFakeClock()
+	playSvc, err := playback.New(playback.Options{
+		WorkDir: filepath.Join(t.TempDir(), "hls"),
+		Now:     clock.Now,
+	})
+	if err != nil {
+		t.Fatalf("playback.New: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := playSvc.Close(); err != nil {
+			t.Errorf("playback.Close: %v", err)
+		}
+	})
+
+	server := httptest.NewServer(newHandler(authSvc, library.NewAPI(st.DB(), authSvc, playSvc)))
 	t.Cleanup(server.Close)
 
-	return &testServer{Server: server, db: st.DB()}
+	return &testServer{Server: server, db: st.DB(), clock: clock}
 }
 
 func execSQL(t *testing.T, db *sql.DB, query string, args ...any) int64 {
@@ -354,5 +398,230 @@ func TestLogoutInvalidaLaSesionEnLaAPI(t *testing.T) {
 
 	if status := getJSON(t, server.URL+"/api/v1/libraries", token, nil); status != http.StatusUnauthorized {
 		t.Fatalf("tras logout: código = %d, se esperaba 401", status)
+	}
+}
+
+// --- Reproducción ---
+
+func requireFFmpeg(t *testing.T) string {
+	t.Helper()
+	ffmpeg, err := exec.LookPath("ffmpeg")
+	if err != nil {
+		t.Skip("ffmpeg no está disponible en PATH; se omite esta prueba de reproducción")
+	}
+	return ffmpeg
+}
+
+func generateLibraryVideo(t *testing.T, ext string) (libDir, file string) {
+	t.Helper()
+	ffmpeg := requireFFmpeg(t)
+
+	codec := []string{"-c:v", "mpeg4", "-q:v", "5"}
+	if out, err := exec.Command(ffmpeg, "-hide_banner", "-loglevel", "error", "-encoders").Output(); err == nil &&
+		strings.Contains(string(out), "libx264") {
+		codec = []string{"-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p"}
+	}
+
+	libDir = t.TempDir()
+	file = filepath.Join(libDir, "Prueba"+ext)
+	args := []string{
+		"-hide_banner", "-loglevel", "error", "-y",
+		"-f", "lavfi", "-i", "testsrc=duration=1:size=160x120:rate=10",
+	}
+	args = append(args, codec...)
+	args = append(args, "-an", file)
+
+	cmd := exec.Command(ffmpeg, args...)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("ffmpeg: %v: %s", err, out)
+	}
+	return libDir, file
+}
+
+func insertMediaFile(t *testing.T, db *sql.DB, libDir, file, title string) int64 {
+	t.Helper()
+	libraryID := execSQL(t, db, `INSERT INTO libraries (path, name) VALUES (?, ?)`, libDir, "Pruebas")
+	return execSQL(t, db, `
+		INSERT INTO media_items (library_id, path, title, kind) VALUES (?, ?, ?, ?)`,
+		libraryID, file, title, "movie")
+}
+
+type playInfo struct {
+	URL       string     `json:"url"`
+	Mode      string     `json:"mode"`
+	ExpiresAt *time.Time `json:"expires_at"`
+}
+
+func requestPlay(t *testing.T, serverURL string, id int64, token string) playInfo {
+	t.Helper()
+	var info playInfo
+	status := getJSON(t, fmt.Sprintf("%s/api/v1/items/%d/play", serverURL, id), token, &info)
+	if status != http.StatusOK {
+		t.Fatalf("play: código = %d, se esperaba 200", status)
+	}
+	if info.URL == "" || info.Mode == "" || info.ExpiresAt == nil {
+		t.Fatalf("respuesta de play incompleta: %+v", info)
+	}
+	return info
+}
+
+func getRaw(t *testing.T, rawURL string, headers map[string]string) (*http.Response, []byte) {
+	t.Helper()
+	req, err := http.NewRequest(http.MethodGet, rawURL, nil)
+	if err != nil {
+		t.Fatalf("nueva petición: %v", err)
+	}
+	for key, value := range headers {
+		req.Header.Set(key, value)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("GET %s: %v", rawURL, err)
+	}
+	defer resp.Body.Close()
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("leer respuesta de %s: %v", rawURL, err)
+	}
+	return resp, data
+}
+
+func TestReproduccionDirectaMP4(t *testing.T) {
+	libDir, file := generateLibraryVideo(t, ".mp4")
+	server := newTestServer(t)
+	createTestUser(t, server.db, "ana", "Clave-segura-1")
+	token := loginToken(t, server.URL, "ana", "Clave-segura-1")
+	id := insertMediaFile(t, server.db, libDir, file, "Prueba")
+
+	info := requestPlay(t, server.URL, id, token)
+	if info.Mode != "direct" {
+		t.Fatalf("modo = %q, se esperaba direct", info.Mode)
+	}
+	if strings.Contains(info.URL, "playlist") {
+		t.Fatalf("la URL directa no debe apuntar a una playlist: %q", info.URL)
+	}
+
+	resp, data := getRaw(t, server.URL+info.URL, nil)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("stream directo: código = %d", resp.StatusCode)
+	}
+	want, err := os.ReadFile(file)
+	if err != nil {
+		t.Fatalf("leer el archivo de prueba: %v", err)
+	}
+	if !bytes.Equal(data, want) {
+		t.Fatalf("el cuerpo servido (%d bytes) no coincide con el archivo (%d bytes)", len(data), len(want))
+	}
+
+	resp, part := getRaw(t, server.URL+info.URL, map[string]string{"Range": "bytes=0-9"})
+	if resp.StatusCode != http.StatusPartialContent {
+		t.Fatalf("petición con Range: código = %d, se esperaba 206", resp.StatusCode)
+	}
+	if len(part) != 10 || resp.Header.Get("Content-Range") == "" {
+		t.Fatalf("rango inesperado: %d bytes, Content-Range = %q", len(part), resp.Header.Get("Content-Range"))
+	}
+}
+
+func TestRemuxMKVGeneraHLS(t *testing.T) {
+	libDir, file := generateLibraryVideo(t, ".mkv")
+	server := newTestServer(t)
+	createTestUser(t, server.db, "ana", "Clave-segura-1")
+	token := loginToken(t, server.URL, "ana", "Clave-segura-1")
+	id := insertMediaFile(t, server.db, libDir, file, "Prueba")
+
+	info := requestPlay(t, server.URL, id, token)
+	if info.Mode != "remux" {
+		t.Fatalf("modo = %q, se esperaba remux", info.Mode)
+	}
+	if !strings.Contains(info.URL, "/playlist.m3u8") {
+		t.Fatalf("la URL de remux debe apuntar a la playlist: %q", info.URL)
+	}
+
+	resp, playlist := getRaw(t, server.URL+info.URL, nil)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("playlist: código = %d", resp.StatusCode)
+	}
+	body := string(playlist)
+	if !strings.HasPrefix(body, "#EXTM3U") {
+		t.Fatalf("playlist inesperada: %q", body)
+	}
+	if !strings.Contains(body, `#EXT-X-MAP:URI="init.mp4?`) {
+		t.Fatalf("la playlist no trae init de fMP4 firmado: %q", body)
+	}
+	if !strings.Contains(body, ".m4s?") {
+		t.Fatalf("la playlist no trae segmentos fMP4 firmados: %q", body)
+	}
+
+	var segment string
+	for _, line := range strings.Split(body, "\n") {
+		line = strings.TrimSpace(line)
+		if line != "" && !strings.HasPrefix(line, "#") {
+			segment = line
+			break
+		}
+	}
+	if segment == "" {
+		t.Fatal("la playlist no lista ningún segmento")
+	}
+
+	segmentURL := server.URL + segment
+	if !strings.HasPrefix(segment, "/") {
+		segmentURL = fmt.Sprintf("%s/api/v1/stream/%d/%s", server.URL, id, segment)
+	}
+	resp, data := getRaw(t, segmentURL, nil)
+	if resp.StatusCode != http.StatusOK || len(data) == 0 {
+		t.Fatalf("segmento: código = %d, %d bytes", resp.StatusCode, len(data))
+	}
+}
+
+func TestFirmaManipuladaYCaducada(t *testing.T) {
+	libDir := t.TempDir()
+	file := filepath.Join(libDir, "Pelicula.mp4")
+	if err := os.WriteFile(file, []byte("datos de prueba"), 0o644); err != nil {
+		t.Fatalf("crear archivo: %v", err)
+	}
+
+	server := newTestServer(t)
+	createTestUser(t, server.db, "ana", "Clave-segura-1")
+	token := loginToken(t, server.URL, "ana", "Clave-segura-1")
+	id := insertMediaFile(t, server.db, libDir, file, "Pelicula")
+
+	info := requestPlay(t, server.URL, id, token)
+	validURL := server.URL + info.URL
+	if resp, _ := getRaw(t, validURL, nil); resp.StatusCode != http.StatusOK {
+		t.Fatalf("URL válida: código = %d", resp.StatusCode)
+	}
+
+	parsed, err := url.Parse(validURL)
+	if err != nil {
+		t.Fatalf("parsear URL: %v", err)
+	}
+	query := parsed.Query()
+	signature := query.Get("sig")
+	tampered := "A" + signature[1:]
+	if signature[0] == 'A' {
+		tampered = "B" + signature[1:]
+	}
+	query.Set("sig", tampered)
+	parsed.RawQuery = query.Encode()
+	if resp, _ := getRaw(t, parsed.String(), nil); resp.StatusCode != http.StatusForbidden {
+		t.Fatalf("firma manipulada: código = %d, se esperaba 403", resp.StatusCode)
+	}
+
+	server.clock.Advance(16 * time.Minute)
+	if resp, _ := getRaw(t, validURL, nil); resp.StatusCode != http.StatusForbidden {
+		t.Fatalf("URL caducada: código = %d, se esperaba 403", resp.StatusCode)
+	}
+}
+
+func TestPlaySinToken(t *testing.T) {
+	server := newTestServer(t)
+
+	var body struct {
+		Error string `json:"error"`
+	}
+	if status := getJSON(t, server.URL+"/api/v1/items/1/play", "", &body); status != http.StatusUnauthorized {
+		t.Fatalf("código = %d, se esperaba 401", status)
 	}
 }

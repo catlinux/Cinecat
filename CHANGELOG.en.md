@@ -7,13 +7,21 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-25
+
+Closes Phase 1: functional minimal server (no clients yet).
+
 ### Added
 - Go server skeleton (`cinecatd`): module, file/env configuration, `--version` flag and `GET /healthz` endpoint (Phase 1, step 1).
 - SQLite database schema (`users`, `sessions`, `libraries`, `media_items`, `playback_state`) and embedded, idempotent migrations (Phase 1, step 2). Driver: `modernc.org/sqlite` (BSD-3-Clause).
 - Authentication with argon2id, 24h renewable sessions (sliding expiry) and temporary lockout after 5 failed attempts; `POST /api/v1/auth/login` and `POST /api/v1/auth/logout` endpoints (Phase 1, step 3). Dependency: `golang.org/x/crypto` (BSD-3-Clause).
 - Library scanning and a custom file/folder name parser (title, year, season and episode), with upsert into `media_items` that avoids duplicates on rescans (Phase 1, step 4). `season`/`episode` columns added to the schema.
-- TMDB metadata client (es-ES): movie search, poster selection by language priority (es-ES → generic Spanish → English → no language) and disk cache with configurable TTL for searches and images (Phase 1, step 5). Still to be wired into the server (steps 6-7); only searches movies, series are left for later.
+- TMDB metadata client (es-ES): movie search, poster selection by language priority (es-ES → generic Spanish → English → no language) and disk cache with configurable TTL for searches and images (Phase 1, step 5). Not yet wired into the scanner or the endpoints; only searches movies, series are left for later.
 - OpenAPI contract (`api/openapi.yaml`) and `GET /api/v1/libraries`, `GET /api/v1/items` (with pagination) and `GET /api/v1/items/{id}` endpoints, protected with Bearer session auth (Phase 1, step 6).
+- Direct playback (`http.ServeContent`, with HTTP range support) for `.mp4`/`.m4v` and remux to fMP4 HLS without re-encoding (codec copy) for `.mkv`/`.avi`/`.mov`/`.ts`/`.m2ts`, invoking FFmpeg as an external process with arguments always passed as a list. Playback URLs signed with HMAC-SHA256 (process key, never the session key) and a 15-minute expiry. `GET /api/v1/items/{id}/play`, `GET /api/v1/stream/{id}` and `GET /api/v1/stream/{id}/{file}` endpoints (Phase 1, step 7).
+
+### Verification note
+- The development environment used for this phase does not have FFmpeg installed: the tests exercising real remuxing (`TestReproduccionDirectaMP4`, `TestRemuxMKVGeneraHLS`) were skipped with `t.Skip()` in every review of this phase and **have never actually run**. The rest of the playback tests (signing, expiry, mode decision, absence of a shell in the code) did run and pass. Before relying on the remux in production, run the full suite on a machine with FFmpeg installed.
 
 ## [0.0.5] - 2026-10-25
 
@@ -49,7 +57,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 - `README`, `TODO`, `CONTRIBUTING`, `SECURITY`, `AUTHORS` and `CREDITS`.
 - Starting decisions: own server and clients; web, Android and Android TV; H.265 preferred with H.264 as a fallback; Spanish (Spain) metadata from existing databases.
 
-[Unreleased]: https://github.com/catlinux/cinecat/compare/v0.0.5...HEAD
+[Unreleased]: https://github.com/catlinux/cinecat/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/catlinux/cinecat/compare/v0.0.5...v0.1.0
 [0.0.5]: https://github.com/catlinux/cinecat/compare/v0.0.4...v0.0.5
 [0.0.4]: https://github.com/catlinux/cinecat/compare/v0.0.3...v0.0.4
 [0.0.3]: https://github.com/catlinux/cinecat/compare/v0.0.2...v0.0.3

@@ -14,6 +14,9 @@ Priorities: 🔴 blocking · 🟠 next phase · 🟢 later.
 - 🟠 The `GET /api/v1/libraries|items` endpoints do not filter by role or by library: any authenticated user sees everything. The architecture plans per-library permissions (Phase 3+); implement before real multi-user use.
 - `internal/metadata` (TMDB) is still not wired into the endpoints or the scanner; `media_items.tmdb_id` is only filled in by hand for now.
 - Small duplication: `bearerToken()` is repeated in `internal/auth/http.go` and `internal/library/http.go`; could be extracted to a shared spot once there's a third consumer.
+- 🔴 HLS remuxing (`internal/playback`) has never been tested with real FFmpeg: the development machine used in Phase 1 has no FFmpeg installed and those tests were always skipped with `t.Skip()`. Run the full suite on a machine with FFmpeg before relying on playback of `.mkv`/`.avi`/`.mov`/`.ts`/`.m2ts`.
+- 🟠 The remux is generated fully and synchronously on the first playlist request: a long file takes a while to start playing. On-demand segmentation is left for later.
+- 🟠 The remux only copies video and audio; subtitles are dropped (to be addressed in Phase 3, per the playback design).
 
 ## Known, accepted risks
 - There is an inactive Android app from 2015 called "CineCat" (F-Droid, Catalan film catalog using Generalitat open data; no trademark registration). Same name, different scope. Keeping the name Cinecat; minor confusion risk, no action pending.

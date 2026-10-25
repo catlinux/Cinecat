@@ -61,7 +61,7 @@ Convención de commits: `tipo: descripción en castellano` (`feat`, `fix`, `docs
 - **Dependencias:** Pasos 3, 4, 5.
 - **Versión/CHANGELOG:** `0.1.0-dev.6` — Añadido: contrato OpenAPI y API REST versionada.
 
-## Paso 7 — Reproducción directa y remux HLS fMP4
+## Paso 7 — Reproducción directa y remux HLS fMP4 [x] hecho (ejecución 20261025-054234-0164; FFmpeg no probado de verdad en ningún entorno de esta fase — ver TODO.md). **FASE 1 CERRADA, versión 0.1.0.**
 
 - **Archivos:** `internal/playback/decision.go`, `internal/playback/hls.go`, endpoint `GET /api/v1/items/{id}/play`.
 - **Qué hace:** implementa solo los dos primeros escalones de la cadena de decisión de `docs/es/reproduccion.md`: reproducción directa (servir el archivo tal cual, con soporte de rangos HTTP) y remux a HLS con segmentos fMP4 cuando el contenedor no es compatible (invocando FFmpeg como proceso externo, **argumentos siempre en lista, nunca por concatenación de texto** — ver `docs/es/arquitectura.md` punto 9). Genera URLs de reproducción firmadas y de vida corta (no tokens permanentes en la URL). Transcodificación parcial/completa queda para la Fase 3: aquí, si ninguno de los dos primeros escalones vale, se devuelve un error claro, no se intenta transcodificar.

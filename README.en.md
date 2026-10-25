@@ -4,7 +4,7 @@
 
 **Languages / Idiomas:** [Español](README.md) · English
 
-**Status:** design phase. Version `0.0.5` (documentation only, no code yet).
+**Status:** functional minimal server (Phase 1 complete), no clients yet. Version `0.1.0`.
 
 ---
 

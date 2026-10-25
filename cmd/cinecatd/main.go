@@ -16,6 +16,7 @@ import (
 	"github.com/catlinux/cinecat/internal/auth"
 	"github.com/catlinux/cinecat/internal/config"
 	"github.com/catlinux/cinecat/internal/library"
+	"github.com/catlinux/cinecat/internal/playback"
 	"github.com/catlinux/cinecat/internal/store"
 )
 
@@ -49,7 +50,12 @@ func main() {
 	}
 
 	authSvc := auth.New(st.DB())
-	api := library.NewAPI(st.DB(), authSvc)
+	playSvc, err := playback.New(playback.Options{})
+	if err != nil {
+		log.Fatalf("cinecatd: %v", err)
+	}
+	defer playSvc.Close()
+	api := library.NewAPI(st.DB(), authSvc, playSvc)
 
 	srv := &http.Server{
 		Addr:              cfg.ListenAddr,
