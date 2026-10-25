@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -37,6 +38,8 @@ func NewAPI(db *sql.DB, authSvc *auth.Service, playSvc *playback.Service) *API {
 // Register monta los endpoints versionados en el mux indicado.
 func (a *API) Register(mux *http.ServeMux) {
 	mux.Handle("GET /api/v1/libraries", a.requireSession(a.handleLibraries))
+	mux.Handle("POST /api/v1/libraries", a.requireAdmin(a.handleCreateLibrary))
+	mux.Handle("DELETE /api/v1/libraries/{id}", a.requireAdmin(a.handleDeleteLibrary))
 	mux.Handle("GET /api/v1/items", a.requireSession(a.handleItems))
 	mux.Handle("GET /api/v1/items/{id}", a.requireSession(a.handleItem))
 	if a.playback != nil {
@@ -49,19 +52,32 @@ func (a *API) Register(mux *http.ServeMux) {
 type sessionHandler func(http.ResponseWriter, *http.Request)
 
 func (a *API) requireSession(next sessionHandler) http.Handler {
+	return a.requireRole("", next)
+}
+
+func (a *API) requireAdmin(next sessionHandler) http.Handler {
+	return a.requireRole("admin", next)
+}
+
+func (a *API) requireRole(role string, next sessionHandler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token := bearerToken(r)
 		if token == "" {
 			writeJSONError(w, http.StatusUnauthorized, "falta el token de sesión")
 			return
 		}
-		if _, err := a.auth.Authenticate(r.Context(), token); err != nil {
+		user, err := a.auth.Authenticate(r.Context(), token)
+		if err != nil {
 			if errors.Is(err, auth.ErrInvalidSession) || errors.Is(err, auth.ErrSessionExpired) {
 				writeJSONError(w, http.StatusUnauthorized, "sesión no válida")
 				return
 			}
 			log.Printf("library: error al validar la sesión: %v", err)
 			writeJSONError(w, http.StatusInternalServerError, "error interno")
+			return
+		}
+		if role != "" && user.Role != role {
+			writeJSONError(w, http.StatusForbidden, "se requiere rol de administrador")
 			return
 		}
 		next(w, r)
@@ -124,6 +140,106 @@ func (a *API) handleLibraries(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, librariesResponse{Libraries: libraries})
+}
+
+const maxLibraryBody = 8 << 10 // 8 KiB
+
+type createLibraryRequest struct {
+	Name string `json:"name"`
+	Path string `json:"path"`
+}
+
+func (a *API) handleCreateLibrary(w http.ResponseWriter, r *http.Request) {
+	var req createLibraryRequest
+	if err := decodeJSONBody(w, r, &req); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "petición no válida")
+		return
+	}
+
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		writeJSONError(w, http.StatusBadRequest, "el nombre no puede estar vacío")
+		return
+	}
+	path := strings.TrimSpace(req.Path)
+	if path == "" {
+		writeJSONError(w, http.StatusBadRequest, "la ruta no puede estar vacía")
+		return
+	}
+	path = filepath.Clean(path)
+
+	info, err := os.Stat(path)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, "la ruta no existe o no es accesible")
+		return
+	}
+	if !info.IsDir() {
+		writeJSONError(w, http.StatusBadRequest, "la ruta no es un directorio")
+		return
+	}
+
+	var exists int
+	err = a.db.QueryRowContext(r.Context(),
+		`SELECT 1 FROM libraries WHERE path = ?`, path).Scan(&exists)
+	switch {
+	case err == nil:
+		writeJSONError(w, http.StatusConflict, "ya existe una biblioteca con esa ruta")
+		return
+	case !errors.Is(err, sql.ErrNoRows):
+		log.Printf("library: comprobar ruta de biblioteca: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
+
+	res, err := a.db.ExecContext(r.Context(),
+		`INSERT INTO libraries (name, path) VALUES (?, ?)`, name, path)
+	if err != nil {
+		log.Printf("library: crear biblioteca: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
+	id, err := res.LastInsertId()
+	if err != nil {
+		log.Printf("library: id de la biblioteca creada: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, libraryDTO{ID: id, Name: name, Path: path})
+}
+
+func (a *API) handleDeleteLibrary(w http.ResponseWriter, r *http.Request) {
+	id, ok := idFromPath(r)
+	if !ok {
+		writeJSONError(w, http.StatusNotFound, "biblioteca no encontrada")
+		return
+	}
+
+	res, err := a.db.ExecContext(r.Context(), `DELETE FROM libraries WHERE id = ?`, id)
+	if err != nil {
+		log.Printf("library: borrar biblioteca %d: %v", id, err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		log.Printf("library: filas borradas de la biblioteca %d: %v", id, err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
+	if affected == 0 {
+		writeJSONError(w, http.StatusNotFound, "biblioteca no encontrada")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func decodeJSONBody(w http.ResponseWriter, r *http.Request, dst any) error {
+	r.Body = http.MaxBytesReader(w, r.Body, maxLibraryBody)
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	return dec.Decode(dst)
 }
 
 func (a *API) handleItems(w http.ResponseWriter, r *http.Request) {
@@ -265,7 +381,7 @@ type mediaFile struct {
 }
 
 func (a *API) handlePlay(w http.ResponseWriter, r *http.Request) {
-	id, ok := itemIDFromPath(r)
+	id, ok := idFromPath(r)
 	if !ok {
 		writeJSONError(w, http.StatusNotFound, "ítem no encontrado")
 		return
@@ -309,7 +425,7 @@ func (a *API) handleStreamFile(w http.ResponseWriter, r *http.Request) {
 // serveSigned verifica la firma y sirve el archivo directo, la playlist o uno
 // de los archivos del remux. name vacío significa la ruta base del ítem.
 func (a *API) serveSigned(w http.ResponseWriter, r *http.Request, name string) {
-	id, ok := itemIDFromPath(r)
+	id, ok := idFromPath(r)
 	if !ok {
 		writeJSONError(w, http.StatusNotFound, "ítem no encontrado")
 		return
@@ -413,7 +529,7 @@ func (a *API) writePlaybackError(w http.ResponseWriter, err error) {
 	}
 }
 
-func itemIDFromPath(r *http.Request) (int64, bool) {
+func idFromPath(r *http.Request) (int64, bool) {
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	if err != nil || id <= 0 {
 		return 0, false

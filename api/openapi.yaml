@@ -100,6 +100,99 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+    post:
+      summary: Crea una biblioteca (solo administradores)
+      description: |
+        Da de alta una biblioteca. La ruta debe existir y ser un directorio en
+        el servidor. Requiere una sesión con rol `admin`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLibraryRequest'
+      responses:
+        '201':
+          description: Biblioteca creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Library'
+        '400':
+          description: Datos no válidos o ruta inexistente o que no es un directorio
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: El usuario no tiene rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Ya existe una biblioteca con esa ruta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/libraries/{id}:
+    delete:
+      summary: Borra una biblioteca (solo administradores)
+      description: |
+        Borra la biblioteca y, en cascada, sus ítems de `media_items`. Requiere
+        una sesión con rol `admin`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        '204':
+          description: Biblioteca borrada
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: El usuario no tiene rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No existe una biblioteca con ese identificador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/items:
     get:
       summary: Lista los ítems de las bibliotecas
@@ -435,6 +528,18 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Library'
+      additionalProperties: false
+    CreateLibraryRequest:
+      type: object
+      required:
+        - name
+        - path
+      properties:
+        name:
+          type: string
+        path:
+          type: string
+          description: Ruta existente y que sea un directorio en el servidor.
       additionalProperties: false
     MediaItem:
       type: object

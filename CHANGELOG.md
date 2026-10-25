@@ -7,7 +7,13 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
-## [0.1.1] - 2026-10-25
+## [0.1.2] - 2026-10-25
+
+### Añadido
+- `POST /api/v1/libraries` y `DELETE /api/v1/libraries/{id}`, restringidos a usuarios con rol admin. Valida que la ruta exista y sea un directorio; 409 si ya hay una biblioteca con esa ruta; el borrado limpia en cascada sus `media_items`.
+
+### Cambiado
+- `requireSession` ahora permite exigir también un rol concreto (`requireAdmin`), sin cambiar el comportamiento de los endpoints existentes.
 
 ### Añadido
 - Alta automática del primer usuario administrador al arrancar el servidor contra una base de datos sin usuarios: contraseña por `CINECAT_ADMIN_PASSWORD` o generada aleatoriamente (144 bits) y mostrada una sola vez en el log.
@@ -62,7 +68,8 @@ Cierra la Fase 1: servidor mínimo funcional (sin clientes todavía).
 - `README`, `TODO`, `CONTRIBUTING`, `SECURITY`, `AUTHORS` y `CREDITS`.
 - Decisiones de partida: servidor y clientes propios; web, Android y Android TV; H.265 preferido con H.264 de reserva; metadatos en español de España a partir de bases de datos existentes.
 
-[Sin publicar]: https://github.com/catlinux/cinecat/compare/v0.1.1...HEAD
+[Sin publicar]: https://github.com/catlinux/cinecat/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/catlinux/cinecat/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/catlinux/cinecat/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/catlinux/cinecat/compare/v0.0.5...v0.1.0
 [0.0.5]: https://github.com/catlinux/cinecat/compare/v0.0.4...v0.0.5

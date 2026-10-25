@@ -125,8 +125,10 @@ func execSQL(t *testing.T, db *sql.DB, query string, args ...any) int64 {
 }
 
 type seededData struct {
-	movieID   int64
-	episodeID int64
+	moviesLibraryID int64
+	seriesLibraryID int64
+	movieID         int64
+	episodeID       int64
 }
 
 func seedLibraryData(t *testing.T, db *sql.DB) seededData {
@@ -148,17 +150,27 @@ func seedLibraryData(t *testing.T, db *sql.DB) seededData {
 		VALUES (?, ?, ?, ?, ?)`,
 		movies, "/media/peliculas/Otra (2010).mkv", "Otra", 2010, "movie")
 
-	return seededData{movieID: movie, episodeID: episode}
+	return seededData{
+		moviesLibraryID: movies,
+		seriesLibraryID: series,
+		movieID:         movie,
+		episodeID:       episode,
+	}
 }
 
 func createTestUser(t *testing.T, db *sql.DB, username, password string) {
+	t.Helper()
+	createTestUserWithRole(t, db, username, password, "admin")
+}
+
+func createTestUserWithRole(t *testing.T, db *sql.DB, username, password, role string) {
 	t.Helper()
 	hash, err := auth.HashPassword(password)
 	if err != nil {
 		t.Fatalf("HashPassword: %v", err)
 	}
 	execSQL(t, db, `INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)`,
-		username, hash, "admin")
+		username, hash, role)
 }
 
 func loginToken(t *testing.T, serverURL, username, password string) string {
@@ -211,6 +223,218 @@ func getJSON(t *testing.T, url, token string, dst any) int {
 		}
 	}
 	return resp.StatusCode
+}
+
+func doJSON(t *testing.T, method, rawURL, token string, body any) (int, []byte) {
+	t.Helper()
+
+	var reader io.Reader
+	if body != nil {
+		data, err := json.Marshal(body)
+		if err != nil {
+			t.Fatalf("json.Marshal: %v", err)
+		}
+		reader = bytes.NewReader(data)
+	}
+
+	req, err := http.NewRequest(method, rawURL, reader)
+	if err != nil {
+		t.Fatalf("nueva petición: %v", err)
+	}
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("%s %s: %v", method, rawURL, err)
+	}
+	defer resp.Body.Close()
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("leer respuesta de %s: %v", rawURL, err)
+	}
+	return resp.StatusCode, data
+}
+
+func TestCrearBibliotecaAdmin(t *testing.T) {
+	server := newTestServer(t)
+	createTestUser(t, server.db, "ana", "Clave-segura-1")
+	token := loginToken(t, server.URL, "ana", "Clave-segura-1")
+
+	libDir := t.TempDir()
+	status, body := doJSON(t, http.MethodPost, server.URL+"/api/v1/libraries", token,
+		map[string]string{"name": "Peliculas", "path": libDir})
+	if status != http.StatusCreated {
+		t.Fatalf("código = %d, se esperaba 201; cuerpo = %s", status, body)
+	}
+
+	var created struct {
+		ID   int64  `json:"id"`
+		Name string `json:"name"`
+		Path string `json:"path"`
+	}
+	if err := json.Unmarshal(body, &created); err != nil {
+		t.Fatalf("respuesta de creación: %v", err)
+	}
+	if created.ID <= 0 || created.Name != "Peliculas" || created.Path != filepath.Clean(libDir) {
+		t.Fatalf("biblioteca creada inesperada: %+v", created)
+	}
+
+	var list struct {
+		Libraries []struct {
+			ID   int64  `json:"id"`
+			Name string `json:"name"`
+			Path string `json:"path"`
+		} `json:"libraries"`
+	}
+	if status := getJSON(t, server.URL+"/api/v1/libraries", token, &list); status != http.StatusOK {
+		t.Fatalf("listar: código = %d", status)
+	}
+	if len(list.Libraries) != 1 || list.Libraries[0].ID != created.ID ||
+		list.Libraries[0].Name != "Peliculas" {
+		t.Fatalf("la biblioteca creada no aparece en el listado: %+v", list.Libraries)
+	}
+}
+
+func TestCrearBibliotecaNonAdmin(t *testing.T) {
+	server := newTestServer(t)
+	createTestUserWithRole(t, server.db, "ana", "Clave-segura-1", "user")
+	token := loginToken(t, server.URL, "ana", "Clave-segura-1")
+
+	status, body := doJSON(t, http.MethodPost, server.URL+"/api/v1/libraries", token,
+		map[string]string{"name": "Peliculas", "path": t.TempDir()})
+	if status != http.StatusForbidden {
+		t.Fatalf("código = %d, se esperaba 403; cuerpo = %s", status, body)
+	}
+
+	var libraries int
+	if err := server.db.QueryRow(`SELECT count(*) FROM libraries`).Scan(&libraries); err != nil {
+		t.Fatalf("contar bibliotecas: %v", err)
+	}
+	if libraries != 0 {
+		t.Fatalf("no debe crearse ninguna biblioteca, hay %d", libraries)
+	}
+}
+
+func TestCrearBibliotecaPathInvalido(t *testing.T) {
+	server := newTestServer(t)
+	createTestUser(t, server.db, "ana", "Clave-segura-1")
+	token := loginToken(t, server.URL, "ana", "Clave-segura-1")
+
+	missing := filepath.Join(t.TempDir(), "no-existe")
+	status, body := doJSON(t, http.MethodPost, server.URL+"/api/v1/libraries", token,
+		map[string]string{"name": "Peliculas", "path": missing})
+	if status != http.StatusBadRequest {
+		t.Fatalf("ruta inexistente: código = %d, se esperaba 400; cuerpo = %s", status, body)
+	}
+	var errBody struct {
+		Error string `json:"error"`
+	}
+	if err := json.Unmarshal(body, &errBody); err != nil || errBody.Error == "" {
+		t.Fatalf("la respuesta 400 debe traer un mensaje claro: %s", body)
+	}
+
+	file := filepath.Join(t.TempDir(), "archivo.txt")
+	if err := os.WriteFile(file, []byte("x"), 0o644); err != nil {
+		t.Fatalf("crear archivo: %v", err)
+	}
+	status, body = doJSON(t, http.MethodPost, server.URL+"/api/v1/libraries", token,
+		map[string]string{"name": "Peliculas", "path": file})
+	if status != http.StatusBadRequest {
+		t.Fatalf("ruta a un archivo: código = %d, se esperaba 400; cuerpo = %s", status, body)
+	}
+
+	var libraries int
+	if err := server.db.QueryRow(`SELECT count(*) FROM libraries`).Scan(&libraries); err != nil {
+		t.Fatalf("contar bibliotecas: %v", err)
+	}
+	if libraries != 0 {
+		t.Fatalf("no debe crearse ninguna biblioteca, hay %d", libraries)
+	}
+}
+
+func TestBorrarBibliotecaAdmin(t *testing.T) {
+	server := newTestServer(t)
+	seed := seedLibraryData(t, server.db)
+	createTestUser(t, server.db, "ana", "Clave-segura-1")
+	token := loginToken(t, server.URL, "ana", "Clave-segura-1")
+
+	url := fmt.Sprintf("%s/api/v1/libraries/%d", server.URL, seed.moviesLibraryID)
+	status, body := doJSON(t, http.MethodDelete, url, token, nil)
+	if status != http.StatusNoContent {
+		t.Fatalf("código = %d, se esperaba 204; cuerpo = %s", status, body)
+	}
+
+	var items int
+	if err := server.db.QueryRow(
+		`SELECT count(*) FROM media_items WHERE library_id = ?`, seed.moviesLibraryID,
+	).Scan(&items); err != nil {
+		t.Fatalf("contar ítems: %v", err)
+	}
+	if items != 0 {
+		t.Fatalf("quedan %d media_items de la biblioteca borrada", items)
+	}
+
+	var total int
+	if err := server.db.QueryRow(`SELECT count(*) FROM media_items`).Scan(&total); err != nil {
+		t.Fatalf("contar ítems totales: %v", err)
+	}
+	if total != 1 {
+		t.Fatalf("debería quedar solo el episodio de la otra biblioteca, hay %d", total)
+	}
+
+	var list struct {
+		Libraries []struct {
+			ID int64 `json:"id"`
+		} `json:"libraries"`
+	}
+	if status := getJSON(t, server.URL+"/api/v1/libraries", token, &list); status != http.StatusOK {
+		t.Fatalf("listar: código = %d", status)
+	}
+	if len(list.Libraries) != 1 || list.Libraries[0].ID != seed.seriesLibraryID {
+		t.Fatalf("listado tras borrar inesperado: %+v", list.Libraries)
+	}
+
+	if status, _ := doJSON(t, http.MethodDelete, url, token, nil); status != http.StatusNotFound {
+		t.Fatalf("segundo borrado: código = %d, se esperaba 404", status)
+	}
+}
+
+func TestBorrarBibliotecaNonAdmin(t *testing.T) {
+	server := newTestServer(t)
+	seed := seedLibraryData(t, server.db)
+	createTestUserWithRole(t, server.db, "ana", "Clave-segura-1", "user")
+	token := loginToken(t, server.URL, "ana", "Clave-segura-1")
+
+	url := fmt.Sprintf("%s/api/v1/libraries/%d", server.URL, seed.moviesLibraryID)
+	status, body := doJSON(t, http.MethodDelete, url, token, nil)
+	if status != http.StatusForbidden {
+		t.Fatalf("código = %d, se esperaba 403; cuerpo = %s", status, body)
+	}
+
+	var items int
+	if err := server.db.QueryRow(`SELECT count(*) FROM media_items`).Scan(&items); err != nil {
+		t.Fatalf("contar ítems: %v", err)
+	}
+	if items != 3 {
+		t.Fatalf("no debe borrarse nada, quedan %d ítems", items)
+	}
+}
+
+func TestBorrarBibliotecaInexistente(t *testing.T) {
+	server := newTestServer(t)
+	createTestUser(t, server.db, "ana", "Clave-segura-1")
+	token := loginToken(t, server.URL, "ana", "Clave-segura-1")
+
+	status, body := doJSON(t, http.MethodDelete, server.URL+"/api/v1/libraries/999999", token, nil)
+	if status != http.StatusNotFound {
+		t.Fatalf("código = %d, se esperaba 404; cuerpo = %s", status, body)
+	}
 }
 
 func TestLibrariesSinToken(t *testing.T) {

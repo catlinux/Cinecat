@@ -14,7 +14,7 @@ Cada paso es autocontenido. Al completarlo, el ejecutor lo marca `[x]` aquí y a
 - **Ejecutor:** AgentRelay, esfuerzo medio (decisión de diseño pequeña incluida).
 - **Versión/CHANGELOG:** parche — Añadido: alta del primer usuario administrador al arrancar el servidor.
 
-## Paso B — Gestión de bibliotecas por API (solo admin)
+## Paso B — Gestión de bibliotecas por API (solo admin) [x] hecho (ejecución 20261025-063520-7cae)
 
 - **Archivos:** `internal/library/http.go`, `api/openapi.yaml`.
 - **Qué hace:** añade `POST /api/v1/libraries` (crea una biblioteca: `name`, `path`; valida que el path exista y sea un directorio) y `DELETE /api/v1/libraries/{id}` (borra la biblioteca y, en cascada, sus `media_items`, ya previsto por el esquema). Ambos exigen sesión válida **y** rol `admin` (nuevo chequeo: hasta ahora `requireSession` no miraba el rol). `GET /api/v1/libraries` ya existe y no cambia.
