@@ -7,6 +7,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.4.1] - 2026-10-25
+
+### Añadido
+- `GET /api/v1/auth/me`: devuelve `{username, role}` del usuario de la sesión Bearer actual, con 401 si falta el token o no es válido.
+
 ## [0.4.0] - 2026-10-25
 
 ### Añadido

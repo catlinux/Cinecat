@@ -7,6 +7,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-25
+
+### Added
+- `GET /api/v1/auth/me`: returns `{username, role}` for the current Bearer session user, with 401 if the token is missing or invalid.
+
 ## [0.4.0] - 2026-10-25
 
 ### Added

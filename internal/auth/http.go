@@ -30,6 +30,39 @@ type errorResponse struct {
 	Error string `json:"error"`
 }
 
+type currentUserResponse struct {
+	Username string `json:"username"`
+	Role     string `json:"role"`
+}
+
+// CurrentUserHandler atiende GET /api/v1/auth/me y devuelve el usuario de la
+// sesión Bearer actual.
+func (s *Service) CurrentUserHandler() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		token := bearerToken(r)
+		if token == "" {
+			writeError(w, http.StatusUnauthorized, "falta el token de sesión")
+			return
+		}
+
+		user, err := s.Authenticate(r.Context(), token)
+		if err != nil {
+			if errors.Is(err, ErrInvalidSession) || errors.Is(err, ErrSessionExpired) {
+				writeError(w, http.StatusUnauthorized, "sesión no válida")
+				return
+			}
+			log.Printf("auth: error interno al validar la sesión: %v", err)
+			writeError(w, http.StatusInternalServerError, "error interno")
+			return
+		}
+
+		writeJSON(w, http.StatusOK, currentUserResponse{
+			Username: user.Username,
+			Role:     user.Role,
+		})
+	})
+}
+
 // LoginHandler atiende POST /api/v1/auth/login.
 func (s *Service) LoginHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

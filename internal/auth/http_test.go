@@ -19,6 +19,7 @@ func newAuthHTTPServer(t *testing.T) (*httptest.Server, *Service, *sql.DB) {
 	mux.Handle("POST /api/v1/auth/login", svc.LoginHandler())
 	mux.Handle("POST /api/v1/auth/logout", svc.LogoutHandler())
 	mux.Handle("POST /api/v1/auth/password", svc.ChangePasswordHandler())
+	mux.Handle("GET /api/v1/auth/me", svc.CurrentUserHandler())
 
 	server := httptest.NewServer(mux)
 	t.Cleanup(server.Close)
@@ -171,5 +172,57 @@ func TestChangePasswordHTTPCuerpoInvalido(t *testing.T) {
 	status, body := doAuthRequest(t, req)
 	if status != http.StatusBadRequest {
 		t.Fatalf("código = %d, se esperaba 400; cuerpo = %s", status, body)
+	}
+}
+
+func httpCurrentUser(t *testing.T, serverURL, token string) (int, string) {
+	t.Helper()
+	req, err := http.NewRequest(http.MethodGet, serverURL+"/api/v1/auth/me", nil)
+	if err != nil {
+		t.Fatalf("nueva petición: %v", err)
+	}
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	return doAuthRequest(t, req)
+}
+
+func TestCurrentUserHTTP(t *testing.T) {
+	server, _, db := newAuthHTTPServer(t)
+	createUser(t, db, "ana", "Clave-segura-1", "admin")
+
+	status, token := httpLogin(t, server.URL, "ana", "Clave-segura-1")
+	if status != http.StatusOK || token == "" {
+		t.Fatalf("login: código = %d", status)
+	}
+
+	status, body := httpCurrentUser(t, server.URL, token)
+	if status != http.StatusOK {
+		t.Fatalf("me: código = %d, cuerpo = %s", status, body)
+	}
+	var user currentUserResponse
+	if err := json.Unmarshal([]byte(body), &user); err != nil {
+		t.Fatalf("respuesta de me: %v", err)
+	}
+	if user.Username != "ana" || user.Role != "admin" {
+		t.Fatalf("usuario inesperado: %+v", user)
+	}
+}
+
+func TestCurrentUserHTTPSinToken(t *testing.T) {
+	server, _, _ := newAuthHTTPServer(t)
+
+	status, body := httpCurrentUser(t, server.URL, "")
+	if status != http.StatusUnauthorized {
+		t.Fatalf("código = %d, se esperaba 401; cuerpo = %s", status, body)
+	}
+}
+
+func TestCurrentUserHTTPTokenInvalido(t *testing.T) {
+	server, _, _ := newAuthHTTPServer(t)
+
+	status, body := httpCurrentUser(t, server.URL, "token-inventado")
+	if status != http.StatusUnauthorized {
+		t.Fatalf("código = %d, se esperaba 401; cuerpo = %s", status, body)
 	}
 }
