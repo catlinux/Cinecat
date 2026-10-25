@@ -7,6 +7,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-10-25
+
+### Fixed
+- The web client rejected every API request with "PUBLIC_API_URL is not configured on the server", including login, when `PUBLIC_API_URL` was deliberately left empty to use relative paths behind the Docker deployment's proxy (see `0.3.1`). `createApiClient` (`web/src/lib/api-factory.ts`) no longer treats an empty string as a configuration error; `web/src/routes/login/+page.server.ts` now uses that same function instead of duplicating the logic with its own check.
+
 ## [0.3.1] - 2026-10-25
 
 ### Changed

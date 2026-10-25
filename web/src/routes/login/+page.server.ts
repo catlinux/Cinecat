@@ -1,19 +1,11 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { ApiClient } from '$lib/api';
-import { apiBaseUrl } from '$lib/config';
+import { createApiClient } from '$lib/api-factory';
 import { clearSessionCookie, getSessionToken, setSessionCookie } from '$lib/session';
 
 export const load: PageServerLoad = ({ locals }) => {
 	return { hasSession: locals.sessionToken !== null };
 };
-
-function createClient(fetchImpl: typeof fetch): ApiClient | null {
-	if (!apiBaseUrl) {
-		return null;
-	}
-	return new ApiClient({ baseUrl: apiBaseUrl, fetch: fetchImpl });
-}
 
 export const actions: Actions = {
 	login: async ({ request, cookies, url, fetch }) => {
@@ -25,13 +17,7 @@ export const actions: Actions = {
 			return fail(400, { username, message: 'Escribe tu usuario y contraseña.' });
 		}
 
-		const api = createClient(fetch);
-		if (!api) {
-			return fail(500, {
-				username,
-				message: 'Falta configurar PUBLIC_API_URL en el servidor.'
-			});
-		}
+		const api = createApiClient(fetch);
 
 		try {
 			const session = await api.login({ username, password });
@@ -63,7 +49,7 @@ export const actions: Actions = {
 		const token = getSessionToken(cookies);
 		if (token) {
 			try {
-				await createClient(fetch)?.logout(token);
+				await createApiClient(fetch).logout(token);
 			} catch {
 				// Aunque el servidor no responda, la cookie local se borra igualmente.
 				console.warn('No se pudo invalidar la sesión en el servidor.');

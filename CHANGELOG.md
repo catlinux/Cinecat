@@ -7,6 +7,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.3.2] - 2026-10-25
+
+### Corregido
+- El cliente web rechazaba toda petición a la API con «Falta configurar PUBLIC_API_URL en el servidor», incluido el login, cuando `PUBLIC_API_URL` se dejaba vacío a propósito para usar rutas relativas detrás del proxy del despliegue Docker (ver `0.3.1`). `createApiClient` (`web/src/lib/api-factory.ts`) ya no trata la cadena vacía como error de configuración; `web/src/routes/login/+page.server.ts` usa ahora esa misma función en vez de duplicar la lógica con su propio chequeo.
+
 ## [0.3.1] - 2026-10-25
 
 ### Cambiado
