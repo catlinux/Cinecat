@@ -1,0 +1,83 @@
+// Comando cinecatd: servidor de Cinecat.
+package main
+
+import (
+	"errors"
+	"flag"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/catlinux/cinecat/internal/config"
+)
+
+// version se puede fijar en tiempo de compilación con
+// -ldflags "-X main.version=<versión>"; si no, se lee del archivo VERSION.
+var version string
+
+func main() {
+	showVersion := flag.Bool("version", false, "imprime la versión y sale")
+	configPath := flag.String("config", "", "ruta al archivo de configuración (fuera del repositorio)")
+	flag.Parse()
+
+	if *showVersion {
+		fmt.Println(applicationVersion())
+		return
+	}
+
+	cfg, err := config.Load(*configPath)
+	if err != nil {
+		log.Fatalf("cinecatd: %v", err)
+	}
+
+	srv := &http.Server{
+		Addr:              cfg.ListenAddr,
+		Handler:           newHandler(),
+		ReadHeaderTimeout: 10 * time.Second,
+	}
+
+	log.Printf("cinecatd %s escuchando en %s", applicationVersion(), cfg.ListenAddr)
+	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		log.Fatalf("cinecatd: %v", err)
+	}
+}
+
+func newHandler() http.Handler {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintln(w, "ok")
+	})
+	return mux
+}
+
+// applicationVersion devuelve la versión compilada o, si no la hay, el
+// contenido del archivo VERSION junto al ejecutable o en el directorio actual.
+func applicationVersion() string {
+	if v := strings.TrimSpace(version); v != "" {
+		return v
+	}
+	for _, path := range versionFileCandidates() {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			continue
+		}
+		if v := strings.TrimSpace(string(data)); v != "" {
+			return v
+		}
+	}
+	return "desconocida"
+}
+
+func versionFileCandidates() []string {
+	candidates := []string{"VERSION"}
+	if exe, err := os.Executable(); err == nil {
+		candidates = append(candidates, filepath.Join(filepath.Dir(exe), "VERSION"))
+	}
+	return candidates
+}

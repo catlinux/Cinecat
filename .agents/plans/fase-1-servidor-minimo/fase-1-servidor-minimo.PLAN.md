@@ -8,7 +8,7 @@ Cada paso es autocontenido: un ejecutor sin memoria de esta conversación debe p
 
 Convención de commits: `tipo: descripción en castellano` (`feat`, `fix`, `docs`, `test`, `chore`, `refactor`). Nunca `go get` de una dependencia sin comprobar su licencia primero (ver tabla en `CLAUDE.md`).
 
-## Paso 1 — Esqueleto del módulo Go y configuración
+## Paso 1 — Esqueleto del módulo Go y configuración [x] hecho (ejecución 20261025-020450-b014)
 
 - **Archivos:** `go.mod` (módulo `github.com/catlinux/cinecat`), `cmd/cinecatd/main.go`, `internal/config/config.go`, `.gitignore` (añadir binarios Go y `*.db`), `Makefile` o `justfile` sencillo con `build`, `test`, `run`.
 - **Qué hace:** arranca un binario `cinecatd` que lee configuración desde variables de entorno o un archivo fuera de control de versiones (nunca claves de API en el repo — ver `docs/es/licencias-y-creditos.md` y la regla de seguridad global), expone un flag `--version` que imprime el contenido de `VERSION`, y un servidor HTTP mínimo con un único endpoint `GET /healthz` que responde `200 OK`.
