@@ -17,6 +17,7 @@ Prioridades: 🔴 bloqueante · 🟠 próxima fase · 🟢 más adelante.
 - 🔴 El remux a HLS (`internal/playback`) nunca se ha probado con FFmpeg real: el equipo de desarrollo usado en la Fase 1 no tiene FFmpeg instalado y esos tests se saltaron siempre con `t.Skip()`. Ejecutar la suite completa en una máquina con FFmpeg antes de confiar en la reproducción de `.mkv`/`.avi`/`.mov`/`.ts`/`.m2ts`.
 - 🟠 El remux se genera completo y de forma síncrona en la primera petición de la playlist: un archivo largo tarda en empezar a reproducirse. La segmentación bajo demanda queda para más adelante.
 - 🟠 El remux copia solo vídeo y audio; los subtítulos se descartan (se abordarán en la Fase 3, según el diseño de reproducción).
+- 🟠 El cliente web (`web/`) decide la cookie `Secure` según `event.url.protocol`; detrás de un proxy inverso que termina TLS (despliegue previsto en Debian/Docker), hay que configurar `PROTOCOL_HEADER` (por ejemplo a `x-forwarded-proto`) en `@sveltejs/adapter-node` para que `event.url` refleje HTTPS real. Revisar al escribir la guía de despliegue.
 
 ## Riesgos conocidos, aceptados
 - Existe una app Android inactiva desde 2015 llamada «CineCat» (F-Droid, catálogo de cine catalán con datos de la Generalitat; sin registro de marca). Mismo nombre, ámbito distinto. Se mantiene el nombre Cinecat; riesgo de confusión menor, sin acción pendiente.
