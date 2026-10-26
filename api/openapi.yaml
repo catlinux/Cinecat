@@ -336,6 +336,50 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/genres:
+    get:
+      summary: Lista los géneros con su número de ítems
+      description: |
+        Devuelve los géneros de los ítems del tipo indicado, ordenados por
+        nombre, con el número de ítems distintos de cada uno. Requiere sesión.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: kind
+          in: query
+          description: Tipo de ítem del que contar géneros.
+          required: false
+          schema:
+            type: string
+            enum:
+              - movie
+              - episode
+            default: movie
+      responses:
+        '200':
+          description: Géneros y conteos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenresResponse'
+        '400':
+          description: Tipo de ítem no válido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/items:
     get:
       summary: Lista los ítems de las bibliotecas
@@ -365,12 +409,52 @@ paths:
         - name: q
           in: query
           description: |
-            Busca sin distinguir mayúsculas en el título visible, el título del
-            archivo y el título original. Los caracteres `%` y `_` se tratan
-            como literales.
+            Texto a buscar según `field`. Los caracteres `%` y `_` se tratan
+            como literales. Sin `field`, busca en títulos, reparto, dirección y
+            lema. El plegado de mayúsculas es ASCII: las letras acentuadas se
+            encuentran escribiendo la misma grafía.
           required: false
           schema:
             type: string
+        - name: field
+          in: query
+          description: |
+            Campos de búsqueda de `q`: `all` (por defecto), `title`, `cast` o
+            `director`.
+          required: false
+          schema:
+            type: string
+            enum:
+              - all
+              - title
+              - cast
+              - director
+            default: all
+        - name: letter
+          in: query
+          description: |
+            Inicial del título visible, de A a Z o `#` para números y símbolos.
+            Se ignoran signos de apertura y artículos iniciales; las tildes de
+            la inicial y la Ñ se pliegan.
+          required: false
+          schema:
+            type: string
+        - name: genre
+          in: query
+          description: |
+            Nombre exacto de un género, sin distinguir mayúsculas (plegado
+            ASCII).
+          required: false
+          schema:
+            type: string
+        - name: watched
+          in: query
+          description: |
+            Con `true`, solo ítems vistos por el usuario de la sesión; con
+            `false`, solo los no vistos.
+          required: false
+          schema:
+            type: boolean
         - name: unmatched
           in: query
           description: |
@@ -382,9 +466,10 @@ paths:
         - name: sort
           in: query
           description: |
-            Orden de la lista: `title` (título visible, sin distinguir
-            mayúsculas), `year` (año descendente, nulos al final) o `added`
-            (últimos añadidos primero). Sin `sort`, se ordena por `id`.
+            Orden de la lista: `title` (título visible normalizado —sin
+            artículos iniciales y con la inicial sin tilde—), `year` (año
+            descendente, nulos al final) o `added` (últimos añadidos primero).
+            Sin `sort`, se ordena por `id`.
           required: false
           schema:
             type: string
@@ -463,6 +548,79 @@ paths:
                 $ref: '#/components/schemas/Error'
         '404':
           description: No existe un ítem con ese identificador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/items/{id}/watched:
+    put:
+      summary: Marca un ítem como visto (cualquier usuario)
+      description: |
+        Marca el ítem como visto para el usuario de la sesión. Es idempotente:
+        repetir la petición no cambia el estado. Requiere una sesión válida.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        '204':
+          description: Ítem marcado como visto
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No existe el ítem
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Desmarca un ítem como visto (cualquier usuario)
+      description: |
+        Quita la marca de visto del usuario de la sesión. Es idempotente.
+        Requiere una sesión válida.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        '204':
+          description: Ítem desmarcado
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No existe el ítem
           content:
             application/json:
               schema:
@@ -1091,6 +1249,27 @@ components:
           nullable: true
           description: Identificador de TMDB, o null para «no es ninguna».
       additionalProperties: false
+    GenreCount:
+      type: object
+      required:
+        - name
+        - count
+      properties:
+        name:
+          type: string
+        count:
+          type: integer
+      additionalProperties: false
+    GenresResponse:
+      type: object
+      required:
+        - genres
+      properties:
+        genres:
+          type: array
+          items:
+            $ref: '#/components/schemas/GenreCount'
+      additionalProperties: false
     MediaItem:
       type: object
       required:
@@ -1118,6 +1297,7 @@ components:
         - overview_language
         - match_status
         - match_score
+        - watched
       properties:
         id:
           type: integer
@@ -1206,6 +1386,9 @@ components:
           type: number
           format: double
           nullable: true
+        watched:
+          type: boolean
+          description: El usuario de la sesión ha marcado este ítem como visto.
       additionalProperties: false
     ItemsResponse:
       type: object

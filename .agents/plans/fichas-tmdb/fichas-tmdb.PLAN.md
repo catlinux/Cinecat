@@ -1,6 +1,6 @@
 # Fichas en castellano, colecciones, series y navegación de la biblioteca
 
-Estado (2026-10-26): T1–T4 hechas y T1–T3d desplegadas (0.10.0 en producción). **Siguiente: T4b** (ver «Ampliaciones pedidas»).
+Estado (2026-10-26): T1–T4 hechas y T1–T3d desplegadas (0.10.0 en producción). **Siguiente: T5** (ver «Orden definitivo»).
 
 Orden: Hito 1 (T3b → T3c → T3d → ▶ → T4 → T5 → T6 → D1) → Hito 1b (A1 → A2 → A3 → ▶ → A4 → ▶) → Hito 2 (T7 → T8 → T9 → ▶) → Hito 3 (T10 → T11 → T12 → T13 → D2).
 
@@ -121,7 +121,7 @@ Cubiertas por el plan tal cual: corregir/identificar desde la ficha (T6), repart
 
 **Orden definitivo (decidido por el orquestador por facilidad y para desplegar pronto):**
 
-1. **T4b** (API: búsqueda ampliada, letra, género, visionado) — en curso.
+1. ✅ **T4b** (API: búsqueda ampliada, letra, género, visionado).
 2. **T5** (portal `/`, `/movies` paginada con búsqueda, letra y género; el portal empieza con las tres categorías y «Añadido recientemente» usando `sort=added`) → ▶ **desplegar**.
 3. **T6** (ficha completa: reparto, dirección, corregir ficha, visto/no visto; con huecos para «Archivo» y «Póster») → cierra 0.11.0 → ▶ **desplegar** + D1.
 4. **T4c** (info del archivo con ffprobe) + **T6b** (panel «Archivo» en la ficha) → ▶ desplegar.

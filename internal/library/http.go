@@ -46,8 +46,11 @@ func (a *API) Register(mux *http.ServeMux) {
 		mux.Handle("GET /api/v1/libraries/scan", a.requireAdmin(a.handleScanStatus))
 	}
 	mux.Handle("DELETE /api/v1/libraries/{id}", a.requireAdmin(a.handleDeleteLibrary))
+	mux.Handle("GET /api/v1/genres", a.requireSession(a.handleGenres))
 	mux.Handle("GET /api/v1/items", a.requireSession(a.handleItems))
 	mux.Handle("GET /api/v1/items/{id}", a.requireSession(a.handleItem))
+	mux.Handle("PUT /api/v1/items/{id}/watched", a.requireSession(a.handleItemWatched))
+	mux.Handle("DELETE /api/v1/items/{id}/watched", a.requireSession(a.handleItemUnwatched))
 	mux.Handle("GET /api/v1/items/{id}/candidates", a.requireAdmin(a.handleItemCandidates))
 	mux.Handle("PUT /api/v1/items/{id}/match", a.requireAdmin(a.handleItemMatch))
 	mux.Handle("DELETE /api/v1/items/{id}/match", a.requireAdmin(a.handleItemMatchDelete))
@@ -89,7 +92,7 @@ func (a *API) requireRole(role string, next sessionHandler) http.Handler {
 			writeJSONError(w, http.StatusForbidden, "se requiere rol de administrador")
 			return
 		}
-		next(w, r)
+		next(w, r.WithContext(withSessionUser(r.Context(), user)))
 	})
 }
 
@@ -251,8 +254,14 @@ func (a *API) handleItems(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	if err := BackfillSortKeys(r.Context(), a.db); err != nil {
+		log.Printf("library: normalizar títulos: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
 
-	where, args, err := itemFilters(r)
+	userID := sessionUserID(r)
+	where, args, err := itemFilters(r, userID)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -271,9 +280,13 @@ func (a *API) handleItems(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	queryArgs := append(append([]any{}, args...), limit, offset)
+	queryArgs := append([]any{userID}, args...)
+	queryArgs = append(queryArgs, limit, offset)
 	rows, err := a.db.QueryContext(r.Context(),
-		`SELECT `+mediaItemColumns+` FROM media_items`+where+order+` LIMIT ? OFFSET ?`, queryArgs...)
+		`SELECT `+mediaItemColumns+watchedColumn+`
+		   FROM media_items
+		   LEFT JOIN watch_state ws
+		     ON ws.media_item_id = media_items.id AND ws.user_id = ?`+where+order+` LIMIT ? OFFSET ?`, queryArgs...)
 	if err != nil {
 		log.Printf("library: listar ítems: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
@@ -312,7 +325,7 @@ func (a *API) handleItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	item, err := queryMediaItem(r.Context(), a.db, id)
+	item, err := queryMediaItem(r.Context(), a.db, id, sessionUserID(r))
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		writeJSONError(w, http.StatusNotFound, "ítem no encontrado")

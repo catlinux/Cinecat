@@ -14,6 +14,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 - `GET /api/v1/system/version` (sin sesión) con la versión, el commit y la fecha de compilación; el pie de la web muestra la versión del servidor y avisa si la web y el servidor tienen versiones distintas. La versión de la web sale del `VERSION` de la raíz (la imagen de la web se construye ahora desde la raíz del repositorio).
 - Ficha completa de película en la API (título en castellano, título original, lema, géneros, duración, nota, dirección, reparto, fondo, estado de la identificación) y, en `GET /api/v1/items`, los filtros `kind`, `q`, `unmatched` y la ordenación `sort`. Corrección manual para administradores: `GET /items/{id}/candidates`, `PUT` y `DELETE /items/{id}/match`.
 - El escaneo rellena el título en castellano de las fichas guardadas antes de que existiera.
+- Búsqueda por título, reparto, dirección o todo (`field`), filtro por inicial (`letter`, ignorando artículos y tildes: «El Padrino» va en la P) y por género (`genre`), lista de géneros (`GET /api/v1/genres`) y ordenación por título normalizado.
+- Estado de visto por usuario: `PUT`/`DELETE /api/v1/items/{id}/watched`, campo `watched` en los ítems y filtro `watched`.
 - El servidor se apaga de forma ordenada ante SIGINT/SIGTERM, cancelando el escaneo en curso.
 
 ## [0.10.0] - 2026-10-26

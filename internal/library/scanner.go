@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -307,18 +308,26 @@ func (s *Scanner) enrichMovieTMDB(ctx context.Context, libraryID int64, path str
 // ApplyMovieDetails guarda la ficha completa en la fila. El título analizado
 // (title) no se toca; el de TMDB se guarda en display_title.
 func ApplyMovieDetails(ctx context.Context, db *sql.DB, itemID int64, d *metadata.Details, status string, score float64) error {
+	sortSource := d.Title
+	if strings.TrimSpace(sortSource) == "" {
+		if err := db.QueryRowContext(ctx, `SELECT title FROM media_items WHERE id = ?`, itemID).Scan(&sortSource); err != nil {
+			return fmt.Errorf("library: leer el título de la película %d: %w", itemID, err)
+		}
+	}
+	sortTitle, sortLetter := sortKeys(sortSource)
 	_, err := db.ExecContext(ctx, `
 		UPDATE media_items SET
 			tmdb_id = ?, original_title = ?, imdb_id = ?, tagline = ?,
 			overview = ?, overview_language = ?, year = ?, display_title = ?,
-			genres = ?, runtime_minutes = ?, rating = ?, directors = ?,
-			cast_names = ?, poster_url = ?, backdrop_url = ?,
-			metadata_source = 'tmdb', match_status = ?, match_score = ?
+			sort_title = ?, sort_letter = ?, genres = ?, runtime_minutes = ?,
+			rating = ?, directors = ?, cast_names = ?, poster_url = ?,
+			backdrop_url = ?, metadata_source = 'tmdb', match_status = ?,
+			match_score = ?
 		WHERE id = ?`,
 		nullableInt(d.TMDBID), nullableText(d.OriginalTitle), nullableText(d.IMDbID), nullableText(d.Tagline),
 		nullableText(d.Overview), nullableText(d.OverviewLanguage), nullableInt(d.Year), nullableText(d.Title),
-		jsonArray(d.Genres), nullableInt(d.RuntimeMinutes), nullableFloat(d.Rating), jsonArray(d.Directors),
-		jsonArray(d.Cast), nullableText(d.PosterURL), nullableText(d.BackdropURL),
+		sortTitle, sortLetter, jsonArray(d.Genres), nullableInt(d.RuntimeMinutes), nullableFloat(d.Rating),
+		jsonArray(d.Directors), jsonArray(d.Cast), nullableText(d.PosterURL), nullableText(d.BackdropURL),
 		nullableText(status), score, itemID,
 	)
 	if err != nil {
@@ -330,16 +339,26 @@ func ApplyMovieDetails(ctx context.Context, db *sql.DB, itemID int64, d *metadat
 // ClearMovieMetadata deja la fila sin ficha, conservando el título y el año
 // analizados del archivo.
 func ClearMovieMetadata(ctx context.Context, db *sql.DB, itemID int64, status any) error {
-	_, err := db.ExecContext(ctx, `
+	var title string
+	err := db.QueryRowContext(ctx, `SELECT title FROM media_items WHERE id = ?`, itemID).Scan(&title)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("library: leer el título de la película %d: %w", itemID, err)
+	}
+	sortTitle, sortLetter := sortKeys(title)
+
+	_, err = db.ExecContext(ctx, `
 		UPDATE media_items SET
 			tmdb_id = NULL, original_title = NULL, imdb_id = NULL, tagline = NULL,
 			overview = NULL, overview_language = NULL, display_title = NULL,
-			genres = NULL, runtime_minutes = NULL, rating = NULL,
-			directors = NULL, cast_names = NULL, poster_url = NULL,
-			backdrop_url = NULL, metadata_source = NULL, match_score = NULL,
-			match_status = ?
+			sort_title = ?, sort_letter = ?, genres = NULL,
+			runtime_minutes = NULL, rating = NULL, directors = NULL,
+			cast_names = NULL, poster_url = NULL, backdrop_url = NULL,
+			metadata_source = NULL, match_score = NULL, match_status = ?
 		WHERE id = ?`,
-		status, itemID,
+		sortTitle, sortLetter, status, itemID,
 	)
 	if err != nil {
 		return fmt.Errorf("library: borrar la ficha de la película %d: %w", itemID, err)
@@ -407,5 +426,5 @@ func upsertMediaItem(ctx context.Context, db *sql.DB, libraryID int64, path stri
 	if err != nil {
 		return fmt.Errorf("library: guardar %q: %w", path, err)
 	}
-	return nil
+	return refreshSortKeysByPath(ctx, db, libraryID, path)
 }

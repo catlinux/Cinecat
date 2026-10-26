@@ -39,6 +39,7 @@ type mediaItemDTO struct {
 	OverviewLanguage *string  `json:"overview_language"`
 	MatchStatus      *string  `json:"match_status"`
 	MatchScore       *float64 `json:"match_score"`
+	Watched          bool     `json:"watched"`
 }
 
 type itemsResponse struct {
@@ -48,6 +49,15 @@ type itemsResponse struct {
 	Offset int            `json:"offset"`
 }
 
+type genreCount struct {
+	Name  string `json:"name"`
+	Count int64  `json:"count"`
+}
+
+type genresResponse struct {
+	Genres []genreCount `json:"genres"`
+}
+
 // mediaItemColumns la comparten la lista y la ficha para no divergir.
 const mediaItemColumns = `
 	id, library_id, path, title, COALESCE(display_title, title), year,
@@ -55,8 +65,15 @@ const mediaItemColumns = `
 	imdb_id, tagline, genres, runtime_minutes, rating, directors, cast_names,
 	backdrop_url, overview_language, match_status, match_score`
 
-func queryMediaItem(ctx context.Context, db *sql.DB, id int64) (mediaItemDTO, error) {
-	row := db.QueryRowContext(ctx, `SELECT `+mediaItemColumns+` FROM media_items WHERE id = ?`, id)
+const watchedColumn = `, CASE WHEN ws.user_id IS NULL THEN 0 ELSE 1 END`
+
+func queryMediaItem(ctx context.Context, db *sql.DB, id, userID int64) (mediaItemDTO, error) {
+	row := db.QueryRowContext(ctx, `
+		SELECT `+mediaItemColumns+watchedColumn+`
+		  FROM media_items
+		  LEFT JOIN watch_state ws
+		    ON ws.media_item_id = media_items.id AND ws.user_id = ?
+		 WHERE media_items.id = ?`, userID, id)
 	return scanItem(row.Scan)
 }
 
@@ -66,13 +83,14 @@ func scanItem(scan func(dest ...any) error) (mediaItemDTO, error) {
 	var overview, posterURL, originalTitle, imdbID, tagline sql.NullString
 	var genres, directors, castNames, backdropURL, overviewLanguage, matchStatus sql.NullString
 	var rating, matchScore sql.NullFloat64
+	var watched int
 
 	err := scan(
 		&item.ID, &item.LibraryID, &item.Path, &item.FileTitle, &item.Title,
 		&year, &item.Kind, &season, &episode, &tmdbID, &overview,
 		&posterURL, &originalTitle, &imdbID, &tagline, &genres, &runtime,
 		&rating, &directors, &castNames, &backdropURL, &overviewLanguage,
-		&matchStatus, &matchScore,
+		&matchStatus, &matchScore, &watched,
 	)
 	if err != nil {
 		return mediaItemDTO{}, err
@@ -96,6 +114,7 @@ func scanItem(scan func(dest ...any) error) (mediaItemDTO, error) {
 	item.OverviewLanguage = stringPointer(overviewLanguage)
 	item.MatchStatus = stringPointer(matchStatus)
 	item.MatchScore = floatPointer(matchScore)
+	item.Watched = watched != 0
 	return item, nil
 }
 
@@ -142,10 +161,20 @@ func floatPointer(v sql.NullFloat64) *float64 {
 	return &value
 }
 
-func itemFilters(r *http.Request) (string, []any, error) {
+func itemFilters(r *http.Request, userID int64) (string, []any, error) {
 	query := r.URL.Query()
 	var clauses []string
 	var args []any
+
+	field := strings.TrimSpace(query.Get("field"))
+	if field == "" {
+		field = "all"
+	}
+	switch field {
+	case "all", "title", "cast", "director":
+	default:
+		return "", nil, errors.New("field debe ser all, title, cast o director")
+	}
 
 	if raw := strings.TrimSpace(query.Get("library_id")); raw != "" {
 		id, err := strconv.ParseInt(raw, 10, 64)
@@ -166,9 +195,55 @@ func itemFilters(r *http.Request) (string, []any, error) {
 
 	if raw := strings.TrimSpace(query.Get("q")); raw != "" {
 		pattern := likePattern(raw)
+		var columns []string
+		switch field {
+		case "title":
+			columns = []string{"display_title", "title", "original_title"}
+		case "cast":
+			columns = []string{"cast_names"}
+		case "director":
+			columns = []string{"directors"}
+		case "all":
+			columns = []string{"display_title", "title", "original_title", "cast_names", "directors", "tagline"}
+		}
+		parts := make([]string, 0, len(columns))
+		for _, column := range columns {
+			parts = append(parts, "LOWER("+column+`) LIKE LOWER(?) ESCAPE '\'`)
+			args = append(args, pattern)
+		}
+		clauses = append(clauses, "("+strings.Join(parts, " OR ")+")")
+	}
+
+	if raw := strings.TrimSpace(query.Get("letter")); raw != "" {
+		letter, err := parseLetter(raw)
+		if err != nil {
+			return "", nil, err
+		}
+		if letter != "" {
+			clauses = append(clauses, "sort_letter = ?")
+			args = append(args, letter)
+		}
+	}
+
+	if raw := strings.TrimSpace(query.Get("genre")); raw != "" {
 		clauses = append(clauses,
-			`(LOWER(display_title) LIKE LOWER(?) ESCAPE '\' OR LOWER(title) LIKE LOWER(?) ESCAPE '\' OR LOWER(original_title) LIKE LOWER(?) ESCAPE '\')`)
-		args = append(args, pattern, pattern, pattern)
+			`EXISTS (SELECT 1 FROM json_each(CASE WHEN genres IS NOT NULL AND json_valid(genres) THEN genres ELSE '[]' END) je WHERE LOWER(je.value) = LOWER(?))`)
+		args = append(args, raw)
+	}
+
+	if raw := strings.TrimSpace(query.Get("watched")); raw != "" {
+		switch raw {
+		case "true":
+			clauses = append(clauses,
+				`EXISTS (SELECT 1 FROM watch_state wf WHERE wf.media_item_id = media_items.id AND wf.user_id = ?)`)
+			args = append(args, userID)
+		case "false":
+			clauses = append(clauses,
+				`NOT EXISTS (SELECT 1 FROM watch_state wf WHERE wf.media_item_id = media_items.id AND wf.user_id = ?)`)
+			args = append(args, userID)
+		default:
+			return "", nil, errors.New("watched debe ser true o false")
+		}
 	}
 
 	if raw := strings.TrimSpace(query.Get("unmatched")); raw != "" {
@@ -192,9 +267,9 @@ func itemOrder(r *http.Request) (string, error) {
 	case "":
 		return " ORDER BY id", nil
 	case "title":
-		return " ORDER BY COALESCE(display_title, title) COLLATE NOCASE, id", nil
+		return " ORDER BY sort_title COLLATE NOCASE, id", nil
 	case "year":
-		return " ORDER BY (year IS NULL) ASC, year DESC, COALESCE(display_title, title) COLLATE NOCASE, id", nil
+		return " ORDER BY (year IS NULL) ASC, year DESC, sort_title COLLATE NOCASE, id", nil
 	case "added":
 		return " ORDER BY id DESC", nil
 	default:
@@ -207,6 +282,52 @@ func likePattern(value string) string {
 	return "%" + replacer.Replace(value) + "%"
 }
 
+func (a *API) handleGenres(w http.ResponseWriter, r *http.Request) {
+	kind := strings.TrimSpace(r.URL.Query().Get("kind"))
+	if kind == "" {
+		kind = KindMovie
+	}
+	if kind != KindMovie && kind != KindEpisode {
+		writeJSONError(w, http.StatusBadRequest, "kind debe ser movie o episode")
+		return
+	}
+
+	rows, err := a.db.QueryContext(r.Context(), `
+		SELECT je.value, COUNT(DISTINCT mi.id)
+		  FROM media_items mi
+		  JOIN json_each(CASE WHEN mi.genres IS NOT NULL AND json_valid(mi.genres) THEN mi.genres ELSE '[]' END) je
+		 WHERE mi.kind = ?
+		 GROUP BY je.value
+		 ORDER BY je.value COLLATE NOCASE, je.value`, kind)
+	if err != nil {
+		log.Printf("library: listar géneros: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
+	defer rows.Close()
+
+	genres := make([]genreCount, 0)
+	for rows.Next() {
+		var name sql.NullString
+		var count int64
+		if err := rows.Scan(&name, &count); err != nil {
+			log.Printf("library: leer género: %v", err)
+			writeJSONError(w, http.StatusInternalServerError, "error interno")
+			return
+		}
+		if !name.Valid || strings.TrimSpace(name.String) == "" {
+			continue
+		}
+		genres = append(genres, genreCount{Name: name.String, Count: count})
+	}
+	if err := rows.Err(); err != nil {
+		log.Printf("library: recorrer géneros: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
+	writeJSON(w, http.StatusOK, genresResponse{Genres: genres})
+}
+
 func (a *API) loadMovieItem(w http.ResponseWriter, r *http.Request) (mediaItemDTO, bool) {
 	id, ok := idFromPath(r)
 	if !ok {
@@ -214,7 +335,7 @@ func (a *API) loadMovieItem(w http.ResponseWriter, r *http.Request) (mediaItemDT
 		return mediaItemDTO{}, false
 	}
 
-	item, err := queryMediaItem(r.Context(), a.db, id)
+	item, err := queryMediaItem(r.Context(), a.db, id, sessionUserID(r))
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		writeJSONError(w, http.StatusNotFound, "ítem no encontrado")
@@ -383,7 +504,7 @@ func updateMediaYear(ctx context.Context, db *sql.DB, id int64, year int) error 
 }
 
 func (a *API) writeItemByID(w http.ResponseWriter, r *http.Request, id int64) {
-	item, err := queryMediaItem(r.Context(), a.db, id)
+	item, err := queryMediaItem(r.Context(), a.db, id, sessionUserID(r))
 	if err != nil {
 		log.Printf("library: leer ítem %d: %v", id, err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")

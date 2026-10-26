@@ -14,6 +14,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 - `GET /api/v1/system/version` (no session) with the version, commit and build date; the web footer shows the server version and warns if web and server versions differ. The web version comes from the root `VERSION` (the web image is now built from the repository root).
 - Full movie record in the API (Spanish title, original title, tagline, genres, runtime, rating, directors, cast, backdrop, identification status) and, in `GET /api/v1/items`, the `kind`, `q`, `unmatched` filters and the `sort` ordering. Manual correction for admins: `GET /items/{id}/candidates`, `PUT` and `DELETE /items/{id}/match`.
 - The scan fills in the Spanish title of records saved before it existed.
+- Search by title, cast, director or everything (`field`), filter by initial letter (`letter`, ignoring articles and accents: "El Padrino" goes under P) and by genre (`genre`), genre list (`GET /api/v1/genres`) and ordering by normalised title.
+- Per-user watched state: `PUT`/`DELETE /api/v1/items/{id}/watched`, `watched` field on items and a `watched` filter.
 - The server shuts down gracefully on SIGINT/SIGTERM, cancelling any running scan.
 
 ## [0.10.0] - 2026-10-26

@@ -70,6 +70,9 @@ func main() {
 	if err := st.Migrate(ctx); err != nil {
 		log.Fatalf("cinecatd: %v", err)
 	}
+	if err := library.BackfillSortKeys(ctx, st.DB()); err != nil {
+		log.Printf("cinecatd: títulos normalizados pendientes: %v", err)
+	}
 
 	bootstrap, err := auth.BootstrapAdmin(ctx, st.DB(), os.Getenv(auth.EnvAdminPassword))
 	if err != nil {

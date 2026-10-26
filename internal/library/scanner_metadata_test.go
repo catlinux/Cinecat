@@ -98,6 +98,17 @@ func readTMDBMetadata(t *testing.T, db *sql.DB, path string) tmdbMetadataRow {
 	return row
 }
 
+func readSortKeys(t *testing.T, db *sql.DB, path string) (string, string) {
+	t.Helper()
+	var title, letter sql.NullString
+	if err := db.QueryRow(
+		`SELECT sort_title, sort_letter FROM media_items WHERE path = ?`, path,
+	).Scan(&title, &letter); err != nil {
+		t.Fatalf("leer claves de orden de %q: %v", path, err)
+	}
+	return title.String, letter.String
+}
+
 func newMetadataTestClient(t *testing.T, baseURL string) *metadata.OMDbClient {
 	t.Helper()
 	client, err := metadata.NewOMDbClient(metadata.OMDbOptions{
@@ -286,6 +297,9 @@ func TestScannerConTMDBIdentificaYPersisteFicha(t *testing.T) {
 	if !row.displayTitle.Valid || row.displayTitle.String != "Ficha de TMDB" {
 		t.Fatalf("display_title = %+v", row.displayTitle)
 	}
+	if sortTitle, letter := readSortKeys(t, db, file); sortTitle != "Ficha de TMDB" || letter != "F" {
+		t.Fatalf("claves de orden = %q, %q", sortTitle, letter)
+	}
 	if !row.imdbID.Valid || row.imdbID.String != "tt0123456" {
 		t.Fatalf("imdb_id = %+v", row.imdbID)
 	}
@@ -394,6 +408,9 @@ func TestScannerConTMDBLimpiaMetadatosSinCoincidencia(t *testing.T) {
 		row.posterURL.Valid || row.backdropURL.Valid || row.source.Valid ||
 		row.matchStatus.Valid || row.matchScore.Valid {
 		t.Fatalf("los metadatos debían quedar vacíos: %+v", row)
+	}
+	if sortTitle, letter := readSortKeys(t, db, file); sortTitle != "Desconocida" || letter != "D" {
+		t.Fatalf("claves de orden = %q, %q", sortTitle, letter)
 	}
 }
 
@@ -509,6 +526,9 @@ func TestScannerConTMDBRellenaDisplayTitlePendiente(t *testing.T) {
 			}
 			if !row.overview.Valid || row.overview.String != "Sinopsis nueva" {
 				t.Fatalf("overview = %+v", row.overview)
+			}
+			if sortTitle, letter := readSortKeys(t, db, file); sortTitle != "Título de TMDB" || letter != "T" {
+				t.Fatalf("claves de orden = %q, %q", sortTitle, letter)
 			}
 		})
 	}
