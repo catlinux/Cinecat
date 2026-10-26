@@ -13,6 +13,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 - Rows with ‹ › arrows and no scrollbar; the portal no longer overflows horizontally (responsive category grid).
 - Cast and crew with photos (initials fallback portrait) and a "More like this" row on movie and series pages.
 
+- Left-hand navigation menu (`ui.nav_layout` setting: side or top); the web now applies the public `ui.*` settings (name, default theme, accent, show collections and series).
+- Tagline, portal title and intro editable from the admin panel (`ui.tagline`, `ui.portal_title`, `ui.portal_intro`).
+
+### Changed
+
+- Lighter look (near-white cream, no beige veil); the "neighborhood cinema" wording is gone: new tagline "Sesión continua" and title "Tu cine en casa".
+
 ## [0.13.1] - 2026-10-26
 
 ### Fixed

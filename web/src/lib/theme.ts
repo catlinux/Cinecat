@@ -27,14 +27,18 @@ export function systemPrefersDark(): boolean {
 	);
 }
 
-export function getStoredTheme(): ThemePreference {
+export function getStoredTheme(fallback: ThemePreference = 'system'): ThemePreference {
 	if (typeof localStorage === 'undefined') {
-		return 'system';
+		return fallback;
 	}
 	try {
-		return parseThemePreference(localStorage.getItem(THEME_STORAGE_KEY));
+		const stored = localStorage.getItem(THEME_STORAGE_KEY);
+		if (stored === 'light' || stored === 'dark' || stored === 'system') {
+			return stored;
+		}
+		return fallback;
 	} catch {
-		return 'system';
+		return fallback;
 	}
 }
 

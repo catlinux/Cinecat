@@ -1,9 +1,12 @@
 <script lang="ts">
 	import CategoryArt from '$lib/components/CategoryArt.svelte';
 	import PosterRow from '$lib/components/PosterRow.svelte';
+	import { DEFAULT_PUBLIC_UI } from '$lib/settings';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
+
+	const ui = $derived({ ...DEFAULT_PUBLIC_UI, ...(data.ui ?? {}) });
 
 	type PortalCategory = {
 		id: string;
@@ -78,17 +81,16 @@
 </script>
 
 <svelte:head>
-	<title>Cinecat · Tu cine de barrio</title>
+	<title>{ui.portal_title} · {ui.server_name}</title>
 </svelte:head>
 
 <section class="portal">
 	<div class="portal-hero">
 		<p class="kicker">Bienvenido a la sala</p>
-		<h1>Tu cine de barrio</h1>
-		<p class="portal-lede">
-			Una biblioteca personal con olor a palomitas, carteles pintados a mano y la sesión de
-			siempre esperándote.
-		</p>
+		<h1>{ui.portal_title}</h1>
+		{#if ui.portal_intro}
+			<p class="portal-lede">{ui.portal_intro}</p>
+		{/if}
 	</div>
 
 	{#if data.errorMessage}

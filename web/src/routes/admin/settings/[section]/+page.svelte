@@ -23,7 +23,7 @@
 </script>
 
 <svelte:head>
-	<title>{section.label} · Administración · Cinecat</title>
+	<title>{section.label} · Administración · {data.ui?.server_name ?? 'Cinecat'}</title>
 </svelte:head>
 
 <section class="admin settings-page">

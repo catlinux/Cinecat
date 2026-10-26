@@ -38,7 +38,7 @@
 </script>
 
 <svelte:head>
-	<title>Administración · Cinecat</title>
+	<title>Administración · {data.ui?.server_name ?? 'Cinecat'}</title>
 </svelte:head>
 
 <section class="admin admin-summary">

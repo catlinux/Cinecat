@@ -18,7 +18,7 @@
 </script>
 
 <svelte:head>
-	<title>Colecciones · Cinecat</title>
+	<title>Colecciones · {data.ui?.server_name ?? 'Cinecat'}</title>
 </svelte:head>
 
 <section class="library collection-library">

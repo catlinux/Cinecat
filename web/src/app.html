@@ -7,7 +7,7 @@
 		<meta name="theme-color" content="#5a1a1f" />
 		<meta
 			name="description"
-			content="Cinecat: tu biblioteca personal de cine y series, con el encanto de las marquesinas de barrio."
+			content="Cinecat: tu biblioteca personal de cine y series, clara y luminosa."
 		/>
 		<script>
 			// Aplica el tema antes de pintar para evitar el parpadeo del tema claro.
@@ -18,7 +18,12 @@
 				} catch (error) {
 					stored = null;
 				}
-				var preference = stored === 'light' || stored === 'dark' ? stored : 'system';
+				var serverDefault =
+					document.documentElement.getAttribute('data-theme-default') || 'system';
+				var preference =
+					stored === 'light' || stored === 'dark' || stored === 'system'
+						? stored
+						: serverDefault;
 				var prefersDark = false;
 				try {
 					prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;

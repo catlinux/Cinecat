@@ -450,6 +450,8 @@ export interface SettingsResponse {
 	sections: SettingsSection[];
 }
 
+export type PublicSettingsResponse = Record<string, unknown>;
+
 export type SettingsValues = Record<string, string | boolean>;
 export type SettingsChanges = Record<string, unknown>;
 
@@ -558,6 +560,10 @@ export class ApiClient {
 
 	async getSettings(token: string): Promise<SettingsResponse> {
 		return this.get<SettingsResponse>('/api/v1/settings', token);
+	}
+
+	async getPublicSettings(token: string): Promise<PublicSettingsResponse> {
+		return this.get<PublicSettingsResponse>('/api/v1/settings/public', token);
 	}
 
 	async patchSettings(changes: SettingsChanges, token: string): Promise<SettingsResponse> {

@@ -111,7 +111,7 @@
 </script>
 
 <svelte:head>
-	<title>{item.title} · Cinecat</title>
+	<title>{item.title} · {data.ui?.server_name ?? 'Cinecat'}</title>
 </svelte:head>
 
 {#if isEpisode}

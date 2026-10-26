@@ -10,7 +10,7 @@
 </script>
 
 <svelte:head>
-	<title>Películas · Cinecat</title>
+	<title>Películas · {data.ui?.server_name ?? 'Cinecat'}</title>
 </svelte:head>
 
 <section class="library">

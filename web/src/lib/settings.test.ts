@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 import type { Setting } from './api';
 import {
 	collectSettingsForm,
+	DEFAULT_PUBLIC_UI,
 	findSettingsSection,
 	formatDurationText,
 	formatSettingDefault,
 	isNumericEnum,
+	parsePublicUI,
 	parseSettingValue
 } from './settings';
 
@@ -82,6 +84,72 @@ const threshold = setting({
 	value: 0.75,
 	min: 0.6,
 	max: 0.95
+});
+
+describe('ajustes públicos de la interfaz', () => {
+	it('usa los mismos valores por defecto que el servidor', () => {
+		expect(DEFAULT_PUBLIC_UI).toMatchObject({
+			server_name: 'Cinecat',
+			tagline: 'Sesión continua',
+			portal_title: 'Tu cine en casa',
+			nav_layout: 'side',
+			show_collections: true,
+			show_series: true,
+			theme_default: 'system',
+			accent: 'granate'
+		});
+	});
+
+	it('lee los valores válidos de la API', () => {
+		const ui = parsePublicUI({
+			'ui.server_name': '  Mi cine  ',
+			'ui.tagline': '  Siempre en sesión  ',
+			'ui.portal_title': '  Mi cartelera  ',
+			'ui.portal_intro': '  Una sala luminosa.  ',
+			'ui.nav_layout': 'top',
+			'ui.show_collections': false,
+			'ui.show_series': false,
+			'ui.theme_default': 'dark',
+			'ui.accent': 'dorado'
+		});
+
+		expect(ui).toEqual({
+			server_name: 'Mi cine',
+			tagline: 'Siempre en sesión',
+			portal_title: 'Mi cartelera',
+			portal_intro: 'Una sala luminosa.',
+			nav_layout: 'top',
+			show_collections: false,
+			show_series: false,
+			theme_default: 'dark',
+			accent: 'dorado'
+		});
+	});
+
+	it('conserva vacíos el eslogan y la introducción', () => {
+		const ui = parsePublicUI({
+			'ui.tagline': '   ',
+			'ui.portal_intro': ''
+		});
+
+		expect(ui.tagline).toBe('');
+		expect(ui.portal_intro).toBe('');
+	});
+
+	it('cae en los valores por defecto ante una API incompleta o inválida', () => {
+		expect(parsePublicUI(null)).toEqual(DEFAULT_PUBLIC_UI);
+		expect(
+			parsePublicUI({
+				'ui.server_name': 42,
+				'ui.portal_title': '',
+				'ui.nav_layout': 'left',
+				'ui.show_collections': 'no',
+				'ui.show_series': null,
+				'ui.theme_default': 'sepia',
+				'ui.accent': 'verde'
+			})
+		).toEqual(DEFAULT_PUBLIC_UI);
+	});
 });
 
 describe('formato de ajustes', () => {

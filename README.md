@@ -29,7 +29,7 @@ Televisión en directo y contenido de internet. Fotos y presentaciones llegarán
 
 ## Dirección visual
 
-**Elegida: «Marquesina».** Cine de barrio de los años 50-60: rojo granate y crema cálidos, acentos dorados y naranjas, tipografía serif de carácter (Fraunces) para los títulos. Carteles propios ilustrados (ninguno es una foto real) con escenas e iluminación variadas para dar colorido a la biblioteca.
+**Elegida: «Marquesina».** Cine clásico con aire actual y luminoso: rojo granate y crema muy claro, acentos dorados y naranjas, tipografía serif de carácter (Fraunces) para los títulos. Carteles propios ilustrados (ninguno es una foto real) con escenas e iluminación variadas para dar colorido a la biblioteca.
 
 Maqueta de referencia: [artboard "Marquesina" en Claude](https://claude.ai/artifact/J2o3AdQxPbN9woGjUfWQFk) (enlace privado del mantenedor; se sustituirá por capturas en `docs/` cuando haya interfaz real).
 

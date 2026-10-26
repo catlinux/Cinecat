@@ -78,7 +78,7 @@
 </script>
 
 <svelte:head>
-	<title>{series.title} · Cinecat</title>
+	<title>{series.title} · {data.ui?.server_name ?? 'Cinecat'}</title>
 </svelte:head>
 
 <a class="back" href="/series">← Series</a>

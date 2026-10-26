@@ -29,7 +29,7 @@ Live TV and internet content. Photos and slideshows will come in later versions.
 
 ## Visual direction
 
-**Chosen: "Marquesina".** 1950s-60s neighborhood cinema: warm maroon and cream tones, gold and orange accents, a characterful serif typeface (Fraunces) for titles. Illustrated posters of our own (none is a real photo) with varied scenes and lighting to give the library some color.
+**Chosen: "Marquesina".** Classic cinema with a modern, bright feel: maroon and very light cream tones, gold and orange accents, a characterful serif typeface (Fraunces) for titles. Illustrated posters of our own (none is a real photo) with varied scenes and lighting to give the library some color.
 
 Reference mockup: ["Marquesina" artboard on Claude](https://claude.ai/artifact/J2o3AdQxPbN9woGjUfWQFk) (maintainer's private link; will be replaced with screenshots in `docs/` once a real interface exists).
 

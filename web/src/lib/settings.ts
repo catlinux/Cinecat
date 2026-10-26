@@ -5,6 +5,74 @@ import type {
 	SettingsSection,
 	SettingsValues
 } from './api';
+import type { ThemePreference } from './theme';
+
+export type NavLayout = 'side' | 'top';
+export type Accent = 'granate' | 'naranja' | 'dorado';
+
+export interface PublicUI {
+	server_name: string;
+	tagline: string;
+	portal_title: string;
+	portal_intro: string;
+	nav_layout: NavLayout;
+	show_collections: boolean;
+	show_series: boolean;
+	theme_default: ThemePreference;
+	accent: Accent;
+}
+
+export const DEFAULT_PUBLIC_UI: PublicUI = {
+	server_name: 'Cinecat',
+	tagline: 'Sesión continua',
+	portal_title: 'Tu cine en casa',
+	portal_intro:
+		'Una biblioteca personal con olor a palomitas, carteles pintados a mano y la sesión de siempre esperándote.',
+	nav_layout: 'side',
+	show_collections: true,
+	show_series: true,
+	theme_default: 'system',
+	accent: 'granate'
+};
+
+function publicText(value: unknown, fallback: string, allowEmpty = false): string {
+	if (typeof value !== 'string') {
+		return fallback;
+	}
+	const text = value.trim();
+	return text === '' && !allowEmpty ? fallback : text;
+}
+
+function publicFlag(value: unknown, fallback: boolean): boolean {
+	return typeof value === 'boolean' ? value : fallback;
+}
+
+export function parsePublicUI(raw: Record<string, unknown> | null | undefined): PublicUI {
+	const source = raw ?? {};
+	const navLayout = source['ui.nav_layout'];
+	const themeDefault = source['ui.theme_default'];
+	const accent = source['ui.accent'];
+	return {
+		server_name: publicText(source['ui.server_name'], DEFAULT_PUBLIC_UI.server_name),
+		tagline: publicText(source['ui.tagline'], DEFAULT_PUBLIC_UI.tagline, true),
+		portal_title: publicText(source['ui.portal_title'], DEFAULT_PUBLIC_UI.portal_title),
+		portal_intro: publicText(source['ui.portal_intro'], DEFAULT_PUBLIC_UI.portal_intro, true),
+		nav_layout: navLayout === 'top' ? 'top' : 'side',
+		show_collections: publicFlag(
+			source['ui.show_collections'],
+			DEFAULT_PUBLIC_UI.show_collections
+		),
+		show_series: publicFlag(source['ui.show_series'], DEFAULT_PUBLIC_UI.show_series),
+		theme_default:
+			themeDefault === 'light' || themeDefault === 'dark' || themeDefault === 'system'
+				? themeDefault
+				: DEFAULT_PUBLIC_UI.theme_default,
+		accent:
+			accent === 'naranja' || accent === 'dorado' || accent === 'granate'
+				? accent
+				: DEFAULT_PUBLIC_UI.accent
+	};
+}
 
 export const settingsSectionKeys = [
 	'scan',

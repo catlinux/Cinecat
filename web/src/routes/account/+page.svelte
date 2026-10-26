@@ -1,11 +1,17 @@
 <script lang="ts">
 	type FormState = { message?: string; success?: boolean } | null;
 
-	let { form = null }: { form?: FormState } = $props();
+	let {
+		data = {},
+		form = null
+	}: {
+		data?: { ui?: { server_name: string } };
+		form?: FormState;
+	} = $props();
 </script>
 
 <svelte:head>
-	<title>Tu cuenta · Cinecat</title>
+	<title>Tu cuenta · {data.ui?.server_name ?? 'Cinecat'}</title>
 </svelte:head>
 
 <a class="back" href="/movies">← Volver a la cartelera</a>

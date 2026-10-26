@@ -1,6 +1,7 @@
 import { render } from 'svelte/server';
 import { describe, expect, it, vi } from 'vitest';
 import type { MediaItem } from '$lib/api';
+import { DEFAULT_PUBLIC_UI } from '$lib/settings';
 import { webVersion } from '$lib/version';
 import PortalPage from './+page.svelte';
 import { load } from './+page.server';
@@ -97,10 +98,12 @@ function portalData(overrides: Record<string, unknown> = {}) {
 	return {
 		hasSession: true,
 		isAdmin: false,
+		isHome: false,
 		activeCategory: null,
 		serverVersion: null,
 		serverCommit: null,
 		webVersion,
+		ui: DEFAULT_PUBLIC_UI,
 		moviesTotal: 42,
 		collectionsTotal: 7,
 		seriesTotal: 5,
@@ -246,7 +249,8 @@ describe('portal', () => {
 	it('muestra Continuar viendo antes de las recientes', () => {
 		const { body } = render(PortalPage, { props: { data: portalData() } });
 
-		expect(body).toContain('Tu cine de barrio');
+		expect(body).toContain('Tu cine en casa');
+		expect(body).toContain('Una biblioteca personal con olor a palomitas');
 		expect(body).toContain('Películas');
 		expect(body).toContain('42 películas');
 		expect(body).toContain('Colecciones');
@@ -269,6 +273,35 @@ describe('portal', () => {
 		expect(body).toMatch(/class="row-arrows[^"]*"[^>]*\bhidden\b/);
 		expect(body.indexOf('Continuar viendo')).toBeLessThan(body.indexOf('Añadido recientemente'));
 		expect(body).not.toContain('Siguiente episodio');
+	});
+
+	it('aplica el nombre, el título y la introducción de los ajustes', () => {
+		const { body, head } = render(PortalPage, {
+			props: {
+				data: portalData({
+					ui: {
+						...DEFAULT_PUBLIC_UI,
+						server_name: 'Mi cine',
+						portal_title: 'La sala de casa',
+						portal_intro: 'Una sala <luminosa> y tranquila.'
+					}
+				}) as never
+			}
+		});
+
+		expect(head).toContain('<title>La sala de casa · Mi cine</title>');
+		expect(body).toContain('La sala de casa');
+		expect(body).toContain('Una sala &lt;luminosa> y tranquila.');
+		expect(body).not.toContain('<luminosa>');
+	});
+
+	it('oculta la introducción si el ajuste está vacío', () => {
+		const { body } = render(PortalPage, {
+			props: { data: portalData({ ui: { ...DEFAULT_PUBLIC_UI, portal_intro: '' } }) as never }
+		});
+
+		expect(body).not.toContain('portal-lede');
+		expect(body).toContain('Tu cine en casa');
 	});
 
 	it('mantiene Colecciones activa aunque no haya recuento', () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseThemePreference, resolveTheme } from './theme';
+import { getStoredTheme, parseThemePreference, resolveTheme } from './theme';
 
 describe('theme', () => {
 	it('acepta solo las preferencias válidas y cae en system', () => {
@@ -8,6 +8,11 @@ describe('theme', () => {
 		expect(parseThemePreference('system')).toBe('system');
 		expect(parseThemePreference('otro')).toBe('system');
 		expect(parseThemePreference(null)).toBe('system');
+	});
+
+	it('usa el tema por defecto cuando no hay preferencia guardada', () => {
+		expect(getStoredTheme()).toBe('system');
+		expect(getStoredTheme('dark')).toBe('dark');
 	});
 
 	it('resuelve system según prefers-color-scheme', () => {

@@ -5,13 +5,13 @@
 		data = { hasSession: false },
 		form = null
 	}: {
-		data?: { hasSession: boolean };
+		data?: { hasSession: boolean; ui?: { server_name: string } };
 		form?: FormState;
 	} = $props();
 </script>
 
 <svelte:head>
-	<title>Entrar · Cinecat</title>
+	<title>Entrar · {data?.ui?.server_name ?? 'Cinecat'}</title>
 </svelte:head>
 
 <section class="login">

@@ -233,10 +233,26 @@ func TestSettingsPublic(t *testing.T) {
 	if err := json.Unmarshal(body, &values); err != nil {
 		t.Fatalf("respuesta pública: %v", err)
 	}
-	if len(values) != 8 {
-		t.Fatalf("ajustes públicos = %d, se esperaban 8: %v", len(values), values)
+	if len(values) != 12 {
+		t.Fatalf("ajustes públicos = %d, se esperaban 12: %v", len(values), values)
 	}
-	if values["ui.server_name"] != "Cinecat" || values["ui.page_size"].(float64) != 48 {
+	defaults := map[string]any{
+		"ui.server_name":      "Cinecat",
+		"ui.tagline":          "Sesión continua",
+		"ui.portal_title":     "Tu cine en casa",
+		"ui.portal_intro":     "Una biblioteca personal con olor a palomitas, carteles pintados a mano y la sesión de siempre esperándote.",
+		"ui.nav_layout":       "side",
+		"ui.show_collections": true,
+		"ui.show_series":      true,
+		"ui.theme_default":    "system",
+		"ui.accent":           "granate",
+	}
+	for key, want := range defaults {
+		if values[key] != want {
+			t.Fatalf("%s = %v, se esperaba %v", key, values[key], want)
+		}
+	}
+	if values["ui.page_size"].(float64) != 48 {
 		t.Fatalf("valores públicos inesperados: %v", values)
 	}
 	if _, ok := values[settings.KeyScanInterval]; ok {

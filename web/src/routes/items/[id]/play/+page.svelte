@@ -12,7 +12,7 @@
 </script>
 
 <svelte:head>
-	<title>Reproducir {data.item.title} · Cinecat</title>
+	<title>Reproducir {data.item.title} · {data.ui?.server_name ?? 'Cinecat'}</title>
 </svelte:head>
 
 <a class="back" href={`/items/${data.item.id}`}>← Volver a la ficha</a>

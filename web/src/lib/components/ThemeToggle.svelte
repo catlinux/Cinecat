@@ -13,10 +13,12 @@
 		{ value: 'dark', label: 'Oscuro', title: 'Tema oscuro' }
 	];
 
-	let preference = $state<ThemePreference>('system');
+	let { defaultPreference = 'system' }: { defaultPreference?: ThemePreference } = $props();
+	let preference = $state<ThemePreference | null>(null);
+	const selected = $derived(preference ?? defaultPreference);
 
 	onMount(() => {
-		preference = getStoredTheme();
+		preference = getStoredTheme(defaultPreference);
 		applyTheme(preference);
 
 		const media = window.matchMedia('(prefers-color-scheme: dark)');
@@ -39,7 +41,7 @@
 	{#each options as option (option.value)}
 		<button
 			type="button"
-			aria-pressed={preference === option.value}
+			aria-pressed={selected === option.value}
 			title={option.title}
 			onclick={() => choose(option.value)}
 		>

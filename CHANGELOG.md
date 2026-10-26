@@ -13,6 +13,13 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 - Filas con flechas ‹ › sin barra de desplazamiento; el portal ya no desborda horizontalmente (categorías en rejilla adaptable).
 - Reparto y equipo con fotos (retrato de respaldo con iniciales) y fila «Más como este» en las fichas de película y de serie.
 
+- Menú de navegación lateral a la izquierda (ajuste `ui.nav_layout`: lateral o superior); la web aplica ahora los ajustes públicos `ui.*` (nombre, tema por defecto, acento, mostrar colecciones y series).
+- Eslogan, título e introducción del portal editables desde la administración (`ui.tagline`, `ui.portal_title`, `ui.portal_intro`).
+
+### Cambiado
+
+- Aspecto más claro (crema casi blanco, sin velo beige); fuera la referencia a «cine de barrio»: nuevo eslogan «Sesión continua» y título «Tu cine en casa».
+
 ## [0.13.1] - 2026-10-26
 
 ### Corregido

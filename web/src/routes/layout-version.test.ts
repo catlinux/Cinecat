@@ -1,6 +1,7 @@
 import { createRawSnippet } from 'svelte';
 import { render } from 'svelte/server';
 import { describe, expect, it, vi } from 'vitest';
+import { DEFAULT_PUBLIC_UI, type PublicUI } from '$lib/settings';
 import { versionMismatch, webVersion } from '$lib/version';
 import Layout from './+layout.svelte';
 import { load } from './+layout.server';
@@ -16,14 +17,20 @@ const children = createRawSnippet(() => ({
 	render: () => '<p>Contenido</p>'
 }));
 
+function uiWith(overrides: Partial<PublicUI> = {}): PublicUI {
+	return { ...DEFAULT_PUBLIC_UI, ...overrides };
+}
+
 function layoutData(serverVersion: string | null, serverCommit: string | null = null) {
 	return {
 		hasSession: false,
 		isAdmin: false,
+		isHome: false,
 		activeCategory: null,
 		serverVersion,
 		serverCommit,
-		webVersion
+		webVersion,
+		ui: DEFAULT_PUBLIC_UI
 	};
 }
 
@@ -135,6 +142,88 @@ describe('carga de la versión del servidor', () => {
 	});
 });
 
+describe('carga de los ajustes públicos', () => {
+	it('usa los valores por defecto sin sesión', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(
+			jsonResponse({ server: '999.0.0', commit: '', built_at: '' })
+		);
+		const locals = { sessionToken: null } as { sessionToken: string | null; publicUI?: unknown };
+
+		const result = (await load({
+			locals,
+			fetch: fetchMock,
+			url: new URL('http://localhost/')
+		} as never)) as { ui: typeof DEFAULT_PUBLIC_UI; isHome: boolean };
+
+		expect(result.ui).toEqual(DEFAULT_PUBLIC_UI);
+		expect(result.isHome).toBe(true);
+		expect(locals.publicUI).toEqual(DEFAULT_PUBLIC_UI);
+	});
+
+	it('aplica los ajustes públicos con sesión', async () => {
+		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+			const path = new URL(String(input)).pathname;
+			if (path === '/api/v1/system/version') {
+				return jsonResponse({ server: '999.0.0', commit: '', built_at: '' });
+			}
+			if (path === '/api/v1/settings/public') {
+				return jsonResponse({
+					'ui.server_name': 'Mi cine',
+					'ui.nav_layout': 'top',
+					'ui.show_series': false,
+					'ui.accent': 'dorado'
+				});
+			}
+			if (path === '/api/v1/auth/me') {
+				return jsonResponse({ role: 'admin' });
+			}
+			throw new Error(`URL inesperada: ${path}`);
+		});
+
+		const result = (await load({
+			locals: { sessionToken: 'token-123' },
+			fetch: fetchMock,
+			url: new URL('http://localhost/movies')
+		} as never)) as {
+			ui: typeof DEFAULT_PUBLIC_UI;
+			isAdmin: boolean;
+			activeCategory: string | null;
+		};
+
+		expect(result.ui.server_name).toBe('Mi cine');
+		expect(result.ui.nav_layout).toBe('top');
+		expect(result.ui.show_series).toBe(false);
+		expect(result.ui.accent).toBe('dorado');
+		expect(result.ui.tagline).toBe(DEFAULT_PUBLIC_UI.tagline);
+		expect(result.isAdmin).toBe(true);
+		expect(result.activeCategory).toBe('movies');
+	});
+
+	it('vuelve a los valores por defecto si falla la API de ajustes', async () => {
+		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+			const path = new URL(String(input)).pathname;
+			if (path === '/api/v1/system/version') {
+				return jsonResponse({ server: '999.0.0', commit: '', built_at: '' });
+			}
+			if (path === '/api/v1/settings/public') {
+				return jsonResponse({ error: 'fallo' }, 500);
+			}
+			if (path === '/api/v1/auth/me') {
+				return jsonResponse({ role: 'viewer' });
+			}
+			throw new Error(`URL inesperada: ${path}`);
+		});
+
+		const result = (await load({
+			locals: { sessionToken: 'token-123' },
+			fetch: fetchMock,
+			url: new URL('http://localhost/')
+		} as never)) as { ui: typeof DEFAULT_PUBLIC_UI };
+
+		expect(result.ui).toEqual(DEFAULT_PUBLIC_UI);
+	});
+});
+
 describe('pie de página', () => {
 	it('muestra la versión del servidor y el commit', () => {
 		const body = renderFooter(webVersion, 'abc1234');
@@ -198,5 +287,116 @@ describe('pie de página', () => {
 
 		expect(body).toContain('href="/series"');
 		expect(body).toContain('aria-current="page"');
+	});
+});
+
+describe('interfaz configurable', () => {
+	it('aplica el nombre, el eslogan y el pie de los ajustes', () => {
+		const { body, head } = render(Layout, {
+			props: {
+				data: {
+					...layoutData(webVersion),
+					ui: uiWith({
+						server_name: 'Mi cine',
+						tagline: 'Siempre en sesión'
+					})
+				},
+				children
+			}
+		});
+
+		expect(head).toContain('<title>Mi cine</title>');
+		expect(body).toContain('Mi cine');
+		expect(body).toContain('Siempre en sesión');
+		expect(visibleText(body)).toContain(`Mi cine ${webVersion} · GPL-3.0`);
+	});
+
+	it('escapa el nombre y el eslogan', () => {
+		const { body } = render(Layout, {
+			props: {
+				data: {
+					...layoutData(null),
+					ui: uiWith({
+						server_name: '<b>Cine</b>',
+						tagline: '<script>alert(1)</script>'
+					})
+				},
+				children
+			}
+		});
+
+		expect(body).toContain('&lt;b>Cine&lt;/b>');
+		expect(body).toContain('&lt;script>alert(1)&lt;/script>');
+		expect(body).not.toContain('<b>Cine</b>');
+	});
+
+	it('pinta la barra lateral por defecto con la navegación principal', () => {
+		const { body } = render(Layout, {
+			props: {
+				data: { ...layoutData(null), isHome: true },
+				children
+			}
+		});
+
+		expect(body).toContain('side-nav');
+		expect(body).toContain('<nav aria-label="Principal"');
+		expect(body).toContain('href="/"');
+		expect(body).toContain('aria-current="page"');
+		expect(body).toContain('Sesión continua');
+		expect(body).not.toContain('class="marquee"');
+	});
+
+	it('usa la cabecera superior si nav_layout es top y añade Inicio', () => {
+		const { body } = render(Layout, {
+			props: {
+				data: {
+					...layoutData(null),
+					ui: uiWith({ nav_layout: 'top', tagline: '' })
+				},
+				children
+			}
+		});
+
+		expect(body).toContain('class="marquee"');
+		expect(body).toContain('<nav class="category-nav" aria-label="Principal"');
+		expect(body).toContain('>Inicio</a>');
+		expect(body).not.toContain('side-nav');
+		expect(body).not.toContain('Sesión continua');
+	});
+
+	it('oculta Colecciones y Series del menú cuando los ajustes lo piden', () => {
+		const { body } = render(Layout, {
+			props: {
+				data: {
+					...layoutData(null),
+					ui: uiWith({ show_collections: false, show_series: false })
+				},
+				children
+			}
+		});
+
+		expect(body).not.toContain('href="/collections"');
+		expect(body).not.toContain('href="/series"');
+		expect(body).toContain('href="/movies"');
+	});
+
+	it('solo muestra Administración a los administradores y Mi cuenta con sesión', () => {
+		const user = render(Layout, {
+			props: {
+				data: { ...layoutData(null), hasSession: true, isAdmin: false },
+				children
+			}
+		}).body;
+		expect(user).not.toContain('href="/admin"');
+		expect(user).toContain('href="/account"');
+
+		const admin = render(Layout, {
+			props: {
+				data: { ...layoutData(null), hasSession: true, isAdmin: true },
+				children
+			}
+		}).body;
+		expect(admin).toContain('href="/admin"');
+		expect(admin).toContain('href="/account"');
 	});
 });

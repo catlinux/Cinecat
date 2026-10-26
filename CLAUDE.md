@@ -7,7 +7,7 @@ Servidor y clientes propios (web, Android, Android TV) para reproducir una bibli
 - Autor y mantenedor único: **Catlinux**. Nunca otro usuario como autor/coautor en el historial.
 - Licencia: **GPL-3.0** con la condición adicional del artículo 7 (conservar atribución de Catlinux). Ver [LICENSE](LICENSE) y [docs/es/licencias-y-creditos.md](docs/es/licencias-y-creditos.md).
 - Pila: servidor en **Go**; web en **TypeScript + SvelteKit** + hls.js; Android/Android TV en **Kotlin + Jetpack Compose** + Media3/ExoPlayer (libmpv opcional). Ver `docs/es/arquitectura.md`.
-- Dirección visual de la interfaz: **«Marquesina»** (cine de barrio de los 50-60, serif Fraunces, carteles ilustrados propios, nunca fotos de terceros). Ver la sección «Dirección visual» del README.
+- Dirección visual de la interfaz: **«Marquesina»** (cine clásico con aire actual y luminoso, granate y crema claro, serif Fraunces, carteles ilustrados propios, nunca fotos de terceros). Ver la sección «Dirección visual» del README.
 - Documentación en castellano e inglés, siempre sincronizada. Commits en castellano.
 - Versiones: el orquestador decide cuándo crear la etiqueta `vX.Y.Z` (autorizado por el usuario el 2026-10-26): al cerrar una versión con cambios importantes (menor o mayor) o un parche que corrige un fallo que afecta al uso. La etiqueta se crea sobre el commit que sube `VERSION` y su `CHANGELOG`. **Subir la etiqueta al remoto sigue necesitando la aprobación explícita del usuario**, porque con el actualizador automático equivale a desplegar.
 - Plataformas: web, Android, Android TV. Nada más por ahora (ver «Fuera de alcance» en el README).

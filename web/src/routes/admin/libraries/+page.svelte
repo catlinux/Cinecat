@@ -16,7 +16,7 @@
 		data,
 		form = null
 	}: {
-		data: { libraries: Library[] };
+		data: { libraries: Library[]; ui?: { server_name: string } };
 		form?: FormState;
 	} = $props();
 
@@ -115,7 +115,7 @@
 </script>
 
 <svelte:head>
-	<title>Bibliotecas · Cinecat</title>
+	<title>Bibliotecas · {data.ui?.server_name ?? 'Cinecat'}</title>
 </svelte:head>
 
 <section class="admin">

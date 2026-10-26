@@ -2,6 +2,7 @@ import { render } from 'svelte/server';
 import { describe, expect, it, vi } from 'vitest';
 import type { GenreCount, MediaItem } from '$lib/api';
 import type { MovieFilters } from '$lib/movies';
+import { DEFAULT_PUBLIC_UI } from '$lib/settings';
 import { webVersion } from '$lib/version';
 import MoviesPage from './+page.svelte';
 import { load } from './+page.server';
@@ -242,10 +243,12 @@ function pageData(overrides: Record<string, unknown> = {}) {
 	return {
 		hasSession: true,
 		isAdmin: false,
-		activeCategory: 'movies',
+		isHome: false,
+		activeCategory: 'movies' as const,
 		serverVersion: null,
 		serverCommit: null,
 		webVersion,
+		ui: DEFAULT_PUBLIC_UI,
 		items: [item],
 		total: 100,
 		page: 2,

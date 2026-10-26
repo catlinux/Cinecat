@@ -48,8 +48,8 @@ func raw(value string) json.RawMessage {
 
 func TestDefinitions(t *testing.T) {
 	definitions := Definitions()
-	if len(definitions) != 17 {
-		t.Fatalf("ajustes = %d, se esperaban 17", len(definitions))
+	if len(definitions) != 21 {
+		t.Fatalf("ajustes = %d, se esperaban 21", len(definitions))
 	}
 
 	seen := make(map[string]bool)
@@ -77,8 +77,8 @@ func TestDefinitions(t *testing.T) {
 			t.Fatalf("el defecto de %q se normaliza a %#v", definition.Key, normalized)
 		}
 	}
-	if public != 8 {
-		t.Fatalf("ajustes públicos = %d, se esperaban 8", public)
+	if public != 12 {
+		t.Fatalf("ajustes públicos = %d, se esperaban 12", public)
 	}
 
 	sectionKeys := make([]string, 0, len(Sections()))
@@ -90,6 +90,31 @@ func TestDefinitions(t *testing.T) {
 	}
 	if lookup, ok := Lookup(KeyScanInterval); !ok || lookup.Default != "6h" {
 		t.Fatalf("scan.interval inesperado: %+v, %v", lookup, ok)
+	}
+
+	uiDefaults := map[string]any{
+		"ui.server_name":  "Cinecat",
+		"ui.tagline":      "Sesión continua",
+		"ui.portal_title": "Tu cine en casa",
+		"ui.portal_intro": "Una biblioteca personal con olor a palomitas, carteles pintados a mano y la sesión de siempre esperándote.",
+		"ui.nav_layout":   "side",
+	}
+	for key, want := range uiDefaults {
+		definition, ok := Lookup(key)
+		if !ok {
+			t.Fatalf("falta el ajuste %q", key)
+		}
+		if definition.Default != want || !definition.Public || definition.Section != "ui" {
+			t.Fatalf("%s inesperado: %+v", key, definition)
+		}
+	}
+	if layout, ok := Lookup("ui.nav_layout"); !ok ||
+		len(layout.Options) != 2 ||
+		layout.Options[0].Value != "side" ||
+		layout.Options[0].Label != "Lateral (izquierda)" ||
+		layout.Options[1].Value != "top" ||
+		layout.Options[1].Label != "Superior" {
+		t.Fatalf("opciones de ui.nav_layout inesperadas: %+v, %v", layout, ok)
 	}
 }
 
@@ -106,6 +131,14 @@ func TestValidate(t *testing.T) {
 		{"float mínimo", "metadata.match_threshold", "0.6", 0.6},
 		{"float máximo", "metadata.match_threshold", "0.95", 0.95},
 		{"texto recortado", "ui.server_name", `"  Mi cine  "`, "Mi cine"},
+		{"eslogan vacío", "ui.tagline", `"   "`, ""},
+		{"eslogan máximo", "ui.tagline", `"` + strings.Repeat("a", 60) + `"`, strings.Repeat("a", 60)},
+		{"título del portal", "ui.portal_title", `"  Mi casa  "`, "Mi casa"},
+		{"título del portal máximo", "ui.portal_title", `"` + strings.Repeat("a", 60) + `"`, strings.Repeat("a", 60)},
+		{"intro vacía", "ui.portal_intro", `""`, ""},
+		{"intro máxima", "ui.portal_intro", `"` + strings.Repeat("a", 240) + `"`, strings.Repeat("a", 240)},
+		{"menú lateral", "ui.nav_layout", `"side"`, "side"},
+		{"menú superior", "ui.nav_layout", `"top"`, "top"},
 		{"duración cero", KeyScanInterval, `"0"`, "0"},
 		{"duración minutos", KeyScanInterval, `"30m"`, "30m"},
 		{"duración horas", KeyScanInterval, `"6h"`, "6h"},
@@ -143,6 +176,11 @@ func TestValidate(t *testing.T) {
 		{"float alto", "metadata.match_threshold", "0.96"},
 		{"texto vacío", "ui.server_name", `"   "`},
 		{"texto largo", "ui.server_name", `"` + strings.Repeat("a", 41) + `"`},
+		{"eslogan largo", "ui.tagline", `"` + strings.Repeat("a", 61) + `"`},
+		{"título del portal vacío", "ui.portal_title", `"   "`},
+		{"título del portal largo", "ui.portal_title", `"` + strings.Repeat("a", 61) + `"`},
+		{"intro larga", "ui.portal_intro", `"` + strings.Repeat("a", 241) + `"`},
+		{"menú desconocido", "ui.nav_layout", `"left"`},
 		{"duración corta", KeyScanInterval, `"30s"`},
 		{"duración negativa", KeyScanInterval, `"-1m"`},
 		{"duración inválida", KeyScanInterval, `"mañana"`},

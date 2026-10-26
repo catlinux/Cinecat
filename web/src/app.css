@@ -17,8 +17,8 @@
 :root {
 	color-scheme: light;
 
-	--crema: #f5ead4;
-	--crema-clara: #fdf7ea;
+	--crema: #fbf7ee;
+	--crema-clara: #fffdf8;
 	--granate: #5a1a1f;
 	--granate-oscuro: #3a1013;
 	--dorado: #c99a2e;
@@ -32,8 +32,8 @@
 	--texto-apagado: #7a514c;
 	--texto-error: #7a2f18;
 	--texto-sobre-oscuro: #fdf7ea;
-	--superficie: #fdf7ea;
-	--superficie-suave: rgba(253, 247, 234, 0.5);
+	--superficie: #fffdf8;
+	--superficie-suave: rgba(255, 253, 248, 0.72);
 	--borde-suave: rgba(90, 26, 31, 0.25);
 	--borde-medio: rgba(90, 26, 31, 0.4);
 	--borde-tenue: rgba(90, 26, 31, 0.2);
@@ -44,8 +44,8 @@
 	--boton-texto: #fdf7ea;
 	--boton-hover: #3a1013;
 	--foco: #a64618;
-	--brillo-a: rgba(201, 154, 46, 0.18);
-	--brillo-b: rgba(90, 26, 31, 0.12);
+	--brillo-a: rgba(201, 154, 46, 0.06);
+	--brillo-b: rgba(90, 26, 31, 0.04);
 	--velo-cartel: rgba(20, 10, 11, 0.72);
 
 	font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -86,6 +86,34 @@
 	--foco: #ffd27a;
 	--brillo-a: rgba(224, 181, 74, 0.08);
 	--brillo-b: rgba(124, 43, 51, 0.3);
+}
+
+:root[data-accent='naranja'] {
+	--granate: #8a3514;
+	--boton-fondo: #8a3514;
+	--boton-hover: #6f2a0f;
+	--foco: #a64618;
+}
+
+:root[data-accent='dorado'] {
+	--granate: #6f520c;
+	--boton-fondo: #6f520c;
+	--boton-hover: #574007;
+	--foco: #7a5a10;
+}
+
+[data-theme='dark'][data-accent='naranja'] {
+	--granate: #f4b183;
+	--boton-fondo: #9a3f12;
+	--boton-hover: #7d320e;
+	--foco: #ffb27a;
+}
+
+[data-theme='dark'][data-accent='dorado'] {
+	--granate: #e8c979;
+	--boton-fondo: #7a5a10;
+	--boton-hover: #614608;
+	--foco: #ffd27a;
 }
 
 * {
@@ -205,6 +233,7 @@ video:focus-visible,
 
 .eyebrow {
 	margin: 0;
+	overflow-wrap: anywhere;
 	font-size: 0.72rem;
 	font-weight: 600;
 	letter-spacing: 0.28em;
@@ -213,6 +242,7 @@ video:focus-visible,
 }
 
 .wordmark {
+	overflow-wrap: anywhere;
 	font-family: 'Fraunces', Georgia, serif;
 	font-size: 1.6rem;
 	font-weight: 700;
@@ -313,6 +343,7 @@ main {
 footer {
 	display: flex;
 	flex-wrap: wrap;
+	overflow-wrap: anywhere;
 	justify-content: space-between;
 	gap: 0.5rem 1.5rem;
 	padding-top: 1rem;
@@ -2093,6 +2124,7 @@ footer {
 
 .portal-hero h1 {
 	margin: 0.3rem 0 0.7rem;
+	overflow-wrap: anywhere;
 	font-family: 'Fraunces', Georgia, serif;
 	font-size: clamp(3rem, 9vw, 6rem);
 	font-weight: 700;
@@ -2107,6 +2139,7 @@ footer {
 .portal-lede {
 	max-width: 38rem;
 	margin: 0;
+	overflow-wrap: anywhere;
 	color: var(--texto-tenue);
 	font-size: clamp(1rem, 2vw, 1.15rem);
 	line-height: 1.6;

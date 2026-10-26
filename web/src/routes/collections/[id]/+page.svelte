@@ -29,7 +29,7 @@
 </script>
 
 <svelte:head>
-	<title>{collection.name} · Cinecat</title>
+	<title>{collection.name} · {data.ui?.server_name ?? 'Cinecat'}</title>
 </svelte:head>
 
 <a class="back" href="/collections">← Colecciones</a>

@@ -12,4 +12,10 @@ describe('ThemeToggle', () => {
 		expect(body).toContain('Oscuro');
 		expect(body).toContain('aria-pressed="true"');
 	});
+
+	it('marca el tema por defecto del servidor cuando no hay preferencia', () => {
+		const { body } = render(ThemeToggle, { props: { defaultPreference: 'dark' } });
+
+		expect(body).toContain('aria-pressed="true" title="Tema oscuro"');
+	});
 });
