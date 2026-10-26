@@ -14,15 +14,20 @@ import (
 )
 
 type fakeTMDB struct {
-	searchCalls  int
-	detailsCalls int
-	searchErr    error
-	detailsErr   error
-	details      *metadata.Details
+	searchCalls   int
+	detailsCalls  int
+	lastQuery     string
+	lastYear      int
+	lastDetailsID int
+	searchErr     error
+	detailsErr    error
+	details       *metadata.Details
 }
 
 func (f *fakeTMDB) SearchMovies(ctx context.Context, query string, year int) ([]metadata.Candidate, error) {
 	f.searchCalls++
+	f.lastQuery = query
+	f.lastYear = year
 	if f.searchErr != nil {
 		return nil, f.searchErr
 	}
@@ -42,6 +47,7 @@ func (f *fakeTMDB) MovieCollection(ctx context.Context, movieID int) ([]metadata
 
 func (f *fakeTMDB) MovieDetails(ctx context.Context, id int) (*metadata.Details, error) {
 	f.detailsCalls++
+	f.lastDetailsID = id
 	if f.detailsErr != nil {
 		return nil, f.detailsErr
 	}
@@ -54,6 +60,7 @@ func (f *fakeTMDB) MovieDetails(ctx context.Context, id int) (*metadata.Details,
 type tmdbMetadataRow struct {
 	tmdbID           sql.NullInt64
 	originalTitle    sql.NullString
+	displayTitle     sql.NullString
 	imdbID           sql.NullString
 	tagline          sql.NullString
 	overview         sql.NullString
@@ -74,16 +81,17 @@ func readTMDBMetadata(t *testing.T, db *sql.DB, path string) tmdbMetadataRow {
 	t.Helper()
 	var row tmdbMetadataRow
 	if err := db.QueryRow(`
-		SELECT tmdb_id, original_title, imdb_id, tagline, overview,
-			overview_language, genres, runtime_minutes, rating, directors,
-			cast_names, poster_url, backdrop_url, metadata_source,
+		SELECT tmdb_id, original_title, display_title, imdb_id, tagline,
+			overview, overview_language, genres, runtime_minutes, rating,
+			directors, cast_names, poster_url, backdrop_url, metadata_source,
 			match_status, match_score
 		FROM media_items WHERE path = ?`, path,
 	).Scan(
-		&row.tmdbID, &row.originalTitle, &row.imdbID, &row.tagline,
-		&row.overview, &row.overviewLanguage, &row.genres, &row.runtime,
-		&row.rating, &row.directors, &row.castNames, &row.posterURL,
-		&row.backdropURL, &row.source, &row.matchStatus, &row.matchScore,
+		&row.tmdbID, &row.originalTitle, &row.displayTitle, &row.imdbID,
+		&row.tagline, &row.overview, &row.overviewLanguage, &row.genres,
+		&row.runtime, &row.rating, &row.directors, &row.castNames,
+		&row.posterURL, &row.backdropURL, &row.source, &row.matchStatus,
+		&row.matchScore,
 	); err != nil {
 		t.Fatalf("leer metadatos de %q: %v", path, err)
 	}
@@ -275,6 +283,9 @@ func TestScannerConTMDBIdentificaYPersisteFicha(t *testing.T) {
 	if !row.originalTitle.Valid || row.originalTitle.String != "Original title" {
 		t.Fatalf("original_title = %+v", row.originalTitle)
 	}
+	if !row.displayTitle.Valid || row.displayTitle.String != "Ficha de TMDB" {
+		t.Fatalf("display_title = %+v", row.displayTitle)
+	}
 	if !row.imdbID.Valid || row.imdbID.String != "tt0123456" {
 		t.Fatalf("imdb_id = %+v", row.imdbID)
 	}
@@ -347,13 +358,13 @@ func TestScannerConTMDBLimpiaMetadatosSinCoincidencia(t *testing.T) {
 	if _, err := db.Exec(`
 		INSERT INTO media_items (
 			library_id, path, title, year, kind, tmdb_id, overview, poster_url,
-			original_title, imdb_id, tagline, genres, runtime_minutes, rating,
-			directors, cast_names, backdrop_url, overview_language,
-			metadata_source, match_score
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			original_title, display_title, imdb_id, tagline, genres,
+			runtime_minutes, rating, directors, cast_names, backdrop_url,
+			overview_language, metadata_source, match_score
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		libraryID, file, "Desconocida", 1999, KindMovie, 7,
 		"Sinopsis de OMDb", "https://images.example/omdb.jpg",
-		"Old original", "tt0000007", "Old tagline", `["Old genre"]`, 100, 7.1,
+		"Old original", "Título antiguo", "tt0000007", "Old tagline", `["Old genre"]`, 100, 7.1,
 		`["Old director"]`, `["Old actor"]`, "https://images.example/old-backdrop.jpg",
 		"en-US", "omdb", 0.9,
 	); err != nil {
@@ -376,12 +387,12 @@ func TestScannerConTMDBLimpiaMetadatosSinCoincidencia(t *testing.T) {
 	}
 
 	row := readTMDBMetadata(t, db, file)
-	if row.tmdbID.Valid || row.originalTitle.Valid || row.imdbID.Valid ||
-		row.tagline.Valid || row.overview.Valid || row.overviewLanguage.Valid ||
-		row.genres.Valid || row.runtime.Valid || row.rating.Valid ||
-		row.directors.Valid || row.castNames.Valid || row.posterURL.Valid ||
-		row.backdropURL.Valid || row.source.Valid || row.matchStatus.Valid ||
-		row.matchScore.Valid {
+	if row.tmdbID.Valid || row.originalTitle.Valid || row.displayTitle.Valid ||
+		row.imdbID.Valid || row.tagline.Valid || row.overview.Valid ||
+		row.overviewLanguage.Valid || row.genres.Valid || row.runtime.Valid ||
+		row.rating.Valid || row.directors.Valid || row.castNames.Valid ||
+		row.posterURL.Valid || row.backdropURL.Valid || row.source.Valid ||
+		row.matchStatus.Valid || row.matchScore.Valid {
 		t.Fatalf("los metadatos debían quedar vacíos: %+v", row)
 	}
 }
@@ -410,10 +421,10 @@ func TestScannerConTMDBNoTocaManualNiNone(t *testing.T) {
 		if _, err := db.Exec(`
 			INSERT INTO media_items (
 				library_id, path, title, year, kind, tmdb_id, overview,
-				poster_url, metadata_source, match_status, match_score
-			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				poster_url, display_title, metadata_source, match_status, match_score
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			libraryID, item.path, item.title, item.year, KindMovie, 99,
-			"Ficha fijada", "https://images.example/fijada.jpg",
+			"Ficha fijada", "https://images.example/fijada.jpg", "Ficha fijada",
 			item.source, item.status, 0.8,
 		); err != nil {
 			t.Fatalf("insertar %q: %v", item.path, err)
@@ -440,9 +451,66 @@ func TestScannerConTMDBNoTocaManualNiNone(t *testing.T) {
 		row := readTMDBMetadata(t, db, path)
 		if !row.tmdbID.Valid || row.tmdbID.Int64 != 99 ||
 			!row.overview.Valid || row.overview.String != "Ficha fijada" ||
+			!row.displayTitle.Valid || row.displayTitle.String != "Ficha fijada" ||
 			!row.matchScore.Valid || row.matchScore.Float64 != 0.8 {
 			t.Fatalf("la fila %q cambió: %+v", path, row)
 		}
+	}
+}
+
+func TestScannerConTMDBRellenaDisplayTitlePendiente(t *testing.T) {
+	for _, status := range []string{"auto", "manual"} {
+		t.Run(status, func(t *testing.T) {
+			ctx := context.Background()
+			db := openTestDB(t)
+
+			root := t.TempDir()
+			file := filepath.Join(root, "Pelicula (1999).mkv")
+			writeFile(t, file)
+			libraryID := createLibrary(t, db, root)
+
+			if _, err := db.Exec(`
+				INSERT INTO media_items (
+					library_id, path, title, year, kind, tmdb_id, overview,
+					metadata_source, match_status, match_score
+				) VALUES (?, ?, ?, ?, ?, ?, ?, 'tmdb', ?, ?)`,
+				libraryID, file, "Pelicula", 1999, KindMovie, 77,
+				"Sinopsis antigua", status, 0.87,
+			); err != nil {
+				t.Fatalf("insertar fila previa: %v", err)
+			}
+
+			fake := &fakeTMDB{details: &metadata.Details{
+				TMDBID:   77,
+				Title:    "Título de TMDB",
+				Year:     1999,
+				Overview: "Sinopsis nueva",
+			}}
+			res, err := New(db).WithTMDB(fake).Scan(ctx)
+			if err != nil {
+				t.Fatalf("Scan: %v", err)
+			}
+			if res.Identified != 0 || res.Unidentified != 0 {
+				t.Fatalf("el relleno no debe contar como identificación: %+v", res)
+			}
+			if fake.searchCalls != 0 || fake.detailsCalls != 1 {
+				t.Fatalf("búsquedas %d, fichas %d", fake.searchCalls, fake.detailsCalls)
+			}
+
+			row := readTMDBMetadata(t, db, file)
+			if !row.displayTitle.Valid || row.displayTitle.String != "Título de TMDB" {
+				t.Fatalf("display_title = %+v", row.displayTitle)
+			}
+			if !row.matchStatus.Valid || row.matchStatus.String != status {
+				t.Fatalf("match_status = %+v", row.matchStatus)
+			}
+			if !row.matchScore.Valid || row.matchScore.Float64 != 0.87 {
+				t.Fatalf("match_score = %+v", row.matchScore)
+			}
+			if !row.overview.Valid || row.overview.String != "Sinopsis nueva" {
+				t.Fatalf("overview = %+v", row.overview)
+			}
+		})
 	}
 }
 

@@ -227,16 +227,46 @@ func (s *Scanner) enrichMovie(ctx context.Context, libraryID int64, path string,
 // de corrección manual: lo que el usuario ha fijado no se vuelve a consultar.
 func (s *Scanner) enrichMovieTMDB(ctx context.Context, libraryID int64, path string, media Media, res *Result) {
 	var itemID int64
-	var matchStatus, source sql.NullString
+	var matchStatus, source, displayTitle sql.NullString
+	var tmdbID sql.NullInt64
+	var matchScore sql.NullFloat64
 	if err := s.db.QueryRowContext(ctx,
-		`SELECT id, match_status, metadata_source FROM media_items WHERE library_id = ? AND path = ?`,
+		`SELECT id, match_status, metadata_source, tmdb_id, match_score, display_title
+		   FROM media_items WHERE library_id = ? AND path = ?`,
 		libraryID, path,
-	).Scan(&itemID, &matchStatus, &source); err != nil {
+	).Scan(&itemID, &matchStatus, &source, &tmdbID, &matchScore, &displayTitle); err != nil {
 		res.Warnings = append(res.Warnings, fmt.Sprintf("%s: no se pudo comprobar los metadatos: %v", path, err))
 		return
 	}
 
 	if matchStatus.Valid {
+		// Relleno de las fichas guardadas antes de que existiera
+		// display_title: se conserva el estado y la puntuación de la fila.
+		if (matchStatus.String == "auto" || matchStatus.String == "manual") &&
+			source.Valid && source.String == "tmdb" &&
+			tmdbID.Valid && tmdbID.Int64 > 0 && !displayTitle.Valid {
+			score := 0.0
+			if matchScore.Valid {
+				score = matchScore.Float64
+			}
+			details, err := s.tmdb.MovieDetails(ctx, int(tmdbID.Int64))
+			if err != nil {
+				res.Warnings = append(res.Warnings, fmt.Sprintf("%s: no se pudo obtener la ficha: %v", path, err))
+				return
+			}
+			if err := ApplyMovieDetails(ctx, s.db, itemID, details, matchStatus.String, score); err != nil {
+				res.Warnings = append(res.Warnings, fmt.Sprintf("%s: no se pudieron guardar los metadatos: %v", path, err))
+				return
+			}
+			if !matchScore.Valid {
+				if _, err := s.db.ExecContext(ctx,
+					`UPDATE media_items SET match_score = NULL WHERE id = ?`, itemID); err != nil {
+					res.Warnings = append(res.Warnings, fmt.Sprintf("%s: no se pudieron guardar los metadatos: %v", path, err))
+				}
+			}
+			return
+		}
+
 		switch matchStatus.String {
 		case "manual", "none":
 			return
@@ -274,21 +304,21 @@ func (s *Scanner) enrichMovieTMDB(ctx context.Context, libraryID int64, path str
 	res.Identified++
 }
 
-// ApplyMovieDetails guarda la ficha completa en la fila. El título se deja
-// como está porque es el que se analizó del archivo.
+// ApplyMovieDetails guarda la ficha completa en la fila. El título analizado
+// (title) no se toca; el de TMDB se guarda en display_title.
 func ApplyMovieDetails(ctx context.Context, db *sql.DB, itemID int64, d *metadata.Details, status string, score float64) error {
 	_, err := db.ExecContext(ctx, `
 		UPDATE media_items SET
 			tmdb_id = ?, original_title = ?, imdb_id = ?, tagline = ?,
-			overview = ?, overview_language = ?, year = ?, genres = ?,
-			runtime_minutes = ?, rating = ?, directors = ?, cast_names = ?,
-			poster_url = ?, backdrop_url = ?, metadata_source = 'tmdb',
-			match_status = ?, match_score = ?
+			overview = ?, overview_language = ?, year = ?, display_title = ?,
+			genres = ?, runtime_minutes = ?, rating = ?, directors = ?,
+			cast_names = ?, poster_url = ?, backdrop_url = ?,
+			metadata_source = 'tmdb', match_status = ?, match_score = ?
 		WHERE id = ?`,
 		nullableInt(d.TMDBID), nullableText(d.OriginalTitle), nullableText(d.IMDbID), nullableText(d.Tagline),
-		nullableText(d.Overview), nullableText(d.OverviewLanguage), nullableInt(d.Year), jsonArray(d.Genres),
-		nullableInt(d.RuntimeMinutes), nullableFloat(d.Rating), jsonArray(d.Directors), jsonArray(d.Cast),
-		nullableText(d.PosterURL), nullableText(d.BackdropURL),
+		nullableText(d.Overview), nullableText(d.OverviewLanguage), nullableInt(d.Year), nullableText(d.Title),
+		jsonArray(d.Genres), nullableInt(d.RuntimeMinutes), nullableFloat(d.Rating), jsonArray(d.Directors),
+		jsonArray(d.Cast), nullableText(d.PosterURL), nullableText(d.BackdropURL),
 		nullableText(status), score, itemID,
 	)
 	if err != nil {
@@ -303,10 +333,11 @@ func ClearMovieMetadata(ctx context.Context, db *sql.DB, itemID int64, status an
 	_, err := db.ExecContext(ctx, `
 		UPDATE media_items SET
 			tmdb_id = NULL, original_title = NULL, imdb_id = NULL, tagline = NULL,
-			overview = NULL, overview_language = NULL, genres = NULL,
-			runtime_minutes = NULL, rating = NULL, directors = NULL,
-			cast_names = NULL, poster_url = NULL, backdrop_url = NULL,
-			metadata_source = NULL, match_score = NULL, match_status = ?
+			overview = NULL, overview_language = NULL, display_title = NULL,
+			genres = NULL, runtime_minutes = NULL, rating = NULL,
+			directors = NULL, cast_names = NULL, poster_url = NULL,
+			backdrop_url = NULL, metadata_source = NULL, match_score = NULL,
+			match_status = ?
 		WHERE id = ?`,
 		status, itemID,
 	)

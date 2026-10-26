@@ -12,6 +12,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 - Automatic scan one minute after startup and then every `CINECAT_SCAN_INTERVAL` (default `6h`; `0` disables it).
 - The libraries panel starts the scan in the background and shows "Escaneo en curso…" polling every 3 s; when done, it shows files, identified, unidentified and collapsible warnings.
 - `GET /api/v1/system/version` (no session) with the version, commit and build date; the web footer shows the server version and warns if web and server versions differ. The web version comes from the root `VERSION` (the web image is now built from the repository root).
+- Full movie record in the API (Spanish title, original title, tagline, genres, runtime, rating, directors, cast, backdrop, identification status) and, in `GET /api/v1/items`, the `kind`, `q`, `unmatched` filters and the `sort` ordering. Manual correction for admins: `GET /items/{id}/candidates`, `PUT` and `DELETE /items/{id}/match`.
+- The scan fills in the Spanish title of records saved before it existed.
 - The server shuts down gracefully on SIGINT/SIGTERM, cancelling any running scan.
 
 ## [0.10.0] - 2026-10-26

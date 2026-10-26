@@ -340,8 +340,8 @@ paths:
     get:
       summary: Lista los ítems de las bibliotecas
       description: |
-        Devuelve las entradas de `media_items` con paginación simple. El orden
-        es estable por `id`.
+        Devuelve las entradas de `media_items` con paginación simple. Los
+        filtros se pueden combinar. Sin `sort`, el orden es estable por `id`.
       security:
         - bearerAuth: []
       parameters:
@@ -353,6 +353,45 @@ paths:
             type: integer
             format: int64
             minimum: 1
+        - name: kind
+          in: query
+          description: Filtra por tipo de ítem.
+          required: false
+          schema:
+            type: string
+            enum:
+              - movie
+              - episode
+        - name: q
+          in: query
+          description: |
+            Busca sin distinguir mayúsculas en el título visible, el título del
+            archivo y el título original. Los caracteres `%` y `_` se tratan
+            como literales.
+          required: false
+          schema:
+            type: string
+        - name: unmatched
+          in: query
+          description: |
+            Con `true`, devuelve solo películas sin identificar o marcadas como
+            «no es ninguna». Con `false`, no aplica este filtro.
+          required: false
+          schema:
+            type: boolean
+        - name: sort
+          in: query
+          description: |
+            Orden de la lista: `title` (título visible, sin distinguir
+            mayúsculas), `year` (año descendente, nulos al final) o `added`
+            (últimos añadidos primero). Sin `sort`, se ordena por `id`.
+          required: false
+          schema:
+            type: string
+            enum:
+              - title
+              - year
+              - added
         - name: limit
           in: query
           description: Número máximo de ítems a devolver.
@@ -378,7 +417,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ItemsResponse'
         '400':
-          description: Parámetros de paginación no válidos
+          description: Parámetros de paginación, filtro u orden no válidos
           content:
             application/json:
               schema:
@@ -430,6 +469,209 @@ paths:
                 $ref: '#/components/schemas/Error'
         '500':
           description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/items/{id}/candidates:
+    get:
+      summary: Busca candidatos de TMDB para una película (solo administradores)
+      description: |
+        Busca películas en TMDB. Si no se indica `q`, usa el título analizado
+        del archivo. `year` es opcional. Requiere una sesión con rol `admin`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - name: q
+          in: query
+          description: Texto a buscar; por defecto, el título analizado del archivo.
+          required: false
+          schema:
+            type: string
+        - name: year
+          in: query
+          description: Año opcional para afinar la búsqueda.
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        '200':
+          description: Candidatos encontrados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidatesResponse'
+        '400':
+          description: Parámetros no válidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: El usuario no tiene rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No existe el ítem o no es una película
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: No se pudo consultar TMDB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: TMDB no está configurado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/items/{id}/match:
+    put:
+      summary: Corrige a mano la ficha de una película (solo administradores)
+      description: |
+        Con un `tmdb_id` guarda la ficha de TMDB como corrección manual. Con
+        `null` marca la película como «no es ninguna» y limpia sus metadatos.
+        Requiere una sesión con rol `admin`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMatchRequest'
+      responses:
+        '200':
+          description: Ítem actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaItem'
+        '400':
+          description: Cuerpo no válido o tmdb_id incorrecto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: El usuario no tiene rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No existe el ítem o no es una película
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno al guardar la ficha
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: No se pudo consultar TMDB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: TMDB no está configurado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Vuelve a identificar una película automáticamente (solo administradores)
+      description: |
+        Limpia la corrección manual, restaura el año analizado del archivo y
+        vuelve a identificar la película con TMDB. Si no hay coincidencia, el
+        ítem queda sin identificar. Requiere una sesión con rol `admin`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        '200':
+          description: Ítem resultante
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaItem'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: El usuario no tiene rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No existe el ítem o no es una película
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno al guardar la ficha
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: No se pudo consultar TMDB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: TMDB no está configurado
           content:
             application/json:
               schema:
@@ -799,6 +1041,56 @@ components:
           type: string
           description: Mensaje del error que detuvo el escaneo; vacío si terminó bien.
       additionalProperties: false
+    Candidate:
+      type: object
+      required:
+        - tmdb_id
+        - title
+        - original_title
+        - year
+        - overview
+        - poster_url
+        - popularity
+        - vote_count
+      properties:
+        tmdb_id:
+          type: integer
+        title:
+          type: string
+        original_title:
+          type: string
+        year:
+          type: integer
+        overview:
+          type: string
+        poster_url:
+          type: string
+        popularity:
+          type: number
+          format: double
+        vote_count:
+          type: integer
+      additionalProperties: false
+    CandidatesResponse:
+      type: object
+      required:
+        - candidates
+      properties:
+        candidates:
+          type: array
+          items:
+            $ref: '#/components/schemas/Candidate'
+      additionalProperties: false
+    UpdateMatchRequest:
+      type: object
+      required:
+        - tmdb_id
+      properties:
+        tmdb_id:
+          type: integer
+          nullable: true
+          description: Identificador de TMDB, o null para «no es ninguna».
+      additionalProperties: false
     MediaItem:
       type: object
       required:
@@ -806,11 +1098,26 @@ components:
         - library_id
         - path
         - title
+        - file_title
         - year
         - kind
         - season
         - episode
         - tmdb_id
+        - overview
+        - poster_url
+        - original_title
+        - imdb_id
+        - tagline
+        - genres
+        - runtime_minutes
+        - rating
+        - directors
+        - cast
+        - backdrop_url
+        - overview_language
+        - match_status
+        - match_score
       properties:
         id:
           type: integer
@@ -822,6 +1129,10 @@ components:
           type: string
         title:
           type: string
+          description: Título visible; usa el de TMDB si existe.
+        file_title:
+          type: string
+          description: Título analizado del nombre del archivo.
         year:
           type: integer
           nullable: true
@@ -846,6 +1157,54 @@ components:
           nullable: true
         poster_url:
           type: string
+          nullable: true
+        original_title:
+          type: string
+          nullable: true
+        imdb_id:
+          type: string
+          nullable: true
+        tagline:
+          type: string
+          nullable: true
+        genres:
+          type: array
+          description: Géneros; siempre es un array, aunque esté vacío.
+          items:
+            type: string
+        runtime_minutes:
+          type: integer
+          nullable: true
+        rating:
+          type: number
+          format: double
+          nullable: true
+        directors:
+          type: array
+          description: Dirección; siempre es un array, aunque esté vacío.
+          items:
+            type: string
+        cast:
+          type: array
+          description: Reparto; siempre es un array, aunque esté vacío.
+          items:
+            type: string
+        backdrop_url:
+          type: string
+          nullable: true
+        overview_language:
+          type: string
+          nullable: true
+        match_status:
+          type: string
+          nullable: true
+          enum:
+            - auto
+            - manual
+            - none
+        match_score:
+          type: number
+          format: double
           nullable: true
       additionalProperties: false
     ItemsResponse:

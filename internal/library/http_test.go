@@ -24,7 +24,7 @@ type libraryTestServer struct {
 	job   *ScanJob
 }
 
-func newLibraryHTTPTestServer(t *testing.T) *libraryTestServer {
+func newLibraryHTTPTestServer(t *testing.T, tmdb ...TMDBClient) *libraryTestServer {
 	t.Helper()
 	ctx := context.Background()
 
@@ -61,7 +61,11 @@ func newLibraryHTTPTestServer(t *testing.T) *libraryTestServer {
 
 	job := NewScanJob(New(db))
 	t.Cleanup(job.Close)
-	api := NewAPI(db, authSvc, nil, job)
+	var client TMDBClient
+	if len(tmdb) > 0 {
+		client = tmdb[0]
+	}
+	api := NewAPI(db, authSvc, nil, job, client)
 	mux := http.NewServeMux()
 	api.Register(mux)
 	server := httptest.NewServer(mux)

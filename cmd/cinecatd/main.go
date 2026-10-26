@@ -94,6 +94,7 @@ func main() {
 	defer playSvc.Close()
 
 	scanner := library.New(st.DB())
+	var tmdbClient library.TMDBClient
 	if cfg.TMDBAPIKey != "" {
 		tmdb, err := metadata.New(metadata.Options{
 			APIKey:   cfg.TMDBAPIKey,
@@ -103,6 +104,7 @@ func main() {
 			log.Printf("cinecatd: metadatos de TMDB desactivados: %v", err)
 		} else {
 			scanner = scanner.WithTMDB(tmdb)
+			tmdbClient = tmdb
 		}
 	} else if cfg.OMDbAPIKey != "" {
 		omdb, err := metadata.NewOMDbClient(metadata.OMDbOptions{APIKey: cfg.OMDbAPIKey})
@@ -117,7 +119,7 @@ func main() {
 	defer scanJob.Close()
 	go scheduleScans(ctx, scanJob, time.Minute, cfg.ScanInterval)
 
-	api := library.NewAPI(st.DB(), authSvc, playSvc, scanJob)
+	api := library.NewAPI(st.DB(), authSvc, playSvc, scanJob, tmdbClient)
 
 	srv := &http.Server{
 		Addr:              cfg.ListenAddr,

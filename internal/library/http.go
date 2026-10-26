@@ -29,11 +29,12 @@ type API struct {
 	auth     *auth.Service
 	playback *playback.Service
 	scanJob  *ScanJob
+	tmdb     TMDBClient
 }
 
 // NewAPI crea los handlers de la API de biblioteca.
-func NewAPI(db *sql.DB, authSvc *auth.Service, playSvc *playback.Service, scanJob *ScanJob) *API {
-	return &API{db: db, auth: authSvc, playback: playSvc, scanJob: scanJob}
+func NewAPI(db *sql.DB, authSvc *auth.Service, playSvc *playback.Service, scanJob *ScanJob, tmdb TMDBClient) *API {
+	return &API{db: db, auth: authSvc, playback: playSvc, scanJob: scanJob, tmdb: tmdb}
 }
 
 // Register monta los endpoints versionados en el mux indicado.
@@ -47,6 +48,9 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.Handle("DELETE /api/v1/libraries/{id}", a.requireAdmin(a.handleDeleteLibrary))
 	mux.Handle("GET /api/v1/items", a.requireSession(a.handleItems))
 	mux.Handle("GET /api/v1/items/{id}", a.requireSession(a.handleItem))
+	mux.Handle("GET /api/v1/items/{id}/candidates", a.requireAdmin(a.handleItemCandidates))
+	mux.Handle("PUT /api/v1/items/{id}/match", a.requireAdmin(a.handleItemMatch))
+	mux.Handle("DELETE /api/v1/items/{id}/match", a.requireAdmin(a.handleItemMatchDelete))
 	if a.playback != nil {
 		mux.Handle("GET /api/v1/items/{id}/play", a.requireSession(a.handlePlay))
 		mux.Handle("GET /api/v1/stream/{id}", http.HandlerFunc(a.handleStream))
@@ -97,27 +101,6 @@ type libraryDTO struct {
 
 type librariesResponse struct {
 	Libraries []libraryDTO `json:"libraries"`
-}
-
-type mediaItemDTO struct {
-	ID        int64   `json:"id"`
-	LibraryID int64   `json:"library_id"`
-	Path      string  `json:"path"`
-	Title     string  `json:"title"`
-	Year      *int    `json:"year"`
-	Kind      string  `json:"kind"`
-	Season    *int    `json:"season"`
-	Episode   *int    `json:"episode"`
-	TMDBID    *int64  `json:"tmdb_id"`
-	Overview  *string `json:"overview"`
-	PosterURL *string `json:"poster_url"`
-}
-
-type itemsResponse struct {
-	Items  []mediaItemDTO `json:"items"`
-	Total  int64          `json:"total"`
-	Limit  int            `json:"limit"`
-	Offset int            `json:"offset"`
 }
 
 func (a *API) handleLibraries(w http.ResponseWriter, r *http.Request) {
@@ -269,22 +252,15 @@ func (a *API) handleItems(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var libraryID int64
-	filterByLibrary := false
-	if raw := strings.TrimSpace(r.URL.Query().Get("library_id")); raw != "" {
-		libraryID, err = strconv.ParseInt(raw, 10, 64)
-		if err != nil || libraryID <= 0 {
-			writeJSONError(w, http.StatusBadRequest, "library_id debe ser un entero positivo")
-			return
-		}
-		filterByLibrary = true
+	where, args, err := itemFilters(r)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
 	}
-
-	where := ""
-	var args []any
-	if filterByLibrary {
-		where = " WHERE library_id = ?"
-		args = append(args, libraryID)
+	order, err := itemOrder(r)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
 	}
 
 	var total int64
@@ -295,12 +271,9 @@ func (a *API) handleItems(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	queryArgs := append(args, limit, offset)
-	rows, err := a.db.QueryContext(r.Context(), `
-		SELECT id, library_id, path, title, year, kind, season, episode, tmdb_id, overview, poster_url
-		  FROM media_items`+where+`
-		 ORDER BY id
-		 LIMIT ? OFFSET ?`, queryArgs...)
+	queryArgs := append(append([]any{}, args...), limit, offset)
+	rows, err := a.db.QueryContext(r.Context(),
+		`SELECT `+mediaItemColumns+` FROM media_items`+where+order+` LIMIT ? OFFSET ?`, queryArgs...)
 	if err != nil {
 		log.Printf("library: listar ítems: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
@@ -333,18 +306,13 @@ func (a *API) handleItems(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) handleItem(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
-	if err != nil || id <= 0 {
+	id, ok := idFromPath(r)
+	if !ok {
 		writeJSONError(w, http.StatusNotFound, "ítem no encontrado")
 		return
 	}
 
-	row := a.db.QueryRowContext(r.Context(), `
-		SELECT id, library_id, path, title, year, kind, season, episode, tmdb_id, overview, poster_url
-		  FROM media_items
-		 WHERE id = ?`, id)
-
-	item, err := scanItem(row.Scan)
+	item, err := queryMediaItem(r.Context(), a.db, id)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		writeJSONError(w, http.StatusNotFound, "ítem no encontrado")
@@ -354,47 +322,6 @@ func (a *API) handleItem(w http.ResponseWriter, r *http.Request) {
 	default:
 		writeJSON(w, http.StatusOK, item)
 	}
-}
-
-func scanItem(scan func(dest ...any) error) (mediaItemDTO, error) {
-	var item mediaItemDTO
-	var year, season, episode, tmdbID sql.NullInt64
-	var overview, posterURL sql.NullString
-
-	err := scan(
-		&item.ID, &item.LibraryID, &item.Path, &item.Title, &year, &item.Kind,
-		&season, &episode, &tmdbID, &overview, &posterURL,
-	)
-	if err != nil {
-		return mediaItemDTO{}, err
-	}
-
-	item.Year = intPointer(year)
-	item.Season = intPointer(season)
-	item.Episode = intPointer(episode)
-	if tmdbID.Valid {
-		value := tmdbID.Int64
-		item.TMDBID = &value
-	}
-	item.Overview = stringPointer(overview)
-	item.PosterURL = stringPointer(posterURL)
-	return item, nil
-}
-
-func stringPointer(v sql.NullString) *string {
-	if !v.Valid || strings.TrimSpace(v.String) == "" {
-		return nil
-	}
-	value := v.String
-	return &value
-}
-
-func intPointer(v sql.NullInt64) *int {
-	if !v.Valid {
-		return nil
-	}
-	value := int(v.Int64)
-	return &value
 }
 
 func pagination(r *http.Request) (limit, offset int, err error) {

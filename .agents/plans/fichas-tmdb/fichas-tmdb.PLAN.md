@@ -60,7 +60,7 @@ Convenciones para el `context` de cada tarea: Go 1.22+ (módulo `github.com/catl
 - El botón «Escanear» llama al POST y muestra «Escaneo en curso…» consultando `GET /api/v1/libraries/scan` cada 3 s hasta `running=false`; entonces muestra archivos, identificadas, sin identificar y avisos (los avisos en una lista plegable). Con 409, mostrar que ya hay uno en curso y seguir consultando.
 - Esfuerzo: medio.
 
-### T4 — API: ficha completa, filtros, búsqueda y corrección de películas
+### ✅ T4 — API: ficha completa, filtros, búsqueda y corrección de películas
 - Archivos: `internal/library/http.go`, `internal/library/http_test.go`, `api/openapi.yaml`.
 - `mediaItemDTO` con los campos nuevos: `original_title, imdb_id, tagline, genres[], runtime_minutes, rating, directors[], cast[]` (la columna es `cast_names`), `backdrop_url, overview_language, match_status, match_score` (arrays vacíos si NULL).
 - `GET /api/v1/items`: nuevos parámetros `kind` (`movie`|`episode`), `q` (título analizado u `original_title`, sin distinguir mayúsculas, `LIKE`), `unmatched=true` (`kind='movie' AND (match_status IS NULL OR match_status='none')`), `sort` (`title` por defecto — `COALESCE` del título de TMDB si lo hay… ver nota —, `year`, `added`=id desc). Sigue devolviendo `total`.

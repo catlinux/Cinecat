@@ -138,7 +138,7 @@ func newTestServer(t *testing.T) *testServer {
 
 	scanJob := library.NewScanJob(library.New(st.DB()))
 	t.Cleanup(scanJob.Close)
-	server := httptest.NewServer(newHandler(authSvc, library.NewAPI(st.DB(), authSvc, playSvc, scanJob)))
+	server := httptest.NewServer(newHandler(authSvc, library.NewAPI(st.DB(), authSvc, playSvc, scanJob, nil)))
 	t.Cleanup(server.Close)
 
 	return &testServer{Server: server, db: st.DB(), clock: clock, scanJob: scanJob}
