@@ -18,5 +18,6 @@ Solo administradores. Hoy la biblioteca se monta de solo lectura (`${CINECAT_MED
 2. **FB — Subida en el servidor (Go).** `PUT /api/v1/libraries/{id}/files`, confinamiento, `.part`, extensiones, espacio libre, límite, escaneo posterior. Tests. Ejecutor: AgentRelay, esfuerzo alto.
 3. **FC — Interfaz web.** Ficha: botón «Mover a la papelera» (solo admin, con confirmación). Administración → «Papelera»: lista con fecha de borrado y días restantes, Restaurar y Eliminar definitivamente. Administración → Bibliotecas: «Subir archivos» (elegir carpeta con el navegador de carpetas existente, varios archivos, barra de progreso). Ajustes en Sistema. Ejecutor: AgentRelay, esfuerzo medio-alto.
 4. **FD — Despliegue.** Compose con montaje rw y `user:`, documentación `docs/es/archivos.md` y `docs/en/files.md`, aviso de seguridad. Lo aplico yo en el Debian con aprobación del usuario.
+   Además: el contenedor web debe llevar `BODY_SIZE_LIMIT` alto (por defecto adapter-node rechaza cuerpos de más de 512 KB). El Apache de delante (`video.warcrafted.com-le-ssl.conf`) no limita el cuerpo (`LimitRequestBody` ausente) y su `Timeout 300` no corta una subida en curso; el dominio no pasa por Cloudflare (comprobado el 2026-10-26).
 
 Orden: después de T17b, U2 y U3. Versión 0.16.0.

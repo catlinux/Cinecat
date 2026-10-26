@@ -7,6 +7,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-10-27
+
 ### Changed
 
 - Cast and crew: actors first, then directing, writing, production, etc.
