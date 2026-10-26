@@ -25,7 +25,9 @@
 		progress ? `Continúas por ${formatProgressTime(progress.position_seconds)}` : ''
 	);
 	const caption = $derived(
-		progress ? episodeProgressSubtitle(item) || itemSubtitle(item) : itemSubtitle(item)
+		item.kind === 'episode'
+			? episodeProgressSubtitle(item) || itemSubtitle(item)
+			: itemSubtitle(item)
 	);
 </script>
 

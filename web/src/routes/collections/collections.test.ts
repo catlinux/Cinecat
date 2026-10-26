@@ -47,7 +47,11 @@ function movie(id: number, title: string, watched = false): MediaItem {
 		match_score: null,
 		watched,
 		progress: null,
-		collections: [{ id: 5, name: 'La saga' }]
+		collections: [{ id: 5, name: 'La saga' }],
+		series_id: null,
+		series_title: null,
+		episode_title: null,
+		still_url: null
 	};
 }
 

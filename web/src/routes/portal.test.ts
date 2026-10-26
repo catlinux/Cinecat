@@ -41,7 +41,11 @@ const recentItem: MediaItem = {
 	match_score: 1,
 	watched: false,
 	progress: null,
-	collections: []
+	collections: [],
+	series_id: null,
+	series_title: null,
+	episode_title: null,
+	still_url: null
 };
 
 const continueItem: MediaItem = {
@@ -76,7 +80,7 @@ function homeResponse(overrides: Record<string, unknown> = {}) {
 		continue: [continueItem],
 		next_up: [],
 		recent_movies: [recentItem],
-		counts: { movies: 42, episodes: 2 },
+		counts: { movies: 42, episodes: 2, series: 5 },
 		...overrides
 	};
 }
@@ -99,6 +103,7 @@ function portalData(overrides: Record<string, unknown> = {}) {
 		webVersion,
 		moviesTotal: 42,
 		collectionsTotal: 7,
+		seriesTotal: 5,
 		continueWatching: [continueItem],
 		nextUp: [],
 		recent: [recentItem],
@@ -109,6 +114,10 @@ function portalData(overrides: Record<string, unknown> = {}) {
 
 function collectionsResponse(total = 7): Response {
 	return jsonResponse({ collections: [], total, limit: 1, offset: 0 });
+}
+
+function seriesResponse(total = 9): Response {
+	return jsonResponse({ series: [], total, limit: 1, offset: 0 });
 }
 
 describe('carga del portal', () => {
@@ -127,6 +136,7 @@ describe('carga del portal', () => {
 		const result = (await load(loadEvent(fetchMock) as never)) as {
 			moviesTotal: number;
 			collectionsTotal: number | null;
+			seriesTotal: number | null;
 			continueWatching: MediaItem[];
 			nextUp: MediaItem[];
 			recent: MediaItem[];
@@ -135,6 +145,7 @@ describe('carga del portal', () => {
 
 		expect(result.moviesTotal).toBe(42);
 		expect(result.collectionsTotal).toBe(7);
+		expect(result.seriesTotal).toBe(5);
 		expect(result.continueWatching).toHaveLength(1);
 		expect(result.nextUp).toEqual([]);
 		expect(result.recent).toHaveLength(1);
@@ -161,6 +172,30 @@ describe('carga del portal', () => {
 
 		expect(result.collectionsTotal).toBeNull();
 		expect(result.errorMessage).toBeNull();
+	});
+
+	it('mantiene el recuento de series cuando falla el home', async () => {
+		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+			const url = new URL(String(input));
+			if (url.pathname === '/api/v1/collections') {
+				return collectionsResponse();
+			}
+			if (url.pathname === '/api/v1/home') {
+				return jsonResponse({ error: 'home roto' }, 502);
+			}
+			if (url.pathname === '/api/v1/series') {
+				return seriesResponse(9);
+			}
+			throw new Error(`URL inesperada: ${url}`);
+		});
+
+		const result = (await load(loadEvent(fetchMock) as never)) as {
+			seriesTotal: number | null;
+			errorMessage: string | null;
+		};
+
+		expect(result.seriesTotal).toBe(9);
+		expect(result.errorMessage).toBeTruthy();
 	});
 
 	it('redirige la antigua cartelera conservando la consulta', async () => {
@@ -217,8 +252,10 @@ describe('portal', () => {
 		expect(body).toContain('Colecciones');
 		expect(body).toContain('href="/collections"');
 		expect(body).toContain('7 colecciones');
+		expect(body).toContain('href="/series"');
+		expect(body).toContain('5 series');
 		expect(body).toContain('Series');
-		expect(body).toContain('Próximamente');
+		expect(body).not.toContain('Próximamente');
 		expect(body).toContain('Continuar viendo');
 		expect(body).toContain('Continúas por 1 h 12 min');
 		expect(body).toContain('Añadido recientemente');
@@ -238,6 +275,16 @@ describe('portal', () => {
 		expect(body).toContain('Entrar');
 	});
 
+	it('mantiene Series activa aunque no haya recuento', () => {
+		const { body } = render(PortalPage, {
+			props: { data: portalData({ seriesTotal: null }) }
+		});
+
+		expect(body).toContain('href="/series"');
+		expect(body).toContain('Series');
+		expect(body).toContain('Entrar');
+	});
+
 	it('no muestra Continuar viendo si no hay elementos', () => {
 		const { body } = render(PortalPage, {
 			props: { data: portalData({ continueWatching: [] }) }
@@ -248,12 +295,15 @@ describe('portal', () => {
 	});
 
 	it('muestra Siguiente episodio cuando next_up trae elementos', () => {
+		const upcoming = { ...nextEpisode, progress: null };
 		const { body } = render(PortalPage, {
-			props: { data: portalData({ nextUp: [nextEpisode] }) }
+			props: { data: portalData({ nextUp: [upcoming] }) }
 		});
 
 		expect(body).toContain('Siguiente episodio');
 		expect(body).toContain('Serie · T2 E5');
+		expect(body).toContain('El episodio');
+		expect(body).toContain('/items/11');
 	});
 
 	it('muestra el error de la API sin ocultar el portal', () => {
@@ -271,6 +321,6 @@ describe('portal', () => {
 
 		expect(body).toContain('No se pudo cargar el portal.');
 		expect(body).toContain('Abrir cartelera');
-		expect(body).toContain('Próximamente');
+		expect(body).toContain('href="/series"');
 	});
 });

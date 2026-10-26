@@ -13,7 +13,9 @@ export const load: LayoutServerLoad = async ({ locals, fetch, url }) => {
 			? 'movies'
 			: pathname === '/collections' || pathname.startsWith('/collections/')
 				? 'collections'
-				: null;
+				: pathname === '/series' || pathname.startsWith('/series/')
+					? 'series'
+					: null;
 	let serverVersion: string | null = null;
 	let serverCommit: string | null = null;
 	try {

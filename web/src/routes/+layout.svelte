@@ -35,9 +35,11 @@
 					class:category-active={data.activeCategory === 'collections'}
 					aria-current={data.activeCategory === 'collections' ? 'page' : undefined}>Colecciones</a
 				>
-				<span class="category-soon" aria-disabled="true">
-					Series <span class="category-soon-tag">Próximamente</span>
-				</span>
+				<a
+					href="/series"
+					class:category-active={data.activeCategory === 'series'}
+					aria-current={data.activeCategory === 'series' ? 'page' : undefined}>Series</a
+				>
 			</nav>
 			{#if data.isAdmin}
 				<a class="account-link" href="/admin/libraries">Bibliotecas</a>

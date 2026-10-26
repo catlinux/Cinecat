@@ -42,6 +42,10 @@ function makeItem(overrides: Partial<MediaItem> = {}): MediaItem {
 		watched: false,
 		progress: null,
 		collections: [],
+		series_id: null,
+		series_title: null,
+		episode_title: null,
+		still_url: null,
 		...overrides
 	};
 }

@@ -40,10 +40,10 @@
 			id: 'series',
 			title: 'Series',
 			description: 'Temporadas, episodios y ese capítulo que siempre vuelve.',
-			kicker: 'En preparación',
-			href: null,
+			kicker: 'Series',
+			href: '/series',
 			art: 'series',
-			count: null
+			count: data.seriesTotal
 		}
 	]);
 
@@ -57,6 +57,11 @@
 			? 'Entrar'
 			: `${data.collectionsTotal} ${data.collectionsTotal === 1 ? 'colección' : 'colecciones'}`
 	);
+	const seriesCount = $derived(
+		data.seriesTotal == null
+			? 'Entrar'
+			: `${data.seriesTotal} ${data.seriesTotal === 1 ? 'serie' : 'series'}`
+	);
 
 	function categoryMeta(category: PortalCategory): string {
 		if (category.id === 'movies') {
@@ -64,6 +69,9 @@
 		}
 		if (category.id === 'collections') {
 			return collectionCount;
+		}
+		if (category.id === 'series') {
+			return seriesCount;
 		}
 		return 'Entrar';
 	}

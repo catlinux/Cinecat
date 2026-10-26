@@ -1,19 +1,27 @@
 <script lang="ts">
 	import type { GenreCount } from '$lib/api';
-	import { genreOptions, mutateHref, type MovieFilters } from '$lib/movies';
+	import { genreOptions, mutateHref, type LibraryFilterState } from '$lib/movies';
 
 	let {
 		filters,
 		genres,
 		isAdmin,
 		unmatchedCount,
-		currentUrl
+		currentUrl,
+		action = '/movies',
+		showField = true,
+		showWatched = true,
+		searchPlaceholder = 'Título, actor, directora…'
 	}: {
-		filters: MovieFilters;
+		filters: LibraryFilterState;
 		genres: GenreCount[];
 		isAdmin: boolean;
 		unmatchedCount: number;
 		currentUrl: string;
+		action?: string;
+		showField?: boolean;
+		showWatched?: boolean;
+		searchPlaceholder?: string;
 	} = $props();
 
 	const orderedGenres = $derived(genreOptions(genres));
@@ -36,7 +44,12 @@
 </script>
 
 <div class="movies-toolbar">
-	<form class="filters-form" method="GET" action="/movies">
+	<form
+		class="filters-form"
+		class:filters-form--compact={!showField && !showWatched}
+		method="GET"
+		{action}
+	>
 		{#if filters.letter}
 			<input type="hidden" name="letter" value={filters.letter} />
 		{/if}
@@ -50,20 +63,22 @@
 				type="search"
 				name="q"
 				value={filters.q}
-				placeholder="Título, actor, directora…"
+				placeholder={searchPlaceholder}
 				autocomplete="off"
 			/>
 		</label>
 
-		<label class="filter-field">
-			<span>Buscar en</span>
-			<select name="field">
-				<option value="all" selected={filters.field === 'all'}>Todo</option>
-				<option value="title" selected={filters.field === 'title'}>Título</option>
-				<option value="cast" selected={filters.field === 'cast'}>Reparto</option>
-				<option value="director" selected={filters.field === 'director'}>Dirección</option>
-			</select>
-		</label>
+		{#if showField}
+			<label class="filter-field">
+				<span>Buscar en</span>
+				<select name="field">
+					<option value="all" selected={(filters.field ?? 'all') === 'all'}>Todo</option>
+					<option value="title" selected={filters.field === 'title'}>Título</option>
+					<option value="cast" selected={filters.field === 'cast'}>Reparto</option>
+					<option value="director" selected={filters.field === 'director'}>Dirección</option>
+				</select>
+			</label>
+		{/if}
 
 		<label class="filter-field">
 			<span>Género</span>
@@ -89,14 +104,16 @@
 			</select>
 		</label>
 
-		<label class="filter-field">
-			<span>Visionado</span>
-			<select name="watched">
-				<option value="" selected={!filters.watched}>Todas</option>
-				<option value="false" selected={filters.watched === 'false'}>Sin ver</option>
-				<option value="true" selected={filters.watched === 'true'}>Vistas</option>
-			</select>
-		</label>
+		{#if showWatched}
+			<label class="filter-field">
+				<span>Visionado</span>
+				<select name="watched">
+					<option value="" selected={!filters.watched}>Todas</option>
+					<option value="false" selected={filters.watched === 'false'}>Sin ver</option>
+					<option value="true" selected={filters.watched === 'true'}>Vistas</option>
+				</select>
+			</label>
+		{/if}
 
 		<button type="submit" class="button filter-submit">Aplicar</button>
 	</form>

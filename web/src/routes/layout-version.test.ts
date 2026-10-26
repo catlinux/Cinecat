@@ -119,6 +119,20 @@ describe('carga de la versión del servidor', () => {
 
 		expect(result.activeCategory).toBe('collections');
 	});
+
+	it('marca Series como categoría activa en sus rutas', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(
+			jsonResponse({ server: '0.11.0', commit: '', built_at: '' })
+		);
+
+		const result = (await load({
+			locals: { sessionToken: null },
+			fetch: fetchMock,
+			url: new URL('http://localhost/series/5')
+		} as never)) as { activeCategory: string | null };
+
+		expect(result.activeCategory).toBe('series');
+	});
 });
 
 describe('pie de página', () => {
@@ -147,7 +161,7 @@ describe('pie de página', () => {
 		expect(body).not.toContain('La web y el servidor tienen versiones distintas');
 	});
 
-	it('marca Películas como categoría activa y deja las demás para después', () => {
+	it('marca Películas como categoría activa y muestra el resto de enlaces', () => {
 		const { body } = render(Layout, {
 			props: {
 				data: { ...layoutData(null), activeCategory: 'movies' },
@@ -158,8 +172,8 @@ describe('pie de página', () => {
 		expect(body).toContain('href="/movies"');
 		expect(body).toContain('aria-current="page"');
 		expect(body).toContain('Colecciones');
-		expect(body).toContain('Series');
-		expect(body).toContain('Próximamente');
+		expect(body).toContain('href="/series"');
+		expect(body).not.toContain('Próximamente');
 	});
 
 	it('marca el enlace de Colecciones como activo', () => {
@@ -171,6 +185,18 @@ describe('pie de página', () => {
 		});
 
 		expect(body).toContain('href="/collections"');
+		expect(body).toContain('aria-current="page"');
+	});
+
+	it('marca el enlace de Series como activo', () => {
+		const { body } = render(Layout, {
+			props: {
+				data: { ...layoutData(null), activeCategory: 'series' },
+				children
+			}
+		});
+
+		expect(body).toContain('href="/series"');
 		expect(body).toContain('aria-current="page"');
 	});
 });

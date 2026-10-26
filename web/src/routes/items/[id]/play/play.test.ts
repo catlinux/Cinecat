@@ -44,7 +44,11 @@ const item: MediaItem = {
 		duration_seconds: 7200,
 		updated_at: '2026-10-26T10:00:00Z'
 	},
-	collections: []
+	collections: [],
+	series_id: null,
+	series_title: null,
+	episode_title: null,
+	still_url: null
 };
 
 const play: PlayResponse = {

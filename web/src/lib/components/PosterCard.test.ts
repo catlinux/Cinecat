@@ -32,7 +32,11 @@ const item: MediaItem = {
 	match_score: null,
 	watched: false,
 	progress: null,
-	collections: []
+	collections: [],
+	series_id: null,
+	series_title: null,
+	episode_title: null,
+	still_url: null
 };
 
 describe('PosterCard', () => {

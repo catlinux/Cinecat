@@ -63,6 +63,10 @@ export interface MediaItem {
 	watched: boolean;
 	progress: PlaybackProgress | null;
 	collections: ItemCollection[];
+	series_id: number | null;
+	series_title: string | null;
+	episode_title: string | null;
+	still_url: string | null;
 }
 
 export type CollectionSource = 'tmdb' | 'manual';
@@ -108,6 +112,7 @@ export interface CollectionUpdate {
 export interface HomeCounts {
 	movies: number;
 	episodes: number;
+	series: number;
 }
 
 export interface HomeResponse {
@@ -233,6 +238,83 @@ export interface ItemsResponse {
 	total: number;
 	limit: number;
 	offset: number;
+}
+
+export type SeriesSort = 'title' | 'year' | 'added';
+
+export interface Series {
+	id: number;
+	title: string;
+	file_title: string;
+	year: number | null;
+	poster_url: string | null;
+	genres: string[];
+	season_count: number;
+	episode_count: number;
+	watched_count: number;
+	match_status: 'auto' | 'manual' | 'none' | null;
+}
+
+export interface SeriesResponse {
+	series: Series[];
+	total: number;
+	limit: number;
+	offset: number;
+}
+
+export interface SeriesQuery {
+	limit?: number;
+	offset?: number;
+	q?: string;
+	sort?: SeriesSort;
+	letter?: string;
+	genre?: string;
+	unmatched?: boolean;
+}
+
+export interface SeriesSeason {
+	season: number;
+	name: string;
+	overview: string | null;
+	poster_url: string | null;
+	episode_count: number;
+	watched_count: number;
+}
+
+export interface SeriesDetail {
+	id: number;
+	title: string;
+	file_title: string;
+	folder: string;
+	original_title: string | null;
+	year: number | null;
+	tagline: string | null;
+	overview: string | null;
+	overview_language: string | null;
+	poster_url: string | null;
+	backdrop_url: string | null;
+	genres: string[];
+	rating: number | null;
+	directors: string[];
+	cast: string[];
+	tmdb_id: number | null;
+	match_status: 'auto' | 'manual' | 'none' | null;
+	match_score: number | null;
+	poster_custom: boolean;
+	backdrop_custom: boolean;
+	season_count: number;
+	episode_count: number;
+	watched_count: number;
+	seasons: SeriesSeason[];
+	next_episode: MediaItem | null;
+}
+
+export interface SeriesSeasonDetail {
+	season: number;
+	name: string;
+	overview: string | null;
+	poster_url: string | null;
+	items: MediaItem[];
 }
 
 export interface PlayResponse {
@@ -398,6 +480,69 @@ export class ApiClient {
 
 	async getHome(token: string): Promise<HomeResponse> {
 		return this.get<HomeResponse>('/api/v1/home', token);
+	}
+
+	async getSeries(query: SeriesQuery, token: string): Promise<SeriesResponse> {
+		const params = new URLSearchParams();
+		if (query.limit !== undefined) {
+			params.set('limit', String(query.limit));
+		}
+		if (query.offset !== undefined) {
+			params.set('offset', String(query.offset));
+		}
+		if (query.q) {
+			params.set('q', query.q);
+		}
+		if (query.sort) {
+			params.set('sort', query.sort);
+		}
+		if (query.letter) {
+			params.set('letter', query.letter);
+		}
+		if (query.genre) {
+			params.set('genre', query.genre);
+		}
+		if (query.unmatched) {
+			params.set('unmatched', 'true');
+		}
+		const queryString = params.toString();
+		const suffix = queryString ? `?${queryString}` : '';
+		return this.get<SeriesResponse>(`/api/v1/series${suffix}`, token);
+	}
+
+	async getSeriesGenres(token: string): Promise<GenresResponse> {
+		return this.get<GenresResponse>('/api/v1/series/genres', token);
+	}
+
+	async getSeriesDetail(id: number, token: string): Promise<SeriesDetail> {
+		return this.get<SeriesDetail>(`/api/v1/series/${id}`, token);
+	}
+
+	async getSeriesSeason(id: number, season: number, token: string): Promise<SeriesSeasonDetail> {
+		return this.get<SeriesSeasonDetail>(`/api/v1/series/${id}/seasons/${season}`, token);
+	}
+
+	async setSeriesWatched(id: number, watched: boolean, token: string): Promise<void> {
+		const path = `/api/v1/series/${id}/watched`;
+		if (watched) {
+			await this.put<void>(path, undefined, token);
+			return;
+		}
+		await this.delete(path, token);
+	}
+
+	async setSeriesSeasonWatched(
+		id: number,
+		season: number,
+		watched: boolean,
+		token: string
+	): Promise<void> {
+		const path = `/api/v1/series/${id}/seasons/${season}/watched`;
+		if (watched) {
+			await this.put<void>(path, undefined, token);
+			return;
+		}
+		await this.delete(path, token);
 	}
 
 	async putProgress(

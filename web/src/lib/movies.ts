@@ -20,6 +20,11 @@ export interface MovieFilters {
 	unmatched: boolean;
 }
 
+export type LibraryFilterState = Omit<MovieFilters, 'field' | 'watched'> & {
+	field?: SearchField;
+	watched?: WatchedFilter;
+};
+
 export interface FilterChip {
 	key: string;
 	label: string;

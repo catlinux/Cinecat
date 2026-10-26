@@ -29,6 +29,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 - The name parser takes the series from the top-level folder and recognises episodes in formats such as `ChicagoFire720p4x17` or `MR_Robot_305` inside a season folder (they used to be taken for movies).
 - Series: each series folder is grouped into its own record, identified with TMDB in Spanish (same rules as movies: automatic, manual or "none of these") and the scan fills in seasons and episodes (title, overview, still) with one request per season. Scan status includes `series_identified` and `series_unidentified`.
 - Series API: paginated list with search, letter and genre filters, record with seasons and next episode, episodes per season, mark series or season as watched, identification correction and images for admins. `GET /api/v1/home` fills in "next episode".
+- Series on the web: active category in the portal and header, paginated list with search, letter and genre filters, and a series page with season selector, episodes with title, overview and still, "Continue" and marking an episode, season or series as watched. The portal shows "Next episode".
 - The server shuts down gracefully on SIGINT/SIGTERM, cancelling any running scan.
 
 ## [0.10.0] - 2026-10-26

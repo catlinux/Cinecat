@@ -43,7 +43,11 @@ function movie(id: number, watched: boolean): MediaItem {
 		match_score: null,
 		watched,
 		progress: null,
-		collections: []
+		collections: [],
+		series_id: null,
+		series_title: null,
+		episode_title: null,
+		still_url: null
 	};
 }
 

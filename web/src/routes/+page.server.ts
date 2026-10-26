@@ -26,9 +26,23 @@ export const load: PageServerLoad = async ({ locals, fetch, url }) => {
 
 	try {
 		const home = await api.getHome(token);
+		let seriesTotal: number | null = null;
+		if (typeof home.counts.series === 'number' && Number.isFinite(home.counts.series)) {
+			seriesTotal = home.counts.series;
+		} else {
+			try {
+				const series = await api.getSeries({ limit: 1 }, token);
+				seriesTotal = series.total;
+			} catch (seriesError) {
+				if (seriesError instanceof ApiError && seriesError.status === 401) {
+					redirect(303, '/login');
+				}
+			}
+		}
 		return {
 			moviesTotal: home.counts.movies,
 			collectionsTotal,
+			seriesTotal,
 			continueWatching: home.continue ?? [],
 			nextUp: home.next_up ?? [],
 			recent: home.recent_movies ?? [],
@@ -38,9 +52,19 @@ export const load: PageServerLoad = async ({ locals, fetch, url }) => {
 		if (error instanceof ApiError && error.status === 401) {
 			redirect(303, '/login');
 		}
+		let seriesTotal: number | null = null;
+		try {
+			const series = await api.getSeries({ limit: 1 }, token);
+			seriesTotal = series.total;
+		} catch (seriesError) {
+			if (seriesError instanceof ApiError && seriesError.status === 401) {
+				redirect(303, '/login');
+			}
+		}
 		return {
 			moviesTotal: 0,
 			collectionsTotal,
+			seriesTotal,
 			continueWatching: [],
 			nextUp: [],
 			recent: [],
