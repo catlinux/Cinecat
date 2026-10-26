@@ -1,6 +1,12 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { ApiError } from '$lib/api';
-import type { Candidate } from '$lib/api';
+import type {
+	Candidate,
+	FileInfoError,
+	FileInfoResult,
+	ImageKind,
+	ImageOptions
+} from '$lib/api';
 import { ConfigurationError, createApiClient } from '$lib/api-factory';
 import { requireSessionToken } from '$lib/session';
 import type { Actions, PageServerLoad } from './$types';
@@ -21,11 +27,18 @@ export const load: PageServerLoad = async ({ params, locals, fetch, url, parent 
 	const isAdmin = Boolean(layout?.isAdmin);
 
 	try {
-		const item = await createApiClient(fetch).getItem(id, token);
+		const api = createApiClient(fetch);
+		const item = await api.getItem(id, token);
+		const fileInfo: Promise<FileInfoResult> = api.getFileInfo(id, token).then(
+			(data) => ({ data }),
+			(cause) => ({ error: fileInfoError(cause) })
+		);
 		return {
 			item,
 			isAdmin,
-			corregir: isAdmin && url.searchParams.get('corregir') === '1'
+			corregir: isAdmin && url.searchParams.get('corregir') === '1',
+			imagenes: isAdmin && url.searchParams.get('imagenes') === '1',
+			fileInfo
 		};
 	} catch (err) {
 		if (err instanceof ApiError) {
@@ -42,6 +55,18 @@ export const load: PageServerLoad = async ({ params, locals, fetch, url, parent 
 		error(502, 'No se pudo cargar el ítem.');
 	}
 };
+
+function fileInfoError(cause: unknown): FileInfoError {
+	if (cause instanceof ApiError) {
+		if (cause.status === 404) {
+			return 'not_found';
+		}
+		if (cause.status === 503) {
+			return 'unavailable';
+		}
+	}
+	return 'failed';
+}
 
 function watchedFailure(cause: unknown) {
 	if (cause instanceof ApiError) {
@@ -82,6 +107,44 @@ function correctionFailure(cause: unknown) {
 		}
 	}
 	return fail(502, { panel: true, message: 'No se pudo consultar TMDB' });
+}
+
+function imageKind(value: FormDataEntryValue | null): ImageKind | null {
+	const kind = String(value ?? '');
+	return kind === 'poster' || kind === 'backdrop' ? kind : null;
+}
+
+function imageFailure(cause: unknown) {
+	if (cause instanceof ApiError) {
+		if (cause.status === 401) {
+			redirect(303, '/login');
+		}
+		if (cause.status === 400) {
+			return fail(400, { imagePanel: true, message: 'URL no válida' });
+		}
+		if (cause.status === 403) {
+			return fail(403, {
+				imagePanel: true,
+				message: 'Solo los administradores pueden cambiar las imágenes.'
+			});
+		}
+		if (cause.status === 404) {
+			return fail(404, { imagePanel: true, message: 'Ítem no encontrado.' });
+		}
+		if (cause.status === 409) {
+			return fail(409, {
+				imagePanel: true,
+				message: 'Identifica primero la película para ver las imágenes de TMDB'
+			});
+		}
+		if (cause.status === 503) {
+			return fail(503, {
+				imagePanel: true,
+				message: 'TMDB no está configurado en el servidor'
+			});
+		}
+	}
+	return fail(502, { imagePanel: true, message: 'No se pudo consultar TMDB' });
 }
 
 export const actions: Actions = {
@@ -199,6 +262,83 @@ export const actions: Actions = {
 			success: true,
 			panel: true,
 			message: 'Vuelta a la identificación automática.'
+		};
+	},
+
+	imageList: async ({ request, locals, fetch, params }) => {
+		const token = requireSessionToken(locals);
+		const id = itemID(params);
+		if (id === null) {
+			return fail(404, { imagePanel: true, message: 'Ítem no encontrado.' });
+		}
+
+		const form = await request.formData();
+		const kind = imageKind(form.get('kind'));
+		if (kind === null) {
+			return fail(400, { imagePanel: true, message: 'Tipo de imagen no válido.' });
+		}
+
+		try {
+			const imageOptions: ImageOptions = await createApiClient(fetch).getImageOptions(id, token);
+			return { imagePanel: true, imageKind: kind, imageOptions };
+		} catch (err) {
+			return imageFailure(err);
+		}
+	},
+
+	imageSet: async ({ request, locals, fetch, params }) => {
+		const token = requireSessionToken(locals);
+		const id = itemID(params);
+		if (id === null) {
+			return fail(404, { imagePanel: true, message: 'Ítem no encontrado.' });
+		}
+
+		const form = await request.formData();
+		const kind = imageKind(form.get('kind'));
+		if (kind === null) {
+			return fail(400, { imagePanel: true, message: 'Tipo de imagen no válido.' });
+		}
+		const url = String(form.get('url') ?? '').trim();
+		if (!url.startsWith('http://') && !url.startsWith('https://')) {
+			return fail(400, { imagePanel: true, message: 'URL no válida' });
+		}
+
+		try {
+			await createApiClient(fetch).setImage(id, kind, url, token);
+		} catch (err) {
+			return imageFailure(err);
+		}
+
+		return {
+			success: true,
+			imagePanel: true,
+			message: kind === 'poster' ? 'Cartel actualizado.' : 'Fondo actualizado.'
+		};
+	},
+
+	imageReset: async ({ request, locals, fetch, params }) => {
+		const token = requireSessionToken(locals);
+		const id = itemID(params);
+		if (id === null) {
+			return fail(404, { imagePanel: true, message: 'Ítem no encontrado.' });
+		}
+
+		const form = await request.formData();
+		const kind = imageKind(form.get('kind'));
+		if (kind === null) {
+			return fail(400, { imagePanel: true, message: 'Tipo de imagen no válido.' });
+		}
+
+		try {
+			await createApiClient(fetch).resetImage(id, kind, token);
+		} catch (err) {
+			return imageFailure(err);
+		}
+
+		return {
+			success: true,
+			imagePanel: true,
+			message: kind === 'poster' ? 'Cartel restaurado.' : 'Fondo restaurado.'
 		};
 	}
 };

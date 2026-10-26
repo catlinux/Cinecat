@@ -21,6 +21,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 - Imágenes personalizables (administración): `GET /api/v1/items/{id}/images` ofrece los carteles y fondos de TMDB; `PUT`/`DELETE /api/v1/items/{id}/images/{poster|backdrop}` fijan una URL propia o restauran la de TMDB. El escaneo no pisa las imágenes fijadas.
 - Ficha de película completa (título original, lema, duración, géneros, nota, dirección, reparto, enlaces a IMDb y TMDB, fondo), botón de visto/no visto y, para administradores, «Corregir ficha» con búsqueda de candidatos en TMDB, «No es ninguna» y «Volver a automático».
 - Progreso de reproducción por usuario (`PUT`/`DELETE /api/v1/items/{id}/progress`; al 90 % se marca como visto) y `GET /api/v1/home` con «continuar viendo», lo añadido recientemente y los contadores del portal.
+- Panel «Archivo» en la ficha (calidad, contenedor, tamaño, pistas de vídeo, audio y subtítulos, cómo se reproducirá) y, para administradores, panel «Imagen» para elegir el cartel y el fondo entre los de TMDB o fijar una URL propia.
 - El servidor se apaga de forma ordenada ante SIGINT/SIGTERM, cancelando el escaneo en curso.
 
 ## [0.10.0] - 2026-10-26

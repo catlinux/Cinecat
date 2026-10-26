@@ -21,6 +21,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 - Customisable images (admin): `GET /api/v1/items/{id}/images` offers TMDB posters and backdrops; `PUT`/`DELETE /api/v1/items/{id}/images/{poster|backdrop}` set a custom URL or restore the TMDB one. Scans do not overwrite pinned images.
 - Full movie page (original title, tagline, runtime, genres, rating, directors, cast, IMDb and TMDB links, backdrop), watched/unwatched button and, for admins, "Fix record" with TMDB candidate search, "None of these" and "Back to automatic".
 - Per-user playback progress (`PUT`/`DELETE /api/v1/items/{id}/progress`; at 90 % it is marked as watched) and `GET /api/v1/home` with "continue watching", recently added items and the portal counters.
+- "File" panel on the movie page (quality, container, size, video, audio and subtitle tracks, how it will play) and, for admins, an "Image" panel to pick the poster and backdrop from TMDB or set a custom URL.
 - The server shuts down gracefully on SIGINT/SIGTERM, cancelling any running scan.
 
 ## [0.10.0] - 2026-10-26

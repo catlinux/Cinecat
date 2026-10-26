@@ -1,7 +1,14 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import type { Candidate } from '$lib/api';
+	import type {
+		Candidate,
+		FileInfoResult,
+		ImageKind,
+		ImageOptions
+	} from '$lib/api';
 	import ItemFacts from '$lib/components/ItemFacts.svelte';
+	import FilePanel from '$lib/components/FilePanel.svelte';
+	import ImagePanel from '$lib/components/ImagePanel.svelte';
 	import MatchDialog from '$lib/components/MatchDialog.svelte';
 	import {
 		formatMovieMeta,
@@ -21,6 +28,9 @@
 	interface ActionForm {
 		success?: boolean;
 		panel?: boolean;
+		imagePanel?: boolean;
+		imageKind?: ImageKind;
+		imageOptions?: ImageOptions;
 		message?: string;
 		candidates?: Candidate[];
 		search?: MatchSearch;
@@ -50,6 +60,12 @@
 	const candidates = $derived(actionForm?.candidates ?? []);
 	const search = $derived(actionForm?.search ?? null);
 	const panelOpen = $derived(Boolean(data.corregir || actionForm?.panel));
+	const imageOptions = $derived(actionForm?.imageOptions ?? null);
+	const imageListKind = $derived(actionForm?.imageKind ?? null);
+	const imagePanelOpen = $derived(Boolean(data.imagenes || actionForm?.imagePanel));
+	const fileInfo = $derived(
+		(data.fileInfo ?? { error: 'failed' }) as FileInfoResult | Promise<FileInfoResult>
+	);
 </script>
 
 <svelte:head>
@@ -139,12 +155,18 @@
 
 		{#if isMovie}
 			<ItemFacts {item} />
+		{/if}
 
-			<!-- Aquí irán los paneles Archivo e Imagen -->
+		<FilePanel result={fileInfo} />
 
-			{#if data.isAdmin}
-				<MatchDialog {item} {candidates} {search} open={panelOpen} />
-			{/if}
+		{#if isMovie && data.isAdmin}
+			<ImagePanel
+				{item}
+				open={imagePanelOpen}
+				{imageOptions}
+				{imageListKind}
+			/>
+			<MatchDialog {item} {candidates} {search} open={panelOpen} />
 		{/if}
 	</div>
 </section>

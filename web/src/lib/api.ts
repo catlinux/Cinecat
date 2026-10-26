@@ -35,6 +35,7 @@ export interface MediaItem {
 	tmdb_id: number | null;
 	overview: string | null;
 	poster_url: string | null;
+	poster_custom: boolean;
 	original_title: string | null;
 	imdb_id: string | null;
 	tagline: string | null;
@@ -44,6 +45,7 @@ export interface MediaItem {
 	directors: string[];
 	cast: string[];
 	backdrop_url: string | null;
+	backdrop_custom: boolean;
 	overview_language: string | null;
 	match_status: 'auto' | 'manual' | 'none' | null;
 	match_score: number | null;
@@ -64,6 +66,93 @@ export interface Candidate {
 export interface CandidatesResponse {
 	candidates: Candidate[];
 }
+
+export interface PlaybackInfo {
+	mode: 'direct' | 'hls' | '';
+	description: string;
+	supported: boolean;
+}
+
+export interface VideoStream {
+	index: number;
+	codec: string;
+	codec_long_name: string;
+	profile: string;
+	width: number;
+	height: number;
+	display_aspect_ratio: string;
+	frame_rate: number;
+	bit_rate: number;
+	pixel_format: string;
+	bit_depth: number;
+	hdr: string;
+	language: string;
+	title: string;
+	default: boolean;
+}
+
+export interface AudioStream {
+	index: number;
+	codec: string;
+	codec_long_name: string;
+	profile: string;
+	channels: number;
+	channel_layout: string;
+	sample_rate: number;
+	bit_rate: number;
+	language: string;
+	title: string;
+	default: boolean;
+}
+
+export interface SubtitleStream {
+	index: number;
+	codec: string;
+	language: string;
+	title: string;
+	forced: boolean;
+	default: boolean;
+	text: boolean;
+}
+
+export interface FileInfo {
+	container: string;
+	container_long_name: string;
+	size_bytes: number;
+	duration_seconds: number;
+	bit_rate: number;
+	modified_at: string;
+	file_name: string;
+	path: string;
+	video: VideoStream[];
+	audio: AudioStream[];
+	subtitles: SubtitleStream[];
+	chapters: number;
+	quality: string;
+	playback: PlaybackInfo;
+}
+
+export type FileInfoError = 'not_found' | 'unavailable' | 'failed';
+
+export type FileInfoResult =
+	| { data: FileInfo; error?: null }
+	| { data?: null; error: FileInfoError };
+
+export interface ImageOption {
+	url: string;
+	full_url: string;
+	language: string;
+	vote_average: number;
+	width: number;
+	height: number;
+}
+
+export interface ImageOptions {
+	posters: ImageOption[];
+	backdrops: ImageOption[];
+}
+
+export type ImageKind = 'poster' | 'backdrop';
 
 export interface GenreCount {
 	name: string;
@@ -237,6 +326,30 @@ export class ApiClient {
 
 	async resetMatch(id: number, token: string): Promise<MediaItem> {
 		return this.request<MediaItem>(`/api/v1/items/${id}/match`, {
+			method: 'DELETE',
+			token
+		});
+	}
+
+	async getFileInfo(id: number, token: string): Promise<FileInfo> {
+		return this.get<FileInfo>(`/api/v1/items/${id}/file-info`, token);
+	}
+
+	async getImageOptions(id: number, token: string): Promise<ImageOptions> {
+		return this.get<ImageOptions>(`/api/v1/items/${id}/images`, token);
+	}
+
+	async setImage(
+		id: number,
+		kind: ImageKind,
+		url: string,
+		token: string
+	): Promise<MediaItem> {
+		return this.put<MediaItem>(`/api/v1/items/${id}/images/${kind}`, { url }, token);
+	}
+
+	async resetImage(id: number, kind: ImageKind, token: string): Promise<MediaItem> {
+		return this.request<MediaItem>(`/api/v1/items/${id}/images/${kind}`, {
 			method: 'DELETE',
 			token
 		});

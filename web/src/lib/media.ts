@@ -46,6 +46,156 @@ export function formatRuntime(minutes: number | null): string {
 	return `${hours} h ${rest} min`;
 }
 
+function formatDecimal(value: number, decimals: number): string {
+	let text = value.toFixed(decimals);
+	if (text.includes('.')) {
+		text = text.replace(/0+$/, '').replace(/\.$/, '');
+	}
+	return text.replace('.', ',');
+}
+
+export function formatDurationSeconds(seconds: number | null): string {
+	if (seconds === null || !Number.isFinite(seconds) || seconds <= 0) {
+		return '';
+	}
+	const total = Math.round(seconds);
+	const hours = Math.floor(total / 3600);
+	const minutes = Math.floor((total % 3600) / 60);
+	const rest = total % 60;
+	if (hours > 0) {
+		return minutes > 0 ? `${hours} h ${minutes} min` : `${hours} h`;
+	}
+	if (minutes > 0) {
+		return `${minutes} min`;
+	}
+	return `${rest} s`;
+}
+
+// Los tamaños se muestran en unidades de 1024 bytes, como en el sistema de archivos.
+export function formatBytes(bytes: number | null): string {
+	if (bytes === null || !Number.isFinite(bytes) || bytes < 0) {
+		return '—';
+	}
+	const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+	let value = bytes;
+	let unit = 0;
+	while (value >= 1024 && unit < units.length - 1) {
+		value /= 1024;
+		unit++;
+	}
+	const decimals = unit === 0 || value >= 100 ? 0 : 1;
+	return `${formatDecimal(value, decimals)} ${units[unit]}`;
+}
+
+export function formatBitrate(bitsPerSecond: number | null, forceMbps = false): string {
+	if (bitsPerSecond === null || !Number.isFinite(bitsPerSecond) || bitsPerSecond <= 0) {
+		return '—';
+	}
+	if (forceMbps || bitsPerSecond >= 1_000_000) {
+		return `${formatDecimal(bitsPerSecond / 1_000_000, 1)} Mb/s`;
+	}
+	if (bitsPerSecond >= 1000) {
+		return `${formatDecimal(bitsPerSecond / 1000, 0)} kb/s`;
+	}
+	return `${formatDecimal(bitsPerSecond, 0)} b/s`;
+}
+
+export function formatAudioChannels(channels: number, layout: string | null): string {
+	const clean = (layout ?? '')
+		.toLowerCase()
+		.replace(/\s*\([^)]*\)\s*/g, '')
+		.trim();
+	if (channels === 1 || clean === 'mono') {
+		return 'mono';
+	}
+	if (channels === 2 || clean === 'stereo') {
+		return 'estéreo';
+	}
+	if (clean === '5.1' || channels === 6) {
+		return '5.1';
+	}
+	if (clean === '7.1' || channels === 8) {
+		return '7.1';
+	}
+	if (clean !== '') {
+		return clean;
+	}
+	return channels > 0 ? `${channels} canales` : '';
+}
+
+export function formatLanguage(code: string | null): string {
+	const original = (code ?? '').trim();
+	if (!original) {
+		return '';
+	}
+	const base = original.toLowerCase().split(/[-_]/)[0];
+	const names: Record<string, string> = {
+		es: 'Español',
+		spa: 'Español',
+		en: 'Inglés',
+		eng: 'Inglés',
+		fr: 'Francés',
+		fre: 'Francés',
+		fra: 'Francés',
+		de: 'Alemán',
+		ger: 'Alemán',
+		deu: 'Alemán',
+		it: 'Italiano',
+		ita: 'Italiano',
+		pt: 'Portugués',
+		por: 'Portugués',
+		ca: 'Catalán',
+		cat: 'Catalán',
+		ja: 'Japonés',
+		jpn: 'Japonés'
+	};
+	return names[base] ?? original;
+}
+
+export function formatFps(rate: number | null): string {
+	if (rate === null || !Number.isFinite(rate) || rate <= 0) {
+		return '—';
+	}
+	return formatDecimal(rate, 3);
+}
+
+export function formatResolution(
+	width: number,
+	height: number,
+	displayAspectRatio: string | null
+): string {
+	if (width <= 0 || height <= 0) {
+		return '—';
+	}
+	const base = `${width} × ${height}`;
+	const aspect = (displayAspectRatio ?? '').trim();
+	return aspect ? `${base} (${aspect})` : base;
+}
+
+export function formatSampleRate(hertz: number | null): string {
+	if (hertz === null || !Number.isFinite(hertz) || hertz <= 0) {
+		return '—';
+	}
+	if (hertz >= 1000) {
+		return `${formatDecimal(hertz / 1000, 1)} kHz`;
+	}
+	return `${formatDecimal(hertz, 0)} Hz`;
+}
+
+export function formatDateTime(value: string | null): string {
+	if (!value) {
+		return '';
+	}
+	const date = new Date(value);
+	if (Number.isNaN(date.getTime())) {
+		return value;
+	}
+	return new Intl.DateTimeFormat('es-ES', {
+		dateStyle: 'medium',
+		timeStyle: 'short'
+	}).format(date);
+}
+
 // La nota se muestra siempre con una cifra decimal y coma castellana.
 export function formatRating(rating: number | null): string {
 	if (rating === null || !Number.isFinite(rating)) {
