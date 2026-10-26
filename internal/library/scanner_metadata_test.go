@@ -460,8 +460,9 @@ func TestScannerConTMDBNoTocaManualNiNone(t *testing.T) {
 		if _, err := db.Exec(`
 			INSERT INTO media_items (
 				library_id, path, title, year, kind, tmdb_id, overview,
-				poster_url, display_title, metadata_source, match_status, match_score
-			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				poster_url, display_title, metadata_source, match_status, match_score,
+				collection_checked
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
 			libraryID, item.path, item.title, item.year, KindMovie, 99,
 			"Ficha fijada", "https://images.example/fijada.jpg", "Ficha fijada",
 			item.source, item.status, 0.8,
@@ -563,6 +564,70 @@ func TestScannerConTMDBRellenaDisplayTitlePendiente(t *testing.T) {
 			}
 			if sortTitle, letter := readSortKeys(t, db, file); sortTitle != "Título de TMDB" || letter != "T" {
 				t.Fatalf("claves de orden = %q, %q", sortTitle, letter)
+			}
+		})
+	}
+}
+
+func TestScannerConTMDBRellenaColeccionPendiente(t *testing.T) {
+	for _, status := range []string{"auto", "manual"} {
+		t.Run(status, func(t *testing.T) {
+			ctx := context.Background()
+			db := openTestDB(t)
+
+			root := t.TempDir()
+			file := filepath.Join(root, "Pelicula (1999).mkv")
+			writeFile(t, file)
+			libraryID := createLibrary(t, db, root)
+			itemID := insertItemFixture(t, db, itemFixture{
+				libraryID: libraryID, path: file, title: "Pelicula",
+				displayTitle: "Pelicula", year: 1999, kind: KindMovie,
+				tmdbID: 77, metadataSource: "tmdb", matchStatus: status, matchScore: 0.87,
+			})
+
+			fake := &fakeTMDB{details: &metadata.Details{
+				TMDBID: 77,
+				Title:  "Pelicula",
+				Year:   1999,
+				Collection: &metadata.CollectionRef{
+					TMDBID: 900,
+					Name:   "La saga",
+				},
+			}}
+			scanner := New(db).WithTMDB(fake)
+			res, err := scanner.Scan(ctx)
+			if err != nil {
+				t.Fatalf("Scan: %v", err)
+			}
+			if res.Identified != 0 || res.Unidentified != 0 {
+				t.Fatalf("el relleno no debe contar como identificación: %+v", res)
+			}
+			if fake.searchCalls != 0 || fake.detailsCalls != 1 {
+				t.Fatalf("búsquedas %d, fichas %d", fake.searchCalls, fake.detailsCalls)
+			}
+
+			collection := readCollection(t, db, 900)
+			if collection.Name != "La saga" || collection.Source != "tmdb" {
+				t.Fatalf("colección inesperada: %+v", collection)
+			}
+			if _, _, ok := readMembership(t, db, collection.ID, itemID); !ok {
+				t.Fatal("la película no entró en su colección")
+			}
+			if checked := collectionChecked(t, db, itemID); checked != 1 {
+				t.Fatalf("collection_checked = %d, se esperaba 1", checked)
+			}
+			row := readTMDBMetadata(t, db, file)
+			if !row.matchStatus.Valid || row.matchStatus.String != status ||
+				!row.matchScore.Valid || row.matchScore.Float64 != 0.87 {
+				t.Fatalf("el estado cambió: %+v %+v", row.matchStatus, row.matchScore)
+			}
+
+			if _, err := scanner.Scan(ctx); err != nil {
+				t.Fatalf("segundo Scan: %v", err)
+			}
+			if fake.detailsCalls != 1 || fake.searchCalls != 0 {
+				t.Fatalf("no debe repetirse la ficha: búsquedas %d, fichas %d",
+					fake.searchCalls, fake.detailsCalls)
 			}
 		})
 	}

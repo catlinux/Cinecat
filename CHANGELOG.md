@@ -23,6 +23,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 - Progreso de reproducción por usuario (`PUT`/`DELETE /api/v1/items/{id}/progress`; al 90 % se marca como visto) y `GET /api/v1/home` con «continuar viendo», lo añadido recientemente y los contadores del portal.
 - Panel «Archivo» en la ficha (calidad, contenedor, tamaño, pistas de vídeo, audio y subtítulos, cómo se reproducirá) y, para administradores, panel «Imagen» para elegir el cartel y el fondo entre los de TMDB o fijar una URL propia.
 - El reproductor guarda el progreso cada 15 s y al salir, y permite continuar donde se dejó («Continuar · 1 h 12 min» en la ficha, «Empezar desde el principio»). El portal muestra «Continuar viendo» y «Añadido recientemente».
+- Colecciones automáticas: las películas que pertenecen a una saga de TMDB se agrupan solas en una colección; una colección borrada o una película quitada por el usuario no reaparecen en los escaneos siguientes. Las películas ya identificadas se añaden a su colección en el primer escaneo.
 - El servidor se apaga de forma ordenada ante SIGINT/SIGTERM, cancelando el escaneo en curso.
 
 ## [0.10.0] - 2026-10-26

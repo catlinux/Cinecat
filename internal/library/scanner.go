@@ -232,21 +232,25 @@ func (s *Scanner) enrichMovieTMDB(ctx context.Context, libraryID int64, path str
 	var matchStatus, source, displayTitle sql.NullString
 	var tmdbID sql.NullInt64
 	var matchScore sql.NullFloat64
+	var collectionChecked int
 	if err := s.db.QueryRowContext(ctx,
-		`SELECT id, match_status, metadata_source, tmdb_id, match_score, display_title
+		`SELECT id, match_status, metadata_source, tmdb_id, match_score,
+		        display_title, collection_checked
 		   FROM media_items WHERE library_id = ? AND path = ?`,
 		libraryID, path,
-	).Scan(&itemID, &matchStatus, &source, &tmdbID, &matchScore, &displayTitle); err != nil {
+	).Scan(&itemID, &matchStatus, &source, &tmdbID, &matchScore,
+		&displayTitle, &collectionChecked); err != nil {
 		res.Warnings = append(res.Warnings, fmt.Sprintf("%s: no se pudo comprobar los metadatos: %v", path, err))
 		return
 	}
 
 	if matchStatus.Valid {
-		// Relleno de las fichas guardadas antes de que existiera
-		// display_title: se conserva el estado y la puntuación de la fila.
+		// Las fichas antiguas pueden necesitar display_title o la colección.
+		// Se unifican ambas comprobaciones para pedir la ficha una sola vez.
 		if (matchStatus.String == "auto" || matchStatus.String == "manual") &&
 			source.Valid && source.String == "tmdb" &&
-			tmdbID.Valid && tmdbID.Int64 > 0 && !displayTitle.Valid {
+			tmdbID.Valid && tmdbID.Int64 > 0 &&
+			(!displayTitle.Valid || collectionChecked == 0) {
 			score := 0.0
 			if matchScore.Valid {
 				score = matchScore.Float64
@@ -340,14 +344,25 @@ func ApplyMovieDetails(ctx context.Context, db *sql.DB, itemID int64, d *metadat
 	if err != nil {
 		return fmt.Errorf("library: guardar la ficha de la película %d: %w", itemID, err)
 	}
+	if err := ApplyCollection(ctx, db, itemID, d.Collection); err != nil {
+		return err
+	}
 	return nil
 }
 
 // ClearMovieMetadata deja la fila sin ficha, conservando el título y el año
 // analizados del archivo.
 func ClearMovieMetadata(ctx context.Context, db *sql.DB, itemID int64, status any) error {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("library: iniciar limpieza de la película %d: %w", itemID, err)
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
 	var title string
-	err := db.QueryRowContext(ctx, `SELECT title FROM media_items WHERE id = ?`, itemID).Scan(&title)
+	err = tx.QueryRowContext(ctx, `SELECT title FROM media_items WHERE id = ?`, itemID).Scan(&title)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil
 	}
@@ -356,20 +371,26 @@ func ClearMovieMetadata(ctx context.Context, db *sql.DB, itemID int64, status an
 	}
 	sortTitle, sortLetter := sortKeys(title)
 
-	_, err = db.ExecContext(ctx, `
+	if err := clearTMDBCollectionItems(ctx, tx, itemID); err != nil {
+		return err
+	}
+	_, err = tx.ExecContext(ctx, `
 		UPDATE media_items SET
 			tmdb_id = NULL, original_title = NULL, imdb_id = NULL, tagline = NULL,
 			overview = NULL, overview_language = NULL, display_title = NULL,
 			sort_title = ?, sort_letter = ?, genres = NULL,
 			runtime_minutes = NULL, rating = NULL, directors = NULL,
 			cast_names = NULL, poster_url = NULL, backdrop_url = NULL,
-			poster_locked = 0, backdrop_locked = 0,
+			poster_locked = 0, backdrop_locked = 0, collection_checked = 0,
 			metadata_source = NULL, match_score = NULL, match_status = ?
 		WHERE id = ?`,
 		sortTitle, sortLetter, status, itemID,
 	)
 	if err != nil {
 		return fmt.Errorf("library: borrar la ficha de la película %d: %w", itemID, err)
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("library: confirmar limpieza de la película %d: %w", itemID, err)
 	}
 	return nil
 }

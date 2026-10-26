@@ -170,7 +170,7 @@ El usuario quiere un panel de administración bien estructurado para configurar 
 
 ## Hito 2 — Colecciones (→ 0.12.0)
 
-### T7 — Modelo y creación automática de colecciones
+### ✅ T7 — Modelo y creación automática de colecciones
 - Archivos: `internal/store/migrations/0006_collections.sql`, `internal/metadata/tmdb.go` (+test), `internal/library/collections.go` (nuevo, +test), `internal/library/scanner.go`.
 - `MovieDetails` añade `Collection *CollectionRef{TMDBID int, Name, PosterURL, BackdropURL string}` desde `belongs_to_collection` (ya viene en la respuesta de `/movie/{id}`; el nombre llega en es-ES, p. ej. «Harry Potter - Colección»).
 - Tablas:

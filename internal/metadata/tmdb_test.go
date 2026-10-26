@@ -620,6 +620,12 @@ func TestMovieDetails(t *testing.T) {
 		},
 		"poster_path":   "/fallback.jpg",
 		"backdrop_path": "/backdrop.jpg",
+		"belongs_to_collection": map[string]any{
+			"id":            10,
+			"name":          "Saga Matrix",
+			"poster_path":   "/collection.jpg",
+			"backdrop_path": "/collection-backdrop.jpg",
+		},
 	}))
 	client := newAPIClient(t, api, t.TempDir(), nil, "clave-de-prueba")
 
@@ -648,12 +654,35 @@ func TestMovieDetails(t *testing.T) {
 	if want := api.URL + "/img/w1280/backdrop.jpg"; details.BackdropURL != want {
 		t.Fatalf("BackdropURL = %q, se esperaba %q", details.BackdropURL, want)
 	}
+	if details.Collection == nil || details.Collection.TMDBID != 10 ||
+		details.Collection.Name != "Saga Matrix" ||
+		details.Collection.PosterURL != api.URL+"/img/w342/collection.jpg" ||
+		details.Collection.BackdropURL != api.URL+"/img/w1280/collection-backdrop.jpg" {
+		t.Fatalf("colección inesperada: %+v", details.Collection)
+	}
 
 	query := api.query("/movie/603")
 	if query.Get("language") != "es-ES" ||
 		query.Get("append_to_response") != "credits,images" ||
 		query.Get("include_image_language") != "es,null,en" {
 		t.Fatalf("parámetros inesperados: %v", query)
+	}
+}
+
+func TestMovieDetailsSinColeccion(t *testing.T) {
+	api := newTestAPI(t)
+	api.route("/movie/604", jsonRoute(map[string]any{
+		"id":    604,
+		"title": "Película suelta",
+	}))
+	client := newAPIClient(t, api, t.TempDir(), nil, "clave-de-prueba")
+
+	details, err := client.MovieDetails(context.Background(), 604)
+	if err != nil {
+		t.Fatalf("MovieDetails: %v", err)
+	}
+	if details.Collection != nil {
+		t.Fatalf("no debería tener colección: %+v", details.Collection)
 	}
 }
 

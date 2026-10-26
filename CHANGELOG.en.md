@@ -23,6 +23,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 - Per-user playback progress (`PUT`/`DELETE /api/v1/items/{id}/progress`; at 90 % it is marked as watched) and `GET /api/v1/home` with "continue watching", recently added items and the portal counters.
 - "File" panel on the movie page (quality, container, size, video, audio and subtitle tracks, how it will play) and, for admins, an "Image" panel to pick the poster and backdrop from TMDB or set a custom URL.
 - The player saves progress every 15 s and on exit, and resumes where you left off ("Continue · 1 h 12 min" on the movie page, "Start from the beginning"). The portal shows "Continue watching" and "Recently added".
+- Automatic collections: movies that belong to a TMDB saga are grouped into a collection automatically; a collection deleted or a movie removed by the user does not reappear in later scans. Already identified movies join their collection on the first scan.
 - The server shuts down gracefully on SIGINT/SIGTERM, cancelling any running scan.
 
 ## [0.10.0] - 2026-10-26

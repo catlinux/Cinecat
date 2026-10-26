@@ -72,23 +72,32 @@ type Candidate struct {
 	VoteCount     int     `json:"vote_count"`
 }
 
+// CollectionRef identifica la saga a la que pertenece una película.
+type CollectionRef struct {
+	TMDBID      int    `json:"tmdb_id"`
+	Name        string `json:"name"`
+	PosterURL   string `json:"poster_url"`
+	BackdropURL string `json:"backdrop_url"`
+}
+
 // Details es la ficha completa de una película o serie.
 type Details struct {
-	TMDBID           int      `json:"tmdb_id"`
-	IMDbID           string   `json:"imdb_id"`
-	Title            string   `json:"title"`
-	OriginalTitle    string   `json:"original_title"`
-	Year             int      `json:"year"`
-	Tagline          string   `json:"tagline"`
-	Overview         string   `json:"overview"`
-	OverviewLanguage string   `json:"overview_language"`
-	Genres           []string `json:"genres"`
-	RuntimeMinutes   int      `json:"runtime_minutes"`
-	Rating           float64  `json:"rating"`
-	Directors        []string `json:"directors"`
-	Cast             []string `json:"cast"`
-	PosterURL        string   `json:"poster_url"`
-	BackdropURL      string   `json:"backdrop_url"`
+	TMDBID           int            `json:"tmdb_id"`
+	IMDbID           string         `json:"imdb_id"`
+	Title            string         `json:"title"`
+	OriginalTitle    string         `json:"original_title"`
+	Year             int            `json:"year"`
+	Tagline          string         `json:"tagline"`
+	Overview         string         `json:"overview"`
+	OverviewLanguage string         `json:"overview_language"`
+	Genres           []string       `json:"genres"`
+	RuntimeMinutes   int            `json:"runtime_minutes"`
+	Rating           float64        `json:"rating"`
+	Directors        []string       `json:"directors"`
+	Cast             []string       `json:"cast"`
+	PosterURL        string         `json:"poster_url"`
+	BackdropURL      string         `json:"backdrop_url"`
+	Collection       *CollectionRef `json:"collection,omitempty"`
 }
 
 // Episode es la ficha de un episodio concreto.
@@ -359,10 +368,15 @@ type tvSearchResponse struct {
 	} `json:"results"`
 }
 
+type collectionRef struct {
+	ID           int    `json:"id"`
+	Name         string `json:"name"`
+	PosterPath   string `json:"poster_path"`
+	BackdropPath string `json:"backdrop_path"`
+}
+
 type collectionRefResponse struct {
-	BelongsToCollection *struct {
-		ID int `json:"id"`
-	} `json:"belongs_to_collection"`
+	BelongsToCollection *collectionRef `json:"belongs_to_collection"`
 }
 
 type collectionResponse struct {
@@ -396,20 +410,21 @@ type genre struct {
 }
 
 type movieDetailsResponse struct {
-	ID            int             `json:"id"`
-	IMDbID        string          `json:"imdb_id"`
-	Title         string          `json:"title"`
-	OriginalTitle string          `json:"original_title"`
-	ReleaseDate   string          `json:"release_date"`
-	Tagline       string          `json:"tagline"`
-	Overview      string          `json:"overview"`
-	Runtime       int             `json:"runtime"`
-	VoteAverage   float64         `json:"vote_average"`
-	Genres        []genre         `json:"genres"`
-	Credits       creditsResponse `json:"credits"`
-	Images        imagesResponse  `json:"images"`
-	PosterPath    string          `json:"poster_path"`
-	BackdropPath  string          `json:"backdrop_path"`
+	ID                  int             `json:"id"`
+	IMDbID              string          `json:"imdb_id"`
+	Title               string          `json:"title"`
+	OriginalTitle       string          `json:"original_title"`
+	ReleaseDate         string          `json:"release_date"`
+	Tagline             string          `json:"tagline"`
+	Overview            string          `json:"overview"`
+	Runtime             int             `json:"runtime"`
+	VoteAverage         float64         `json:"vote_average"`
+	Genres              []genre         `json:"genres"`
+	Credits             creditsResponse `json:"credits"`
+	Images              imagesResponse  `json:"images"`
+	PosterPath          string          `json:"poster_path"`
+	BackdropPath        string          `json:"backdrop_path"`
+	BelongsToCollection *collectionRef  `json:"belongs_to_collection"`
 }
 
 type tvDetailsResponse struct {
@@ -671,6 +686,14 @@ func (c *Client) MovieDetails(ctx context.Context, id int) (*Details, error) {
 		Cast:           castNames(response.Credits.Cast),
 		PosterURL:      c.posterURL(response.Images.Posters, response.PosterPath),
 		BackdropURL:    c.imageURLSize(response.BackdropPath, "w1280"),
+	}
+	if collection := response.BelongsToCollection; collection != nil && collection.ID > 0 {
+		details.Collection = &CollectionRef{
+			TMDBID:      collection.ID,
+			Name:        collection.Name,
+			PosterURL:   c.imageURLSize(collection.PosterPath, "w342"),
+			BackdropURL: c.imageURLSize(collection.BackdropPath, "w1280"),
+		}
 	}
 	if details.Overview != "" {
 		details.OverviewLanguage = defaultLanguage
