@@ -8,6 +8,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 ## [Sin publicar]
 
 ### Añadido
+- Los ajustes se aplican en caliente, sin reiniciar: intervalo y arranque del escaneo automático, idioma de TMDB, umbral de identificación, calidad de la transcodificación (altura máxima, CRF y preset) y mínimo de películas por colección automática.
 - Ajustes del servidor guardados en la base de datos con registro tipado y validación (escaneo, metadatos, interfaz, reproducción y sistema): `GET`/`PATCH /api/v1/settings`, `DELETE /api/v1/settings/{clave}` y `GET /api/v1/settings/public`. Las variables de entorno siguen dando el valor inicial.
 
 ## [0.11.0] - 2026-10-26

@@ -101,7 +101,7 @@ var definitions = []Definition{
 		Key:         "metadata.language",
 		Section:     "metadata",
 		Label:       "Idioma de los metadatos",
-		Description: "Idioma preferido para las sinopsis y fichas de TMDB.",
+		Description: "Idioma preferido para las sinopsis y fichas nuevas de TMDB; no reescribe las fichas ya guardadas.",
 		Type:        TypeEnum,
 		Default:     "es-ES",
 		Options: []Option{

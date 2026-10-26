@@ -22,6 +22,7 @@ import (
 	"github.com/catlinux/cinecat/internal/auth"
 	"github.com/catlinux/cinecat/internal/library"
 	"github.com/catlinux/cinecat/internal/playback"
+	"github.com/catlinux/cinecat/internal/settings"
 	"github.com/catlinux/cinecat/internal/store"
 )
 
@@ -78,9 +79,10 @@ func TestVersionEndpointSinSesion(t *testing.T) {
 
 type testServer struct {
 	*httptest.Server
-	db      *sql.DB
-	clock   *fakeClock
-	scanJob *library.ScanJob
+	db       *sql.DB
+	clock    *fakeClock
+	scanJob  *library.ScanJob
+	settings *settings.Store
 }
 
 type fakeClock struct {
@@ -120,12 +122,23 @@ func newTestServer(t *testing.T) *testServer {
 	if err := st.Migrate(ctx); err != nil {
 		t.Fatalf("Migrate: %v", err)
 	}
+	settingsStore := settings.NewStore(st.DB(), nil)
+	if err := settingsStore.Load(ctx); err != nil {
+		t.Fatalf("settings.Load: %v", err)
+	}
 
 	authSvc := auth.New(st.DB())
 	clock := newFakeClock()
 	playSvc, err := playback.New(playback.Options{
 		WorkDir: filepath.Join(t.TempDir(), "hls"),
 		Now:     clock.Now,
+		Settings: func() playback.TranscodeSettings {
+			return playback.TranscodeSettings{
+				MaxHeight: settingsStore.Int("playback.max_height"),
+				CRF:       settingsStore.Int("playback.crf"),
+				Preset:    settingsStore.String("playback.preset"),
+			}
+		},
 	})
 	if err != nil {
 		t.Fatalf("playback.New: %v", err)
@@ -138,10 +151,13 @@ func newTestServer(t *testing.T) *testServer {
 
 	scanJob := library.NewScanJob(library.New(st.DB()))
 	t.Cleanup(scanJob.Close)
-	server := httptest.NewServer(newHandler(authSvc, library.NewAPI(st.DB(), authSvc, playSvc, scanJob, nil)))
+	api := library.NewAPI(st.DB(), authSvc, playSvc, scanJob, nil).WithSettings(settingsStore)
+	server := httptest.NewServer(newHandler(authSvc, api))
 	t.Cleanup(server.Close)
 
-	return &testServer{Server: server, db: st.DB(), clock: clock, scanJob: scanJob}
+	return &testServer{
+		Server: server, db: st.DB(), clock: clock, scanJob: scanJob, settings: settingsStore,
+	}
 }
 
 func execSQL(t *testing.T, db *sql.DB, query string, args ...any) int64 {
@@ -584,25 +600,72 @@ func (f *fakeScanStarter) Start(ctx context.Context) bool {
 	return true
 }
 
-func TestScheduleScans(t *testing.T) {
+type hotScanSettings struct {
+	mu        sync.Mutex
+	interval  time.Duration
+	onStartup bool
+	changes   chan struct{}
+}
+
+func newHotScanSettings(interval time.Duration, onStartup bool) *hotScanSettings {
+	return &hotScanSettings{
+		interval:  interval,
+		onStartup: onStartup,
+		changes:   make(chan struct{}, 1),
+	}
+}
+
+func (f *hotScanSettings) Interval() time.Duration {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.interval
+}
+
+func (f *hotScanSettings) OnStartup() bool {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.onStartup
+}
+
+func (f *hotScanSettings) Changes() <-chan struct{} {
+	return f.changes
+}
+
+func (f *hotScanSettings) set(interval time.Duration, onStartup bool) {
+	f.mu.Lock()
+	f.interval = interval
+	f.onStartup = onStartup
+	f.mu.Unlock()
+	select {
+	case f.changes <- struct{}{}:
+	default:
+	}
+}
+
+func waitScheduledScanCalls(t *testing.T, job *fakeScanStarter, want int32) {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for job.calls.Load() < want && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	if job.calls.Load() < want {
+		t.Fatalf("el planificador solo lanzó %d escaneos, se esperaban %d", job.calls.Load(), want)
+	}
+}
+
+func TestScheduleScansArranqueYPeriodico(t *testing.T) {
 	var job fakeScanStarter
+	settings := newHotScanSettings(5*time.Millisecond, true)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	done := make(chan struct{})
 	go func() {
-		scheduleScans(ctx, &job, 2*time.Millisecond, 5*time.Millisecond)
+		scheduleScans(ctx, &job, 2*time.Millisecond, settings)
 		close(done)
 	}()
 
-	deadline := time.Now().Add(2 * time.Second)
-	for job.calls.Load() < 2 && time.Now().Before(deadline) {
-		time.Sleep(time.Millisecond)
-	}
-	if job.calls.Load() < 2 {
-		t.Fatalf("el planificador solo lanzó %d escaneos", job.calls.Load())
-	}
-
+	waitScheduledScanCalls(t, &job, 2)
 	cancel()
 	select {
 	case <-done:
@@ -616,21 +679,79 @@ func TestScheduleScans(t *testing.T) {
 	}
 }
 
-func TestScheduleScansConIntervaloCero(t *testing.T) {
+func TestScheduleScansSinArranque(t *testing.T) {
 	var job fakeScanStarter
-	done := make(chan struct{})
-	go func() {
-		scheduleScans(context.Background(), &job, time.Millisecond, 0)
-		close(done)
-	}()
+	settings := newHotScanSettings(500*time.Millisecond, false)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	select {
-	case <-done:
-	case <-time.After(time.Second):
-		t.Fatal("con intervalo 0 el planificador debe terminar")
-	}
+	go scheduleScans(ctx, &job, 5*time.Millisecond, settings)
+	time.Sleep(20 * time.Millisecond)
 	if job.calls.Load() != 0 {
-		t.Fatalf("con intervalo 0 se lanzaron %d escaneos", job.calls.Load())
+		t.Fatalf("sin arranque no debe escanearse antes del intervalo: %d", job.calls.Load())
+	}
+	waitScheduledScanCalls(t, &job, 1)
+}
+
+func TestScheduleScansCambioDeIntervaloYReactivacion(t *testing.T) {
+	var job fakeScanStarter
+	settings := newHotScanSettings(time.Second, false)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go scheduleScans(ctx, &job, time.Minute, settings)
+	time.Sleep(20 * time.Millisecond)
+	if job.calls.Load() != 0 {
+		t.Fatalf("no debe esperar al intervalo largo: %d", job.calls.Load())
+	}
+
+	settings.set(5*time.Millisecond, false)
+	waitScheduledScanCalls(t, &job, 1)
+
+	settings.set(0, false)
+	time.Sleep(20 * time.Millisecond)
+	before := job.calls.Load()
+	time.Sleep(30 * time.Millisecond)
+	if job.calls.Load() != before {
+		t.Fatalf("con intervalo 0 no deben lanzarse escaneos: %d -> %d", before, job.calls.Load())
+	}
+
+	settings.set(5*time.Millisecond, false)
+	waitScheduledScanCalls(t, &job, before+1)
+}
+
+func TestStoreScanSettingsAdaptaYDespierta(t *testing.T) {
+	server := newTestServer(t)
+	ctx := context.Background()
+	adapter := newStoreScanSettings(server.settings)
+	if adapter.Interval() != 6*time.Hour || !adapter.OnStartup() {
+		t.Fatalf("defectos del adaptador: %v, %v", adapter.Interval(), adapter.OnStartup())
+	}
+
+	if failures := server.settings.Set(ctx, map[string]json.RawMessage{
+		settings.KeyScanInterval: json.RawMessage(`"7m"`),
+		"scan.on_startup":        json.RawMessage("false"),
+	}); len(failures) != 0 {
+		t.Fatalf("Set: %v", failures)
+	}
+	select {
+	case <-adapter.Changes():
+	case <-time.After(time.Second):
+		t.Fatal("el adaptador no avisó del cambio de escaneo")
+	}
+	if adapter.Interval() != 7*time.Minute || adapter.OnStartup() {
+		t.Fatalf("adaptador sin actualizar: %v, %v", adapter.Interval(), adapter.OnStartup())
+	}
+
+	if failures := server.settings.Set(ctx, map[string]json.RawMessage{
+		"ui.page_size": json.RawMessage("24"),
+	}); len(failures) != 0 {
+		t.Fatalf("Set ajeno: %v", failures)
+	}
+	select {
+	case <-adapter.Changes():
+		t.Fatal("un ajuste ajeno al escaneo no debe despertar el planificador")
+	case <-time.After(20 * time.Millisecond):
 	}
 }
 

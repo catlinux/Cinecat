@@ -149,7 +149,7 @@ El usuario quiere un panel de administración bien estructurado para configurar 
 - API: `GET /api/v1/settings` (admin) → secciones con sus ajustes (valor, defecto, tipo, opciones, descripción); `PATCH /api/v1/settings {clave: valor, ...}` con validación (400 con el error por clave); `GET /api/v1/settings/public` (con sesión) → solo los `ui.*` que necesita la web.
 - Esfuerzo: alto.
 
-### A2 — Conectar los ajustes a cada parte
+### ✅ A2 — Conectar los ajustes a cada parte
 - Archivos: `internal/library/scanner.go`/`scanjob.go`, `internal/library/match.go` (**solo** leer el umbral de un parámetro con el valor actual por defecto; el fixture de T2 debe seguir pasando con 0.75), `internal/playback/hls.go` (CRF, preset y altura máxima en `hlsTranscodeArgs`: el filtro `scale` pasa a `min(<altura>, ih)` manteniendo dimensiones pares), `internal/metadata/tmdb.go` (idioma).
 - Criterios: tests que cambian un ajuste y comprueban el efecto (argumentos de FFmpeg, intervalo, idioma de la petición).
 - Esfuerzo: alto. **Ojo con `internal/playback`:** los tests con FFmpeg real se ejecutan en el contenedor (ver TODO.md); no aceptar sin pasarlos allí.

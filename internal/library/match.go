@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 	"unicode/utf8"
 
@@ -22,6 +23,25 @@ import (
 // biblioteca de producción (títulos en castellano, casi nunca con año) y los
 // resultados de TMDB; testdata/match_fixture.json conserva los casos difíciles.
 const MatchThreshold = 0.75
+
+var matchThresholdBits atomic.Uint64
+
+func init() {
+	matchThresholdBits.Store(math.Float64bits(MatchThreshold))
+}
+
+// SetMatchThreshold cambia el umbral vigente. Los valores fuera del rango
+// válido se ignoran para no dejar la identificación en un estado absurdo.
+func SetMatchThreshold(value float64) {
+	if math.IsNaN(value) || value < 0.6 || value > 0.95 {
+		return
+	}
+	matchThresholdBits.Store(math.Float64bits(value))
+}
+
+func currentMatchThreshold() float64 {
+	return math.Float64frombits(matchThresholdBits.Load())
+}
 
 // MovieSearcher es lo que necesita la identificación de TMDB.
 type MovieSearcher interface {
@@ -126,7 +146,7 @@ func identifyCandidate(ctx context.Context, search candidateSearch, title string
 	if top := ranked[0].candidate; top.VoteCount < 200 {
 		for i := 1; i < len(ranked); i++ {
 			other := ranked[i]
-			if other.score >= MatchThreshold && other.candidate.VoteCount >= 500 && other.candidate.VoteCount >= 20*top.VoteCount {
+			if other.score >= currentMatchThreshold() && other.candidate.VoteCount >= 500 && other.candidate.VoteCount >= 20*top.VoteCount {
 				ranked[0], ranked[i] = ranked[i], ranked[0]
 				break
 			}
@@ -147,9 +167,9 @@ func IdentifyMovie(ctx context.Context, searcher MovieSearcher, title string, ye
 		return best, score, false, err
 	}
 	if fixed, ok := byCollection(ctx, searcher, variants[0], best); ok {
-		best, score = fixed, math.Max(score, MatchThreshold)
+		best, score = fixed, math.Max(score, currentMatchThreshold())
 	}
-	return best, score, score >= MatchThreshold, nil
+	return best, score, score >= currentMatchThreshold(), nil
 }
 
 // IdentifySeries busca en TMDB la serie de un título analizado. Comparte la
@@ -159,7 +179,7 @@ func IdentifySeries(ctx context.Context, searcher TVSearcher, title string, year
 	if err != nil || !found {
 		return best, score, false, err
 	}
-	return best, score, score >= MatchThreshold, nil
+	return best, score, score >= currentMatchThreshold(), nil
 }
 
 // matchVariants genera las búsquedas para TMDB. La primera es el título limpio
@@ -515,7 +535,7 @@ func scoreCandidate(title string, year int, query string, candidate metadata.Can
 	}
 	switch {
 	case len(queryShortNums) > 0 && intersects(queryShortNums, candidateShort):
-		if f1 >= 0.75 {
+		if f1 >= currentMatchThreshold() {
 			best += 0.15
 		}
 	case len(queryShortNums) > 0 && len(candidateShort) > 0:

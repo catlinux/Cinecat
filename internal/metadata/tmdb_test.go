@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -485,6 +486,24 @@ func newAPIClient(t *testing.T, api *testAPI, cacheDir string, clock *fakeClock,
 	return client
 }
 
+func newLanguageTestClient(t *testing.T, api *testAPI, cacheDir, language string) *Client {
+	t.Helper()
+	client, err := New(Options{
+		APIKey:       "clave-de-prueba",
+		BaseURL:      api.URL,
+		ImageBaseURL: api.URL + "/img",
+		CacheDir:     cacheDir,
+		HTTPClient:   api.Client(),
+		Now:          newFakeClock().Now,
+		RetryDelay:   10 * time.Millisecond,
+		Language:     func() string { return language },
+	})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	return client
+}
+
 func jsonRoute(body any) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -802,6 +821,83 @@ func TestMovieDetailsRespaldoDeSinopsis(t *testing.T) {
 					details.Overview, details.OverviewLanguage, tt.wantText, tt.wantLang)
 			}
 		})
+	}
+}
+
+func TestClienteUsaIdiomaConfigurado(t *testing.T) {
+	api := newTestAPI(t)
+	api.route("/search/movie", jsonRoute(map[string]any{
+		"results": []map[string]any{{
+			"id": 7, "title": "Movie", "original_title": "Movie",
+			"release_date": "2000-01-01", "overview": "English overview",
+		}},
+	}))
+	api.route("/movie/7", jsonRoute(map[string]any{
+		"id": 7, "title": "Movie", "overview": "English overview",
+	}))
+
+	client := newLanguageTestClient(t, api, t.TempDir(), "en-US")
+	candidates, err := client.SearchMovies(context.Background(), "Movie", 0)
+	if err != nil || len(candidates) != 1 {
+		t.Fatalf("SearchMovies: %v, %+v", err, candidates)
+	}
+	if got := api.query("/search/movie").Get("language"); got != "en-US" {
+		t.Fatalf("language de búsqueda = %q", got)
+	}
+
+	details, err := client.MovieDetails(context.Background(), 7)
+	if err != nil {
+		t.Fatalf("MovieDetails: %v", err)
+	}
+	if got := api.query("/movie/7").Get("language"); got != "en-US" {
+		t.Fatalf("language de ficha = %q", got)
+	}
+	if details.OverviewLanguage != "en-US" {
+		t.Fatalf("OverviewLanguage = %q", details.OverviewLanguage)
+	}
+}
+
+func TestRespaldoSinopsisConIdiomaConfigurado(t *testing.T) {
+	translations := []map[string]any{
+		{"iso_639_1": "es", "iso_3166_1": "ES", "data": map[string]any{"overview": "Española"}},
+		{"iso_639_1": "es", "iso_3166_1": "MX", "data": map[string]any{"overview": "Mexicana"}},
+		{"iso_639_1": "en", "iso_3166_1": "US", "data": map[string]any{"overview": "English"}},
+	}
+	for _, test := range []struct {
+		language string
+		wantText string
+		wantLang string
+	}{
+		{language: "es-MX", wantText: "Mexicana", wantLang: "es-MX"},
+		{language: "es-ES", wantText: "Española", wantLang: "es"},
+		{language: "en-US", wantText: "English", wantLang: "en-US"},
+	} {
+		t.Run(test.language, func(t *testing.T) {
+			api := newTestAPI(t)
+			api.route("/movie/7", jsonRoute(map[string]any{"id": 7, "title": "Sinopsis", "overview": ""}))
+			api.route("/movie/7/translations", jsonRoute(map[string]any{"translations": translations}))
+			client := newLanguageTestClient(t, api, t.TempDir(), test.language)
+			details, err := client.MovieDetails(context.Background(), 7)
+			if err != nil {
+				t.Fatalf("MovieDetails: %v", err)
+			}
+			if details.Overview != test.wantText || details.OverviewLanguage != test.wantLang {
+				t.Fatalf("respaldo = %q/%q, se esperaba %q/%q",
+					details.Overview, details.OverviewLanguage, test.wantText, test.wantLang)
+			}
+		})
+	}
+}
+
+func TestOrdenDeRespaldosDeIdioma(t *testing.T) {
+	for language, want := range map[string][]string{
+		"es-ES": {"es-ES", "es-MX", "es", "en-US"},
+		"es-MX": {"es-MX", "es-ES", "es", "en-US"},
+		"en-US": {"en-US"},
+	} {
+		if got := translationFallbacks(language); !reflect.DeepEqual(got, want) {
+			t.Errorf("translationFallbacks(%q) = %v, se esperaba %v", language, got, want)
+		}
 	}
 }
 

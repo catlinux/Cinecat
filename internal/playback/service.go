@@ -24,6 +24,35 @@ const DefaultURLTTL = 8 * time.Hour
 // hlsIdleTTL es el tiempo que se conserva un HLS ya generado sin usarse.
 const hlsIdleTTL = time.Hour
 
+// TranscodeSettings son los parámetros que afectan al remux HLS.
+type TranscodeSettings struct {
+	MaxHeight int
+	CRF       int
+	Preset    string
+}
+
+func defaultTranscodeSettings() TranscodeSettings {
+	return TranscodeSettings{MaxHeight: 1080, CRF: 20, Preset: "veryfast"}
+}
+
+func normalizeTranscodeSettings(settings TranscodeSettings) TranscodeSettings {
+	defaults := defaultTranscodeSettings()
+	switch settings.MaxHeight {
+	case 480, 720, 1080:
+	default:
+		settings.MaxHeight = defaults.MaxHeight
+	}
+	if settings.CRF < 18 || settings.CRF > 28 {
+		settings.CRF = defaults.CRF
+	}
+	switch settings.Preset {
+	case "veryfast", "faster", "fast":
+	default:
+		settings.Preset = defaults.Preset
+	}
+	return settings
+}
+
 // Options configura el servicio de reproducción.
 type Options struct {
 	// TTL de las URLs firmadas; por defecto, 15 minutos.
@@ -38,24 +67,33 @@ type Options struct {
 	// Prober sustituye el detector de keyframes; si es nil se usa el de por
 	// defecto (ffprobe).
 	Prober *Prober
+	// Settings devuelve los parámetros de transcodificación vigentes. Si es
+	// nil se usan 1080p, CRF 20 y veryfast.
+	Settings func() TranscodeSettings
 }
 
 // Service firma URLs, prepara remux HLS y sirve sus archivos.
 type Service struct {
-	key     []byte
-	ttl     time.Duration
-	now     func() time.Time
-	workDir string
-	prober  *Prober
+	key      []byte
+	ttl      time.Duration
+	now      func() time.Time
+	workDir  string
+	prober   *Prober
+	settings func() TranscodeSettings
 
 	procCtx    context.Context
 	procCancel context.CancelFunc
 
 	mu        sync.Mutex
-	entries   map[int64]*hlsEntry
+	entries   map[hlsEntryKey]*hlsEntry
 	stop      chan struct{}
 	done      chan struct{}
 	closeOnce sync.Once
+}
+
+type hlsEntryKey struct {
+	itemID    int64
+	transcode string
 }
 
 // hlsEntry es el HLS de un ítem. Sus campos se protegen con Service.mu.
@@ -64,6 +102,7 @@ type hlsEntry struct {
 	inputPath    string
 	lastUsed     time.Time
 	playlistFile string
+	transcode    TranscodeSettings
 	// segments es el total de la playlist VOD propia; 0 si se sirve la de
 	// FFmpeg y por tanto no se puede relanzar en un segmento concreto.
 	segments int
@@ -128,6 +167,10 @@ func New(opts Options) (*Service, error) {
 	if prober == nil {
 		prober = NewProber()
 	}
+	settings := opts.Settings
+	if settings == nil {
+		settings = defaultTranscodeSettings
+	}
 
 	procCtx, procCancel := context.WithCancel(context.Background())
 	svc := &Service{
@@ -136,14 +179,19 @@ func New(opts Options) (*Service, error) {
 		now:        now,
 		workDir:    workDir,
 		prober:     prober,
+		settings:   settings,
 		procCtx:    procCtx,
 		procCancel: procCancel,
-		entries:    make(map[int64]*hlsEntry),
+		entries:    make(map[hlsEntryKey]*hlsEntry),
 		stop:       make(chan struct{}),
 		done:       make(chan struct{}),
 	}
 	go svc.cleanupLoop()
 	return svc, nil
+}
+
+func (s *Service) currentTranscodeSettings() TranscodeSettings {
+	return normalizeTranscodeSettings(s.settings())
 }
 
 // Close detiene la limpieza periódica y elimina el directorio de trabajo con
@@ -158,8 +206,8 @@ func (s *Service) Close() error {
 	// Los procesos ya se cancelaron con procCtx; removeEntryLocked espera a
 	// que terminen antes de borrar sus archivos.
 	s.mu.Lock()
-	for itemID, entry := range s.entries {
-		s.removeEntryLocked(itemID, entry)
+	for key, entry := range s.entries {
+		s.removeEntryLocked(key, entry)
 	}
 	s.mu.Unlock()
 	return os.RemoveAll(s.workDir)

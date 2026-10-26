@@ -81,6 +81,15 @@ func main() {
 	if err := settingsStore.Load(ctx); err != nil {
 		log.Printf("cinecatd: no se pudieron cargar los ajustes guardados: %v", err)
 	}
+	library.SetMatchThreshold(settingsStore.Float("metadata.match_threshold"))
+	settingsStore.OnChange(func(keys []string) {
+		for _, key := range keys {
+			if key == "metadata.match_threshold" {
+				library.SetMatchThreshold(settingsStore.Float(key))
+				return
+			}
+		}
+	})
 
 	bootstrap, err := auth.BootstrapAdmin(ctx, st.DB(), os.Getenv(auth.EnvAdminPassword))
 	if err != nil {
@@ -98,7 +107,15 @@ func main() {
 	}
 
 	authSvc := auth.New(st.DB())
-	playSvc, err := playback.New(playback.Options{})
+	playSvc, err := playback.New(playback.Options{
+		Settings: func() playback.TranscodeSettings {
+			return playback.TranscodeSettings{
+				MaxHeight: settingsStore.Int("playback.max_height"),
+				CRF:       settingsStore.Int("playback.crf"),
+				Preset:    settingsStore.String("playback.preset"),
+			}
+		},
+	})
 	if err != nil {
 		log.Fatalf("cinecatd: %v", err)
 	}
@@ -110,6 +127,7 @@ func main() {
 		tmdb, err := metadata.New(metadata.Options{
 			APIKey:   cfg.TMDBAPIKey,
 			CacheDir: tmdbCacheDir(cfg.DatabasePath),
+			Language: func() string { return settingsStore.String("metadata.language") },
 		})
 		if err != nil {
 			log.Printf("cinecatd: metadatos de TMDB desactivados: %v", err)
@@ -128,7 +146,7 @@ func main() {
 
 	scanJob := library.NewScanJob(scanner)
 	defer scanJob.Close()
-	go scheduleScans(ctx, scanJob, time.Minute, cfg.ScanInterval)
+	go scheduleScans(ctx, scanJob, time.Minute, newStoreScanSettings(settingsStore))
 
 	api := library.NewAPI(st.DB(), authSvc, playSvc, scanJob, tmdbClient)
 	api = api.WithSettings(settingsStore)
@@ -164,22 +182,126 @@ type scanStarter interface {
 	Start(context.Context) bool
 }
 
-// scheduleScans lanza un escaneo tras el retardo inicial y después cada
-// intervalo. Con intervalo 0 no hace nada.
-func scheduleScans(ctx context.Context, job scanStarter, initialDelay, interval time.Duration) {
-	if interval <= 0 {
+type scanSettings interface {
+	Interval() time.Duration
+	OnStartup() bool
+	Changes() <-chan struct{}
+}
+
+// storeScanSettings adapta el Store de ajustes al planificador. El canal
+// despierta el bucle para recalcular el siguiente escaneo sin esperar al
+// temporizador anterior.
+type storeScanSettings struct {
+	store   *settings.Store
+	changes chan struct{}
+}
+
+func newStoreScanSettings(store *settings.Store) *storeScanSettings {
+	settings := &storeScanSettings{
+		store:   store,
+		changes: make(chan struct{}, 1),
+	}
+	if store != nil {
+		store.OnChange(func(keys []string) {
+			for _, key := range keys {
+				if key != "scan.interval" && key != "scan.on_startup" {
+					continue
+				}
+				select {
+				case settings.changes <- struct{}{}:
+				default:
+				}
+				break
+			}
+		})
+	}
+	return settings
+}
+
+func (s *storeScanSettings) Interval() time.Duration {
+	if s == nil || s.store == nil {
+		return 0
+	}
+	return s.store.Duration("scan.interval")
+}
+
+func (s *storeScanSettings) OnStartup() bool {
+	if s == nil || s.store == nil {
+		return false
+	}
+	return s.store.Bool("scan.on_startup")
+}
+
+func (s *storeScanSettings) Changes() <-chan struct{} {
+	if s == nil {
+		return nil
+	}
+	return s.changes
+}
+
+// scheduleScans lanza un escaneo tras el retardo inicial si está activado y
+// después cada intervalo. Los cambios de ajustes recalculan el siguiente
+// instante; con intervalo 0 el planificador espera sin lanzar escaneos.
+func scheduleScans(ctx context.Context, job scanStarter, initialDelay time.Duration, settings scanSettings) {
+	if settings == nil {
 		return
 	}
 
-	timer := time.NewTimer(initialDelay)
-	defer timer.Stop()
+	var timer *time.Timer
+	var timerC <-chan time.Time
+
+	stopTimer := func() {
+		if timer != nil && !timer.Stop() {
+			select {
+			case <-timer.C:
+			default:
+			}
+		}
+		timer = nil
+		timerC = nil
+	}
+	resetTimer := func(delay time.Duration) {
+		stopTimer()
+		if delay < 0 {
+			return
+		}
+		timer = time.NewTimer(delay)
+		timerC = timer.C
+	}
+
+	startupHandled := false
+	scheduleNext := func() {
+		interval := settings.Interval()
+		if interval <= 0 {
+			startupHandled = true
+			stopTimer()
+			return
+		}
+		if !startupHandled && settings.OnStartup() {
+			resetTimer(initialDelay)
+			return
+		}
+		startupHandled = true
+		resetTimer(interval)
+	}
+
+	scheduleNext()
+	defer stopTimer()
+
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-timer.C:
+		case <-settings.Changes():
+			scheduleNext()
+		case <-timerC:
 			job.Start(ctx)
-			timer.Reset(interval)
+			startupHandled = true
+			if interval := settings.Interval(); interval > 0 {
+				resetTimer(interval)
+			} else {
+				stopTimer()
+			}
 		}
 	}
 }

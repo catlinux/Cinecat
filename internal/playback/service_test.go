@@ -87,7 +87,7 @@ func currentRunStart(svc *Service, entry *hlsEntry) int {
 }
 
 func TestHLSArgsSaltoYAudioEstereo(t *testing.T) {
-	first := strings.Join(hlsTranscodeArgs("/tmp/peli.avi", 0), "\n")
+	first := strings.Join(hlsTranscodeArgs("/tmp/peli.avi", 0, defaultTranscodeSettings()), "\n")
 	if strings.Contains(first, "-ss\n") {
 		t.Fatalf("el proceso inicial no debe buscar: %v", first)
 	}
@@ -104,7 +104,7 @@ func TestHLSArgsSaltoYAudioEstereo(t *testing.T) {
 		}
 	}
 
-	seek := strings.Join(hlsTranscodeArgs("/tmp/peli.avi", 500), "\n")
+	seek := strings.Join(hlsTranscodeArgs("/tmp/peli.avi", 500, defaultTranscodeSettings()), "\n")
 	for _, expected := range []string{"-ss\n3000\n-i", "-start_number\n500", "-output_ts_offset\n3010"} {
 		if !strings.Contains(seek, expected) {
 			t.Fatalf("falta %q en el relanzado: %v", expected, seek)

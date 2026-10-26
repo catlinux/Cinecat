@@ -176,7 +176,7 @@ func TestPlaylistFirmada(t *testing.T) {
 
 func TestHLSArgsEnLista(t *testing.T) {
 	input := "/media/Biblioteca/Película; con espacios & comillas \"raras\".mkv"
-	args := hlsTranscodeArgs(input, 0)
+	args := hlsTranscodeArgs(input, 0, defaultTranscodeSettings())
 
 	foundInput := false
 	for _, arg := range args {

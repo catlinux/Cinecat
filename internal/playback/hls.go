@@ -74,7 +74,12 @@ var (
 // (vídeos con AC-3 5.1 se quedaban cargando). Los segmentos son MPEG-TS y no
 // fMP4 porque cada uno lleva sus marcas de tiempo absolutas: al relanzar FFmpeg
 // en mitad del vídeo no hay que regenerar ningún init ni recalcular tfdt.
-func hlsTranscodeArgs(inputPath string, startSegment int) []string {
+func hlsTranscodeArgs(inputPath string, startSegment int, transcode ...TranscodeSettings) []string {
+	settings := defaultTranscodeSettings()
+	if len(transcode) > 0 {
+		settings = transcode[0]
+	}
+	settings = normalizeTranscodeSettings(settings)
 	startSeconds := startSegment * hlsSegmentSeconds
 	args := []string{
 		"-hide_banner",
@@ -90,11 +95,12 @@ func hlsTranscodeArgs(inputPath string, startSegment int) []string {
 		// V mayúscula excluye las carátulas incrustadas como flujo de vídeo.
 		"-map", "0:V:0",
 		"-map", "0:a:0?",
-		// libx264 con yuv420p exige dimensiones pares; además se limita a 1080p.
-		"-vf", `scale=trunc(min(1920\,iw)/2)*2:-2`,
+		// libx264 con yuv420p exige dimensiones pares; la altura se limita al
+		// máximo configurado y el ancho se calcula manteniendo la proporción.
+		"-vf", fmt.Sprintf(`scale=-2:trunc(min(%d\,ih)/2)*2`, settings.MaxHeight),
 		"-c:v", "libx264",
-		"-preset", "veryfast",
-		"-crf", "20",
+		"-preset", settings.Preset,
+		"-crf", strconv.Itoa(settings.CRF),
 		"-pix_fmt", "yuv420p",
 		"-force_key_frames", "expr:gte(t,n_forced*"+strconv.Itoa(hlsSegmentSeconds)+")",
 		"-c:a", "aac",
@@ -199,7 +205,9 @@ func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string) (
 
 	s.cleanupLocked()
 
-	if entry, ok := s.entries[itemID]; ok {
+	transcode := s.currentTranscodeSettings()
+	key := hlsEntryKey{itemID: itemID, transcode: transcodeKey(transcode)}
+	if entry, ok := s.entries[key]; ok {
 		entry.lastUsed = s.now()
 		if s.playlistExists(entry) {
 			return entry, nil
@@ -207,13 +215,13 @@ func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string) (
 		if entry.run != nil && !entry.run.finished() {
 			if err := s.waitForPlaylist(ctx, entry); err != nil {
 				if errors.Is(err, ErrHLSStartupTimeout) {
-					s.removeEntryLocked(itemID, entry)
+					s.removeEntryLocked(key, entry)
 				}
 				return nil, err
 			}
 			return entry, nil
 		}
-		s.removeEntryLocked(itemID, entry)
+		s.removeEntryLocked(key, entry)
 		if entry.run != nil && entry.run.err != nil {
 			return nil, entry.run.err
 		}
@@ -228,7 +236,7 @@ func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string) (
 		return nil, fmt.Errorf("playback: ruta de entrada no válida: %w", err)
 	}
 
-	dir := filepath.Join(s.workDir, fmt.Sprintf("item-%d", itemID))
+	dir := filepath.Join(s.workDir, fmt.Sprintf("item-%d-%s", itemID, key.transcode))
 	if err := os.RemoveAll(dir); err != nil {
 		return nil, fmt.Errorf("playback: limpiar el HLS anterior: %w", err)
 	}
@@ -241,6 +249,7 @@ func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string) (
 		inputPath:    absInput,
 		lastUsed:     s.now(),
 		playlistFile: ffmpegPlaylistFile,
+		transcode:    transcode,
 	}
 
 	if durations, err := s.playlistDurations(ctx, absInput); err == nil {
@@ -250,7 +259,7 @@ func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string) (
 		}
 		entry.playlistFile = "playlist.m3u8"
 		entry.segments = len(durations)
-		s.entries[itemID] = entry
+		s.entries[key] = entry
 		return entry, nil
 	}
 
@@ -258,17 +267,25 @@ func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string) (
 		_ = os.RemoveAll(dir)
 		return nil, err
 	}
-	s.entries[itemID] = entry
+	s.entries[key] = entry
 	if err := s.waitForPlaylist(ctx, entry); err != nil {
 		if ctx.Err() != nil {
 			// El cliente se fue, pero el proceso sigue y otra petición podrá
 			// reutilizarlo.
 			return nil, ctx.Err()
 		}
-		s.removeEntryLocked(itemID, entry)
+		s.removeEntryLocked(key, entry)
 		return nil, err
 	}
 	return entry, nil
+}
+
+// transcodeKey identifica los parámetros de calidad en la caché y en el
+// nombre del directorio: un cambio de ajustes no mezcla segmentos de otra
+// calidad.
+func transcodeKey(settings TranscodeSettings) string {
+	settings = normalizeTranscodeSettings(settings)
+	return fmt.Sprintf("%d-%d-%s", settings.MaxHeight, settings.CRF, settings.Preset)
 }
 
 // startRunLocked detiene el proceso FFmpeg actual de la entrada (si lo hay) y
@@ -289,7 +306,7 @@ func (s *Service) startRunLocked(entry *hlsEntry, start int) error {
 	// El proceso vive ligado al contexto del servicio, no al de la petición
 	// HTTP que lo arranca, para que no se cancele al terminar esa petición.
 	procCtx, cancel := context.WithTimeout(s.procCtx, hlsProcessTimeout)
-	cmd := exec.CommandContext(procCtx, ffmpeg, hlsTranscodeArgs(entry.inputPath, start)...)
+	cmd := exec.CommandContext(procCtx, ffmpeg, hlsTranscodeArgs(entry.inputPath, start, entry.transcode)...)
 	cmd.Dir = entry.dir
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
@@ -550,14 +567,14 @@ func (s *Service) waitForPlaylist(ctx context.Context, entry *hlsEntry) error {
 }
 
 // removeEntryLocked detiene el proceso de la entrada y borra sus archivos.
-func (s *Service) removeEntryLocked(itemID int64, entry *hlsEntry) {
+func (s *Service) removeEntryLocked(key hlsEntryKey, entry *hlsEntry) {
 	entry.removed = true
 	if entry.run != nil {
 		entry.run.cancel()
 		<-entry.run.done
 	}
-	if s.entries[itemID] == entry {
-		delete(s.entries, itemID)
+	if s.entries[key] == entry {
+		delete(s.entries, key)
 	}
 	_ = os.RemoveAll(entry.dir)
 }
@@ -579,9 +596,9 @@ func segmentIndex(name string) (int, bool) {
 
 func (s *Service) cleanupLocked() {
 	now := s.now()
-	for itemID, entry := range s.entries {
+	for key, entry := range s.entries {
 		if now.Sub(entry.lastUsed) > hlsIdleTTL {
-			s.removeEntryLocked(itemID, entry)
+			s.removeEntryLocked(key, entry)
 		}
 	}
 }

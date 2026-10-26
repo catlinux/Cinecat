@@ -59,7 +59,7 @@ func (a *API) handleHome(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	nextUp, err := queryHomeNextUp(r.Context(), a.db, user.ID)
+	nextUp, err := queryHomeNextUp(r.Context(), a.db, user.ID, a.collectionMin())
 	if err != nil {
 		log.Printf("library: listar siguientes episodios: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
@@ -85,7 +85,13 @@ func (a *API) handleHome(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func queryHomeNextUp(ctx context.Context, db *sql.DB, userID int64) ([]mediaItemDTO, error) {
+func queryHomeNextUp(
+	ctx context.Context,
+	db *sql.DB,
+	userID int64,
+	minCollectionItems ...int,
+) ([]mediaItemDTO, error) {
+	minimum := collectionMinimum(minCollectionItems...)
 	rows, err := db.QueryContext(ctx, `
 		WITH watched AS (
 			SELECT mi.series_id, MAX(ws.watched_at) AS activity
@@ -146,7 +152,7 @@ func queryHomeNextUp(ctx context.Context, db *sql.DB, userID int64) ([]mediaItem
 
 	items := make([]mediaItemDTO, 0, len(next))
 	for _, item := range next {
-		dto, err := queryMediaItem(ctx, db, item.episodeID, userID)
+		dto, err := queryMediaItem(ctx, db, item.episodeID, userID, minimum)
 		if err != nil {
 			return nil, err
 		}

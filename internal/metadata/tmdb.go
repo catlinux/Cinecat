@@ -1,5 +1,5 @@
-// Package metadata implementa el cliente de metadatos de TMDB en español de
-// España (es-ES), con caché en disco para búsquedas e imágenes.
+// Package metadata implementa el cliente de metadatos de TMDB con idioma
+// configurable y caché en disco para búsquedas e imágenes.
 package metadata
 
 import (
@@ -142,6 +142,9 @@ type Options struct {
 	Now func() time.Time
 	// RetryDelay es la espera antes de reintentar un 429; 2 s por defecto.
 	RetryDelay time.Duration
+	// Language devuelve el idioma de las peticiones a TMDB. Si es nil se usa
+	// es-ES.
+	Language func() string
 }
 
 // Client consulta TMDB y cachea en disco las búsquedas y las imágenes.
@@ -155,6 +158,7 @@ type Client struct {
 	httpClient *http.Client
 	now        func() time.Time
 	retryDelay time.Duration
+	language   func() string
 
 	rateMu      sync.Mutex
 	lastRequest time.Time
@@ -219,6 +223,11 @@ func New(opts Options) (*Client, error) {
 		retryDelay = 2 * time.Second
 	}
 
+	language := opts.Language
+	if language == nil {
+		language = func() string { return defaultLanguage }
+	}
+
 	return &Client{
 		apiKey:     apiKey,
 		baseURL:    base,
@@ -229,7 +238,16 @@ func New(opts Options) (*Client, error) {
 		httpClient: httpClient,
 		now:        now,
 		retryDelay: retryDelay,
+		language:   language,
 	}, nil
+}
+
+func (c *Client) languageCode() string {
+	language := strings.TrimSpace(c.language())
+	if language == "" {
+		return defaultLanguage
+	}
+	return language
 }
 
 type searchResponse struct {
@@ -283,8 +301,9 @@ type cacheEntry struct {
 	Data     json.RawMessage `json:"data"`
 }
 
-// Search busca una película por título y año en es-ES y elige el cartel según
-// la prioridad es-ES -> español genérico -> inglés -> sin idioma. Devuelve
+// Search busca una película por título y año en el idioma configurado y elige
+// el cartel según la prioridad es-ES -> español genérico -> inglés -> sin
+// idioma. Devuelve
 // ErrNotFound si no hay resultados. Una caché vigente evita repetir las
 // peticiones HTTP.
 func (c *Client) Search(ctx context.Context, title string, year int) (*Movie, error) {
@@ -293,7 +312,7 @@ func (c *Client) Search(ctx context.Context, title string, year int) (*Movie, er
 		return nil, errors.New("metadata: el título no puede estar vacío")
 	}
 
-	key := cacheKey(title, year)
+	key := cacheKey(title, year, c.languageCode())
 	var cached cachedSearch
 	if c.readCache("search", key, &cached) {
 		if !cached.Found {
@@ -305,7 +324,7 @@ func (c *Client) Search(ctx context.Context, title string, year int) (*Movie, er
 	}
 
 	params := url.Values{}
-	params.Set("language", defaultLanguage)
+	params.Set("language", c.languageCode())
 	params.Set("query", title)
 	params.Set("include_adult", "false")
 	if year > 0 {
@@ -348,9 +367,9 @@ func (c *Client) Search(ctx context.Context, title string, year int) (*Movie, er
 		return nil, err
 	}
 	if posterPath == "" && chosen.PosterPath != "" {
-		// Sin listado de imágenes: sirve el cartel de la propia búsqueda, que
-		// se pidió en es-ES.
-		posterPath, posterLanguage = chosen.PosterPath, defaultLanguage
+		// Sin listado de imágenes: sirve el cartel de la propia búsqueda,
+		// pedida en el idioma configurado.
+		posterPath, posterLanguage = chosen.PosterPath, c.languageCode()
 	}
 	if posterPath != "" {
 		movie.PosterURL = c.imageURL(posterPath)
@@ -497,7 +516,7 @@ type translationsResponse struct {
 	Translations []translationItem `json:"translations"`
 }
 
-// SearchMovies busca películas por título y año opcional, en es-ES.
+// SearchMovies busca películas por título y año opcional en el idioma configurado.
 func (c *Client) SearchMovies(ctx context.Context, query string, year int) ([]Candidate, error) {
 	query = strings.TrimSpace(query)
 	if query == "" {
@@ -505,7 +524,7 @@ func (c *Client) SearchMovies(ctx context.Context, query string, year int) ([]Ca
 	}
 
 	params := url.Values{}
-	params.Set("language", defaultLanguage)
+	params.Set("language", c.languageCode())
 	params.Set("query", query)
 	params.Set("include_adult", "false")
 	if year > 0 {
@@ -544,7 +563,7 @@ func (c *Client) SearchMovies(ctx context.Context, query string, year int) ([]Ca
 // fecha se descartan. Si no pertenece a ninguna, devuelve una lista vacía.
 func (c *Client) MovieCollection(ctx context.Context, movieID int) ([]Candidate, error) {
 	params := url.Values{}
-	params.Set("language", defaultLanguage)
+	params.Set("language", c.languageCode())
 
 	// Misma petición que MovieDetails pero sin append_to_response: la ficha
 	// básica basta y queda en caché aparte.
@@ -657,7 +676,7 @@ func imageLanguagePriority(language string) int {
 	}
 }
 
-// SearchTV busca series por nombre y año opcional, en es-ES.
+// SearchTV busca series por nombre y año opcional en el idioma configurado.
 func (c *Client) SearchTV(ctx context.Context, query string, year int) ([]Candidate, error) {
 	query = strings.TrimSpace(query)
 	if query == "" {
@@ -665,7 +684,7 @@ func (c *Client) SearchTV(ctx context.Context, query string, year int) ([]Candid
 	}
 
 	params := url.Values{}
-	params.Set("language", defaultLanguage)
+	params.Set("language", c.languageCode())
 	params.Set("query", query)
 	params.Set("include_adult", "false")
 	if year > 0 {
@@ -699,10 +718,10 @@ func (c *Client) SearchTV(ctx context.Context, query string, year int) ([]Candid
 	return candidates, nil
 }
 
-// MovieDetails obtiene la ficha completa de una película en es-ES.
+// MovieDetails obtiene la ficha completa de una película en el idioma configurado.
 func (c *Client) MovieDetails(ctx context.Context, id int) (*Details, error) {
 	params := url.Values{}
-	params.Set("language", defaultLanguage)
+	params.Set("language", c.languageCode())
 	params.Set("append_to_response", "credits,images")
 	params.Set("include_image_language", "es,null,en")
 
@@ -737,7 +756,7 @@ func (c *Client) MovieDetails(ctx context.Context, id int) (*Details, error) {
 		}
 	}
 	if details.Overview != "" {
-		details.OverviewLanguage = defaultLanguage
+		details.OverviewLanguage = c.languageCode()
 	} else if overview, language := c.translatedOverview(ctx, path+"/translations"); overview != "" {
 		details.Overview = overview
 		details.OverviewLanguage = language
@@ -745,10 +764,10 @@ func (c *Client) MovieDetails(ctx context.Context, id int) (*Details, error) {
 	return details, nil
 }
 
-// TVDetails obtiene la ficha completa de una serie en es-ES.
+// TVDetails obtiene la ficha completa de una serie en el idioma configurado.
 func (c *Client) TVDetails(ctx context.Context, id int) (*Details, error) {
 	params := url.Values{}
-	params.Set("language", defaultLanguage)
+	params.Set("language", c.languageCode())
 	params.Set("append_to_response", "credits,images")
 	params.Set("include_image_language", "es,null,en")
 
@@ -781,7 +800,7 @@ func (c *Client) TVDetails(ctx context.Context, id int) (*Details, error) {
 		BackdropURL:    c.imageURLSize(response.BackdropPath, "w1280"),
 	}
 	if details.Overview != "" {
-		details.OverviewLanguage = defaultLanguage
+		details.OverviewLanguage = c.languageCode()
 	} else if overview, language := c.translatedOverview(ctx, path+"/translations"); overview != "" {
 		details.Overview = overview
 		details.OverviewLanguage = language
@@ -789,11 +808,11 @@ func (c *Client) TVDetails(ctx context.Context, id int) (*Details, error) {
 	return details, nil
 }
 
-// SeasonDetails obtiene una temporada y todos sus episodios en es-ES con una
-// sola petición.
+// SeasonDetails obtiene una temporada y todos sus episodios en el idioma
+// configurado con una sola petición.
 func (c *Client) SeasonDetails(ctx context.Context, tvID, season int) (*Season, error) {
 	params := url.Values{}
-	params.Set("language", defaultLanguage)
+	params.Set("language", c.languageCode())
 
 	path := fmt.Sprintf("/tv/%d/season/%d", tvID, season)
 	var response seasonDetailsResponse
@@ -808,7 +827,7 @@ func (c *Client) SeasonDetails(ctx context.Context, tvID, season int) (*Season, 
 		AirYear:   releaseYear(response.AirDate),
 	}
 	if result.Overview != "" {
-		result.OverviewLanguage = defaultLanguage
+		result.OverviewLanguage = c.languageCode()
 	}
 	for _, episode := range response.Episodes {
 		result.Episodes = append(result.Episodes, SeasonEpisode{
@@ -822,10 +841,10 @@ func (c *Client) SeasonDetails(ctx context.Context, tvID, season int) (*Season, 
 	return result, nil
 }
 
-// EpisodeDetails obtiene la ficha de un episodio en es-ES.
+// EpisodeDetails obtiene la ficha de un episodio en el idioma configurado.
 func (c *Client) EpisodeDetails(ctx context.Context, tvID, season, episode int) (*Episode, error) {
 	params := url.Values{}
-	params.Set("language", defaultLanguage)
+	params.Set("language", c.languageCode())
 
 	path := fmt.Sprintf("/tv/%d/season/%d/episode/%d", tvID, season, episode)
 	var response episodeDetailsResponse
@@ -840,7 +859,7 @@ func (c *Client) EpisodeDetails(ctx context.Context, tvID, season, episode int) 
 		StillURL: c.imageURLSize(response.StillPath, "w300"),
 	}
 	if result.Overview != "" {
-		result.OverviewLanguage = defaultLanguage
+		result.OverviewLanguage = c.languageCode()
 	} else if overview, language := c.translatedOverview(ctx, path+"/translations"); overview != "" {
 		result.Overview = overview
 		result.OverviewLanguage = language
@@ -895,32 +914,99 @@ func (c *Client) posterURL(posters []imageInfo, fallbackPath string) string {
 	return c.imageURL(posterPath)
 }
 
-// translatedOverview pide las traducciones y aplica es-MX -> cualquier es ->
-// en-US. Si la petición falla, se devuelve vacío sin romper la ficha.
+// translatedOverview pide las traducciones y prueba el idioma elegido, sus
+// variantes regionales o genéricas y, por último, en-US. Si la petición falla,
+// se devuelve vacío sin romper la ficha.
 func (c *Client) translatedOverview(ctx context.Context, path string) (string, string) {
 	var response translationsResponse
 	if err := c.getCachedJSON(ctx, path, nil, &response); err != nil {
 		return "", ""
 	}
 
-	for _, translation := range response.Translations {
-		if translation.ISO6391 == "es" && translation.ISO31661 == "MX" &&
-			strings.TrimSpace(translation.Data.Overview) != "" {
-			return translation.Data.Overview, "es-MX"
-		}
-	}
-	for _, translation := range response.Translations {
-		if translation.ISO6391 == "es" && strings.TrimSpace(translation.Data.Overview) != "" {
-			return translation.Data.Overview, "es"
-		}
-	}
-	for _, translation := range response.Translations {
-		if translation.ISO6391 == "en" && translation.ISO31661 == "US" &&
-			strings.TrimSpace(translation.Data.Overview) != "" {
-			return translation.Data.Overview, "en-US"
+	for _, language := range translationFallbacks(c.languageCode()) {
+		for _, translation := range response.Translations {
+			if !translationMatches(translation, language) ||
+				strings.TrimSpace(translation.Data.Overview) == "" {
+				continue
+			}
+			return translation.Data.Overview, translationLanguage(translation)
 		}
 	}
 	return "", ""
+}
+
+func translationLanguage(translation translationItem) string {
+	code := strings.ToLower(strings.TrimSpace(translation.ISO6391))
+	region := strings.ToUpper(strings.TrimSpace(translation.ISO31661))
+	switch {
+	case code == "":
+		return ""
+	case code == "es" && region == "MX":
+		return "es-MX"
+	case code == "es":
+		return "es"
+	case code == "en" && region == "US":
+		return "en-US"
+	case region != "":
+		return code + "-" + region
+	default:
+		return code
+	}
+}
+
+// translationFallbacks devuelve el orden de respaldo para las traducciones.
+// En español se prioriza la variante elegida, después la otra variante
+// regional, el español genérico y finalmente en-US.
+func translationFallbacks(language string) []string {
+	language = strings.TrimSpace(language)
+	if language == "" {
+		language = defaultLanguage
+	}
+	upper := strings.ToUpper(language)
+	base := strings.SplitN(upper, "-", 2)[0]
+
+	fallbacks := []string{language}
+	switch base {
+	case "ES":
+		other := "es-MX"
+		if upper == "ES-MX" {
+			other = "es-ES"
+		}
+		fallbacks = append(fallbacks, other, "es", "en-US")
+	case "EN":
+		if upper == "EN-US" {
+			fallbacks = []string{"en-US"}
+		} else {
+			fallbacks = append(fallbacks, "en-US")
+		}
+	default:
+		if len(upper) > 2 {
+			fallbacks = append(fallbacks, strings.ToLower(base))
+		}
+		fallbacks = append(fallbacks, "en-US")
+	}
+
+	seen := make(map[string]bool, len(fallbacks))
+	result := make([]string, 0, len(fallbacks))
+	for _, candidate := range fallbacks {
+		if candidate == "" || seen[candidate] {
+			continue
+		}
+		seen[candidate] = true
+		result = append(result, candidate)
+	}
+	return result
+}
+
+func translationMatches(translation translationItem, language string) bool {
+	parts := strings.SplitN(strings.ToUpper(language), "-", 2)
+	if !strings.EqualFold(translation.ISO6391, parts[0]) {
+		return false
+	}
+	if len(parts) == 1 {
+		return true
+	}
+	return strings.EqualFold(translation.ISO31661, parts[1])
 }
 
 // posterFor pide todas las imágenes del título en varios idiomas a la vez y
@@ -1202,8 +1288,14 @@ func requestCacheKey(path string, params url.Values) string {
 	return hex.EncodeToString(sum[:])
 }
 
-func cacheKey(title string, year int) string {
-	sum := sha256.Sum256([]byte(fmt.Sprintf("movie|%s|%d", strings.ToLower(strings.TrimSpace(title)), year)))
+func cacheKey(title string, year int, languages ...string) string {
+	language := defaultLanguage
+	if len(languages) > 0 {
+		language = languages[0]
+	}
+	sum := sha256.Sum256([]byte(fmt.Sprintf(
+		"movie|%s|%d|%s", strings.ToLower(strings.TrimSpace(title)), year, language,
+	)))
 	return hex.EncodeToString(sum[:])
 }
 

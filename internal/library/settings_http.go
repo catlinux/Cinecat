@@ -42,6 +42,28 @@ type settingsErrorResponse struct {
 	Fields map[string]string `json:"fields"`
 }
 
+const defaultCollectionMinItems = 2
+
+func collectionMinimum(values ...int) int {
+	if len(values) > 0 && values[0] >= 1 {
+		return values[0]
+	}
+	return defaultCollectionMinItems
+}
+
+// collectionMin es el mínimo de películas para mostrar una colección
+// automática. Sin Store se conserva el comportamiento anterior.
+func (a *API) collectionMin() int {
+	if a.settingsStore == nil {
+		return defaultCollectionMinItems
+	}
+	value := a.settingsStore.Int("ui.collection_min_items")
+	if value < 1 {
+		return defaultCollectionMinItems
+	}
+	return value
+}
+
 func (a *API) handleSettings(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, a.buildSettingsResponse())
 }

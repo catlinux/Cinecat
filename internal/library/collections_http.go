@@ -94,7 +94,10 @@ func (a *API) handleCollections(w http.ResponseWriter, r *http.Request) {
 		sortOrder = "name"
 	}
 
-	where := `c.deleted = 0 AND (c.source = 'manual' OR ` + collectionItemCountExpr + ` >= 2)`
+	where := fmt.Sprintf(
+		`c.deleted = 0 AND (c.source = 'manual' OR %s >= %d)`,
+		collectionItemCountExpr, a.collectionMin(),
+	)
 	args := make([]any, 0)
 	if q != "" {
 		where += ` AND LOWER(c.name) LIKE LOWER(?) ESCAPE '\'`
@@ -232,7 +235,7 @@ func (a *API) handleCollection(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
 		return
 	}
-	if collection.Source == "tmdb" && collection.ItemCount < 2 {
+	if collection.Source == "tmdb" && collection.ItemCount < int64(a.collectionMin()) {
 		writeJSONError(w, http.StatusNotFound, "colección no encontrada")
 		return
 	}
@@ -293,7 +296,7 @@ func (a *API) collectionMovieItems(ctx context.Context, collectionID, userID int
 	for _, item := range items {
 		itemIDs = append(itemIDs, item.ID)
 	}
-	collectionsByItem, err := loadItemCollections(ctx, a.db, itemIDs)
+	collectionsByItem, err := loadItemCollections(ctx, a.db, itemIDs, a.collectionMin())
 	if err != nil {
 		return nil, err
 	}

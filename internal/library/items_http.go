@@ -87,7 +87,13 @@ const watchedColumn = `, CASE WHEN ws.user_id IS NULL THEN 0 ELSE 1 END`
 
 const progressColumn = `, pp.position_seconds, pp.duration_seconds, pp.updated_at`
 
-func queryMediaItem(ctx context.Context, db *sql.DB, id, userID int64) (mediaItemDTO, error) {
+func queryMediaItem(
+	ctx context.Context,
+	db *sql.DB,
+	id, userID int64,
+	minCollectionItems ...int,
+) (mediaItemDTO, error) {
+	minimum := collectionMinimum(minCollectionItems...)
 	row := db.QueryRowContext(ctx, `
 		SELECT `+mediaItemColumns+watchedColumn+progressColumn+`
 		  FROM media_items
@@ -100,7 +106,7 @@ func queryMediaItem(ctx context.Context, db *sql.DB, id, userID int64) (mediaIte
 	if err != nil {
 		return mediaItemDTO{}, err
 	}
-	byItem, err := loadItemCollections(ctx, db, []int64{item.ID})
+	byItem, err := loadItemCollections(ctx, db, []int64{item.ID}, minimum)
 	if err != nil {
 		return mediaItemDTO{}, err
 	}
@@ -111,17 +117,25 @@ func queryMediaItem(ctx context.Context, db *sql.DB, id, userID int64) (mediaIte
 }
 
 // loadItemCollections resuelve en una sola consulta las colecciones visibles
-// de todos los ítems pedidos. Las automáticas necesitan al menos dos miembros.
-func loadItemCollections(ctx context.Context, db *sql.DB, itemIDs []int64) (map[int64][]itemCollection, error) {
+// de todos los ítems pedidos. Las automáticas necesitan el mínimo configurado
+// de miembros.
+func loadItemCollections(
+	ctx context.Context,
+	db *sql.DB,
+	itemIDs []int64,
+	minItems ...int,
+) (map[int64][]itemCollection, error) {
+	minimum := collectionMinimum(minItems...)
 	result := make(map[int64][]itemCollection, len(itemIDs))
 	if len(itemIDs) == 0 {
 		return result, nil
 	}
 	placeholders := strings.TrimSuffix(strings.Repeat("?,", len(itemIDs)), ",")
-	args := make([]any, 0, len(itemIDs))
+	args := make([]any, 0, len(itemIDs)+1)
 	for _, id := range itemIDs {
 		args = append(args, id)
 	}
+	args = append(args, minimum)
 	rows, err := db.QueryContext(ctx, `
 		SELECT ci.media_item_id, c.id, c.name
 		  FROM collection_items ci
@@ -132,7 +146,7 @@ func loadItemCollections(ctx context.Context, db *sql.DB, itemIDs []int64) (map[
 		   AND (c.source = 'manual' OR (
 		         SELECT count(*) FROM collection_items cc
 		          WHERE cc.collection_id = c.id AND cc.excluded = 0
-		       ) >= 2)
+		       ) >= ?)
 		 ORDER BY c.name COLLATE NOCASE, c.id`, args...)
 	if err != nil {
 		return nil, err
@@ -462,7 +476,7 @@ func (a *API) loadMovieItem(w http.ResponseWriter, r *http.Request) (mediaItemDT
 		return mediaItemDTO{}, false
 	}
 
-	item, err := queryMediaItem(r.Context(), a.db, id, sessionUserID(r))
+	item, err := queryMediaItem(r.Context(), a.db, id, sessionUserID(r), a.collectionMin())
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		writeJSONError(w, http.StatusNotFound, "ítem no encontrado")
@@ -649,7 +663,7 @@ func updateMediaYear(ctx context.Context, db *sql.DB, id int64, year int) error 
 }
 
 func (a *API) writeItemByID(w http.ResponseWriter, r *http.Request, id int64) {
-	item, err := queryMediaItem(r.Context(), a.db, id, sessionUserID(r))
+	item, err := queryMediaItem(r.Context(), a.db, id, sessionUserID(r), a.collectionMin())
 	if err != nil {
 		log.Printf("library: leer ítem %d: %v", id, err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")

@@ -313,7 +313,13 @@ func (a *API) loadSeriesRecord(w http.ResponseWriter, r *http.Request) (seriesRe
 	return record, true
 }
 
-func querySeriesDetail(ctx context.Context, db *sql.DB, seriesID, userID int64) (seriesDetailDTO, error) {
+func querySeriesDetail(
+	ctx context.Context,
+	db *sql.DB,
+	seriesID, userID int64,
+	minCollectionItems ...int,
+) (seriesDetailDTO, error) {
+	minimum := collectionMinimum(minCollectionItems...)
 	var detail seriesDetailDTO
 	var originalTitle, tagline, overview, overviewLanguage, poster, backdrop sql.NullString
 	var genres, directors, castNames, matchStatus sql.NullString
@@ -368,7 +374,7 @@ func querySeriesDetail(ctx context.Context, db *sql.DB, seriesID, userID int64) 
 		return seriesDetailDTO{}, err
 	}
 	if next != nil {
-		item, err := queryMediaItem(ctx, db, *next, userID)
+		item, err := queryMediaItem(ctx, db, *next, userID, minimum)
 		if err != nil {
 			return seriesDetailDTO{}, err
 		}
@@ -454,7 +460,7 @@ func (a *API) handleSeriesDetail(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	detail, err := querySeriesDetail(r.Context(), a.db, record.ID, sessionUserID(r))
+	detail, err := querySeriesDetail(r.Context(), a.db, record.ID, sessionUserID(r), a.collectionMin())
 	if err != nil {
 		log.Printf("library: leer ficha de la serie %d: %v", record.ID, err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
@@ -541,7 +547,7 @@ func (a *API) querySeriesItems(ctx context.Context, seriesID int64, season *int,
 	for _, item := range items {
 		ids = append(ids, item.ID)
 	}
-	collections, err := loadItemCollections(ctx, a.db, ids)
+	collections, err := loadItemCollections(ctx, a.db, ids, a.collectionMin())
 	if err != nil {
 		return nil, err
 	}
@@ -708,7 +714,7 @@ func (a *API) handleSeriesMatchDelete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) writeSeriesByID(w http.ResponseWriter, r *http.Request, id int64) {
-	detail, err := querySeriesDetail(r.Context(), a.db, id, sessionUserID(r))
+	detail, err := querySeriesDetail(r.Context(), a.db, id, sessionUserID(r), a.collectionMin())
 	if err != nil {
 		log.Printf("library: leer ficha de la serie %d: %v", id, err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")

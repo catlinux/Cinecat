@@ -56,6 +56,17 @@ func NewAPI(db *sql.DB, authSvc *auth.Service, playSvc *playback.Service, scanJo
 // WithSettings activa los endpoints de ajustes. Con nil no se registran.
 func (a *API) WithSettings(store *settings.Store) *API {
 	a.settingsStore = store
+	if store != nil {
+		SetMatchThreshold(store.Float("metadata.match_threshold"))
+		store.OnChange(func(keys []string) {
+			for _, key := range keys {
+				if key == "metadata.match_threshold" {
+					SetMatchThreshold(store.Float(key))
+					return
+				}
+			}
+		})
+	}
 	return a
 }
 
@@ -373,7 +384,7 @@ func (a *API) handleItems(w http.ResponseWriter, r *http.Request) {
 	for _, item := range items {
 		itemIDs = append(itemIDs, item.ID)
 	}
-	collectionsByItem, err := loadItemCollections(r.Context(), a.db, itemIDs)
+	collectionsByItem, err := loadItemCollections(r.Context(), a.db, itemIDs, a.collectionMin())
 	if err != nil {
 		log.Printf("library: leer colecciones de los ítems: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
@@ -400,7 +411,7 @@ func (a *API) handleItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	item, err := queryMediaItem(r.Context(), a.db, id, sessionUserID(r))
+	item, err := queryMediaItem(r.Context(), a.db, id, sessionUserID(r), a.collectionMin())
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		writeJSONError(w, http.StatusNotFound, "ítem no encontrado")
