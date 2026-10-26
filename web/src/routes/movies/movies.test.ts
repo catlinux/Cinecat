@@ -65,12 +65,17 @@ const genres: GenreCount[] = [
 	{ name: 'Drama', count: 8 }
 ];
 
-function event(fetchImpl: typeof fetch, path: string, isAdmin = false) {
+function event(
+	fetchImpl: typeof fetch,
+	path: string,
+	isAdmin = false,
+	ui = DEFAULT_PUBLIC_UI
+) {
 	return {
 		locals: { sessionToken: 'token-123' },
 		fetch: fetchImpl,
 		url: new URL(`http://localhost${path}`),
-		parent: async () => ({ isAdmin })
+		parent: async () => ({ isAdmin, ui })
 	};
 }
 
@@ -79,6 +84,29 @@ function requestedUrls(fetchImpl: ReturnType<typeof vi.fn>): URL[] {
 }
 
 describe('carga de /movies', () => {
+	it('pide columnas × filas resultados por página', async () => {
+		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+			const url = new URL(String(input));
+			if (url.pathname === '/api/v1/items') {
+				return jsonResponse({ items: [item], total: 500, limit: 50, offset: 50 });
+			}
+			if (url.pathname === '/api/v1/genres') {
+				return jsonResponse({ genres });
+			}
+			throw new Error(`URL inesperada: ${url}`);
+		});
+		const ui = { ...DEFAULT_PUBLIC_UI, grid_columns: 5, grid_rows: 10 };
+
+		const result = (await load(
+			event(fetchMock, '/movies?page=2', false, ui) as never
+		)) as { pageSize: number };
+
+		const itemsUrl = requestedUrls(fetchMock).find((url) => url.pathname === '/api/v1/items');
+		expect(itemsUrl?.searchParams.get('limit')).toBe('50');
+		expect(itemsUrl?.searchParams.get('offset')).toBe('50');
+		expect(result.pageSize).toBe(50);
+	});
+
 	it('traduce filtros y página a la petición de la API', async () => {
 		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
 			const url = new URL(String(input));

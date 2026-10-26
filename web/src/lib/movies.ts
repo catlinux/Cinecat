@@ -1,7 +1,5 @@
 import type { GenreCount } from './api';
 
-export const PAGE_SIZE = 48;
-
 export const SEARCH_FIELDS = ['all', 'title', 'cast', 'director'] as const;
 export type SearchField = (typeof SEARCH_FIELDS)[number];
 
@@ -68,11 +66,15 @@ export function readMovieFilters(url: URL, isAdmin: boolean): MovieFilters {
 	};
 }
 
-export function movieApiQuery(filters: MovieFilters, page: number): URLSearchParams {
+export function movieApiQuery(
+	filters: MovieFilters,
+	page: number,
+	pageSize: number
+): URLSearchParams {
 	const params = new URLSearchParams();
 	params.set('kind', 'movie');
-	params.set('limit', String(PAGE_SIZE));
-	params.set('offset', String((Math.max(1, page) - 1) * PAGE_SIZE));
+	params.set('limit', String(pageSize));
+	params.set('offset', String((Math.max(1, page) - 1) * pageSize));
 	if (filters.q) {
 		params.set('q', filters.q);
 		params.set('field', filters.field);

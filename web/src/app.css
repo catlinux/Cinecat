@@ -154,9 +154,10 @@ video:focus-visible,
 	display: flex;
 	flex-direction: column;
 	min-height: 100vh;
-	max-width: 72rem;
+	width: 100%;
+	max-width: 100rem;
 	margin: 0 auto;
-	padding: 1.5rem clamp(1rem, 4vw, 3rem) 2rem;
+	padding: 1.5rem clamp(1rem, 2vw, 2rem) 2rem;
 }
 
 .marquee {
@@ -517,7 +518,7 @@ footer {
 
 .poster-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
+	grid-template-columns: repeat(var(--grid-cols, 6), minmax(0, 1fr));
 	gap: 1.8rem 1.2rem;
 }
 
@@ -1596,18 +1597,25 @@ footer {
 
 .admin-grid {
 	display: grid;
-	grid-template-columns: minmax(0, 1.4fr) minmax(18rem, 1fr);
+	grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
 	gap: 1.5rem;
 	margin-top: 1.5rem;
-	align-items: start;
+	align-items: stretch;
 }
 
 .admin-card {
+	display: flex;
+	flex-direction: column;
 	padding: clamp(1rem, 3vw, 1.75rem);
 	border: 1px solid var(--borde-suave);
 	border-radius: 4px;
 	background: var(--superficie);
 	box-shadow: 0 1rem 2rem -1.6rem var(--sombra);
+}
+
+.admin-card > .button,
+.admin-card > .admin-toolbar {
+	margin-top: auto;
 }
 
 .admin-card h2 {
@@ -1715,7 +1723,7 @@ footer {
 /* Panel de administración */
 .admin-shell {
 	display: grid;
-	grid-template-columns: minmax(11rem, 13rem) minmax(0, 1fr);
+	grid-template-columns: 11rem minmax(0, 1fr);
 	gap: clamp(1.2rem, 3vw, 2.4rem);
 	width: 100%;
 	align-items: start;
@@ -1728,7 +1736,7 @@ footer {
 .admin-nav {
 	position: sticky;
 	top: 1rem;
-	padding: 1rem;
+	padding: 0.8rem;
 	border: 1px solid var(--borde-suave);
 	border-radius: 4px;
 	background: var(--superficie);
@@ -1756,10 +1764,10 @@ footer {
 	align-items: center;
 	justify-content: space-between;
 	gap: 0.4rem;
-	padding: 0.5rem 0.6rem;
+	padding: 0.45rem 0.5rem;
 	border-left: 2px solid transparent;
 	color: var(--texto-tenue);
-	font-size: 0.78rem;
+	font-size: 0.72rem;
 	font-weight: 600;
 	text-decoration: none;
 }
@@ -1793,10 +1801,10 @@ footer {
 
 .admin-summary-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+	grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
 	gap: 1rem;
 	margin-top: 1.5rem;
-	align-items: start;
+	align-items: stretch;
 }
 
 .admin-stat-card {
@@ -2681,7 +2689,7 @@ footer {
 
 .collection-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+	grid-template-columns: repeat(var(--grid-cols, 6), minmax(0, 1fr));
 	gap: 1.8rem 1.2rem;
 }
 
@@ -3098,10 +3106,6 @@ footer {
 }
 
 @media (max-width: 700px) {
-	.collection-grid {
-		grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
-	}
-
 	.collection-url-form {
 		grid-template-columns: 1fr;
 	}
@@ -3122,7 +3126,7 @@ footer {
 
 .series-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
+	grid-template-columns: repeat(var(--grid-cols, 6), minmax(0, 1fr));
 	gap: 1.8rem 1.2rem;
 }
 
@@ -3609,10 +3613,6 @@ footer {
 }
 
 @media (max-width: 700px) {
-	.series-grid {
-		grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
-	}
-
 	.season-head {
 		flex-direction: column;
 	}
@@ -3644,5 +3644,37 @@ footer {
 	.filters-form--compact .filter-search,
 	.filters-form--compact .filter-submit {
 		grid-column: auto;
+	}
+}
+
+@media (max-width: 1100px) {
+	.poster-grid,
+	.series-grid,
+	.collection-grid {
+		--grid-cols: min(var(--ui-grid-cols, 6), 5);
+	}
+}
+
+@media (max-width: 800px) {
+	.poster-grid,
+	.series-grid,
+	.collection-grid {
+		--grid-cols: min(var(--ui-grid-cols, 6), 4);
+	}
+}
+
+@media (max-width: 600px) {
+	.poster-grid,
+	.series-grid,
+	.collection-grid {
+		--grid-cols: min(var(--ui-grid-cols, 6), 3);
+	}
+}
+
+@media (max-width: 420px) {
+	.poster-grid,
+	.series-grid,
+	.collection-grid {
+		--grid-cols: 2;
 	}
 }

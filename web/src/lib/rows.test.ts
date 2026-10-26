@@ -3,24 +3,24 @@ import { jobLabel, personInitials, rowScrollState } from './rows';
 
 describe('estado de desplazamiento de una fila', () => {
 	it('calcula los extremos y una página de avance', () => {
-		expect(rowScrollState(0, 900, 1800)).toMatchObject({
+		expect(rowScrollState(0, 600, 1800)).toMatchObject({
 			canPrev: false,
 			canNext: true,
 			prevOffset: 0,
-			nextOffset: 810,
+			nextOffset: 600,
 			overflow: true
 		});
-		const middle = rowScrollState(405, 900, 1800);
+		const middle = rowScrollState(600, 600, 1800);
 		expect(middle.canPrev).toBe(true);
 		expect(middle.canNext).toBe(true);
 		expect(middle.prevOffset).toBe(0);
-		expect(middle.nextOffset).toBe(900);
-		const end = rowScrollState(900, 900, 1800);
+		expect(middle.nextOffset).toBe(1200);
+		const end = rowScrollState(1200, 600, 1800);
 		expect(end).toMatchObject({
 			canPrev: true,
 			canNext: false,
-			prevOffset: 90,
-			nextOffset: 900
+			prevOffset: 600,
+			nextOffset: 1200
 		});
 	});
 

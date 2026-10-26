@@ -2997,7 +2997,7 @@ paths:
         - name: key
           in: path
           required: true
-          description: Clave del ajuste, por ejemplo `ui.page_size`.
+          description: Clave del ajuste, por ejemplo `ui.grid_columns`.
           schema:
             type: string
       responses:
@@ -3036,7 +3036,11 @@ paths:
       summary: Devuelve los ajustes públicos
       description: |
         Devuelve un objeto plano con los ajustes que la interfaz puede
-        consultar sin ser administrador.
+        consultar sin ser administrador. Entre las claves de interfaz están
+        `ui.server_name`, `ui.tagline`, `ui.portal_title`, `ui.portal_intro`,
+        `ui.nav_layout`, `ui.show_collections`, `ui.show_series`,
+        `ui.theme_default`, `ui.accent`, `ui.grid_columns`, `ui.grid_rows` y
+        `ui.row_columns`.
       security:
         - bearerAuth: []
       responses:

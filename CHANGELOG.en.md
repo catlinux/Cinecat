@@ -7,6 +7,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+### Changed
+
+- Narrower side menu pinned to the edge, wider content with smaller margins; admin cards aligned and equal in size.
+- "List columns" (`ui.grid_columns`) and "Rows per page" (`ui.grid_rows`) replace `ui.page_size`: results per page are columns × rows. New `ui.row_columns` for the posters visible per portal row (6 by default).
+
 ## [0.14.0] - 2026-10-26
 
 ### Added

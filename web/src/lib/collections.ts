@@ -1,7 +1,5 @@
 import type { CollectionSort, MediaItem } from './api';
 
-export const COLLECTIONS_PAGE_SIZE = 48;
-
 export const COLLECTION_SORTS: Array<{ value: CollectionSort; label: string }> = [
 	{ value: 'name', label: 'Nombre' },
 	{ value: 'added', label: 'Añadidas' },
@@ -24,10 +22,14 @@ export function readCollectionFilters(url: URL): CollectionFilters {
 	return { q, sort, page };
 }
 
-export function collectionApiQuery(filters: CollectionFilters, page: number): URLSearchParams {
+export function collectionApiQuery(
+	filters: CollectionFilters,
+	page: number,
+	pageSize: number
+): URLSearchParams {
 	const params = new URLSearchParams();
-	params.set('limit', String(COLLECTIONS_PAGE_SIZE));
-	params.set('offset', String((Math.max(1, page) - 1) * COLLECTIONS_PAGE_SIZE));
+	params.set('limit', String(pageSize));
+	params.set('offset', String((Math.max(1, page) - 1) * pageSize));
 	if (filters.q) {
 		params.set('q', filters.q);
 	}

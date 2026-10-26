@@ -20,6 +20,9 @@ export interface PublicUI {
 	show_series: boolean;
 	theme_default: ThemePreference;
 	accent: Accent;
+	grid_columns: number;
+	grid_rows: number;
+	row_columns: number;
 }
 
 export const DEFAULT_PUBLIC_UI: PublicUI = {
@@ -32,7 +35,10 @@ export const DEFAULT_PUBLIC_UI: PublicUI = {
 	show_collections: true,
 	show_series: true,
 	theme_default: 'system',
-	accent: 'granate'
+	accent: 'granate',
+	grid_columns: 6,
+	grid_rows: 8,
+	row_columns: 6
 };
 
 function publicText(value: unknown, fallback: string, allowEmpty = false): string {
@@ -45,6 +51,24 @@ function publicText(value: unknown, fallback: string, allowEmpty = false): strin
 
 function publicFlag(value: unknown, fallback: boolean): boolean {
 	return typeof value === 'boolean' ? value : fallback;
+}
+
+function publicInt(value: unknown, fallback: number, minimum: number, maximum: number): number {
+	if (typeof value !== 'number' || !Number.isInteger(value)) {
+		return fallback;
+	}
+	return value >= minimum && value <= maximum ? value : fallback;
+}
+
+export function listPageSize(ui?: Partial<PublicUI> | null): number {
+	const columns = publicInt(
+		ui?.grid_columns,
+		DEFAULT_PUBLIC_UI.grid_columns,
+		4,
+		8
+	);
+	const rows = publicInt(ui?.grid_rows, DEFAULT_PUBLIC_UI.grid_rows, 2, 12);
+	return columns * rows;
 }
 
 export function parsePublicUI(raw: Record<string, unknown> | null | undefined): PublicUI {
@@ -70,7 +94,10 @@ export function parsePublicUI(raw: Record<string, unknown> | null | undefined): 
 		accent:
 			accent === 'naranja' || accent === 'dorado' || accent === 'granate'
 				? accent
-				: DEFAULT_PUBLIC_UI.accent
+				: DEFAULT_PUBLIC_UI.accent,
+		grid_columns: publicInt(source['ui.grid_columns'], DEFAULT_PUBLIC_UI.grid_columns, 4, 8),
+		grid_rows: publicInt(source['ui.grid_rows'], DEFAULT_PUBLIC_UI.grid_rows, 2, 12),
+		row_columns: publicInt(source['ui.row_columns'], DEFAULT_PUBLIC_UI.row_columns, 3, 8)
 	};
 }
 

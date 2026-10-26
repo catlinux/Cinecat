@@ -1,8 +1,6 @@
 import type { MediaItem, Series, SeriesDetail, SeriesSort } from './api';
 import { mutateHref, type FilterChip } from './movies';
 
-export const SERIES_PAGE_SIZE = 48;
-
 export const SERIES_SORTS: Array<{ value: SeriesSort; label: string }> = [
 	{ value: 'title', label: 'Título' },
 	{ value: 'year', label: 'Año' },
@@ -37,10 +35,14 @@ export function readSeriesFilters(url: URL, isAdmin: boolean): SeriesFilters {
 	return { q, letter, genre: genreRaw || null, sort, unmatched };
 }
 
-export function seriesApiQuery(filters: SeriesFilters, page: number): URLSearchParams {
+export function seriesApiQuery(
+	filters: SeriesFilters,
+	page: number,
+	pageSize: number
+): URLSearchParams {
 	const params = new URLSearchParams();
-	params.set('limit', String(SERIES_PAGE_SIZE));
-	params.set('offset', String((Math.max(1, page) - 1) * SERIES_PAGE_SIZE));
+	params.set('limit', String(pageSize));
+	params.set('offset', String((Math.max(1, page) - 1) * pageSize));
 	if (filters.q) {
 		params.set('q', filters.q);
 	}

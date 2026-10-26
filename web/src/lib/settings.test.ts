@@ -7,6 +7,7 @@ import {
 	formatDurationText,
 	formatSettingDefault,
 	isNumericEnum,
+	listPageSize,
 	parsePublicUI,
 	parseSettingValue
 } from './settings';
@@ -25,18 +26,26 @@ function setting(overrides: Partial<Setting> & Pick<Setting, 'key' | 'type'>): S
 	};
 }
 
-const pageSize = setting({
-	key: 'ui.page_size',
+const gridColumns = setting({
+	key: 'ui.grid_columns',
+	type: 'int',
+	default: 6,
+	value: 6,
+	min: 4,
+	max: 8
+});
+const maxHeight = setting({
+	key: 'playback.max_height',
 	type: 'enum',
-	default: 48,
-	value: 48,
+	default: 1080,
+	value: 1080,
 	options: [
-		{ value: '24', label: '24' },
-		{ value: '48', label: '48' },
-		{ value: '96', label: '96' }
+		{ value: '480', label: '480p' },
+		{ value: '720', label: '720p' },
+		{ value: '1080', label: '1080p' }
 	],
-	min: 24,
-	max: 96
+	min: 480,
+	max: 1080
 });
 const language = setting({
 	key: 'metadata.language',
@@ -96,7 +105,10 @@ describe('ajustes públicos de la interfaz', () => {
 			show_collections: true,
 			show_series: true,
 			theme_default: 'system',
-			accent: 'granate'
+			accent: 'granate',
+			grid_columns: 6,
+			grid_rows: 8,
+			row_columns: 6
 		});
 	});
 
@@ -110,7 +122,10 @@ describe('ajustes públicos de la interfaz', () => {
 			'ui.show_collections': false,
 			'ui.show_series': false,
 			'ui.theme_default': 'dark',
-			'ui.accent': 'dorado'
+			'ui.accent': 'dorado',
+			'ui.grid_columns': 5,
+			'ui.grid_rows': 10,
+			'ui.row_columns': 4
 		});
 
 		expect(ui).toEqual({
@@ -122,7 +137,10 @@ describe('ajustes públicos de la interfaz', () => {
 			show_collections: false,
 			show_series: false,
 			theme_default: 'dark',
-			accent: 'dorado'
+			accent: 'dorado',
+			grid_columns: 5,
+			grid_rows: 10,
+			row_columns: 4
 		});
 	});
 
@@ -146,15 +164,25 @@ describe('ajustes públicos de la interfaz', () => {
 				'ui.show_collections': 'no',
 				'ui.show_series': null,
 				'ui.theme_default': 'sepia',
-				'ui.accent': 'verde'
+				'ui.accent': 'verde',
+				'ui.grid_columns': 3,
+				'ui.grid_rows': 13,
+				'ui.row_columns': 9
 			})
 		).toEqual(DEFAULT_PUBLIC_UI);
+	});
+
+	it('calcula los resultados por página como columnas × filas', () => {
+		expect(listPageSize({ grid_columns: 6, grid_rows: 8 })).toBe(48);
+		expect(listPageSize({ grid_columns: 5, grid_rows: 10 })).toBe(50);
+		expect(listPageSize({ grid_columns: 3, grid_rows: 99 })).toBe(48);
+		expect(listPageSize(null)).toBe(48);
 	});
 });
 
 describe('formato de ajustes', () => {
 	it('distingue los enum numéricos', () => {
-		expect(isNumericEnum(pageSize)).toBe(true);
+		expect(isNumericEnum(maxHeight)).toBe(true);
 		expect(isNumericEnum(language)).toBe(false);
 	});
 
@@ -169,7 +197,7 @@ describe('formato de ajustes', () => {
 	it('formatea el defecto según el tipo', () => {
 		expect(formatSettingDefault(interval)).toBe('6 h');
 		expect(formatSettingDefault(showSeries)).toBe('Sí');
-		expect(formatSettingDefault(pageSize)).toBe('48');
+		expect(formatSettingDefault(gridColumns)).toBe('6');
 		expect(formatSettingDefault(threshold)).toBe('0,75');
 		expect(formatSettingDefault(language)).toBe('Español (España)');
 	});
@@ -185,7 +213,7 @@ describe('conversión de valores del formulario', () => {
 		expect(parseSettingValue(serverName, '  Mi cine  ')).toEqual({ value: 'Mi cine' });
 		expect(parseSettingValue(interval, '30m')).toEqual({ value: '30m' });
 		expect(parseSettingValue(interval, '0')).toEqual({ value: '0' });
-		expect(parseSettingValue(pageSize, '24')).toEqual({ value: 24 });
+		expect(parseSettingValue(gridColumns, '7')).toEqual({ value: 7 });
 		expect(parseSettingValue(language, 'en-US')).toEqual({ value: 'en-US' });
 	});
 
@@ -194,7 +222,7 @@ describe('conversión de valores del formulario', () => {
 		expect(parseSettingValue(crf, '17').error).toContain('mayor');
 		expect(parseSettingValue(serverName, '').error).toContain('al menos');
 		expect(parseSettingValue(interval, 'mañana').error).toContain('Duración');
-		expect(parseSettingValue(pageSize, '50').error).toContain('opción');
+		expect(parseSettingValue(gridColumns, '9').error).toContain('menor');
 		expect(parseSettingValue(language, 'fr-FR').error).toContain('opción');
 	});
 });
@@ -202,7 +230,7 @@ describe('conversión de valores del formulario', () => {
 describe('recogida del formulario', () => {
 	it('envía solo los campos modificados y conserva el tipo', () => {
 		const form = new FormData();
-		form.set('ui.page_size', '24');
+		form.set('ui.grid_columns', '4');
 		form.set('metadata.language', 'es-ES');
 		form.set('ui.server_name', 'Cinecat');
 		form.set('scan.interval', '30m');
@@ -210,23 +238,23 @@ describe('recogida del formulario', () => {
 		form.set('metadata.match_threshold', '0.75');
 
 		const collected = collectSettingsForm(
-			[pageSize, language, serverName, interval, crf, threshold, showSeries],
+			[gridColumns, language, serverName, interval, crf, threshold, showSeries],
 			form
 		);
 
 		expect(collected.changes).toEqual({
-			'ui.page_size': 24,
+			'ui.grid_columns': 4,
 			'scan.interval': '30m',
 			'ui.show_series': false
 		});
 		expect(collected.fields).toEqual({});
-		expect(collected.values['ui.page_size']).toBe('24');
+		expect(collected.values['ui.grid_columns']).toBe('4');
 		expect(collected.values['ui.show_series']).toBe(false);
 	});
 
 	it('no envía nada si los valores no cambian', () => {
 		const form = new FormData();
-		form.set('ui.page_size', '48');
+		form.set('ui.grid_columns', '6');
 		form.set('metadata.language', 'es-ES');
 		form.set('ui.server_name', 'Cinecat');
 		form.set('scan.interval', '6h');
@@ -235,7 +263,7 @@ describe('recogida del formulario', () => {
 		form.set('ui.show_series', '1');
 
 		const collected = collectSettingsForm(
-			[pageSize, language, serverName, interval, crf, threshold, showSeries],
+			[gridColumns, language, serverName, interval, crf, threshold, showSeries],
 			form
 		);
 

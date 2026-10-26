@@ -6,6 +6,7 @@ import type {
 	SeriesDetail,
 	SeriesSeasonDetail
 } from '$lib/api';
+import { DEFAULT_PUBLIC_UI } from '$lib/settings';
 import SeriesPage from './[id]/+page.svelte';
 import { actions, load as loadDetail } from './[id]/+page.server';
 import SeriesListPage from './+page.svelte';
@@ -172,12 +173,17 @@ function detailData(overrides: Record<string, unknown> = {}) {
 	};
 }
 
-function listEvent(fetchImpl: typeof fetch, path = '/series', isAdmin = true) {
+function listEvent(
+	fetchImpl: typeof fetch,
+	path = '/series',
+	isAdmin = true,
+	ui = DEFAULT_PUBLIC_UI
+) {
 	return {
 		locals: { sessionToken: 'token-123' },
 		fetch: fetchImpl,
 		url: new URL(`http://localhost${path}`),
-		parent: async () => ({ isAdmin })
+		parent: async () => ({ isAdmin, ui })
 	};
 }
 
@@ -209,6 +215,32 @@ function actionEvent(
 }
 
 describe('carga del listado de series', () => {
+	it('pide columnas × filas resultados por página', async () => {
+		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+			const url = new URL(String(input));
+			if (url.pathname === '/api/v1/series') {
+				return jsonResponse({ series: [seriesItem], total: 500, limit: 50, offset: 50 });
+			}
+			if (url.pathname === '/api/v1/series/genres') {
+				return jsonResponse({ genres: [] });
+			}
+			throw new Error(`URL inesperada: ${url}`);
+		});
+		const ui = { ...DEFAULT_PUBLIC_UI, grid_columns: 5, grid_rows: 10 };
+
+		const result = (await loadList(
+			listEvent(fetchMock, '/series?page=2', false, ui) as never
+		)) as { pageSize: number };
+
+		const listCall = fetchMock.mock.calls.find(
+			([input]) => new URL(String(input)).pathname === '/api/v1/series'
+		);
+		const listURL = new URL(String(listCall?.[0]));
+		expect(listURL.searchParams.get('limit')).toBe('50');
+		expect(listURL.searchParams.get('offset')).toBe('50');
+		expect(result.pageSize).toBe(50);
+	});
+
 	it('traduce filtros y página a la API', async () => {
 		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
 			const url = new URL(String(input));

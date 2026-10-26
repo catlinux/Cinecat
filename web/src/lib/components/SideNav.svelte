@@ -82,20 +82,20 @@
 		align-self: start;
 		display: flex;
 		flex-direction: column;
-		width: 14rem;
+		width: 10.5rem;
 		height: 100vh;
 		overflow-y: auto;
-		padding: 1.5rem 1rem 1.5rem 0;
+		padding: 1.15rem 0.65rem 1.15rem clamp(0.75rem, 1.5vw, 1.1rem);
 		border-right: 1px solid var(--borde-suave);
 	}
 	.side-brand {
-		margin-bottom: 1.5rem;
+		margin-bottom: 1rem;
 	}
 	.side-wordmark {
 		display: inline-block;
 		overflow-wrap: anywhere;
 		font-family: 'Fraunces', Georgia, serif;
-		font-size: 1.6rem;
+		font-size: 1.2rem;
 		font-weight: 700;
 		letter-spacing: 0.02em;
 		color: var(--granate);
@@ -105,10 +105,10 @@
 		margin: 0.15rem 0 0;
 		overflow-wrap: anywhere;
 		color: var(--granate);
-		font-size: 0.7rem;
+		font-size: 0.58rem;
 		font-weight: 600;
-		letter-spacing: 0.18em;
-		line-height: 1.4;
+		letter-spacing: 0.14em;
+		line-height: 1.35;
 		text-transform: uppercase;
 	}
 	.side-nav nav {
@@ -127,12 +127,12 @@
 		display: flex;
 		align-items: center;
 		min-height: 40px;
-		padding: 0.45rem 0.65rem;
+		padding: 0.35rem 0.4rem;
 		border-left: 3px solid transparent;
 		color: var(--texto-tenue);
-		font-size: 0.7rem;
+		font-size: 0.62rem;
 		font-weight: 600;
-		letter-spacing: 0.12em;
+		letter-spacing: 0.08em;
 		text-decoration: none;
 		text-transform: uppercase;
 	}
@@ -148,25 +148,33 @@
 	.side-account {
 		display: flex;
 		flex-direction: column;
-		gap: 0.15rem;
-		margin-top: 1rem;
-		padding-top: 1rem;
+		gap: 0.1rem;
+		margin-top: 0.75rem;
+		padding-top: 0.75rem;
 		border-top: 1px solid var(--borde-suave);
 	}
 	.side-foot {
 		display: flex;
 		flex-direction: column;
-		gap: 0.7rem;
+		gap: 0.5rem;
 		margin-top: auto;
-		padding-top: 1rem;
+		padding-top: 0.75rem;
 		border-top: 1px solid var(--borde-suave);
+	}
+	.side-foot :global(.theme-toggle) {
+		justify-content: center;
+	}
+	.side-foot :global(.theme-toggle button) {
+		padding: 0.3rem 0.35rem;
+		font-size: 0.58rem;
+		letter-spacing: 0.04em;
 	}
 	.side-version {
 		margin: 0;
 		overflow-wrap: anywhere;
 		color: var(--texto-apagado);
-		font-size: 0.68rem;
-		line-height: 1.4;
+		font-size: 0.6rem;
+		line-height: 1.35;
 	}
 
 	@media (max-width: 900px) {
@@ -175,7 +183,7 @@
 			width: 100%;
 			height: auto;
 			overflow: visible;
-			padding: 0 0 0.85rem;
+			padding: 1rem clamp(1rem, 4vw, 3rem) 0.85rem;
 			border-right: 0;
 			border-bottom: 2px solid var(--granate);
 		}
@@ -185,6 +193,13 @@
 			align-items: baseline;
 			gap: 0.35rem 1rem;
 			margin-bottom: 0.6rem;
+		}
+		.side-wordmark {
+			font-size: 1.35rem;
+		}
+		.side-tagline {
+			font-size: 0.66rem;
+			letter-spacing: 0.16em;
 		}
 		.side-links {
 			flex-direction: row;
@@ -196,6 +211,13 @@
 			padding: 0.45rem 0.1rem;
 			border-left: 0;
 			border-bottom: 2px solid transparent;
+			font-size: 0.68rem;
+			letter-spacing: 0.12em;
+		}
+		.side-foot :global(.theme-toggle button) {
+			padding: 0.35rem 0.65rem;
+			font-size: 0.66rem;
+			letter-spacing: 0.08em;
 		}
 		.side-links a[aria-current='page'] {
 			border-left-color: transparent;

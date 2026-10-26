@@ -747,7 +747,7 @@ func TestStoreScanSettingsAdaptaYDespierta(t *testing.T) {
 	}
 
 	if failures := server.settings.Set(ctx, map[string]json.RawMessage{
-		"ui.page_size": json.RawMessage("24"),
+		"ui.grid_columns": json.RawMessage("4"),
 	}); len(failures) != 0 {
 		t.Fatalf("Set ajeno: %v", failures)
 	}

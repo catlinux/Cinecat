@@ -48,8 +48,8 @@ func raw(value string) json.RawMessage {
 
 func TestDefinitions(t *testing.T) {
 	definitions := Definitions()
-	if len(definitions) != 21 {
-		t.Fatalf("ajustes = %d, se esperaban 21", len(definitions))
+	if len(definitions) != 23 {
+		t.Fatalf("ajustes = %d, se esperaban 23", len(definitions))
 	}
 
 	seen := make(map[string]bool)
@@ -77,8 +77,8 @@ func TestDefinitions(t *testing.T) {
 			t.Fatalf("el defecto de %q se normaliza a %#v", definition.Key, normalized)
 		}
 	}
-	if public != 12 {
-		t.Fatalf("ajustes públicos = %d, se esperaban 12", public)
+	if public != 14 {
+		t.Fatalf("ajustes públicos = %d, se esperaban 14", public)
 	}
 
 	sectionKeys := make([]string, 0, len(Sections()))
@@ -91,6 +91,9 @@ func TestDefinitions(t *testing.T) {
 	if lookup, ok := Lookup(KeyScanInterval); !ok || lookup.Default != "6h" {
 		t.Fatalf("scan.interval inesperado: %+v, %v", lookup, ok)
 	}
+	if _, ok := Lookup("ui.page_size"); ok {
+		t.Fatal("ui.page_size ya no debe existir")
+	}
 
 	uiDefaults := map[string]any{
 		"ui.server_name":  "Cinecat",
@@ -98,6 +101,9 @@ func TestDefinitions(t *testing.T) {
 		"ui.portal_title": "Tu cine en casa",
 		"ui.portal_intro": "Una biblioteca personal con olor a palomitas, carteles pintados a mano y la sesión de siempre esperándote.",
 		"ui.nav_layout":   "side",
+		"ui.grid_columns": 6,
+		"ui.grid_rows":    8,
+		"ui.row_columns":  6,
 	}
 	for key, want := range uiDefaults {
 		definition, ok := Lookup(key)
@@ -139,12 +145,18 @@ func TestValidate(t *testing.T) {
 		{"intro máxima", "ui.portal_intro", `"` + strings.Repeat("a", 240) + `"`, strings.Repeat("a", 240)},
 		{"menú lateral", "ui.nav_layout", `"side"`, "side"},
 		{"menú superior", "ui.nav_layout", `"top"`, "top"},
+		{"columnas mínimo", "ui.grid_columns", "4", 4},
+		{"columnas máximo", "ui.grid_columns", "8", 8},
+		{"filas mínimo", "ui.grid_rows", "2", 2},
+		{"filas máximo", "ui.grid_rows", "12", 12},
+		{"carátulas por fila mínimo", "ui.row_columns", "3", 3},
+		{"carátulas por fila máximo", "ui.row_columns", "8", 8},
 		{"duración cero", KeyScanInterval, `"0"`, "0"},
 		{"duración minutos", KeyScanInterval, `"30m"`, "30m"},
 		{"duración horas", KeyScanInterval, `"6h"`, "6h"},
 		{"duración compuesta", KeyScanInterval, `"1h30m"`, "1h30m"},
 		{"enum texto", "metadata.language", `"es-MX"`, "es-MX"},
-		{"enum numérico", "ui.page_size", "24", 24},
+		{"entero de rejilla", "ui.grid_columns", "7", 7},
 		{"enum numérico alto", "playback.max_height", "1080", 1080},
 		{"enum numérico mínimo", "playback.max_height", "480", 480},
 		{"transcodificaciones mínimo", "playback.max_transcodes", "1", 1},
@@ -181,13 +193,19 @@ func TestValidate(t *testing.T) {
 		{"título del portal largo", "ui.portal_title", `"` + strings.Repeat("a", 61) + `"`},
 		{"intro larga", "ui.portal_intro", `"` + strings.Repeat("a", 241) + `"`},
 		{"menú desconocido", "ui.nav_layout", `"left"`},
+		{"columnas fuera por abajo", "ui.grid_columns", "3"},
+		{"columnas fuera por arriba", "ui.grid_columns", "9"},
+		{"filas fuera por abajo", "ui.grid_rows", "1"},
+		{"filas fuera por arriba", "ui.grid_rows", "13"},
+		{"carátulas fuera por abajo", "ui.row_columns", "2"},
+		{"carátulas fuera por arriba", "ui.row_columns", "9"},
 		{"duración corta", KeyScanInterval, `"30s"`},
 		{"duración negativa", KeyScanInterval, `"-1m"`},
 		{"duración inválida", KeyScanInterval, `"mañana"`},
 		{"duración número", KeyScanInterval, "3600"},
 		{"enum desconocido", "metadata.language", `"fr-FR"`},
-		{"enum numérico texto", "ui.page_size", `"24"`},
-		{"enum numérico fuera", "ui.page_size", "50"},
+		{"entero como texto", "ui.grid_columns", `"4"`},
+		{"entero decimal", "ui.grid_columns", "4.5"},
 		{"transcodificaciones fuera por abajo", "playback.max_transcodes", "0"},
 		{"transcodificaciones fuera por arriba", "playback.max_transcodes", "9"},
 		{"transcodificaciones decimal", "playback.max_transcodes", "2.5"},
@@ -218,25 +236,25 @@ func TestStoredDefaultsAndPersistence(t *testing.T) {
 	if store.Duration(KeyScanInterval) != 30*time.Minute {
 		t.Fatalf("duración por defecto = %v", store.Duration(KeyScanInterval))
 	}
-	if store.Int("ui.page_size") != 48 || store.Bool("ui.show_series") != true {
+	if store.Int("ui.grid_columns") != 6 || store.Bool("ui.show_series") != true {
 		t.Fatalf("defectos inesperados: %+v", store.All())
 	}
-	if store.IsModified("ui.page_size") {
+	if store.IsModified("ui.grid_columns") {
 		t.Fatal("un ajuste sin fila no debe estar modificado")
 	}
 
 	changes := map[string]json.RawMessage{
-		"ui.page_size":        raw("24"),
+		"ui.grid_columns":     raw("4"),
 		"scan.interval":       raw(`"45m"`),
 		"ui.show_collections": raw("false"),
 	}
 	if failures := store.Set(ctx, changes); len(failures) != 0 {
 		t.Fatalf("Set: %v", failures)
 	}
-	if store.Int("ui.page_size") != 24 || store.Duration(KeyScanInterval) != 45*time.Minute {
+	if store.Int("ui.grid_columns") != 4 || store.Duration(KeyScanInterval) != 45*time.Minute {
 		t.Fatalf("la caché no cambió: %+v", store.All())
 	}
-	if !store.IsModified("ui.page_size") || !store.IsModified(KeyScanInterval) {
+	if !store.IsModified("ui.grid_columns") || !store.IsModified(KeyScanInterval) {
 		t.Fatal("los ajustes guardados deben estar modificados")
 	}
 
@@ -244,7 +262,7 @@ func TestStoredDefaultsAndPersistence(t *testing.T) {
 	if err := other.Load(ctx); err != nil {
 		t.Fatalf("Load del segundo almacén: %v", err)
 	}
-	if other.Int("ui.page_size") != 24 || other.Duration(KeyScanInterval) != 45*time.Minute {
+	if other.Int("ui.grid_columns") != 4 || other.Duration(KeyScanInterval) != 45*time.Minute {
 		t.Fatalf("no se conservaron los valores: %+v", other.All())
 	}
 	if !other.Bool("ui.show_series") {
@@ -256,7 +274,7 @@ func TestSetInvalidoNoGuardaNada(t *testing.T) {
 	store, ctx := newTestStore(t, nil)
 
 	failures := store.Set(ctx, map[string]json.RawMessage{
-		"ui.page_size":      raw("24"),
+		"ui.grid_columns":   raw("4"),
 		"playback.crf":      raw("99"),
 		"clave.desconocida": raw("true"),
 	})
@@ -269,8 +287,8 @@ func TestSetInvalidoNoGuardaNada(t *testing.T) {
 	if _, ok := failures["clave.desconocida"]; !ok {
 		t.Fatalf("falta el error de la clave desconocida: %v", failures)
 	}
-	if store.Int("ui.page_size") != 48 {
-		t.Fatalf("el ajuste válido no debe guardarse: %d", store.Int("ui.page_size"))
+	if store.Int("ui.grid_columns") != 6 {
+		t.Fatalf("el ajuste válido no debe guardarse: %d", store.Int("ui.grid_columns"))
 	}
 	var count int
 	if err := store.db.QueryRow(`SELECT count(*) FROM settings`).Scan(&count); err != nil {
@@ -286,26 +304,26 @@ func TestResetYOnChange(t *testing.T) {
 	var calls [][]string
 	store.OnChange(func(keys []string) {
 		calls = append(calls, append([]string(nil), keys...))
-		_ = store.Get("ui.page_size")
+		_ = store.Get("ui.grid_columns")
 	})
 
 	if failures := store.Set(ctx, map[string]json.RawMessage{
-		"ui.show_series": raw("false"),
-		"ui.page_size":   raw("24"),
+		"ui.show_series":  raw("false"),
+		"ui.grid_columns": raw("4"),
 	}); len(failures) != 0 {
 		t.Fatalf("Set: %v", failures)
 	}
-	if len(calls) != 1 || !reflect.DeepEqual(calls[0], []string{"ui.page_size", "ui.show_series"}) {
+	if len(calls) != 1 || !reflect.DeepEqual(calls[0], []string{"ui.grid_columns", "ui.show_series"}) {
 		t.Fatalf("llamadas a OnChange = %v", calls)
 	}
 
-	if err := store.Reset(ctx, "ui.page_size"); err != nil {
+	if err := store.Reset(ctx, "ui.grid_columns"); err != nil {
 		t.Fatalf("Reset: %v", err)
 	}
-	if store.Int("ui.page_size") != 48 || store.IsModified("ui.page_size") {
+	if store.Int("ui.grid_columns") != 6 || store.IsModified("ui.grid_columns") {
 		t.Fatal("Reset no volvió al defecto")
 	}
-	if len(calls) != 2 || !reflect.DeepEqual(calls[1], []string{"ui.page_size"}) {
+	if len(calls) != 2 || !reflect.DeepEqual(calls[1], []string{"ui.grid_columns"}) {
 		t.Fatalf("llamadas tras Reset = %v", calls)
 	}
 	if err := store.Reset(ctx, "clave.desconocida"); !errors.Is(err, ErrUnknownKey) {
@@ -318,7 +336,8 @@ func TestLoadIgnoraClavesYValoresInvalidos(t *testing.T) {
 	if _, err := store.db.ExecContext(ctx, `
 		INSERT INTO settings (key, value) VALUES
 			('clave.desconocida', '{"x":1}'),
-			('ui.page_size', '25'),
+			('ui.page_size', '24'),
+			('ui.grid_columns', '9'),
 			('ui.show_series', 'no-es-json'),
 			('playback.crf', '22')`); err != nil {
 		t.Fatalf("insertar ajustes de prueba: %v", err)
@@ -327,17 +346,17 @@ func TestLoadIgnoraClavesYValoresInvalidos(t *testing.T) {
 	if err := store.Load(ctx); err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if store.Int("ui.page_size") != 48 || !store.Bool("ui.show_series") {
+	if store.Int("ui.grid_columns") != 6 || !store.Bool("ui.show_series") {
 		t.Fatalf("los valores inválidos no deben aplicarse: %+v", store.All())
 	}
 	if store.Int("playback.crf") != 22 || !store.IsModified("playback.crf") {
 		t.Fatalf("el valor válido no se aplicó: %+v", store.All())
 	}
-	if store.IsModified("ui.page_size") || store.IsModified("ui.show_series") {
+	if store.IsModified("ui.grid_columns") || store.IsModified("ui.show_series") {
 		t.Fatal("los valores inválidos no deben quedar modificados")
 	}
-	if store.Get("clave.desconocida") != nil {
-		t.Fatal("la clave desconocida no debe estar en la caché")
+	if store.Get("clave.desconocida") != nil || store.Get("ui.page_size") != nil {
+		t.Fatal("las claves desconocidas no deben estar en la caché")
 	}
 }
 
@@ -349,21 +368,21 @@ func TestStoreConcurrente(t *testing.T) {
 		go func(index int) {
 			defer workers.Done()
 			for iteration := 0; iteration < 10; iteration++ {
-				value := "24"
+				value := "4"
 				if (index+iteration)%2 == 0 {
-					value = "96"
+					value = "8"
 				}
 				_ = store.Set(ctx, map[string]json.RawMessage{
-					"ui.page_size": raw(value),
+					"ui.grid_columns": raw(value),
 				})
-				_ = store.Get("ui.page_size")
+				_ = store.Get("ui.grid_columns")
 				_ = store.All()
 			}
 		}(index)
 	}
 	workers.Wait()
 
-	if value := store.Int("ui.page_size"); value != 24 && value != 96 {
+	if value := store.Int("ui.grid_columns"); value != 4 && value != 8 {
 		t.Fatalf("valor concurrente inesperado: %d", value)
 	}
 }

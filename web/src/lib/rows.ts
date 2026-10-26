@@ -18,7 +18,7 @@ export function rowScrollState(
 	const total = Number.isFinite(scrollWidth) ? Math.max(0, scrollWidth) : 0;
 	const maxScroll = Math.max(0, total - width);
 	const overflow = maxScroll > EDGE_TOLERANCE;
-	const page = width * 0.9;
+	const page = width;
 	return {
 		canPrev: overflow && left > EDGE_TOLERANCE,
 		canNext: overflow && left < maxScroll - EDGE_TOLERANCE,

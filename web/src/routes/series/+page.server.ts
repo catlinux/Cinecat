@@ -3,7 +3,6 @@ import { ApiError } from '$lib/api';
 import type { GenreCount, GenresResponse, SeriesResponse } from '$lib/api';
 import { ConfigurationError, createApiClient } from '$lib/api-factory';
 import {
-	SERIES_PAGE_SIZE,
 	clearSeriesFiltersHref,
 	readSeriesFilters,
 	seriesApiQuery,
@@ -11,6 +10,7 @@ import {
 } from '$lib/series';
 import { clampPage, pageCount, pageHref } from '$lib/pagination';
 import { requireSessionToken } from '$lib/session';
+import { DEFAULT_PUBLIC_UI, listPageSize } from '$lib/settings';
 import type { PageServerLoad } from './$types';
 
 const ERROR_MESSAGE = 'No se pudieron cargar las series. Inténtalo de nuevo en unos momentos.';
@@ -19,6 +19,7 @@ function emptyPage(
 	filters: ReturnType<typeof readSeriesFilters>,
 	currentUrl: string,
 	isAdmin: boolean,
+	pageSize: number,
 	message: string
 ) {
 	return {
@@ -26,7 +27,7 @@ function emptyPage(
 		total: 0,
 		page: 1,
 		last: 1,
-		pageSize: SERIES_PAGE_SIZE,
+		pageSize,
 		filters,
 		genres: [] as GenreCount[],
 		isAdmin,
@@ -40,8 +41,10 @@ function emptyPage(
 
 export const load: PageServerLoad = async ({ locals, fetch, url, parent }) => {
 	const token = requireSessionToken(locals);
-	const layout = typeof parent === 'function' ? await parent() : { isAdmin: false };
+	const layout =
+		typeof parent === 'function' ? await parent() : { isAdmin: false, ui: DEFAULT_PUBLIC_UI };
 	const isAdmin = Boolean(layout?.isAdmin);
+	const pageSize = listPageSize(layout.ui);
 	const filters = readSeriesFilters(url, isAdmin);
 	const currentUrl = `${url.pathname}${url.search}`;
 	const requestedPage = clampPage(url.searchParams.get('page'), Number.MAX_SAFE_INTEGER);
@@ -50,7 +53,7 @@ export const load: PageServerLoad = async ({ locals, fetch, url, parent }) => {
 	let response: SeriesResponse;
 	try {
 		response = await api.get<SeriesResponse>(
-			`/api/v1/series?${seriesApiQuery(filters, requestedPage)}`,
+			`/api/v1/series?${seriesApiQuery(filters, requestedPage, pageSize)}`,
 			token
 		);
 	} catch (error) {
@@ -61,11 +64,12 @@ export const load: PageServerLoad = async ({ locals, fetch, url, parent }) => {
 			filters,
 			currentUrl,
 			isAdmin,
+			pageSize,
 			error instanceof ConfigurationError ? error.message : ERROR_MESSAGE
 		);
 	}
 
-	const last = pageCount(response.total, SERIES_PAGE_SIZE);
+	const last = pageCount(response.total, pageSize);
 	const page = clampPage(requestedPage, last);
 	if (page !== requestedPage) {
 		redirect(303, pageHref(url, page));
@@ -101,7 +105,7 @@ export const load: PageServerLoad = async ({ locals, fetch, url, parent }) => {
 		total: response.total,
 		page,
 		last,
-		pageSize: SERIES_PAGE_SIZE,
+		pageSize,
 		filters,
 		genres,
 		isAdmin,

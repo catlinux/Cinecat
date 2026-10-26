@@ -111,18 +111,13 @@ function uiSection(): SettingsSection {
 				max: 40
 			}),
 			makeSetting({
-				key: 'ui.page_size',
-				type: 'enum',
-				label: 'Resultados por página',
-				default: 48,
-				value: 48,
-				options: [
-					{ value: '24', label: '24' },
-					{ value: '48', label: '48' },
-					{ value: '96', label: '96' }
-				],
-				min: 24,
-				max: 96
+				key: 'ui.grid_columns',
+				type: 'int',
+				label: 'Columnas de los listados',
+				default: 6,
+				value: 6,
+				min: 4,
+				max: 8
 			}),
 			makeSetting({
 				key: 'ui.show_series',
@@ -451,6 +446,8 @@ describe('resumen de administración', () => {
 		}).body;
 
 		expect(body).toContain('Resumen');
+		expect(body).toContain('admin-summary-grid');
+		expect((body.match(/admin-stat-card/g) ?? []).length).toBe(3);
 		expect(body).toContain('10');
 		expect(body).toContain('2 películas sin identificar');
 		expect(body).toContain('/movies?unmatched=1');

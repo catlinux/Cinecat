@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MediaItem } from './api';
 import {
-	SERIES_PAGE_SIZE,
 	clearSeriesFiltersHref,
 	formatEpisodeCode,
 	formatEpisodeHeading,
@@ -83,9 +82,9 @@ describe('filtros de series', () => {
 			new URL('http://localhost/series?q=big&letter=B&genre=Comedia&sort=added&unmatched=1'),
 			true
 		);
-		const params = seriesApiQuery(filters, 2);
-		expect(params.get('limit')).toBe(String(SERIES_PAGE_SIZE));
-		expect(params.get('offset')).toBe(String(SERIES_PAGE_SIZE));
+		const params = seriesApiQuery(filters, 2, 48);
+		expect(params.get('limit')).toBe('48');
+		expect(params.get('offset')).toBe('48');
 		expect(params.get('q')).toBe('big');
 		expect(params.get('letter')).toBe('B');
 		expect(params.get('genre')).toBe('Comedia');

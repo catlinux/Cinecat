@@ -114,6 +114,7 @@
 
 <style>
 	.row-scroller {
+		--row-gap: 0.9rem;
 		min-width: 0;
 		max-width: 100%;
 		margin: 1.5rem 0;
@@ -187,15 +188,45 @@
 	}
 	.row-track {
 		display: flex;
-		gap: 0.75rem;
+		gap: var(--row-gap);
 		align-items: stretch;
 		margin: 0;
 		padding: 0;
 		list-style: none;
-		width: max-content;
+		width: 100%;
 	}
 	.row-track > :global(li) {
-		flex: 0 0 auto;
+		flex: 0 0
+			calc(
+				(100% - (var(--row-cols, 6) - 1) * var(--row-gap)) / var(--row-cols, 6)
+			);
 		scroll-snap-align: start;
+	}
+	.row-track > :global(li.row-fixed) {
+		flex-basis: 7.5rem;
+	}
+
+	@media (max-width: 1100px) {
+		.row-scroller {
+			--row-cols: min(var(--ui-row-cols, 6), 5);
+		}
+	}
+
+	@media (max-width: 800px) {
+		.row-scroller {
+			--row-cols: min(var(--ui-row-cols, 6), 4);
+		}
+	}
+
+	@media (max-width: 600px) {
+		.row-scroller {
+			--row-cols: min(var(--ui-row-cols, 6), 3);
+		}
+	}
+
+	@media (max-width: 420px) {
+		.row-scroller {
+			--row-cols: 2;
+		}
 	}
 </style>

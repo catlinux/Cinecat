@@ -27,7 +27,7 @@
 	<title>{ui.server_name}</title>
 </svelte:head>
 
-<div class="shell" class:shell-side={sideNav}>
+<div class="app-frame" class:app-frame-side={sideNav}>
 	{#if sideNav}
 		<SideNav
 			{ui}
@@ -39,7 +39,8 @@
 		/>
 	{/if}
 
-	<div class="shell-content">
+	<div class="shell">
+		<div class="shell-content">
 		{#if !sideNav}
 			<header class="marquee">
 				<div class="marquee-brand">
@@ -87,7 +88,9 @@
 			</header>
 		{/if}
 
-		<main>
+		<main
+			style={`--grid-cols: ${ui.grid_columns}; --ui-grid-cols: ${ui.grid_columns}; --row-cols: ${ui.row_columns}; --ui-row-cols: ${ui.row_columns};`}
+		>
 			{@render children()}
 		</main>
 
@@ -100,27 +103,25 @@
 				La web y el servidor tienen versiones distintas: recarga o actualiza.
 			</p>
 		{/if}
+		</div>
 	</div>
 </div>
 
 <style>
-	.shell-side {
+	.app-frame-side {
 		display: grid;
-		grid-template-columns: 14rem minmax(0, 1fr);
+		grid-template-columns: 10.5rem minmax(0, 1fr);
 		align-items: start;
-		gap: clamp(1rem, 3vw, 2.5rem);
-		max-width: 84rem;
-		padding-top: 0;
-		padding-bottom: 0;
+	}
+	.app-frame-side .shell {
+		width: 100%;
 	}
 	.shell-content {
 		display: flex;
+		flex: 1;
 		flex-direction: column;
 		min-width: 0;
 		min-height: 100vh;
-	}
-	.shell-side > .shell-content {
-		padding: 1.5rem 0 2rem;
 	}
 	.version-warning {
 		margin: 0.5rem 0 0;
@@ -130,14 +131,8 @@
 	}
 
 	@media (max-width: 900px) {
-		.shell-side {
+		.app-frame-side {
 			display: block;
-			max-width: 72rem;
-			padding: 1.25rem clamp(1rem, 4vw, 3rem) 2rem;
-		}
-		.shell-side > .shell-content {
-			min-height: 0;
-			padding: 0;
 		}
 	}
 </style>

@@ -37,6 +37,7 @@ describe('reparto y equipo', () => {
 		expect(body).toContain('https://images.example/ana.jpg');
 		expect(body).toContain('alt="Ana Directora"');
 		expect(body).toContain('loading="lazy"');
+		expect(body).toContain('class="row-fixed"');
 		expect(body.indexOf('Ana Directora')).toBeLessThan(body.indexOf('Mara Sol'));
 	});
 

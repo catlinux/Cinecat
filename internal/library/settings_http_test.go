@@ -83,11 +83,10 @@ func TestSettingsGetEstructuraYOrden(t *testing.T) {
 		t.Fatal("options debe ser un array, no null")
 	}
 
-	pageSize := settingsFind(t, response, "ui.page_size")
-	if pageSize.Default.(float64) != 48 || pageSize.Value.(float64) != 48 ||
-		pageSize.Modified || len(pageSize.Options) != 3 ||
-		pageSize.Options[0].Value != "24" || pageSize.Options[0].Label != "24" {
-		t.Fatalf("ui.page_size inesperado: %+v", pageSize)
+	gridColumns := settingsFind(t, response, "ui.grid_columns")
+	if gridColumns.Default.(float64) != 6 || gridColumns.Value.(float64) != 6 ||
+		gridColumns.Modified || gridColumns.Min != 4 || gridColumns.Max != 8 {
+		t.Fatalf("ui.grid_columns inesperado: %+v", gridColumns)
 	}
 
 	if status, body := libraryHTTPGet(t, ts.url+"/api/v1/settings", ""); status != http.StatusUnauthorized {
@@ -104,7 +103,7 @@ func TestSettingsPATCH(t *testing.T) {
 
 	status, body := libraryHTTPDo(t, http.MethodPatch, ts.url+"/api/v1/settings", ts.token,
 		map[string]any{
-			"ui.page_size":        24,
+			"ui.grid_columns":     4,
 			"scan.interval":       "45m",
 			"ui.show_collections": false,
 		})
@@ -112,16 +111,16 @@ func TestSettingsPATCH(t *testing.T) {
 		t.Fatalf("PATCH válido: código = %d, cuerpo = %s", status, body)
 	}
 	response := settingsJSON(t, body)
-	pageSize := settingsFind(t, response, "ui.page_size")
-	if pageSize.Value.(float64) != 24 || !pageSize.Modified {
-		t.Fatalf("ui.page_size no actualizado: %+v", pageSize)
+	gridColumns := settingsFind(t, response, "ui.grid_columns")
+	if gridColumns.Value.(float64) != 4 || !gridColumns.Modified {
+		t.Fatalf("ui.grid_columns no actualizado: %+v", gridColumns)
 	}
 	interval := settingsFind(t, response, settings.KeyScanInterval)
 	if interval.Value != "45m" || !interval.Modified {
 		t.Fatalf("scan.interval no actualizado: %+v", interval)
 	}
-	if got := ts.store.Int("ui.page_size"); got != 24 {
-		t.Fatalf("caché de ui.page_size = %d", got)
+	if got := ts.store.Int("ui.grid_columns"); got != 4 {
+		t.Fatalf("caché de ui.grid_columns = %d", got)
 	}
 	if got := ts.store.Duration(settings.KeyScanInterval); got.String() != "45m0s" {
 		t.Fatalf("caché de scan.interval = %v", got)
@@ -129,9 +128,9 @@ func TestSettingsPATCH(t *testing.T) {
 
 	status, body = libraryHTTPDo(t, http.MethodPatch, ts.url+"/api/v1/settings", ts.token,
 		map[string]any{
-			"ui.page_size":   50,
-			"playback.crf":   99,
-			"ui.show_series": "no",
+			"ui.grid_columns": 9,
+			"playback.crf":    99,
+			"ui.show_series":  "no",
 		})
 	if status != http.StatusBadRequest {
 		t.Fatalf("PATCH inválido: código = %d, cuerpo = %s", status, body)
@@ -140,11 +139,11 @@ func TestSettingsPATCH(t *testing.T) {
 	if err := json.Unmarshal(body, &failure); err != nil {
 		t.Fatalf("respuesta de error: %v", err)
 	}
-	if len(failure.Fields) != 3 || failure.Fields["ui.page_size"] == "" ||
+	if len(failure.Fields) != 3 || failure.Fields["ui.grid_columns"] == "" ||
 		failure.Fields["playback.crf"] == "" || failure.Fields["ui.show_series"] == "" {
 		t.Fatalf("fields inesperados: %+v", failure.Fields)
 	}
-	if ts.store.Int("ui.page_size") != 24 {
+	if ts.store.Int("ui.grid_columns") != 4 {
 		t.Fatal("un PATCH inválido no debe guardar ninguna clave")
 	}
 
@@ -172,11 +171,11 @@ func TestSettingsPATCH(t *testing.T) {
 
 	userToken := nonAdminToken(t, ts.libraryTestServer)
 	if status, body := libraryHTTPDo(t, http.MethodPatch, ts.url+"/api/v1/settings", userToken,
-		map[string]any{"ui.page_size": 24}); status != http.StatusForbidden {
+		map[string]any{"ui.grid_columns": 4}); status != http.StatusForbidden {
 		t.Fatalf("PATCH sin admin: código = %d, cuerpo = %s", status, body)
 	}
 	if status, body := libraryHTTPDo(t, http.MethodPatch, ts.url+"/api/v1/settings", "",
-		map[string]any{"ui.page_size": 24}); status != http.StatusUnauthorized {
+		map[string]any{"ui.grid_columns": 4}); status != http.StatusUnauthorized {
 		t.Fatalf("PATCH sin sesión: código = %d, cuerpo = %s", status, body)
 	}
 }
@@ -184,13 +183,13 @@ func TestSettingsPATCH(t *testing.T) {
 func TestSettingsDeleteYClaveConPuntos(t *testing.T) {
 	ts := newSettingsHTTPTestServer(t)
 	if failures := ts.store.Set(context.Background(), map[string]json.RawMessage{
-		"ui.page_size": json.RawMessage("24"),
+		"ui.grid_columns": json.RawMessage("4"),
 	}); len(failures) != 0 {
 		t.Fatalf("preparar ajuste: %v", failures)
 	}
 
 	status, body := libraryHTTPDo(t, http.MethodDelete,
-		ts.url+"/api/v1/settings/ui.page_size", ts.token, nil)
+		ts.url+"/api/v1/settings/ui.grid_columns", ts.token, nil)
 	if status != http.StatusOK {
 		t.Fatalf("DELETE: código = %d, cuerpo = %s", status, body)
 	}
@@ -198,10 +197,10 @@ func TestSettingsDeleteYClaveConPuntos(t *testing.T) {
 	if err := json.Unmarshal(body, &setting); err != nil {
 		t.Fatalf("respuesta de DELETE: %v", err)
 	}
-	if setting.Key != "ui.page_size" || setting.Value.(float64) != 48 || setting.Modified {
+	if setting.Key != "ui.grid_columns" || setting.Value.(float64) != 6 || setting.Modified {
 		t.Fatalf("ajuste restablecido inesperado: %+v", setting)
 	}
-	if ts.store.Int("ui.page_size") != 48 || ts.store.IsModified("ui.page_size") {
+	if ts.store.Int("ui.grid_columns") != 6 || ts.store.IsModified("ui.grid_columns") {
 		t.Fatal("la caché no se restableció")
 	}
 
@@ -212,11 +211,11 @@ func TestSettingsDeleteYClaveConPuntos(t *testing.T) {
 
 	userToken := nonAdminToken(t, ts.libraryTestServer)
 	if status, body := libraryHTTPDo(t, http.MethodDelete,
-		ts.url+"/api/v1/settings/ui.page_size", userToken, nil); status != http.StatusForbidden {
+		ts.url+"/api/v1/settings/ui.grid_columns", userToken, nil); status != http.StatusForbidden {
 		t.Fatalf("DELETE sin admin: código = %d, cuerpo = %s", status, body)
 	}
 	if status, body := libraryHTTPDo(t, http.MethodDelete,
-		ts.url+"/api/v1/settings/ui.page_size", "", nil); status != http.StatusUnauthorized {
+		ts.url+"/api/v1/settings/ui.grid_columns", "", nil); status != http.StatusUnauthorized {
 		t.Fatalf("DELETE sin sesión: código = %d, cuerpo = %s", status, body)
 	}
 }
@@ -233,8 +232,8 @@ func TestSettingsPublic(t *testing.T) {
 	if err := json.Unmarshal(body, &values); err != nil {
 		t.Fatalf("respuesta pública: %v", err)
 	}
-	if len(values) != 12 {
-		t.Fatalf("ajustes públicos = %d, se esperaban 12: %v", len(values), values)
+	if len(values) != 14 {
+		t.Fatalf("ajustes públicos = %d, se esperaban 14: %v", len(values), values)
 	}
 	defaults := map[string]any{
 		"ui.server_name":      "Cinecat",
@@ -246,14 +245,14 @@ func TestSettingsPublic(t *testing.T) {
 		"ui.show_series":      true,
 		"ui.theme_default":    "system",
 		"ui.accent":           "granate",
+		"ui.grid_columns":     float64(6),
+		"ui.grid_rows":        float64(8),
+		"ui.row_columns":      float64(6),
 	}
 	for key, want := range defaults {
 		if values[key] != want {
 			t.Fatalf("%s = %v, se esperaba %v", key, values[key], want)
 		}
-	}
-	if values["ui.page_size"].(float64) != 48 {
-		t.Fatalf("valores públicos inesperados: %v", values)
 	}
 	if _, ok := values[settings.KeyScanInterval]; ok {
 		t.Fatal("scan.interval no es público")

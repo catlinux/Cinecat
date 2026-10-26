@@ -71,7 +71,7 @@
 	<RowScroller title="Reparto y equipo">
 		{#snippet children()}
 			{#each entries as entry (entry.key)}
-				<li>
+				<li class="row-fixed">
 					<PersonCard name={entry.name} photoUrl={entry.photo} subtitle={entry.subtitle} />
 				</li>
 			{/each}

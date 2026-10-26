@@ -474,3 +474,16 @@ func TestScanEndpointsPermisos(t *testing.T) {
 		}
 	}
 }
+
+func TestListadosAceptan96Resultados(t *testing.T) {
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/items?limit=96&offset=0", nil)
+	if limit, offset, err := pagination(request); err != nil || limit != 96 || offset != 0 {
+		t.Fatalf("paginación de ítems: limit = %d, offset = %d, error = %v", limit, offset, err)
+	}
+	if limit, _, err := seriesPagination(request); err != nil || limit != 96 {
+		t.Fatalf("paginación de series: limit = %d, error = %v", limit, err)
+	}
+	if limit, _, err := collectionPagination(request); err != nil || limit != 96 {
+		t.Fatalf("paginación de colecciones: limit = %d, error = %v", limit, err)
+	}
+}

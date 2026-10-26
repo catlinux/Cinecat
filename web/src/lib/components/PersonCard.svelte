@@ -30,8 +30,8 @@
 
 <style>
 	.person-card {
-		width: 118px;
-		max-width: 118px;
+		width: 7.5rem;
+		max-width: 7.5rem;
 	}
 	.person-photo {
 		position: relative;

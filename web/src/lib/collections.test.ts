@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MediaItem } from './api';
 import {
-	COLLECTIONS_PAGE_SIZE,
 	collectionApiQuery,
 	collectionFiltersActive,
 	firstUnwatched,
@@ -99,9 +98,9 @@ describe('filtros de colecciones', () => {
 	});
 
 	it('construye la consulta de la API con página y filtros', () => {
-		const params = collectionApiQuery({ q: 'saga', sort: 'added', page: 1 }, 2);
-		expect(params.get('limit')).toBe(String(COLLECTIONS_PAGE_SIZE));
-		expect(params.get('offset')).toBe(String(COLLECTIONS_PAGE_SIZE));
+		const params = collectionApiQuery({ q: 'saga', sort: 'added', page: 1 }, 2, 48);
+		expect(params.get('limit')).toBe('48');
+		expect(params.get('offset')).toBe('48');
 		expect(params.get('q')).toBe('saga');
 		expect(params.get('sort')).toBe('added');
 	});

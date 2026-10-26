@@ -2,21 +2,20 @@ import { fail, redirect } from '@sveltejs/kit';
 import { ApiError } from '$lib/api';
 import type { CollectionsResponse } from '$lib/api';
 import { createApiClient } from '$lib/api-factory';
-import {
-	COLLECTIONS_PAGE_SIZE,
-	collectionApiQuery,
-	readCollectionFilters
-} from '$lib/collections';
+import { collectionApiQuery, readCollectionFilters } from '$lib/collections';
 import { clampPage, pageCount, pageHref } from '$lib/pagination';
 import { requireSessionToken } from '$lib/session';
+import { DEFAULT_PUBLIC_UI, listPageSize } from '$lib/settings';
 import type { Actions, PageServerLoad } from './$types';
 
 const ERROR_MESSAGE = 'No se pudieron cargar las colecciones. Inténtalo de nuevo en unos momentos.';
 
 export const load: PageServerLoad = async ({ locals, fetch, url, parent }) => {
 	const token = requireSessionToken(locals);
-	const layout = typeof parent === 'function' ? await parent() : { isAdmin: false };
+	const layout =
+		typeof parent === 'function' ? await parent() : { isAdmin: false, ui: DEFAULT_PUBLIC_UI };
 	const isAdmin = Boolean(layout?.isAdmin);
+	const pageSize = listPageSize(layout.ui);
 	const filters = readCollectionFilters(url);
 	const currentUrl = `${url.pathname}${url.search}`;
 	const requestedPage = filters.page;
@@ -24,7 +23,7 @@ export const load: PageServerLoad = async ({ locals, fetch, url, parent }) => {
 	let response: CollectionsResponse;
 	try {
 		response = await createApiClient(fetch).get<CollectionsResponse>(
-			`/api/v1/collections?${collectionApiQuery(filters, requestedPage)}`,
+			`/api/v1/collections?${collectionApiQuery(filters, requestedPage, pageSize)}`,
 			token
 		);
 	} catch (error) {
@@ -36,7 +35,7 @@ export const load: PageServerLoad = async ({ locals, fetch, url, parent }) => {
 			total: 0,
 			page: 1,
 			last: 1,
-			pageSize: COLLECTIONS_PAGE_SIZE,
+			pageSize,
 			filters,
 			currentUrl,
 			isAdmin,
@@ -44,7 +43,7 @@ export const load: PageServerLoad = async ({ locals, fetch, url, parent }) => {
 		};
 	}
 
-	const last = pageCount(response.total, COLLECTIONS_PAGE_SIZE);
+	const last = pageCount(response.total, pageSize);
 	const page = clampPage(requestedPage, last);
 	if (page !== requestedPage) {
 		redirect(303, pageHref(url, page));
@@ -55,7 +54,7 @@ export const load: PageServerLoad = async ({ locals, fetch, url, parent }) => {
 		total: response.total,
 		page,
 		last,
-		pageSize: COLLECTIONS_PAGE_SIZE,
+		pageSize,
 		filters,
 		currentUrl,
 		isAdmin,

@@ -338,12 +338,30 @@ describe('interfaz configurable', () => {
 			}
 		});
 
+		expect(body).toContain('app-frame-side');
 		expect(body).toContain('side-nav');
 		expect(body).toContain('<nav aria-label="Principal"');
 		expect(body).toContain('href="/"');
 		expect(body).toContain('aria-current="page"');
 		expect(body).toContain('Sesión continua');
 		expect(body).not.toContain('class="marquee"');
+	});
+
+	it('publica las columnas de rejilla y de fila en el contenedor principal', () => {
+		const { body } = render(Layout, {
+			props: {
+				data: {
+					...layoutData(null),
+					ui: uiWith({ grid_columns: 5, row_columns: 4 })
+				},
+				children
+			}
+		});
+
+		expect(body).toContain('--grid-cols: 5');
+		expect(body).toContain('--ui-grid-cols: 5');
+		expect(body).toContain('--row-cols: 4');
+		expect(body).toContain('--ui-row-cols: 4');
 	});
 
 	it('usa la cabecera superior si nav_layout es top y añade Inicio', () => {

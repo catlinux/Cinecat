@@ -1,6 +1,7 @@
 import { render } from 'svelte/server';
 import { describe, expect, it, vi } from 'vitest';
 import type { Collection, CollectionDetail, MediaItem } from '$lib/api';
+import { DEFAULT_PUBLIC_UI } from '$lib/settings';
 import CollectionPage from './[id]/+page.svelte';
 import { actions as detailActions, load as loadDetail } from './[id]/+page.server';
 import CollectionsPage from './+page.svelte';
@@ -71,12 +72,17 @@ const detail: CollectionDetail = {
 	items: [movie(1, 'Primera', true), movie(2, 'Segunda', false)]
 };
 
-function listLoadEvent(fetchImpl: typeof fetch, path = '/collections', isAdmin = false) {
+function listLoadEvent(
+	fetchImpl: typeof fetch,
+	path = '/collections',
+	isAdmin = false,
+	ui = DEFAULT_PUBLIC_UI
+) {
 	return {
 		locals: { sessionToken: 'token-123' },
 		fetch: fetchImpl,
 		url: new URL(`http://localhost${path}`),
-		parent: async () => ({ isAdmin })
+		parent: async () => ({ isAdmin, ui })
 	};
 }
 
@@ -138,6 +144,22 @@ function detailData(overrides: Record<string, unknown> = {}) {
 }
 
 describe('carga del listado de colecciones', () => {
+	it('pide columnas × filas resultados por página', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(
+			jsonResponse({ collections: [collection], total: 500, limit: 50, offset: 50 })
+		);
+		const ui = { ...DEFAULT_PUBLIC_UI, grid_columns: 5, grid_rows: 10 };
+
+		const result = (await loadList(
+			listLoadEvent(fetchMock, '/collections?page=2', false, ui) as never
+		)) as { pageSize: number };
+
+		const url = new URL(String(fetchMock.mock.calls[0][0]));
+		expect(url.searchParams.get('limit')).toBe('50');
+		expect(url.searchParams.get('offset')).toBe('50');
+		expect(result.pageSize).toBe(50);
+	});
+
 	it('traduce filtros y página a la API', async () => {
 		const fetchMock = vi.fn().mockResolvedValue(
 			jsonResponse({ collections: [collection], total: 100, limit: 48, offset: 48 })
