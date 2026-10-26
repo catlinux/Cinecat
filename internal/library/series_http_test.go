@@ -347,6 +347,7 @@ func TestSeriesFichaTemporadaYNextEpisode(t *testing.T) {
 	}
 	if detail.Seasons[0].Name != "Temporada uno" || detail.Seasons[0].EpisodeCount != 2 ||
 		detail.Seasons[0].WatchedCount != 0 ||
+		detail.Seasons[0].PosterURL == nil || *detail.Seasons[0].PosterURL != "https://images.example/t1.jpg" ||
 		detail.Seasons[1].Name != "Temporada 2" || detail.Seasons[1].EpisodeCount != 1 {
 		t.Fatalf("temporadas inesperadas: %+v", detail.Seasons)
 	}
@@ -736,6 +737,10 @@ func TestHomeNextUpYContadorSeries(t *testing.T) {
 	b := makeSeries("Serie B")
 	c := makeSeries("Serie C")
 	d := makeSeries("Serie D")
+	if _, err := ts.db.Exec(`UPDATE series SET poster_url = ?, backdrop_url = ? WHERE id = ?`,
+		"https://images.example/serie-b.jpg", "https://images.example/fondo-b.jpg", b.id); err != nil {
+		t.Fatalf("preparar imágenes de la serie B: %v", err)
+	}
 
 	setWatchState(t, ts.db, anaID, a.first)
 	setWatchState(t, ts.db, anaID, b.first)
@@ -768,9 +773,13 @@ func TestHomeNextUpYContadorSeries(t *testing.T) {
 	if home.NextUp[0].ID != b.second || home.NextUp[1].ID != a.second {
 		t.Fatalf("orden de next_up inesperado: %+v", home.NextUp)
 	}
-	if home.NextUp[0].SeriesTitle == nil || *home.NextUp[0].SeriesTitle != "Serie B" ||
-		home.NextUp[0].EpisodeTitle == nil || *home.NextUp[0].EpisodeTitle != "Segundo" {
-		t.Fatalf("DTO de next_up inesperado: %+v", home.NextUp[0])
+	next := home.NextUp[0]
+	if next.SeriesTitle == nil || *next.SeriesTitle != "Serie B" ||
+		next.EpisodeTitle == nil || *next.EpisodeTitle != "Segundo" ||
+		next.StillURL == nil || *next.StillURL != "https://images.example/2.jpg" ||
+		next.SeriesPosterURL == nil || *next.SeriesPosterURL != "https://images.example/serie-b.jpg" ||
+		next.SeriesBackdropURL == nil || *next.SeriesBackdropURL != "https://images.example/fondo-b.jpg" {
+		t.Fatalf("DTO de next_up inesperado: %+v", next)
 	}
 	for _, item := range home.NextUp {
 		if item.ID == c.first {

@@ -243,11 +243,23 @@ func (s *Scanner) enrichSeriesTMDB(ctx context.Context, seriesID int64, res *Res
 
 	canUpdate := source.Valid && source.String == "tmdb" &&
 		tmdbID.Valid && tmdbID.Int64 > 0
+	identified := matchStatus.Valid && matchStatus.String != "none"
+	autoMatched := matchStatus.Valid && matchStatus.String == "auto"
 
-	// El relleno de créditos va antes de cualquier salida por serie ya
-	// identificada: si faltan, hay que pedir la ficha aunque sus temporadas
-	// estén completas.
-	if matchStatus.Valid && matchStatus.String != "none" && canUpdate && !credits.Valid {
+	missingPosters := []int{}
+	if canUpdate && autoMatched {
+		var posterErr error
+		missingPosters, posterErr = seriesSeasonMissingPosters(ctx, s.db, seriesID)
+		if posterErr != nil {
+			res.Warnings = append(res.Warnings,
+				fmt.Sprintf("%s: no se pudieron comprobar las carátulas de temporada: %v", title, posterErr))
+			missingPosters = nil
+		}
+	}
+
+	// Créditos y carátulas de temporada se rellenan con una sola petición a
+	// TVDetails, aunque los episodios ya estén completos.
+	if canUpdate && identified && (!credits.Valid || len(missingPosters) > 0) {
 		score := 0.0
 		if matchScore.Valid {
 			score = matchScore.Float64
@@ -257,14 +269,27 @@ func (s *Scanner) enrichSeriesTMDB(ctx context.Context, seriesID int64, res *Res
 			res.Warnings = append(res.Warnings, fmt.Sprintf("%s: no se pudo obtener la ficha: %v", title, err))
 			return
 		}
-		if err := ApplyTVDetails(ctx, s.db, seriesID, details, matchStatus.String, score); err != nil {
-			res.Warnings = append(res.Warnings, fmt.Sprintf("%s: no se pudieron guardar los metadatos: %v", title, err))
-			return
-		}
-		if !matchScore.Valid {
-			if _, err := s.db.ExecContext(ctx,
-				`UPDATE series SET match_score = NULL WHERE id = ?`, seriesID); err != nil {
+		if !credits.Valid {
+			if err := ApplyTVDetails(ctx, s.db, seriesID, details, matchStatus.String, score); err != nil {
 				res.Warnings = append(res.Warnings, fmt.Sprintf("%s: no se pudieron guardar los metadatos: %v", title, err))
+				return
+			}
+			if !matchScore.Valid {
+				if _, err := s.db.ExecContext(ctx,
+					`UPDATE series SET match_score = NULL WHERE id = ?`, seriesID); err != nil {
+					res.Warnings = append(res.Warnings, fmt.Sprintf("%s: no se pudieron guardar los metadatos: %v", title, err))
+				}
+			}
+		}
+		for _, number := range missingPosters {
+			poster := details.SeasonPosters[number]
+			// La cadena vacía marca que TMDB ya se consultó y no tiene cartel.
+			if _, err := s.db.ExecContext(ctx, `
+				UPDATE series_seasons SET poster_url = ?
+				 WHERE series_id = ? AND season = ? AND poster_url IS NULL`,
+				poster, seriesID, number); err != nil {
+				res.Warnings = append(res.Warnings,
+					fmt.Sprintf("%s: no se pudo guardar la carátula de la temporada %d: %v", title, number, err))
 			}
 		}
 	}
@@ -371,6 +396,34 @@ func (s *Scanner) enrichSeriesSeasons(ctx context.Context, seriesID, tmdbID int6
 	}
 }
 
+func seriesSeasonMissingPosters(ctx context.Context, db *sql.DB, seriesID int64) ([]int, error) {
+	rows, err := db.QueryContext(ctx, `
+		SELECT DISTINCT mi.season
+		  FROM media_items mi
+		  LEFT JOIN series_seasons ss
+		    ON ss.series_id = mi.series_id AND ss.season = mi.season
+		 WHERE mi.series_id = ? AND mi.season IS NOT NULL
+		   AND ss.poster_url IS NULL
+		 ORDER BY mi.season`, seriesID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var numbers []int
+	for rows.Next() {
+		var number int
+		if err := rows.Scan(&number); err != nil {
+			return nil, err
+		}
+		numbers = append(numbers, number)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return numbers, nil
+}
+
 type seasonNeed struct {
 	number        int
 	missingRow    bool
@@ -427,7 +480,7 @@ func applySeasonDetails(ctx context.Context, db *sql.DB, seriesID int64, seasonN
 			overview = excluded.overview,
 			poster_url = excluded.poster_url`,
 		seriesID, seasonNumber, nullableText(season.Name), nullableText(season.Overview),
-		nullableText(season.PosterURL),
+		season.PosterURL,
 	); err != nil {
 		return fmt.Errorf("library: guardar la temporada %d de la serie %d: %w", seasonNumber, seriesID, err)
 	}

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { MediaItem } from './api';
 import {
+	episodeCardSubtitle,
+	episodeImageURL,
 	episodeNeighbors,
 	formatAudioChannels,
 	formatBitrate,
@@ -278,5 +280,21 @@ describe('formatos del panel de archivo', () => {
 		expect(formatDateTime('2026-10-26T10:00:00Z')).toContain('2026');
 		expect(formatDateTime('fecha inválida')).toBe('fecha inválida');
 		expect(formatDateTime(null)).toBe('');
+	});
+
+	it('elige la imagen y el pie de una tarjeta de episodio', () => {
+		const item = episodeItem(1, 2, 3);
+		expect(episodeImageURL(item)).toBeNull();
+		expect(episodeImageURL({ ...item, series_poster_url: 'serie.jpg' })).toBe('serie.jpg');
+		expect(
+			episodeImageURL({
+				...item,
+				still_url: 'still.jpg',
+				series_backdrop_url: 'fondo.jpg'
+			})
+		).toBe('still.jpg');
+		expect(
+			episodeCardSubtitle({ ...item, series_title: 'The Big Bang Theory' })
+		).toBe('The Big Bang Theory · T2 E3');
 	});
 });

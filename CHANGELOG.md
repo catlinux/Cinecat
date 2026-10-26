@@ -9,8 +9,15 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ### Cambiado
 
+- Reparto y equipo: primero los actores y después dirección, guion, producción, etc.
+- «Más como este» pasa al final de la ficha (tras temporadas y episodios en series).
 - Menú lateral más estrecho y pegado al borde, contenido a más ancho y con menos margen; tarjetas de la administración alineadas y de igual tamaño.
 - Los ajustes «Columnas de los listados» (`ui.grid_columns`) y «Filas por página» (`ui.grid_rows`) sustituyen a `ui.page_size`: el número de resultados por página es columnas × filas. Nuevo `ui.row_columns` para las carátulas visibles por fila en el portal (6 por defecto).
+
+### Añadido
+
+- Carátulas de temporada en el selector y la cabecera de cada temporada de la ficha de serie (con la de la serie como respaldo); el siguiente escaneo las rellena sin reconsultar episodios.
+- Tarjetas de episodio del portal con fotograma (o cartel de la serie) y el nombre de la serie.
 
 ## [0.14.0] - 2026-10-26
 

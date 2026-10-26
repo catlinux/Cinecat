@@ -22,7 +22,7 @@
 	<RowScroller {title} {kicker} {href}>
 		{#snippet children()}
 			{#each items as item (item.id)}
-				<li>
+				<li class:row-wide={item.kind === 'episode'}>
 					<PosterCard {item} posterUrl={item.poster_url} />
 				</li>
 			{/each}

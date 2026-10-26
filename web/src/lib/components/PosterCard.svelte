@@ -1,6 +1,11 @@
 <script lang="ts">
 	import type { MediaItem } from '$lib/api';
-	import { itemSubtitle, kindLabel } from '$lib/media';
+	import {
+		episodeCardSubtitle,
+		episodeImageURL,
+		itemSubtitle,
+		kindLabel
+	} from '$lib/media';
 	import { posterColors } from '$lib/poster-color';
 	import {
 		episodeProgressSubtitle,
@@ -29,44 +34,88 @@
 			? episodeProgressSubtitle(item) || itemSubtitle(item)
 			: itemSubtitle(item)
 	);
+	const isEpisode = $derived(item.kind === 'episode');
+	const artwork = $derived(isEpisode ? episodeImageURL(item) : posterUrl);
+	const episodeSubtitle = $derived(isEpisode ? episodeCardSubtitle(item) : '');
 </script>
 
-<a
-	class="poster-card"
-	href={`/items/${item.id}`}
-	style={`--poster-a: ${colors.from}; --poster-b: ${colors.to};`}
->
-	<div class="poster-frame">
-		{#if posterUrl}
-			<img class="poster-image" src={posterUrl} alt={`Cartel de ${item.title}`} loading="lazy" />
-		{:else}
-			<div class="poster-fallback">
-				<span class="poster-title">{item.title}</span>
-			</div>
-		{/if}
-		<span class="poster-kind">{kindLabel(item.kind)}</span>
-		{#if item.watched}
-			<span class="poster-watched">Visto</span>
-		{/if}
-		{#if progress && progressValue > 0}
-			<div
-				class="poster-progress"
-				role="progressbar"
-				aria-label={`Progreso de ${item.title}`}
-				aria-valuemin="0"
-				aria-valuemax="100"
-				aria-valuenow={progressValue}
-			>
-				<span style={`width: ${progressValue}%`}></span>
-			</div>
-		{/if}
-	</div>
+{#if isEpisode}
+	<a
+		class="episode-card"
+		href={`/items/${item.id}`}
+		style={`--poster-a: ${colors.from}; --poster-b: ${colors.to};`}
+	>
+		<div class="episode-frame">
+			{#if artwork}
+				<img src={artwork} alt="" loading="lazy" />
+			{:else}
+				<div class="episode-fallback">
+					<span>{item.title}</span>
+				</div>
+			{/if}
+			<span class="episode-kind">EPISODIO</span>
+			{#if item.watched}
+				<span class="poster-watched">Visto</span>
+			{/if}
+			{#if progress && progressValue > 0}
+				<div
+					class="poster-progress"
+					role="progressbar"
+					aria-label={`Progreso de ${item.title}`}
+					aria-valuemin="0"
+					aria-valuemax="100"
+					aria-valuenow={progressValue}
+				>
+					<span style={`width: ${progressValue}%`}></span>
+				</div>
+			{/if}
+		</div>
+		<div class="episode-caption">
+			<h2>{item.episode_title || item.title}</h2>
+			{#if episodeSubtitle}<p>{episodeSubtitle}</p>{/if}
+			{#if progressText}
+				<p class="poster-continues">{progressText}</p>
+			{/if}
+		</div>
+	</a>
+{:else}
+	<a
+		class="poster-card"
+		href={`/items/${item.id}`}
+		style={`--poster-a: ${colors.from}; --poster-b: ${colors.to};`}
+	>
+		<div class="poster-frame">
+			{#if posterUrl}
+				<img class="poster-image" src={posterUrl} alt={`Cartel de ${item.title}`} loading="lazy" />
+			{:else}
+				<div class="poster-fallback">
+					<span class="poster-title">{item.title}</span>
+				</div>
+			{/if}
+			<span class="poster-kind">{kindLabel(item.kind)}</span>
+			{#if item.watched}
+				<span class="poster-watched">Visto</span>
+			{/if}
+			{#if progress && progressValue > 0}
+				<div
+					class="poster-progress"
+					role="progressbar"
+					aria-label={`Progreso de ${item.title}`}
+					aria-valuemin="0"
+					aria-valuemax="100"
+					aria-valuenow={progressValue}
+				>
+					<span style={`width: ${progressValue}%`}></span>
+				</div>
+			{/if}
+		</div>
 
-	<div class="poster-caption">
-		<h2>{item.title}</h2>
-		<p>{caption}</p>
-		{#if progressText}
-			<p class="poster-continues">{progressText}</p>
-		{/if}
-	</div>
-</a>
+		<div class="poster-caption">
+			<h2>{item.title}</h2>
+			<p>{caption}</p>
+			{#if progressText}
+				<p class="poster-continues">{progressText}</p>
+			{/if}
+		</div>
+	</a>
+{/if}

@@ -202,6 +202,12 @@
 			);
 		scroll-snap-align: start;
 	}
+	.row-track > :global(li.row-wide) {
+		flex-basis: calc(
+			2 * ((100% - (var(--row-cols, 6) - 1) * var(--row-gap)) / var(--row-cols, 6)) +
+				var(--row-gap)
+		);
+	}
 	.row-track > :global(li.row-fixed) {
 		flex-basis: 7.5rem;
 	}

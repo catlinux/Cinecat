@@ -6,6 +6,7 @@
 	import ImagePanel from '$lib/components/ImagePanel.svelte';
 	import MatchDialog from '$lib/components/MatchDialog.svelte';
 	import RowScroller from '$lib/components/RowScroller.svelte';
+	import SeasonTabs from '$lib/components/SeasonTabs.svelte';
 	import SeriesCard from '$lib/components/SeriesCard.svelte';
 	import { formatGenres, formatRating, overviewInSpanish } from '$lib/media';
 	import { posterColors } from '$lib/poster-color';
@@ -75,6 +76,9 @@
 		series.seasons.find((season) => season.season === data.selectedSeason) ?? null
 	);
 	const currentSeasonWatched = $derived(currentSeason ? seasonWatched(currentSeason) : false);
+	const currentSeasonPoster = $derived(
+		data.season?.poster_url || series.poster_url || null
+	);
 </script>
 
 <svelte:head>
@@ -176,77 +180,33 @@
 		{/if}
 
 		<CastRow credits={series.credits} cast={series.cast} directors={series.directors} />
-
-		{#if data.isAdmin}
-			<ImagePanel
-				item={series}
-				kind="series"
-				open={imagePanelOpen}
-				{imageOptions}
-				{imageListKind}
-			/>
-			<MatchDialog
-				item={series}
-				kind="series"
-				defaultQuery={series.folder}
-				{candidates}
-				{search}
-				open={panelOpen}
-			/>
-		{/if}
 	</div>
 </section>
 
-{#if similarSeries}
-	{#if Array.isArray(similarSeries)}
-		{@const similar = similarSeries as Series[]}
-		{#if similar.length > 0}
-			<RowScroller title="Más como este">
-				{#snippet children()}
-					{#each similar as similarSerie (similarSerie.id)}
-						<li><SeriesCard series={similarSerie} /></li>
-					{/each}
-				{/snippet}
-			</RowScroller>
-		{/if}
-	{:else}
-		{#await similarSeries then similar}
-			{#if similar.length > 0}
-				<RowScroller title="Más como este">
-					{#snippet children()}
-						{#each similar as similarSerie (similarSerie.id)}
-							<li><SeriesCard series={similarSerie} /></li>
-						{/each}
-					{/snippet}
-				</RowScroller>
-			{/if}
-		{/await}
-	{/if}
-{/if}
-
 {#if series.seasons.length > 0}
-	<nav class="season-tabs" aria-label="Temporadas">
-		{#each series.seasons as season (season.season)}
-			<a
-				class="season-tab"
-				class:season-tab-active={season.season === data.selectedSeason}
-				href={`?season=${season.season}`}
-				aria-current={season.season === data.selectedSeason ? 'page' : undefined}
-			>
-				Temporada {season.season} · {season.watched_count}/{season.episode_count} vistos
-			</a>
-		{/each}
-	</nav>
+	<SeasonTabs
+		seasons={series.seasons}
+		activeSeason={data.selectedSeason}
+		seriesPoster={series.poster_url}
+		seriesTitle={series.title}
+	/>
 
 	{#if data.season}
 		<section class="season-panel">
 			<div class="season-head">
-				<div>
-					<p class="kicker">Temporada {data.season.season}</p>
-					<h2>{data.season.name}</h2>
-					{#if data.season.overview}
-						<p class="season-overview">{data.season.overview}</p>
+				<div class="season-summary">
+					{#if currentSeasonPoster}
+						<div class="season-poster">
+							<img src={currentSeasonPoster} alt="" loading="lazy" />
+						</div>
 					{/if}
+					<div>
+						<p class="kicker">Temporada {data.season.season}</p>
+						<h2>{data.season.name}</h2>
+						{#if data.season.overview}
+							<p class="season-overview">{data.season.overview}</p>
+						{/if}
+					</div>
 				</div>
 				<form method="POST" action="?/watchedSeason" use:enhance>
 					<input type="hidden" name="season" value={data.season.season} />
@@ -280,4 +240,51 @@
 		<h2>Esta serie todavía no tiene episodios</h2>
 		<p>Cuando el escáner encuentre archivos, aparecerán aquí.</p>
 	</div>
+{/if}
+
+{#if similarSeries}
+	{#if Array.isArray(similarSeries)}
+		{@const similar = similarSeries as Series[]}
+		{#if similar.length > 0}
+			<RowScroller title="Más como este">
+				{#snippet children()}
+					{#each similar as similarSerie (similarSerie.id)}
+						<li><SeriesCard series={similarSerie} /></li>
+					{/each}
+				{/snippet}
+			</RowScroller>
+		{/if}
+	{:else}
+		{#await similarSeries then similar}
+			{#if similar.length > 0}
+				<RowScroller title="Más como este">
+					{#snippet children()}
+						{#each similar as similarSerie (similarSerie.id)}
+							<li><SeriesCard series={similarSerie} /></li>
+						{/each}
+					{/snippet}
+				</RowScroller>
+			{/if}
+		{/await}
+	{/if}
+{/if}
+
+{#if data.isAdmin}
+	<section class="admin-series-panels">
+		<ImagePanel
+			item={series}
+			kind="series"
+			open={imagePanelOpen}
+			{imageOptions}
+			{imageListKind}
+		/>
+		<MatchDialog
+			item={series}
+			kind="series"
+			defaultQuery={series.folder}
+			{candidates}
+			{search}
+			open={panelOpen}
+		/>
+	</section>
 {/if}

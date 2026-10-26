@@ -23,7 +23,7 @@ const credits: Credits = {
 };
 
 describe('reparto y equipo', () => {
-	it('pone primero el equipo, traduce los oficios y enlaza las fotos', () => {
+	it('pone primero el reparto y después el equipo traducido', () => {
 		const body = renderRow({ credits });
 
 		expect(body).toContain('Reparto y equipo');
@@ -38,7 +38,8 @@ describe('reparto y equipo', () => {
 		expect(body).toContain('alt="Ana Directora"');
 		expect(body).toContain('loading="lazy"');
 		expect(body).toContain('class="row-fixed"');
-		expect(body.indexOf('Ana Directora')).toBeLessThan(body.indexOf('Mara Sol'));
+		expect(body.indexOf('Mara Sol')).toBeLessThan(body.indexOf('Ana Directora'));
+		expect(body.indexOf('Ana Directora')).toBeLessThan(body.indexOf('Luis Guionista'));
 	});
 
 	it('usa iniciales cuando no hay foto y omite el personaje vacío', () => {
@@ -62,6 +63,7 @@ describe('reparto y equipo', () => {
 		expect(body).toContain('Ana Directora');
 		expect(body).toContain('Marlon Brando');
 		expect(body).toContain('>MB<');
+		expect(body.indexOf('Marlon Brando')).toBeLessThan(body.indexOf('Ana Directora'));
 	});
 
 	it('mantiene los nombres de respaldo si todavía no hay créditos', () => {
@@ -75,6 +77,7 @@ describe('reparto y equipo', () => {
 		expect(body).toContain('Dirección');
 		expect(body).toContain('Marlon Brando');
 		expect(body).toContain('>MB<');
+		expect(body.indexOf('Marlon Brando')).toBeLessThan(body.indexOf('Francis Ford Coppola'));
 	});
 
 	it('no dibuja la fila si no hay nadie que mostrar', () => {

@@ -92,6 +92,8 @@ export interface MediaItem {
 	series_title: string | null;
 	episode_title: string | null;
 	still_url: string | null;
+	series_poster_url?: string | null;
+	series_backdrop_url?: string | null;
 }
 
 export type CollectionSource = 'tmdb' | 'manual';

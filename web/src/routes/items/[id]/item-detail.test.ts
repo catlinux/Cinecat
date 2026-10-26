@@ -171,7 +171,7 @@ describe('ficha de película', () => {
 		expect(body).toContain('target="_blank"');
 		expect(body).toContain('https://images.example/backdrop.jpg');
 
-		expect(body.indexOf('Francis Ford Coppola')).toBeLessThan(body.indexOf('Actor 1'));
+		expect(body.indexOf('Actor 1')).toBeLessThan(body.indexOf('Francis Ford Coppola'));
 	});
 
 	it('no avisa del idioma si la sinopsis está en castellano', () => {
@@ -180,12 +180,19 @@ describe('ficha de película', () => {
 		expect(body).not.toContain('Sinopsis no disponible en castellano');
 	});
 
-	it('muestra «Más como este» solo cuando hay películas similares', () => {
+	it('muestra «Más como este» al final, antes de los paneles de administración', () => {
 		const withSimilar = renderPage(makeItem(), {
+			isAdmin: true,
 			similarItems: [makeItem({ id: 8, title: 'El padrino II', poster_url: null })]
 		});
 		expect(withSimilar).toContain('Más como este');
 		expect(withSimilar).toContain('El padrino II');
+		const similarAt = withSimilar.indexOf('Más como este');
+		expect(withSimilar.indexOf('Reparto y equipo')).toBeLessThan(similarAt);
+		expect(withSimilar.indexOf('Enlaces')).toBeLessThan(similarAt);
+		expect(withSimilar.indexOf('Archivo')).toBeLessThan(similarAt);
+		expect(similarAt).toBeLessThan(withSimilar.indexOf('Cambiar imagen'));
+		expect(similarAt).toBeLessThan(withSimilar.indexOf('Corregir ficha'));
 
 		const withoutSimilar = renderPage(makeItem(), { similarItems: [] });
 		expect(withoutSimilar).not.toContain('Más como este');
@@ -276,6 +283,7 @@ describe('ficha de película', () => {
 				episode: 3,
 				title: 'El episodio',
 				original_title: 'The Episode',
+				still_url: 'https://images.example/episodio.jpg',
 				directors: ['Una directora'],
 				cast: ['Un actor']
 			})
@@ -283,6 +291,8 @@ describe('ficha de película', () => {
 
 		expect(body).toContain('Temporada 2, episodio 3');
 		expect(body).toContain('T2E3');
+		expect(body).toContain('episode-hero');
+		expect(body).toContain('https://images.example/episodio.jpg');
 		expect(body).toContain('Reparto y equipo');
 		expect(body).toContain('Una directora');
 		expect(body).toContain('Un actor');

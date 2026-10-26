@@ -517,7 +517,8 @@ paths:
         Devuelve «continuar viendo», «añadido recientemente» y contadores del
         catálogo. `continue` incluye películas y episodios con progreso del
         usuario, ordenados por la última actualización y limitados a 20.
-        `next_up` queda vacío hasta que existan las series como entidad.
+        `next_up` incluye el siguiente episodio por ver de cada serie, con el
+        nombre de la serie, el fotograma y los carteles de la serie.
         `recent_movies` son las 20 últimas películas añadidas.
       security:
         - bearerAuth: []
@@ -4250,6 +4251,8 @@ components:
         - series_title
         - episode_title
         - still_url
+        - series_poster_url
+        - series_backdrop_url
       properties:
         id:
           type: integer
@@ -4377,6 +4380,14 @@ components:
         still_url:
           type: string
           nullable: true
+        series_poster_url:
+          type: string
+          nullable: true
+          description: Cartel de la serie del episodio, para las tarjetas de episodio.
+        series_backdrop_url:
+          type: string
+          nullable: true
+          description: Fondo de la serie del episodio, para las tarjetas de episodio.
       additionalProperties: false
     ItemsResponse:
       type: object

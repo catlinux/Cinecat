@@ -89,7 +89,7 @@ describe('PosterCard', () => {
 		expect(body).toContain('Continúas por 1 h 12 min');
 	});
 
-	it('en episodios con progreso indica la serie y el capítulo', () => {
+	it('en episodios con progreso indica la serie real y el capítulo', () => {
 		const { body } = render(PosterCard, {
 			props: {
 				item: {
@@ -97,6 +97,7 @@ describe('PosterCard', () => {
 					kind: 'episode',
 					season: 2,
 					episode: 5,
+					series_title: 'The Big Bang Theory',
 					progress: {
 						position_seconds: 300,
 						duration_seconds: 1800,
@@ -106,7 +107,52 @@ describe('PosterCard', () => {
 			}
 		});
 
-		expect(body).toContain('Serie · T2 E5');
+		expect(body).toContain('The Big Bang Theory · T2 E5');
+	});
+
+	it('usa el fotograma apaisado y la etiqueta de episodio', () => {
+		const { body } = render(PosterCard, {
+			props: {
+				item: {
+					...item,
+					kind: 'episode',
+					season: 1,
+					episode: 1,
+					series_title: 'The Big Bang Theory',
+					still_url: 'https://images.example/still.jpg'
+				}
+			}
+		});
+
+		expect(body).toContain('episode-card');
+		expect(body).toContain('episode-frame');
+		expect(body).toContain('src="https://images.example/still.jpg"');
+		expect(body).toContain('alt=""');
+		expect(body).toContain('EPISODIO');
+		expect(body).toContain('The Big Bang Theory · T1 E1');
+	});
+
+	it('cae al cartel de la serie y después al respaldo', () => {
+		const withSeriesArt = render(PosterCard, {
+			props: {
+				item: {
+					...item,
+					kind: 'episode',
+					season: 1,
+					episode: 1,
+					series_poster_url: 'https://images.example/serie.jpg'
+				}
+			}
+		}).body;
+		expect(withSeriesArt).toContain('src="https://images.example/serie.jpg"');
+
+		const withoutArt = render(PosterCard, {
+			props: {
+				item: { ...item, kind: 'episode', season: 1, episode: 1 }
+			}
+		}).body;
+		expect(withoutArt).toContain('episode-fallback');
+		expect(withoutArt).toContain('Matrix');
 	});
 
 	it('usa la misma paleta en cada render para el mismo título', () => {

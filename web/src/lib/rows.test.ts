@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { jobLabel, personInitials, rowScrollState } from './rows';
+import { creditRows, crewPriority, jobLabel, personInitials, rowScrollState } from './rows';
 
 describe('estado de desplazamiento de una fila', () => {
 	it('calcula los extremos y una página de avance', () => {
@@ -37,6 +37,52 @@ describe('estado de desplazamiento de una fila', () => {
 		expect(state.canPrev).toBe(false);
 		const end = rowScrollState(899, 900, 1800);
 		expect(end.canNext).toBe(false);
+	});
+});
+
+describe('orden del reparto y del equipo', () => {
+	it('pone primero el reparto y ordena el equipo por importancia', () => {
+		const rows = creditRows(
+			{
+				cast: [
+					{ name: 'Protagonista', character: 'Heroína', photo_url: 'https://images.example/p.jpg' }
+				],
+				crew: [
+					{ name: 'Productora', job: 'Producer', photo_url: '' },
+					{ name: 'Directora', job: 'Director', photo_url: '' },
+					{ name: 'Guionista', job: 'Writer', photo_url: '' },
+					{ name: 'Montadora', job: 'Editor', photo_url: '' },
+					{ name: 'Creadora', job: 'Creator', photo_url: '' },
+					{ name: 'Extra', job: 'Gaffer', photo_url: '' }
+				]
+			},
+			[],
+			[]
+		);
+		expect(rows.map((row) => row.name)).toEqual([
+			'Protagonista',
+			'Directora',
+			'Guionista',
+			'Productora',
+			'Montadora',
+			'Creadora',
+			'Extra'
+		]);
+		expect(rows[0].subtitle).toBe('como Heroína');
+		expect(rows[1].subtitle).toBe('Dirección');
+	});
+
+	it('con nombres de respaldo pone el reparto antes que la dirección', () => {
+		const rows = creditRows(null, ['Actor', 'Actriz'], ['Director']);
+		expect(rows.map((row) => row.name)).toEqual(['Actor', 'Actriz', 'Director']);
+		expect(rows[2].subtitle).toBe('Dirección');
+	});
+
+	it('asigna prioridad a los oficios conocidos', () => {
+		expect(crewPriority('Director')).toBeLessThan(crewPriority('Writer'));
+		expect(crewPriority('Writer')).toBeLessThan(crewPriority('Producer'));
+		expect(crewPriority('Editor')).toBeLessThan(crewPriority('Creator'));
+		expect(crewPriority('Creator')).toBeLessThan(crewPriority('Gaffer'));
 	});
 });
 

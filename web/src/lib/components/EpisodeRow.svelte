@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import type { MediaItem } from '$lib/api';
-	import { formatRuntime, truncateSynopsis } from '$lib/media';
+	import { episodeImageURL, formatRuntime, truncateSynopsis } from '$lib/media';
 	import { formatEpisodeHeading } from '$lib/series';
 	import { formatProgressTime, progressPercent } from '$lib/progress';
 	import { posterColors } from '$lib/poster-color';
@@ -24,12 +24,13 @@
 	const hasLongOverview = $derived(
 		Boolean(item.overview) && shortOverview !== item.overview?.replace(/\s+/g, ' ').trim()
 	);
+	const artwork = $derived(episodeImageURL(item));
 </script>
 
 <article class="episode-row" class:episode-watched={item.watched}>
 	<a class="episode-still" href={`/items/${item.id}`} aria-label={`Ficha de ${item.title}`}>
-		{#if item.still_url}
-			<img src={item.still_url} alt={`Fotograma de ${item.title}`} loading="lazy" />
+		{#if artwork}
+			<img src={artwork} alt="" loading="lazy" />
 		{:else}
 			<div
 				class="episode-fallback"

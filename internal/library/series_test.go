@@ -613,6 +613,84 @@ func TestScannerRellenaCreditsSeriesAntiguas(t *testing.T) {
 	}
 }
 
+func TestScannerRellenaPosterTemporadasSinPedirEpisodios(t *testing.T) {
+	ctx := context.Background()
+	db := openTestDB(t)
+	root := t.TempDir()
+	path := filepath.Join(root, "Serie", "Temporada 1", "1x01.mkv")
+	writeFile(t, path)
+	createLibrary(t, db, root)
+
+	if _, err := New(db).Scan(ctx); err != nil {
+		t.Fatalf("primer Scan: %v", err)
+	}
+	var seriesID int64
+	if err := db.QueryRow(`SELECT id FROM series WHERE folder = 'Serie'`).Scan(&seriesID); err != nil {
+		t.Fatalf("leer serie: %v", err)
+	}
+	if _, err := db.Exec(`
+		UPDATE series
+		   SET tmdb_id = 7, metadata_source = 'tmdb', match_status = 'auto',
+		       display_title = 'Serie', match_score = 0.8,
+		       credits = '{"cast":[],"crew":[]}'
+		 WHERE id = ?`, seriesID); err != nil {
+		t.Fatalf("preparar serie antigua: %v", err)
+	}
+	if _, err := db.Exec(`
+		INSERT INTO series_seasons (series_id, season, name) VALUES (?, 1, 'Temporada 1')`,
+		seriesID); err != nil {
+		t.Fatalf("crear temporada sin cartel: %v", err)
+	}
+	if _, err := db.Exec(`
+		UPDATE media_items SET episode_title = 'Episodio' WHERE series_id = ?`, seriesID); err != nil {
+		t.Fatalf("completar episodio: %v", err)
+	}
+
+	fake := &fakeTMDB{
+		tvDetails: &metadata.Details{
+			TMDBID: 7, Title: "Serie",
+			SeasonPosters: map[int]string{1: "https://images.example/t1.jpg"},
+		},
+	}
+	res, err := New(db).WithTMDB(fake).Scan(ctx)
+	if err != nil {
+		t.Fatalf("segundo Scan: %v", err)
+	}
+	if res.Identified != 0 || res.SeriesIdentified != 0 {
+		t.Fatalf("el relleno no debe contar: %+v", res)
+	}
+	if fake.tvSearchCalls != 0 || fake.tvDetailsCalls != 1 || fake.seasonCalls != 0 {
+		t.Fatalf("peticiones del relleno: %d, %d, %d",
+			fake.tvSearchCalls, fake.tvDetailsCalls, fake.seasonCalls)
+	}
+
+	var poster sql.NullString
+	var status string
+	var score sql.NullFloat64
+	if err := db.QueryRow(`
+		SELECT ss.poster_url, s.match_status, s.match_score
+		  FROM series_seasons ss JOIN series s ON s.id = ss.series_id
+		 WHERE ss.series_id = ? AND ss.season = 1`, seriesID).
+		Scan(&poster, &status, &score); err != nil {
+		t.Fatalf("leer temporada rellenada: %v", err)
+	}
+	if !poster.Valid || poster.String != "https://images.example/t1.jpg" ||
+		status != "auto" || !score.Valid || score.Float64 != 0.8 {
+		t.Fatalf("temporada rellenada inesperada: %+v %q %+v", poster, status, score)
+	}
+
+	fake.tvSearchCalls = 0
+	fake.tvDetailsCalls = 0
+	fake.seasonCalls = 0
+	if _, err := New(db).WithTMDB(fake).Scan(ctx); err != nil {
+		t.Fatalf("tercer Scan: %v", err)
+	}
+	if fake.tvSearchCalls != 0 || fake.tvDetailsCalls != 0 || fake.seasonCalls != 0 {
+		t.Fatalf("el tercer escaneo no debe pedir TMDB: %d, %d, %d",
+			fake.tvSearchCalls, fake.tvDetailsCalls, fake.seasonCalls)
+	}
+}
+
 func TestApplyTVDetailsGuardaYClearCredits(t *testing.T) {
 	ctx := context.Background()
 	db := openTestDB(t)

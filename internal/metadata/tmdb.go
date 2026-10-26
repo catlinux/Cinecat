@@ -124,6 +124,8 @@ type Details struct {
 	PosterURL        string         `json:"poster_url"`
 	BackdropURL      string         `json:"backdrop_url"`
 	Collection       *CollectionRef `json:"collection,omitempty"`
+	// SeasonPosters asocia el número de temporada con su carátula de TMDB.
+	SeasonPosters map[int]string `json:"-"`
 }
 
 // Episode es la ficha de un episodio concreto.
@@ -516,6 +518,10 @@ type tvDetailsResponse struct {
 	Images       imagesResponse  `json:"images"`
 	PosterPath   string          `json:"poster_path"`
 	BackdropPath string          `json:"backdrop_path"`
+	Seasons      []struct {
+		SeasonNumber int    `json:"season_number"`
+		PosterPath   string `json:"poster_path"`
+	} `json:"seasons"`
 }
 
 type episodeDetailsResponse struct {
@@ -835,6 +841,12 @@ func (c *Client) TVDetails(ctx context.Context, id int) (*Details, error) {
 		Credits:        c.credits(response.Credits.Cast, response.Credits.Crew, response.CreatedBy),
 		PosterURL:      c.posterURL(response.Images.Posters, response.PosterPath),
 		BackdropURL:    c.imageURLSize(response.BackdropPath, "w1280"),
+		SeasonPosters:  make(map[int]string),
+	}
+	for _, season := range response.Seasons {
+		if season.SeasonNumber > 0 && season.PosterPath != "" {
+			details.SeasonPosters[season.SeasonNumber] = c.imageURLSize(season.PosterPath, "w342")
+		}
 	}
 	if details.Overview != "" {
 		details.OverviewLanguage = c.languageCode()

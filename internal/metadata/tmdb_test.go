@@ -1087,6 +1087,10 @@ func TestTVDetails(t *testing.T) {
 		"images":        map[string]any{"posters": []map[string]any{}},
 		"poster_path":   "/got.jpg",
 		"backdrop_path": "/got-backdrop.jpg",
+		"seasons": []map[string]any{
+			{"season_number": 1, "poster_path": "/t1.jpg"},
+			{"season_number": 2, "poster_path": ""},
+		},
 	}))
 	client := newAPIClient(t, api, t.TempDir(), nil, "clave-de-prueba")
 
@@ -1111,6 +1115,12 @@ func TestTVDetails(t *testing.T) {
 	}
 	if details.BackdropURL != api.URL+"/img/w1280/got-backdrop.jpg" {
 		t.Fatalf("BackdropURL = %q", details.BackdropURL)
+	}
+	if details.SeasonPosters[1] != api.URL+"/img/w342/t1.jpg" {
+		t.Fatalf("carátula de temporada = %q", details.SeasonPosters[1])
+	}
+	if _, ok := details.SeasonPosters[2]; ok {
+		t.Fatalf("una temporada sin cartel no debe guardarse: %+v", details.SeasonPosters)
 	}
 }
 

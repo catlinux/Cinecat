@@ -30,6 +30,27 @@ export function itemSubtitle(item: MediaItem): string {
 	return parts.length > 0 ? parts.join(' · ') : 'Sin año';
 }
 
+export function episodeImageURL(item: MediaItem): string | null {
+	return (
+		item.still_url ||
+		item.series_backdrop_url ||
+		item.series_poster_url ||
+		item.poster_url ||
+		null
+	);
+}
+
+export function episodeCardSubtitle(item: MediaItem): string {
+	const parts: string[] = [];
+	if (item.series_title?.trim()) {
+		parts.push(item.series_title.trim());
+	}
+	if (item.season !== null && item.episode !== null) {
+		parts.push(`T${item.season} E${item.episode}`);
+	}
+	return parts.join(' · ');
+}
+
 export function formatRuntime(minutes: number | null): string {
 	if (minutes === null || !Number.isFinite(minutes) || minutes <= 0) {
 		return '';

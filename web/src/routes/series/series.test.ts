@@ -85,7 +85,7 @@ const season1 = {
 	season: 1,
 	name: 'Temporada 1',
 	overview: 'La primera temporada.',
-	poster_url: null,
+	poster_url: 'https://images.example/t1.jpg',
 	episode_count: 2,
 	watched_count: 1
 };
@@ -554,7 +554,11 @@ describe('render de la ficha de serie', () => {
 		expect(body).toContain('Chuck Lorre');
 		expect(body).toContain('Actor 13');
 		expect(body).toContain('https://www.themoviedb.org/tv/1418');
-		expect(body).toContain('Temporada 1 · 1/2 vistos');
+		expect(body).toContain('https://images.example/t1.jpg');
+		expect(body).toContain('season-card');
+		expect(body).toContain('1/2 vistos');
+		expect(body).toContain('season-poster');
+		expect(body).toContain('https://images.example/still-11.jpg');
 		expect(body).toContain('E1 · Piloto');
 		expect(body).toContain('E2 · Segundo');
 		expect(body).toContain('Marcar serie como vista');
@@ -563,15 +567,24 @@ describe('render de la ficha de serie', () => {
 		expect(body).toContain('Continuar');
 	});
 
-	it('muestra «Más como este» solo cuando hay series similares', () => {
+	it('muestra «Más como este» al final, después de temporadas y antes de administración', () => {
 		const similar = { ...seriesItem, id: 6, title: 'Young Sheldon' };
 		const withSimilar = render(SeriesPage, {
 			props: {
-				data: detailData({ similarSeries: [similar] }) as never
+				data: detailData({
+					similarSeries: [similar],
+					isAdmin: true,
+					corregir: true
+				}) as never
 			}
 		}).body;
 		expect(withSimilar).toContain('Más como este');
 		expect(withSimilar).toContain('Young Sheldon');
+		const similarAt = withSimilar.indexOf('Más como este');
+		expect(withSimilar.indexOf('Temporada 1')).toBeLessThan(similarAt);
+		expect(withSimilar.indexOf('E2 · Segundo')).toBeLessThan(similarAt);
+		expect(similarAt).toBeLessThan(withSimilar.indexOf('Cambiar imagen'));
+		expect(similarAt).toBeLessThan(withSimilar.indexOf('Corregir ficha'));
 
 		const withoutSimilar = render(SeriesPage, {
 			props: {
@@ -618,6 +631,22 @@ describe('render de la ficha de serie', () => {
 		});
 		expect(body).toContain('Sin identificar');
 		expect(body).toContain('Sinopsis no disponible en castellano.');
+	});
+
+	it('usa el cartel de la serie si el episodio no tiene fotograma', () => {
+		const fallback = episode(14, 1, 3, 'Sin fotograma', {
+			still_url: null,
+			series_poster_url: 'https://images.example/serie-respaldo.jpg'
+		});
+		const { body } = render(SeriesPage, {
+			props: {
+				data: detailData({
+					season: { ...seasonDetail, items: [fallback] }
+				}) as never
+			}
+		});
+		expect(body).toContain('https://images.example/serie-respaldo.jpg');
+		expect(body).toContain('episode-still');
 	});
 
 	it('representa episodios sin sinopsis y sin still', () => {

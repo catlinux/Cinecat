@@ -9,8 +9,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ### Changed
 
+- Cast and crew: actors first, then directing, writing, production, etc.
+- "More like this" moves to the bottom of the page (after seasons and episodes on series).
 - Narrower side menu pinned to the edge, wider content with smaller margins; admin cards aligned and equal in size.
 - "List columns" (`ui.grid_columns`) and "Rows per page" (`ui.grid_rows`) replace `ui.page_size`: results per page are columns × rows. New `ui.row_columns` for the posters visible per portal row (6 by default).
+
+### Added
+
+- Season posters in the season selector and in each season header on the series page (series poster as fallback); the next scan fills them in without re-fetching episodes.
+- Portal episode cards with a still (or the series poster) and the series name.
 
 ## [0.14.0] - 2026-10-26
 

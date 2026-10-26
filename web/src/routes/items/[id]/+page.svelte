@@ -18,6 +18,7 @@
 	import MatchDialog from '$lib/components/MatchDialog.svelte';
 	import PlaybackOptions from '$lib/components/PlaybackOptions.svelte';
 	import {
+		episodeImageURL,
 		formatDurationSeconds,
 		formatMovieMeta,
 		kindLabel,
@@ -103,6 +104,7 @@
 	const episodeHeading = $derived(
 		item.episode !== null ? `E${item.episode} · ${item.title}` : item.title
 	);
+	const episodeArtwork = $derived(isEpisode ? episodeImageURL(item) : null);
 	const episodeDuration = $derived(
 		Promise.resolve(fileInfo)
 			.then((result) => (result.data ? formatDurationSeconds(result.data.duration_seconds) : ''))
@@ -142,9 +144,9 @@
 	</nav>
 
 	<section class="episode-detail">
-		{#if item.still_url}
+		{#if episodeArtwork}
 			<div class="episode-hero" aria-hidden="true">
-				<img src={item.still_url} alt="" loading="lazy" />
+				<img src={episodeArtwork} alt="" loading="lazy" />
 			</div>
 		{/if}
 
@@ -348,36 +350,6 @@
 
 			{#if isMovie}
 				<ItemFacts {item} />
-				{#if similarItems}
-					{#if Array.isArray(similarItems)}
-						{@const similar = similarItems as MediaItem[]}
-						{#if similar.length > 0}
-							<RowScroller title="Más como este">
-								{#snippet children()}
-									{#each similar as similarItem (similarItem.id)}
-										<li>
-											<PosterCard item={similarItem} posterUrl={similarItem.poster_url} />
-										</li>
-									{/each}
-								{/snippet}
-							</RowScroller>
-						{/if}
-					{:else}
-						{#await similarItems then similar}
-							{#if similar && similar.length > 0}
-								<RowScroller title="Más como este">
-									{#snippet children()}
-										{#each similar as similarItem (similarItem.id)}
-											<li>
-												<PosterCard item={similarItem} posterUrl={similarItem.poster_url} />
-											</li>
-										{/each}
-									{/snippet}
-								</RowScroller>
-							{/if}
-						{/await}
-					{/if}
-				{/if}
 			{/if}
 
 			{#if item.collections.length > 0}
@@ -392,6 +364,37 @@
 			{/if}
 
 			<FilePanel result={fileInfo} />
+
+			{#if isMovie && similarItems}
+				{#if Array.isArray(similarItems)}
+					{@const similar = similarItems as MediaItem[]}
+					{#if similar.length > 0}
+						<RowScroller title="Más como este">
+							{#snippet children()}
+								{#each similar as similarItem (similarItem.id)}
+									<li>
+										<PosterCard item={similarItem} posterUrl={similarItem.poster_url} />
+									</li>
+								{/each}
+							{/snippet}
+						</RowScroller>
+					{/if}
+				{:else}
+					{#await similarItems then similar}
+						{#if similar && similar.length > 0}
+							<RowScroller title="Más como este">
+								{#snippet children()}
+									{#each similar as similarItem (similarItem.id)}
+										<li>
+											<PosterCard item={similarItem} posterUrl={similarItem.poster_url} />
+										</li>
+									{/each}
+								{/snippet}
+							</RowScroller>
+						{/if}
+					{/await}
+				{/if}
+			{/if}
 
 			{#if isMovie && data.isAdmin}
 				<ImagePanel

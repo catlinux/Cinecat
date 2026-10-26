@@ -69,6 +69,9 @@ const nextEpisode: MediaItem = {
 	kind: 'episode',
 	season: 2,
 	episode: 5,
+	series_title: 'The Big Bang Theory',
+	episode_title: 'El episodio',
+	still_url: 'https://images.example/episodio.jpg',
 	progress: {
 		position_seconds: 300,
 		duration_seconds: 1800,
@@ -340,9 +343,32 @@ describe('portal', () => {
 		});
 
 		expect(body).toContain('Siguiente episodio');
-		expect(body).toContain('Serie · T2 E5');
+		expect(body).toContain('The Big Bang Theory · T2 E5');
 		expect(body).toContain('El episodio');
 		expect(body).toContain('/items/11');
+		expect(body).toContain('episode-card');
+		expect(body).toContain('https://images.example/episodio.jpg');
+		expect(body).toContain('EPISODIO');
+		expect(body).toContain('row-wide');
+	});
+
+	it('usa el cartel de la serie y después el respaldo en el siguiente episodio', () => {
+		const withPoster = {
+			...nextEpisode,
+			still_url: null,
+			series_poster_url: 'https://images.example/serie.jpg'
+		};
+		const posterBody = render(PortalPage, {
+			props: { data: portalData({ nextUp: [withPoster] }) }
+		}).body;
+		expect(posterBody).toContain('src="https://images.example/serie.jpg"');
+
+		const withoutArt = { ...withPoster, series_poster_url: null };
+		const fallbackBody = render(PortalPage, {
+			props: { data: portalData({ nextUp: [withoutArt] }) }
+		}).body;
+		expect(fallbackBody).toContain('episode-fallback');
+		expect(fallbackBody).toContain('El episodio');
 	});
 
 	it('muestra el error de la API sin ocultar el portal', () => {
