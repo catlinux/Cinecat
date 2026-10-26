@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -48,8 +49,9 @@ func TestHealthzRechazaOtrosMetodos(t *testing.T) {
 
 type testServer struct {
 	*httptest.Server
-	db    *sql.DB
-	clock *fakeClock
+	db      *sql.DB
+	clock   *fakeClock
+	scanJob *library.ScanJob
 }
 
 type fakeClock struct {
@@ -105,10 +107,12 @@ func newTestServer(t *testing.T) *testServer {
 		}
 	})
 
-	server := httptest.NewServer(newHandler(authSvc, library.NewAPI(st.DB(), authSvc, playSvc, library.New(st.DB()))))
+	scanJob := library.NewScanJob(library.New(st.DB()))
+	t.Cleanup(scanJob.Close)
+	server := httptest.NewServer(newHandler(authSvc, library.NewAPI(st.DB(), authSvc, playSvc, scanJob)))
 	t.Cleanup(server.Close)
 
-	return &testServer{Server: server, db: st.DB(), clock: clock}
+	return &testServer{Server: server, db: st.DB(), clock: clock, scanJob: scanJob}
 }
 
 func execSQL(t *testing.T, db *sql.DB, query string, args ...any) int64 {
@@ -259,6 +263,23 @@ func doJSON(t *testing.T, method, rawURL, token string, body any) (int, []byte) 
 		t.Fatalf("leer respuesta de %s: %v", rawURL, err)
 	}
 	return resp.StatusCode, data
+}
+
+func waitLibraryScan(t *testing.T, serverURL, token string) library.ScanStatus {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		var status library.ScanStatus
+		if code := getJSON(t, serverURL+"/api/v1/libraries/scan", token, &status); code != http.StatusOK {
+			t.Fatalf("estado del escaneo: código = %d", code)
+		}
+		if !status.Running {
+			return status
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatal("el escaneo no terminó a tiempo")
+	return library.ScanStatus{}
 }
 
 func TestCrearBibliotecaAdmin(t *testing.T) {
@@ -456,23 +477,24 @@ func TestScanBibliotecasAdmin(t *testing.T) {
 	}
 
 	status, body = doJSON(t, http.MethodPost, server.URL+"/api/v1/libraries/scan", token, nil)
-	if status != http.StatusOK {
+	if status != http.StatusAccepted {
 		t.Fatalf("scan: código = %d, cuerpo = %s", status, body)
 	}
-	var result struct {
-		Libraries int      `json:"libraries"`
-		Files     int      `json:"files"`
-		Upserted  int      `json:"upserted"`
-		Warnings  []string `json:"warnings"`
+	var started struct {
+		Started bool `json:"started"`
 	}
-	if err := json.Unmarshal(body, &result); err != nil {
-		t.Fatalf("respuesta de scan: %v", err)
+	if err := json.Unmarshal(body, &started); err != nil || !started.Started {
+		t.Fatalf("respuesta de inicio de scan inesperada: %s", body)
 	}
+	result := waitLibraryScan(t, server.URL, token)
 	if result.Libraries != 1 || result.Files != 2 || result.Upserted != 2 {
 		t.Fatalf("resultado de scan inesperado: %+v", result)
 	}
 	if len(result.Warnings) != 0 {
 		t.Fatalf("avisos inesperados: %v", result.Warnings)
+	}
+	if result.Error != "" || result.FinishedAt == nil {
+		t.Fatalf("estado final de scan inesperado: %+v", result)
 	}
 
 	var items int
@@ -484,9 +506,10 @@ func TestScanBibliotecasAdmin(t *testing.T) {
 	}
 
 	// Un segundo escaneo no duplica entradas.
-	if status, body := doJSON(t, http.MethodPost, server.URL+"/api/v1/libraries/scan", token, nil); status != http.StatusOK {
+	if status, body := doJSON(t, http.MethodPost, server.URL+"/api/v1/libraries/scan", token, nil); status != http.StatusAccepted {
 		t.Fatalf("segundo scan: código = %d, cuerpo = %s", status, body)
 	}
+	waitLibraryScan(t, server.URL, token)
 	if err := server.db.QueryRow(`SELECT count(*) FROM media_items`).Scan(&items); err != nil {
 		t.Fatalf("contar ítems tras el segundo scan: %v", err)
 	}
@@ -502,7 +525,11 @@ func TestScanBibliotecasNonAdmin(t *testing.T) {
 
 	status, body := doJSON(t, http.MethodPost, server.URL+"/api/v1/libraries/scan", token, nil)
 	if status != http.StatusForbidden {
-		t.Fatalf("código = %d, se esperaba 403; cuerpo = %s", status, body)
+		t.Fatalf("POST: código = %d, se esperaba 403; cuerpo = %s", status, body)
+	}
+	status, body = doJSON(t, http.MethodGet, server.URL+"/api/v1/libraries/scan", token, nil)
+	if status != http.StatusForbidden {
+		t.Fatalf("GET: código = %d, se esperaba 403; cuerpo = %s", status, body)
 	}
 }
 
@@ -511,7 +538,70 @@ func TestScanBibliotecasSinSesion(t *testing.T) {
 
 	status, body := doJSON(t, http.MethodPost, server.URL+"/api/v1/libraries/scan", "", nil)
 	if status != http.StatusUnauthorized {
-		t.Fatalf("código = %d, se esperaba 401; cuerpo = %s", status, body)
+		t.Fatalf("POST: código = %d, se esperaba 401; cuerpo = %s", status, body)
+	}
+	status, body = doJSON(t, http.MethodGet, server.URL+"/api/v1/libraries/scan", "", nil)
+	if status != http.StatusUnauthorized {
+		t.Fatalf("GET: código = %d, se esperaba 401; cuerpo = %s", status, body)
+	}
+}
+
+type fakeScanStarter struct {
+	calls atomic.Int32
+}
+
+func (f *fakeScanStarter) Start(ctx context.Context) bool {
+	f.calls.Add(1)
+	return true
+}
+
+func TestScheduleScans(t *testing.T) {
+	var job fakeScanStarter
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	done := make(chan struct{})
+	go func() {
+		scheduleScans(ctx, &job, 2*time.Millisecond, 5*time.Millisecond)
+		close(done)
+	}()
+
+	deadline := time.Now().Add(2 * time.Second)
+	for job.calls.Load() < 2 && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	if job.calls.Load() < 2 {
+		t.Fatalf("el planificador solo lanzó %d escaneos", job.calls.Load())
+	}
+
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("el planificador no terminó al cancelar el contexto")
+	}
+	before := job.calls.Load()
+	time.Sleep(20 * time.Millisecond)
+	if job.calls.Load() != before {
+		t.Fatal("el planificador siguió lanzando escaneos tras cancelar")
+	}
+}
+
+func TestScheduleScansConIntervaloCero(t *testing.T) {
+	var job fakeScanStarter
+	done := make(chan struct{})
+	go func() {
+		scheduleScans(context.Background(), &job, time.Millisecond, 0)
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("con intervalo 0 el planificador debe terminar")
+	}
+	if job.calls.Load() != 0 {
+		t.Fatalf("con intervalo 0 se lanzaron %d escaneos", job.calls.Load())
 	}
 }
 

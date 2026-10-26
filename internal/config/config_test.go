@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestLoadDefaults(t *testing.T) {
@@ -11,6 +12,7 @@ func TestLoadDefaults(t *testing.T) {
 	t.Setenv(EnvListenAddr, "")
 	t.Setenv(EnvTMDBAPIKey, "")
 	t.Setenv(EnvOMDbAPIKey, "")
+	t.Setenv(EnvScanInterval, "")
 
 	cfg, err := Load("")
 	if err != nil {
@@ -18,6 +20,9 @@ func TestLoadDefaults(t *testing.T) {
 	}
 	if cfg.ListenAddr != DefaultListenAddr {
 		t.Fatalf("ListenAddr = %q, se esperaba %q", cfg.ListenAddr, DefaultListenAddr)
+	}
+	if cfg.ScanInterval != DefaultScanInterval {
+		t.Fatalf("ScanInterval = %s, se esperaba %s", cfg.ScanInterval, DefaultScanInterval)
 	}
 	if cfg.TMDBAPIKey != "" {
 		t.Fatalf("TMDBAPIKey = %q, se esperaba vacía por defecto", cfg.TMDBAPIKey)
@@ -105,5 +110,58 @@ func TestLoadClaveOMDb(t *testing.T) {
 func TestLoadArchivoInexistente(t *testing.T) {
 	if _, err := Load(filepath.Join(t.TempDir(), "no-existe.json")); err == nil {
 		t.Fatal("se esperaba error con un archivo inexistente")
+	}
+}
+
+func TestLoadIntervaloEscaneo(t *testing.T) {
+	t.Setenv(EnvConfigFile, "")
+	t.Setenv(EnvScanInterval, "0")
+	cfg, err := Load("")
+	if err != nil {
+		t.Fatalf("intervalo 0: %v", err)
+	}
+	if cfg.ScanInterval != 0 {
+		t.Fatalf("ScanInterval = %s, se esperaba 0", cfg.ScanInterval)
+	}
+
+	t.Setenv(EnvScanInterval, "90m")
+	cfg, err = Load("")
+	if err != nil {
+		t.Fatalf("intervalo válido: %v", err)
+	}
+	if cfg.ScanInterval != 90*time.Minute {
+		t.Fatalf("ScanInterval = %s, se esperaba 90m", cfg.ScanInterval)
+	}
+
+	for _, invalid := range []string{"no-es-duracion", "-1h"} {
+		t.Setenv(EnvScanInterval, invalid)
+		if _, err := Load(""); err == nil {
+			t.Fatalf("%q debe dar error de validación", invalid)
+		}
+	}
+}
+
+func TestLoadIntervaloEscaneoDesdeArchivo(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	if err := os.WriteFile(path, []byte(`{"scan_interval":"30m"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv(EnvScanInterval, "")
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.ScanInterval != 30*time.Minute {
+		t.Fatalf("ScanInterval = %s, se esperaba 30m", cfg.ScanInterval)
+	}
+
+	t.Setenv(EnvScanInterval, "2h")
+	cfg, err = Load(path)
+	if err != nil {
+		t.Fatalf("Load con entorno: %v", err)
+	}
+	if cfg.ScanInterval != 2*time.Hour {
+		t.Fatalf("ScanInterval = %s, se esperaba la del entorno", cfg.ScanInterval)
 	}
 }

@@ -1,6 +1,6 @@
 # Fichas en castellano, colecciones, series y navegación de la biblioteca
 
-Estado (2026-10-26): T1, T2 y T3a hechas (en local, sin push). **Siguiente: T3b.**
+Estado (2026-10-26): T1, T2, T3a y T3b hechas (en local, sin push). **Siguiente: T3c.** (T3b: `NewAPI` recibe `*ScanJob`; el panel web aún espera la respuesta antigua del POST.)
 
 Orden: Hito 1 (T3b → T3c → T3d → ▶ → T4 → T5 → T6 → D1) → Hito 1b (A1 → A2 → A3 → ▶ → A4 → ▶) → Hito 2 (T7 → T8 → T9 → ▶) → Hito 3 (T10 → T11 → T12 → T13 → D2).
 
@@ -34,7 +34,7 @@ Convenciones para el `context` de cada tarea: Go 1.22+ (módulo `github.com/catl
 
 ## Hito 1 — Fichas de películas, corrección y navegación (→ 0.11.0)
 
-### T3b — Escaneo en segundo plano, con estado y automático
+### ✅ T3b — Escaneo en segundo plano, con estado y automático
 - Por qué: el primer escaneo con TMDB hace ~5000 peticiones (4-5 min); hoy va ligado a la petición HTTP y Apache lo cortaría a medias. Y el usuario quiere que las películas nuevas se identifiquen solas.
 - Archivos: `internal/library/scanner.go` (o nuevo `internal/library/scanjob.go`), `internal/library/http.go`, `internal/library/http_test.go`, `cmd/cinecatd/main.go`, `internal/config/config.go`, `docker-compose.yml`, `.env.deploy.example`, `api/openapi.yaml`.
 - Contrato:

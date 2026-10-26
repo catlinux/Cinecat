@@ -28,20 +28,21 @@ type API struct {
 	db       *sql.DB
 	auth     *auth.Service
 	playback *playback.Service
-	scanner  *Scanner
+	scanJob  *ScanJob
 }
 
 // NewAPI crea los handlers de la API de biblioteca.
-func NewAPI(db *sql.DB, authSvc *auth.Service, playSvc *playback.Service, scanner *Scanner) *API {
-	return &API{db: db, auth: authSvc, playback: playSvc, scanner: scanner}
+func NewAPI(db *sql.DB, authSvc *auth.Service, playSvc *playback.Service, scanJob *ScanJob) *API {
+	return &API{db: db, auth: authSvc, playback: playSvc, scanJob: scanJob}
 }
 
 // Register monta los endpoints versionados en el mux indicado.
 func (a *API) Register(mux *http.ServeMux) {
 	mux.Handle("GET /api/v1/libraries", a.requireSession(a.handleLibraries))
 	mux.Handle("POST /api/v1/libraries", a.requireAdmin(a.handleCreateLibrary))
-	if a.scanner != nil {
+	if a.scanJob != nil {
 		mux.Handle("POST /api/v1/libraries/scan", a.requireAdmin(a.handleScanLibraries))
+		mux.Handle("GET /api/v1/libraries/scan", a.requireAdmin(a.handleScanStatus))
 	}
 	mux.Handle("DELETE /api/v1/libraries/{id}", a.requireAdmin(a.handleDeleteLibrary))
 	mux.Handle("GET /api/v1/items", a.requireSession(a.handleItems))
@@ -241,31 +242,17 @@ func (a *API) handleDeleteLibrary(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-type scanResponse struct {
-	Libraries int      `json:"libraries"`
-	Files     int      `json:"files"`
-	Upserted  int      `json:"upserted"`
-	Warnings  []string `json:"warnings"`
-}
-
 func (a *API) handleScanLibraries(w http.ResponseWriter, r *http.Request) {
-	result, err := a.scanner.Scan(r.Context())
-	if err != nil {
-		log.Printf("library: escanear bibliotecas: %v", err)
-		writeJSONError(w, http.StatusInternalServerError, "error interno")
+	// El escaneo debe sobrevivir a esta petición; no se le pasa r.Context().
+	if !a.scanJob.StartService() {
+		writeJSONError(w, http.StatusConflict, "ya hay un escaneo en curso")
 		return
 	}
+	writeJSON(w, http.StatusAccepted, map[string]bool{"started": true})
+}
 
-	warnings := result.Warnings
-	if warnings == nil {
-		warnings = []string{}
-	}
-	writeJSON(w, http.StatusOK, scanResponse{
-		Libraries: result.Libraries,
-		Files:     result.Files,
-		Upserted:  result.Upserted,
-		Warnings:  warnings,
-	})
+func (a *API) handleScanStatus(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, a.scanJob.Status())
 }
 
 func decodeJSONBody(w http.ResponseWriter, r *http.Request, dst any) error {

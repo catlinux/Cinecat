@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 )
 
 // Variables de entorno reconocidas. Las claves de API y demás secretos se
@@ -22,12 +23,14 @@ const (
 	EnvDatabasePath = "CINECAT_DB_PATH"
 	EnvTMDBAPIKey   = "CINECAT_TMDB_API_KEY"
 	EnvOMDbAPIKey   = "CINECAT_OMDB_API_KEY"
+	EnvScanInterval = "CINECAT_SCAN_INTERVAL"
 )
 
 // Valores por defecto cuando no se configura otra cosa.
 const (
 	DefaultListenAddr   = ":8080"
 	DefaultDatabasePath = "cinecat.db"
+	DefaultScanInterval = 6 * time.Hour
 )
 
 // Config agrupa los ajustes de arranque del servidor.
@@ -42,11 +45,18 @@ type Config struct {
 	// OMDbAPIKey es la clave de la API de OMDb, también opcional y fuera del
 	// repositorio.
 	OMDbAPIKey string `json:"omdb_api_key,omitempty"`
+	// ScanInterval es cada cuánto se escanea sola la biblioteca; 0 lo
+	// desactiva. En el archivo JSON se escribe como cadena de duración Go.
+	ScanInterval time.Duration `json:"-"`
 }
 
 // Default devuelve la configuración por defecto.
 func Default() Config {
-	return Config{ListenAddr: DefaultListenAddr, DatabasePath: DefaultDatabasePath}
+	return Config{
+		ListenAddr:   DefaultListenAddr,
+		DatabasePath: DefaultDatabasePath,
+		ScanInterval: DefaultScanInterval,
+	}
 }
 
 // Load construye la configuración a partir de los valores por defecto, del
@@ -77,11 +87,26 @@ func Load(configPath string) (Config, error) {
 	if v := strings.TrimSpace(os.Getenv(EnvOMDbAPIKey)); v != "" {
 		cfg.OMDbAPIKey = v
 	}
+	if v := strings.TrimSpace(os.Getenv(EnvScanInterval)); v != "" {
+		interval, err := time.ParseDuration(v)
+		if err != nil {
+			return Config{}, fmt.Errorf("config: %s no es una duración válida: %w", EnvScanInterval, err)
+		}
+		cfg.ScanInterval = interval
+	}
 
 	if err := cfg.validate(); err != nil {
 		return Config{}, err
 	}
 	return cfg, nil
+}
+
+type fileConfig struct {
+	ListenAddr   string `json:"listen_addr"`
+	DatabasePath string `json:"database_path"`
+	TMDBAPIKey   string `json:"tmdb_api_key,omitempty"`
+	OMDbAPIKey   string `json:"omdb_api_key,omitempty"`
+	ScanInterval string `json:"scan_interval,omitempty"`
 }
 
 func (c *Config) mergeFile(path string) error {
@@ -90,7 +115,7 @@ func (c *Config) mergeFile(path string) error {
 		return fmt.Errorf("config: no se puede leer %q: %w", path, err)
 	}
 
-	var file Config
+	var file fileConfig
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&file); err != nil {
@@ -109,6 +134,13 @@ func (c *Config) mergeFile(path string) error {
 	if file.OMDbAPIKey != "" {
 		c.OMDbAPIKey = file.OMDbAPIKey
 	}
+	if file.ScanInterval != "" {
+		interval, err := time.ParseDuration(file.ScanInterval)
+		if err != nil {
+			return fmt.Errorf("config: scan_interval no es una duración válida: %w", err)
+		}
+		c.ScanInterval = interval
+	}
 	return nil
 }
 
@@ -118,6 +150,9 @@ func (c Config) validate() error {
 	}
 	if strings.TrimSpace(c.DatabasePath) == "" {
 		return errors.New("config: database_path no puede estar vacío")
+	}
+	if c.ScanInterval < 0 {
+		return errors.New("config: scan_interval no puede ser negativo")
 	}
 	return nil
 }

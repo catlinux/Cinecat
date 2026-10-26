@@ -9,8 +9,10 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/catlinux/cinecat/internal/auth"
@@ -50,7 +52,9 @@ func main() {
 		log.Fatalf("cinecatd: %v", err)
 	}
 
-	ctx := context.Background()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	st, err := store.Open(ctx, cfg.DatabasePath)
 	if err != nil {
 		log.Fatalf("cinecatd: %v", err)
@@ -102,7 +106,11 @@ func main() {
 		}
 	}
 
-	api := library.NewAPI(st.DB(), authSvc, playSvc, scanner)
+	scanJob := library.NewScanJob(scanner)
+	defer scanJob.Close()
+	go scheduleScans(ctx, scanJob, time.Minute, cfg.ScanInterval)
+
+	api := library.NewAPI(st.DB(), authSvc, playSvc, scanJob)
 
 	srv := &http.Server{
 		Addr:              cfg.ListenAddr,
@@ -111,8 +119,46 @@ func main() {
 	}
 
 	log.Printf("cinecatd %s escuchando en %s", applicationVersion(), cfg.ListenAddr)
-	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		log.Fatalf("cinecatd: %v", err)
+	serverErr := make(chan error, 1)
+	go func() {
+		serverErr <- srv.ListenAndServe()
+	}()
+
+	select {
+	case err := <-serverErr:
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("cinecatd: %v", err)
+		}
+	case <-ctx.Done():
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			log.Printf("cinecatd: apagado: %v", err)
+		}
+	}
+}
+
+type scanStarter interface {
+	Start(context.Context) bool
+}
+
+// scheduleScans lanza un escaneo tras el retardo inicial y después cada
+// intervalo. Con intervalo 0 no hace nada.
+func scheduleScans(ctx context.Context, job scanStarter, initialDelay, interval time.Duration) {
+	if interval <= 0 {
+		return
+	}
+
+	timer := time.NewTimer(initialDelay)
+	defer timer.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-timer.C:
+			job.Start(ctx)
+			timer.Reset(interval)
+		}
 	}
 }
 
