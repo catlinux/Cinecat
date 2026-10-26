@@ -8,6 +8,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 ## [Unreleased]
 
 ### Added
+- Admin panel on the web with a side menu: Overview (versions, last scan, counts and items pending identification), Libraries, and settings forms per section (Scan, Metadata, Interface, Playback, System) with defaults, per-field validation and "Reset". Optional update check, only if enabled and the button is pressed.
 - Settings apply live, without restarting: automatic scan interval and startup scan, TMDB language, identification threshold, transcoding quality (maximum height, CRF and preset) and minimum movies per automatic collection.
 - Server settings stored in the database with a typed, validated registry (scan, metadata, interface, playback and system): `GET`/`PATCH /api/v1/settings`, `DELETE /api/v1/settings/{key}` and `GET /api/v1/settings/public`. Environment variables still provide the initial value.
 

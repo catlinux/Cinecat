@@ -42,7 +42,7 @@
 				>
 			</nav>
 			{#if data.isAdmin}
-				<a class="account-link" href="/admin/libraries">Bibliotecas</a>
+				<a class="account-link" href="/admin">Administración</a>
 			{/if}
 			{#if data.hasSession}
 				<a class="account-link" href="/account">Mi cuenta</a>

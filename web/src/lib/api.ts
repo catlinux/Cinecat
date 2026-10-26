@@ -240,6 +240,14 @@ export interface ItemsResponse {
 	offset: number;
 }
 
+export interface ItemsQuery {
+	limit?: number;
+	offset?: number;
+	q?: string;
+	kind?: 'movie' | 'episode';
+	unmatched?: boolean;
+}
+
 export type SeriesSort = 'title' | 'year' | 'added';
 
 export interface Series {
@@ -332,9 +340,44 @@ export interface ScanStatus {
 	upserted: number;
 	identified: number;
 	unidentified: number;
+	series_identified?: number;
+	series_unidentified?: number;
 	warnings: string[];
 	error: string;
 }
+
+export type SettingType = 'bool' | 'int' | 'float' | 'string' | 'duration' | 'enum';
+
+export interface SettingOption {
+	value: string;
+	label: string;
+}
+
+export interface Setting {
+	key: string;
+	label: string;
+	description: string;
+	type: SettingType;
+	options: SettingOption[];
+	min: number;
+	max: number;
+	default: unknown;
+	value: unknown;
+	modified: boolean;
+}
+
+export interface SettingsSection {
+	key: string;
+	label: string;
+	settings: Setting[];
+}
+
+export interface SettingsResponse {
+	sections: SettingsSection[];
+}
+
+export type SettingsValues = Record<string, string | boolean>;
+export type SettingsChanges = Record<string, unknown>;
 
 export interface ScanStarted {
 	started: boolean;
@@ -354,11 +397,13 @@ export interface CurrentUserResponse {
 // Error del servidor o de red. status 0 significa que no se pudo contactar.
 export class ApiError extends Error {
 	readonly status: number;
+	readonly fields: Record<string, string> | null;
 
-	constructor(message: string, status: number) {
+	constructor(message: string, status: number, fields: Record<string, string> | null = null) {
 		super(message);
 		this.name = 'ApiError';
 		this.status = status;
+		this.fields = fields;
 	}
 }
 
@@ -437,8 +482,49 @@ export class ApiClient {
 		return this.get<ServerVersion>('/api/v1/system/version');
 	}
 
+	async getSettings(token: string): Promise<SettingsResponse> {
+		return this.get<SettingsResponse>('/api/v1/settings', token);
+	}
+
+	async patchSettings(changes: SettingsChanges, token: string): Promise<SettingsResponse> {
+		return this.request<SettingsResponse>('/api/v1/settings', {
+			method: 'PATCH',
+			body: changes,
+			token
+		});
+	}
+
+	async resetSetting(key: string, token: string): Promise<Setting> {
+		return this.request<Setting>(`/api/v1/settings/${encodeURIComponent(key)}`, {
+			method: 'DELETE',
+			token
+		});
+	}
+
 	async getItem(id: number, token: string): Promise<MediaItem> {
 		return this.get<MediaItem>(`/api/v1/items/${id}`, token);
+	}
+
+	async getItems(query: ItemsQuery, token: string): Promise<ItemsResponse> {
+		const params = new URLSearchParams();
+		if (query.limit !== undefined) {
+			params.set('limit', String(query.limit));
+		}
+		if (query.offset !== undefined) {
+			params.set('offset', String(query.offset));
+		}
+		if (query.q) {
+			params.set('q', query.q);
+		}
+		if (query.kind) {
+			params.set('kind', query.kind);
+		}
+		if (query.unmatched) {
+			params.set('unmatched', 'true');
+		}
+		const queryString = params.toString();
+		const suffix = queryString ? `?${queryString}` : '';
+		return this.get<ItemsResponse>(`/api/v1/items${suffix}`, token);
 	}
 
 	async getCandidates(
@@ -760,15 +846,29 @@ export class ApiClient {
 
 	private async errorFrom(response: Response): Promise<ApiError> {
 		let serverMessage = '';
+		let fields: Record<string, string> | null = null;
 		try {
-			const data = (await response.json()) as Partial<ErrorResponse>;
+			const data = (await response.json()) as Partial<ErrorResponse> & {
+				fields?: unknown;
+			};
 			if (typeof data.error === 'string' && data.error.trim() !== '') {
 				serverMessage = data.error.trim();
+			}
+			if (data.fields && typeof data.fields === 'object' && !Array.isArray(data.fields)) {
+				fields = {};
+				for (const [key, value] of Object.entries(data.fields)) {
+					if (typeof value === 'string') {
+						fields[key] = value;
+					}
+				}
+				if (Object.keys(fields).length === 0) {
+					fields = null;
+				}
 			}
 		} catch {
 			// Respuesta sin JSON: se usa el mensaje por defecto.
 		}
-		return new ApiError(serverMessage || defaultMessage(response.status), response.status);
+		return new ApiError(serverMessage || defaultMessage(response.status), response.status, fields);
 	}
 }
 

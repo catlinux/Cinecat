@@ -168,7 +168,7 @@ El usuario quiere un panel de administración bien estructurado para configurar 
 - Criterios: tests que cambian un ajuste y comprueban el efecto (argumentos de FFmpeg, intervalo, idioma de la petición).
 - Esfuerzo: alto. **Ojo con `internal/playback`:** los tests con FFmpeg real se ejecutan en el contenedor (ver TODO.md); no aceptar sin pasarlos allí.
 
-### A3 — Web: panel de administración por secciones
+### ✅ A3a (menú, resumen y ajustes; A3b aplicar los ajustes públicos a la web) —  Web: panel de administración por secciones
 - Archivos: `web/src/routes/admin/+layout.svelte` (nuevo: menú lateral), `web/src/routes/admin/+page.svelte` (resumen), `web/src/routes/admin/settings/[section]/+page.svelte|.server.ts`, mover `/admin/libraries` dentro del menú, tests.
 - Secciones del menú: **Resumen** (versión del servidor y de la web, estado del último escaneo, nº de películas/series/colecciones, sin identificar con enlace al filtro, espacio de la caché de TMDB y de HLS si se expone), **Bibliotecas** (lo actual + escaneo con progreso de T3c), **Escaneo**, **Metadatos**, **Interfaz**, **Reproducción**, **Usuarios** (A4), **Sistema** (versión; «Comprobar actualizaciones» si está activado: compara con `https://raw.githubusercontent.com/catlinux/Cinecat/main/VERSION` y muestra «Estás al día» o «Hay una versión nueva: X.Y.Z», más el comando de actualización `./scripts/actualizar.sh`).
 - Los formularios se generan a partir de la descripción de `GET /api/v1/settings` (tipo → control), con «Restablecer valor por defecto» por ajuste.
