@@ -5,10 +5,14 @@
 		FileInfoResult,
 		ImageKind,
 		ImageOptions,
+		MediaItem,
 		PlayResponse
 	} from '$lib/api';
+	import CastRow from '$lib/components/CastRow.svelte';
 	import EpisodeNav from '$lib/components/EpisodeNav.svelte';
 	import ItemFacts from '$lib/components/ItemFacts.svelte';
+	import PosterCard from '$lib/components/PosterCard.svelte';
+	import RowScroller from '$lib/components/RowScroller.svelte';
 	import FilePanel from '$lib/components/FilePanel.svelte';
 	import ImagePanel from '$lib/components/ImagePanel.svelte';
 	import MatchDialog from '$lib/components/MatchDialog.svelte';
@@ -85,6 +89,9 @@
 			| PlayResponse
 			| null
 			| undefined
+	);
+	const similarItems = $derived(
+		data.similarItems as Promise<MediaItem[] | null> | MediaItem[] | null | undefined
 	);
 	const episodeNavigation = $derived(data.episodeNavigation ?? null);
 	const seriesHref = $derived(item.series_id !== null ? `/series/${item.series_id}` : null);
@@ -213,6 +220,8 @@
 				</p>
 			{/if}
 
+			<CastRow credits={item.credits} cast={item.cast} directors={item.directors} />
+
 			<FilePanel result={fileInfo} />
 
 			<EpisodeNav
@@ -335,8 +344,40 @@
 				</p>
 			{/if}
 
+			<CastRow credits={item.credits} cast={item.cast} directors={item.directors} />
+
 			{#if isMovie}
 				<ItemFacts {item} />
+				{#if similarItems}
+					{#if Array.isArray(similarItems)}
+						{@const similar = similarItems as MediaItem[]}
+						{#if similar.length > 0}
+							<RowScroller title="Más como este">
+								{#snippet children()}
+									{#each similar as similarItem (similarItem.id)}
+										<li>
+											<PosterCard item={similarItem} posterUrl={similarItem.poster_url} />
+										</li>
+									{/each}
+								{/snippet}
+							</RowScroller>
+						{/if}
+					{:else}
+						{#await similarItems then similar}
+							{#if similar && similar.length > 0}
+								<RowScroller title="Más como este">
+									{#snippet children()}
+										{#each similar as similarItem (similarItem.id)}
+											<li>
+												<PosterCard item={similarItem} posterUrl={similarItem.poster_url} />
+											</li>
+										{/each}
+									{/snippet}
+								</RowScroller>
+							{/if}
+						{/await}
+					{/if}
+				{/if}
 			{/if}
 
 			{#if item.collections.length > 0}

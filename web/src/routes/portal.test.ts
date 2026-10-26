@@ -256,11 +256,17 @@ describe('portal', () => {
 		expect(body).toContain('5 series');
 		expect(body).toContain('Series');
 		expect(body).not.toContain('Próximamente');
+		expect(body).toContain('class="portal-categories"');
+		expect((body.match(/class="portal-category(?:\s|")/g) ?? []).length).toBe(3);
 		expect(body).toContain('Continuar viendo');
 		expect(body).toContain('Continúas por 1 h 12 min');
 		expect(body).toContain('Añadido recientemente');
 		expect(body).toContain('El Padrino');
 		expect(body).toContain('Ver todas');
+		expect(body).toContain('class="row-scroller');
+		expect(body).toContain('aria-label="Anterior"');
+		expect(body).toContain('aria-label="Siguiente"');
+		expect(body).toMatch(/class="row-arrows[^"]*"[^>]*\bhidden\b/);
 		expect(body.indexOf('Continuar viendo')).toBeLessThan(body.indexOf('Añadido recientemente'));
 		expect(body).not.toContain('Siguiente episodio');
 	});

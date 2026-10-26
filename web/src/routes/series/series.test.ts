@@ -518,9 +518,9 @@ describe('render de la ficha de serie', () => {
 		});
 		expect(body).toContain('The Big Bang Theory');
 		expect(body).toContain('The Big Bang Theory (original)');
-		expect(body).toContain('Creada por');
-		expect(body).toContain('Reparto');
-		expect(body).toContain('Ver todo el reparto');
+		expect(body).toContain('Reparto y equipo');
+		expect(body).toContain('Chuck Lorre');
+		expect(body).toContain('Actor 13');
 		expect(body).toContain('https://www.themoviedb.org/tv/1418');
 		expect(body).toContain('Temporada 1 · 1/2 vistos');
 		expect(body).toContain('E1 · Piloto');
@@ -529,6 +529,24 @@ describe('render de la ficha de serie', () => {
 		expect(body).toContain('Marcar temporada como vista');
 		expect(body).toContain('Marcar como visto');
 		expect(body).toContain('Continuar');
+	});
+
+	it('muestra «Más como este» solo cuando hay series similares', () => {
+		const similar = { ...seriesItem, id: 6, title: 'Young Sheldon' };
+		const withSimilar = render(SeriesPage, {
+			props: {
+				data: detailData({ similarSeries: [similar] }) as never
+			}
+		}).body;
+		expect(withSimilar).toContain('Más como este');
+		expect(withSimilar).toContain('Young Sheldon');
+
+		const withoutSimilar = render(SeriesPage, {
+			props: {
+				data: detailData({ similarSeries: [] }) as never
+			}
+		}).body;
+		expect(withoutSimilar).not.toContain('Más como este');
 	});
 
 	it('empieza, continúa o vuelve a ver según el estado', () => {

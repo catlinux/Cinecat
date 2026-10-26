@@ -5,6 +5,7 @@ import type {
 	ImageKind,
 	ImageOptions,
 	MediaItem,
+	Series,
 	SeriesDetail,
 	SeriesSeasonDetail
 } from '$lib/api';
@@ -140,6 +141,11 @@ export const load: PageServerLoad = async ({ params, locals, fetch, url, parent 
 		error(502, 'No se pudo cargar la serie.');
 	}
 
+	const similarSeries: Promise<Series[]> = api
+		.getSimilarSeries(id, 12, token)
+		.then((response) => response.series)
+		.catch(() => []);
+
 	const seasons = series.seasons ?? [];
 	const selectedSeason = selectSeriesSeason(
 		seasons,
@@ -192,7 +198,8 @@ export const load: PageServerLoad = async ({ params, locals, fetch, url, parent 
 		firstEpisode,
 		isAdmin,
 		corregir: isAdmin && url.searchParams.get('corregir') === '1',
-		imagenes: isAdmin && url.searchParams.get('imagenes') === '1'
+		imagenes: isAdmin && url.searchParams.get('imagenes') === '1',
+		similarSeries
 	};
 };
 

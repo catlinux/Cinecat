@@ -54,6 +54,7 @@ interface RenderOptions {
 	isAdmin?: boolean;
 	corregir?: boolean;
 	form?: unknown;
+	similarItems?: unknown;
 }
 
 function renderPage(item: MediaItem, options: RenderOptions = {}): string {
@@ -62,7 +63,8 @@ function renderPage(item: MediaItem, options: RenderOptions = {}): string {
 			data: {
 				item,
 				isAdmin: options.isAdmin ?? false,
-				corregir: options.corregir ?? false
+				corregir: options.corregir ?? false,
+				similarItems: options.similarItems
 			},
 			form: options.form ?? null
 		} as never
@@ -150,7 +152,7 @@ describe('carga de la ficha', () => {
 });
 
 describe('ficha de película', () => {
-	it('muestra los datos completos, el reparto plegado y los enlaces', () => {
+	it('muestra los datos completos, el reparto y los enlaces', () => {
 		const body = renderPage(makeItem());
 
 		expect(body).toContain('El Padrino');
@@ -159,24 +161,34 @@ describe('ficha de película', () => {
 		expect(body).toContain('Una oferta que no podrás rechazar.');
 		expect(body).toContain('Sinopsis no disponible en castellano');
 		expect(body).toContain('Una familia muy unida.');
+		expect(body).toContain('Reparto y equipo');
 		expect(body).toContain('Dirección');
 		expect(body).toContain('Francis Ford Coppola');
-		expect(body).toContain('Ver resto del reparto (1)');
+		expect(body).toContain('Actor 13');
 		expect(body).toContain('https://www.imdb.com/title/tt0068646/');
 		expect(body).toContain('https://www.themoviedb.org/movie/238');
 		expect(body).toContain('rel="noopener noreferrer"');
 		expect(body).toContain('target="_blank"');
 		expect(body).toContain('https://images.example/backdrop.jpg');
 
-		const details = body.indexOf('<details class="cast-more"');
-		expect(details).toBeGreaterThan(-1);
-		expect(body.indexOf('Actor 13')).toBeGreaterThan(details);
+		expect(body.indexOf('Francis Ford Coppola')).toBeLessThan(body.indexOf('Actor 1'));
 	});
 
 	it('no avisa del idioma si la sinopsis está en castellano', () => {
 		const body = renderPage(makeItem({ overview_language: 'es-ES' }));
 
 		expect(body).not.toContain('Sinopsis no disponible en castellano');
+	});
+
+	it('muestra «Más como este» solo cuando hay películas similares', () => {
+		const withSimilar = renderPage(makeItem(), {
+			similarItems: [makeItem({ id: 8, title: 'El padrino II', poster_url: null })]
+		});
+		expect(withSimilar).toContain('Más como este');
+		expect(withSimilar).toContain('El padrino II');
+
+		const withoutSimilar = renderPage(makeItem(), { similarItems: [] });
+		expect(withoutSimilar).not.toContain('Más como este');
 	});
 
 	it('convierte Reproducir en Continuar y muestra la barra de progreso', () => {
@@ -256,7 +268,7 @@ describe('ficha de película', () => {
 		expect(body).not.toContain('Ficha en IMDb');
 	});
 
-	it('mantiene la ficha sencilla para episodios', () => {
+	it('muestra el reparto del episodio y mantiene la ficha sencilla', () => {
 		const body = renderPage(
 			makeItem({
 				kind: 'episode',
@@ -271,8 +283,9 @@ describe('ficha de película', () => {
 
 		expect(body).toContain('Temporada 2, episodio 3');
 		expect(body).toContain('T2E3');
-		expect(body).not.toContain('Dirección');
-		expect(body).not.toContain('Reparto');
+		expect(body).toContain('Reparto y equipo');
+		expect(body).toContain('Una directora');
+		expect(body).toContain('Un actor');
 		expect(body).not.toContain('Corregir ficha');
 	});
 

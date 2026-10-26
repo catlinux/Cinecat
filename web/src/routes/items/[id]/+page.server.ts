@@ -39,6 +39,10 @@ export const load: PageServerLoad = async ({ params, locals, fetch, url, parent 
 		const playbackOptions: Promise<PlayResponse | null> = api
 			.getPlay(id, {}, token)
 			.catch(() => null);
+		const similarItems: Promise<MediaItem[] | null> =
+			item.kind === 'movie'
+				? api.getSimilarItems(id, 12, token).then((response) => response.items).catch(() => null)
+				: Promise.resolve(null);
 		const episodeNavigation = await loadEpisodeNavigation(api, item, token);
 		return {
 			item,
@@ -47,6 +51,7 @@ export const load: PageServerLoad = async ({ params, locals, fetch, url, parent 
 			imagenes: isAdmin && url.searchParams.get('imagenes') === '1',
 			fileInfo,
 			playbackOptions,
+			similarItems,
 			episodeNavigation
 		};
 	} catch (err) {

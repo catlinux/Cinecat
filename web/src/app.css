@@ -2114,16 +2114,20 @@ footer {
 
 .portal-categories {
 	display: grid;
-	grid-template-columns: repeat(3, minmax(0, 1fr));
-	gap: 1.1rem;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+	gap: 1rem;
 	margin: 1.8rem 0 3rem;
+	max-width: 100%;
+	min-width: 0;
 }
 
 .portal-category {
 	position: relative;
 	display: flex;
-	min-height: clamp(17rem, 28vw, 23rem);
-	padding: 1.4rem;
+	min-width: 0;
+	max-width: 100%;
+	min-height: clamp(12rem, 21vw, 16rem);
+	padding: 1.1rem;
 	overflow: hidden;
 	border: 1px solid var(--dorado);
 	border-radius: 4px;
@@ -2176,19 +2180,19 @@ footer {
 }
 
 .portal-category h2 {
-	margin: 0.2rem 0 0.5rem;
+	margin: 0.15rem 0 0.35rem;
 	font-family: 'Fraunces', Georgia, serif;
-	font-size: clamp(1.8rem, 3vw, 2.5rem);
-	line-height: 0.95;
+	font-size: clamp(1.35rem, 2.2vw, 1.9rem);
+	line-height: 0.98;
 	font-weight: 600;
 }
 
 .portal-category p {
 	margin: 0;
-	max-width: 16rem;
+	max-width: 22rem;
 	color: rgba(253, 247, 234, 0.82);
-	font-size: 0.9rem;
-	line-height: 1.5;
+	font-size: 0.82rem;
+	line-height: 1.4;
 }
 
 .portal-category-meta,
@@ -2527,10 +2531,6 @@ footer {
 }
 
 @media (max-width: 900px) {
-	.portal-categories {
-		grid-template-columns: 1fr;
-	}
-
 	.filters-form {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
@@ -2555,7 +2555,7 @@ footer {
 	}
 
 	.portal-category {
-		min-height: 15rem;
+		min-height: 11rem;
 	}
 
 	.recent-item,

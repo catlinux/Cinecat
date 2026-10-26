@@ -33,6 +33,23 @@ export interface ItemCollection {
 	name: string;
 }
 
+export interface CastCredit {
+	name: string;
+	character: string;
+	photo_url: string;
+}
+
+export interface CrewCredit {
+	name: string;
+	job: string;
+	photo_url: string;
+}
+
+export interface Credits {
+	cast: CastCredit[];
+	crew: CrewCredit[];
+}
+
 export interface ItemPreferences {
 	audio_index: number | null;
 	subtitle_id: string | null;
@@ -61,6 +78,7 @@ export interface MediaItem {
 	rating: number | null;
 	directors: string[];
 	cast: string[];
+	credits?: Credits | null;
 	backdrop_url: string | null;
 	backdrop_custom: boolean;
 	overview_language: string | null;
@@ -247,6 +265,14 @@ export interface ItemsResponse {
 	offset: number;
 }
 
+export interface SimilarItemsResponse {
+	items: MediaItem[];
+}
+
+export interface SimilarSeriesResponse {
+	series: Series[];
+}
+
 export interface ItemsQuery {
 	limit?: number;
 	offset?: number;
@@ -312,6 +338,7 @@ export interface SeriesDetail {
 	rating: number | null;
 	directors: string[];
 	cast: string[];
+	credits?: Credits | null;
 	tmdb_id: number | null;
 	match_status: 'auto' | 'manual' | 'none' | null;
 	match_score: number | null;
@@ -748,6 +775,14 @@ export class ApiClient {
 
 	async deleteProgress(id: number, token: string): Promise<void> {
 		await this.delete(`/api/v1/items/${id}/progress`, token);
+	}
+
+	async getSimilarItems(id: number, limit: number, token: string): Promise<SimilarItemsResponse> {
+		return this.get<SimilarItemsResponse>(`/api/v1/items/${id}/similar?limit=${limit}`, token);
+	}
+
+	async getSimilarSeries(id: number, limit: number, token: string): Promise<SimilarSeriesResponse> {
+		return this.get<SimilarSeriesResponse>(`/api/v1/series/${id}/similar?limit=${limit}`, token);
 	}
 
 	async getPlay(id: number, query: PlayQuery, token: string): Promise<PlayResponse> {

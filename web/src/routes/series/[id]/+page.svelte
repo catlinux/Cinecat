@@ -1,10 +1,13 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import type { Candidate, ImageKind, ImageOptions } from '$lib/api';
+	import type { Candidate, ImageKind, ImageOptions, Series } from '$lib/api';
+	import CastRow from '$lib/components/CastRow.svelte';
 	import EpisodeRow from '$lib/components/EpisodeRow.svelte';
 	import ImagePanel from '$lib/components/ImagePanel.svelte';
 	import MatchDialog from '$lib/components/MatchDialog.svelte';
-	import { formatGenres, formatRating, overviewInSpanish, splitCast } from '$lib/media';
+	import RowScroller from '$lib/components/RowScroller.svelte';
+	import SeriesCard from '$lib/components/SeriesCard.svelte';
+	import { formatGenres, formatRating, overviewInSpanish } from '$lib/media';
 	import { posterColors } from '$lib/poster-color';
 	import {
 		formatSeriesCounts,
@@ -65,7 +68,9 @@
 		Boolean(series.overview) && !overviewInSpanish(series.overview_language)
 	);
 	const unidentified = $derived(series.match_status === null || series.match_status === 'none');
-	const cast = $derived(splitCast(series.cast));
+	const similarSeries = $derived(
+		data.similarSeries as Promise<Series[]> | Series[] | null | undefined
+	);
 	const currentSeason = $derived(
 		series.seasons.find((season) => season.season === data.selectedSeason) ?? null
 	);
@@ -170,25 +175,7 @@
 			</p>
 		{/if}
 
-		{#if series.directors.length > 0}
-			<section class="series-credits">
-				<h2>Creada por</h2>
-				<p>{series.directors.join(', ')}</p>
-			</section>
-		{/if}
-
-		{#if cast.visible.length > 0}
-			<section class="series-credits">
-				<h2>Reparto</h2>
-				<p>{cast.visible.join(', ')}</p>
-				{#if cast.hidden.length > 0}
-					<details class="series-cast-more">
-						<summary>Ver todo el reparto</summary>
-						<p>{cast.hidden.join(', ')}</p>
-					</details>
-				{/if}
-			</section>
-		{/if}
+		<CastRow credits={series.credits} cast={series.cast} directors={series.directors} />
 
 		{#if data.isAdmin}
 			<ImagePanel
@@ -209,6 +196,33 @@
 		{/if}
 	</div>
 </section>
+
+{#if similarSeries}
+	{#if Array.isArray(similarSeries)}
+		{@const similar = similarSeries as Series[]}
+		{#if similar.length > 0}
+			<RowScroller title="Más como este">
+				{#snippet children()}
+					{#each similar as similarSerie (similarSerie.id)}
+						<li><SeriesCard series={similarSerie} /></li>
+					{/each}
+				{/snippet}
+			</RowScroller>
+		{/if}
+	{:else}
+		{#await similarSeries then similar}
+			{#if similar.length > 0}
+				<RowScroller title="Más como este">
+					{#snippet children()}
+						{#each similar as similarSerie (similarSerie.id)}
+							<li><SeriesCard series={similarSerie} /></li>
+						{/each}
+					{/snippet}
+				</RowScroller>
+			{/if}
+		{/await}
+	{/if}
+{/if}
 
 {#if series.seasons.length > 0}
 	<nav class="season-tabs" aria-label="Temporadas">
