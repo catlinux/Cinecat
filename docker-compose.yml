@@ -12,6 +12,7 @@ services:
     environment:
       CINECAT_DB_PATH: /data/cinecat.db
       CINECAT_TMDB_API_KEY: ${CINECAT_TMDB_API_KEY:-}
+      CINECAT_OMDB_API_KEY: ${CINECAT_OMDB_API_KEY:-}
       CINECAT_ADMIN_PASSWORD: ${CINECAT_ADMIN_PASSWORD:-}
 
   web:

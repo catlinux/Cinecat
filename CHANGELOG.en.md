@@ -7,6 +7,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-10-26
+
+### Fixed
+- `docker-compose.yml` wasn't passing `CINECAT_OMDB_API_KEY` to the server container (support was added in the code in 0.6.0, but forgotten in the compose file): even with the key in `.env`, the server never saw it and the scan kept running without metadata. Also added to `.env.deploy.example`.
+
 ## [0.7.0] - 2026-10-26
 
 ### Added

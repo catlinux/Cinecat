@@ -7,6 +7,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.7.1] - 2026-10-26
+
+### Corregido
+- `docker-compose.yml` no pasaba `CINECAT_OMDB_API_KEY` al contenedor del servidor (se añadió el soporte en el código en la 0.6.0, pero se olvidó en el compose): aunque la clave estuviera en `.env`, el servidor nunca la veía y el escaneo seguía sin metadatos. Añadida también a `.env.deploy.example`.
+
 ## [0.7.0] - 2026-10-26
 
 ### Añadido
