@@ -44,6 +44,12 @@ type mediaItemDTO struct {
 	MatchScore       *float64          `json:"match_score"`
 	Watched          bool              `json:"watched"`
 	Progress         *playbackProgress `json:"progress"`
+	Collections      []itemCollection  `json:"collections"`
+}
+
+type itemCollection struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
 }
 
 type itemsResponse struct {
@@ -83,11 +89,65 @@ func queryMediaItem(ctx context.Context, db *sql.DB, id, userID int64) (mediaIte
 		  LEFT JOIN playback_progress pp
 		    ON pp.media_item_id = media_items.id AND pp.user_id = ?
 		 WHERE media_items.id = ?`, userID, userID, id)
-	return scanItem(row.Scan)
+	item, err := scanItem(row.Scan)
+	if err != nil {
+		return mediaItemDTO{}, err
+	}
+	byItem, err := loadItemCollections(ctx, db, []int64{item.ID})
+	if err != nil {
+		return mediaItemDTO{}, err
+	}
+	if collections, ok := byItem[item.ID]; ok {
+		item.Collections = collections
+	}
+	return item, nil
+}
+
+// loadItemCollections resuelve en una sola consulta las colecciones visibles
+// de todos los ítems pedidos. Las automáticas necesitan al menos dos miembros.
+func loadItemCollections(ctx context.Context, db *sql.DB, itemIDs []int64) (map[int64][]itemCollection, error) {
+	result := make(map[int64][]itemCollection, len(itemIDs))
+	if len(itemIDs) == 0 {
+		return result, nil
+	}
+	placeholders := strings.TrimSuffix(strings.Repeat("?,", len(itemIDs)), ",")
+	args := make([]any, 0, len(itemIDs))
+	for _, id := range itemIDs {
+		args = append(args, id)
+	}
+	rows, err := db.QueryContext(ctx, `
+		SELECT ci.media_item_id, c.id, c.name
+		  FROM collection_items ci
+		  JOIN collections c ON c.id = ci.collection_id
+		 WHERE ci.media_item_id IN (`+placeholders+`)
+		   AND ci.excluded = 0
+		   AND c.deleted = 0
+		   AND (c.source = 'manual' OR (
+		         SELECT count(*) FROM collection_items cc
+		          WHERE cc.collection_id = c.id AND cc.excluded = 0
+		       ) >= 2)
+		 ORDER BY c.name COLLATE NOCASE, c.id`, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var itemID int64
+		var collection itemCollection
+		if err := rows.Scan(&itemID, &collection.ID, &collection.Name); err != nil {
+			return nil, err
+		}
+		result[itemID] = append(result[itemID], collection)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 func scanItem(scan func(dest ...any) error) (mediaItemDTO, error) {
-	var item mediaItemDTO
+	item := mediaItemDTO{Collections: make([]itemCollection, 0)}
 	var year, season, episode, tmdbID, runtime sql.NullInt64
 	var overview, posterURL, originalTitle, imdbID, tagline sql.NullString
 	var genres, directors, castNames, backdropURL, overviewLanguage, matchStatus sql.NullString
@@ -264,6 +324,16 @@ func itemFilters(r *http.Request, userID int64) (string, []any, error) {
 		default:
 			return "", nil, errors.New("watched debe ser true o false")
 		}
+	}
+
+	if raw := strings.TrimSpace(query.Get("collection_id")); raw != "" {
+		id, err := strconv.ParseInt(raw, 10, 64)
+		if err != nil || id <= 0 {
+			return "", nil, errors.New("collection_id debe ser un entero positivo")
+		}
+		clauses = append(clauses,
+			`EXISTS (SELECT 1 FROM collection_items cf WHERE cf.media_item_id = media_items.id AND cf.collection_id = ? AND cf.excluded = 0)`)
+		args = append(args, id)
 	}
 
 	if raw := strings.TrimSpace(query.Get("in_progress")); raw != "" {

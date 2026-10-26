@@ -62,6 +62,14 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.Handle("DELETE /api/v1/libraries/{id}", a.requireAdmin(a.handleDeleteLibrary))
 	mux.Handle("GET /api/v1/genres", a.requireSession(a.handleGenres))
 	mux.Handle("GET /api/v1/home", a.requireSession(a.handleHome))
+	mux.Handle("GET /api/v1/collections", a.requireSession(a.handleCollections))
+	mux.Handle("GET /api/v1/collections/{id}", a.requireSession(a.handleCollection))
+	mux.Handle("POST /api/v1/collections", a.requireAdmin(a.handleCollectionCreate))
+	mux.Handle("PATCH /api/v1/collections/{id}", a.requireAdmin(a.handleCollectionPatch))
+	mux.Handle("DELETE /api/v1/collections/{id}", a.requireAdmin(a.handleCollectionDelete))
+	mux.Handle("POST /api/v1/collections/{id}/items", a.requireAdmin(a.handleCollectionItemAdd))
+	mux.Handle("DELETE /api/v1/collections/{id}/items/{itemId}", a.requireAdmin(a.handleCollectionItemRemove))
+	mux.Handle("PUT /api/v1/collections/{id}/order", a.requireAdmin(a.handleCollectionOrder))
 	mux.Handle("GET /api/v1/items", a.requireSession(a.handleItems))
 	mux.Handle("GET /api/v1/items/{id}", a.requireSession(a.handleItem))
 	mux.Handle("GET /api/v1/items/{id}/file-info", a.requireSession(a.handleItemFileInfo))
@@ -331,6 +339,22 @@ func (a *API) handleItems(w http.ResponseWriter, r *http.Request) {
 		log.Printf("library: recorrer ítems: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
 		return
+	}
+
+	itemIDs := make([]int64, 0, len(items))
+	for _, item := range items {
+		itemIDs = append(itemIDs, item.ID)
+	}
+	collectionsByItem, err := loadItemCollections(r.Context(), a.db, itemIDs)
+	if err != nil {
+		log.Printf("library: leer colecciones de los ítems: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
+	for i := range items {
+		if collections, ok := collectionsByItem[items[i].ID]; ok {
+			items[i].Collections = collections
+		}
 	}
 
 	writeJSON(w, http.StatusOK, itemsResponse{

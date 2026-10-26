@@ -410,6 +410,400 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/collections:
+    get:
+      summary: Lista las colecciones visibles
+      description: |
+        Devuelve las colecciones no borradas y visibles: las manuales siempre y
+        las de TMDB con al menos dos películas no excluidas. Las automáticas
+        ocultas no aparecen. Requiere sesión.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 48
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: q
+          in: query
+          description: Texto a buscar en el nombre, sin distinguir mayúsculas.
+          required: false
+          schema:
+            type: string
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - name
+              - added
+              - size
+            default: name
+      responses:
+        '200':
+          description: Página de colecciones
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionsResponse'
+        '400':
+          description: Parámetros no válidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      summary: Crea una colección manual (solo administradores)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCollectionRequest'
+      responses:
+        '201':
+          description: Colección creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Collection'
+        '400':
+          description: Datos no válidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: El usuario no tiene rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/collections/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+          minimum: 1
+    get:
+      summary: Detalle de una colección
+      description: |
+        Devuelve la colección y sus películas no excluidas ordenadas por
+        posición y, si no tienen posición, por año e id. Las automáticas con
+        menos de dos películas se ocultan. Requiere sesión.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Detalle de la colección
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionDetail'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: La colección no existe, está borrada u oculta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      summary: Edita una colección (solo administradores)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCollectionRequest'
+      responses:
+        '200':
+          description: Colección actualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Collection'
+        '400':
+          description: Datos no válidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: El usuario no tiene rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: La colección no existe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Borra una colección (solo administradores)
+      description: |
+        Las manuales se eliminan y las de TMDB se marcan como borradas para que
+        no reaparezcan.
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Colección borrada
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: El usuario no tiene rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: La colección no existe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/collections/{id}/items:
+    post:
+      summary: Añade una película a una colección (solo administradores)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollectionItemRequest'
+      responses:
+        '204':
+          description: Película añadida
+        '400':
+          description: El ítem no es una película o los datos no son válidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: El usuario no tiene rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: La colección o la película no existen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/collections/{id}/items/{itemId}:
+    delete:
+      summary: Quita una película de una colección (solo administradores)
+      description: |
+        En colecciones manuales borra la pertenencia. En las de TMDB marca la
+        película como excluida y la colección como editada.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        '204':
+          description: Película quitada o excluida
+        '400':
+          description: El ítem no es una película
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: El usuario no tiene rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: La colección o la película no existen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/collections/{id}/order:
+    put:
+      summary: Reordena las películas de una colección (solo administradores)
+      description: |
+        La lista debe contener exactamente las películas no excluidas de la
+        colección, sin repetidos. En las colecciones de TMDB marca la colección
+        como editada.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollectionOrderRequest'
+      responses:
+        '204':
+          description: Orden actualizado
+        '400':
+          description: La lista no coincide exactamente con los miembros
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: El usuario no tiene rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: La colección no existe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/items:
     get:
       summary: Lista los ítems de las bibliotecas
@@ -493,6 +887,14 @@ paths:
           required: false
           schema:
             type: boolean
+        - name: collection_id
+          in: query
+          description: Si se indica, solo devuelve los ítems no excluidos de esa colección.
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
         - name: unmatched
           in: query
           description: |
@@ -1969,6 +2371,172 @@ components:
         counts:
           $ref: '#/components/schemas/HomeCounts'
       additionalProperties: false
+    ItemCollection:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+      additionalProperties: false
+    Collection:
+      type: object
+      required:
+        - id
+        - name
+        - overview
+        - poster_url
+        - backdrop_url
+        - item_count
+        - source
+        - edited
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        overview:
+          type: string
+          nullable: true
+        poster_url:
+          type: string
+          nullable: true
+        backdrop_url:
+          type: string
+          nullable: true
+        item_count:
+          type: integer
+          format: int64
+        source:
+          type: string
+          enum:
+            - tmdb
+            - manual
+        edited:
+          type: boolean
+      additionalProperties: false
+    CollectionDetail:
+      type: object
+      required:
+        - id
+        - name
+        - overview
+        - poster_url
+        - backdrop_url
+        - item_count
+        - source
+        - edited
+        - items
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        overview:
+          type: string
+          nullable: true
+        poster_url:
+          type: string
+          nullable: true
+        backdrop_url:
+          type: string
+          nullable: true
+        item_count:
+          type: integer
+          format: int64
+        source:
+          type: string
+          enum:
+            - tmdb
+            - manual
+        edited:
+          type: boolean
+        items:
+          type: array
+          description: Películas no excluidas, en el orden de la colección.
+          items:
+            $ref: '#/components/schemas/MediaItem'
+      additionalProperties: false
+    CollectionsResponse:
+      type: object
+      required:
+        - collections
+        - total
+        - limit
+        - offset
+      properties:
+        collections:
+          type: array
+          items:
+            $ref: '#/components/schemas/Collection'
+        total:
+          type: integer
+          format: int64
+        limit:
+          type: integer
+        offset:
+          type: integer
+      additionalProperties: false
+    CreateCollectionRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        overview:
+          type: string
+          maxLength: 2000
+      additionalProperties: false
+    UpdateCollectionRequest:
+      type: object
+      description: Debe incluir al menos un campo. Las URLs vacías borran la imagen.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        overview:
+          type: string
+          maxLength: 2000
+        poster_url:
+          type: string
+          maxLength: 2048
+        backdrop_url:
+          type: string
+          maxLength: 2048
+      additionalProperties: false
+    CollectionItemRequest:
+      type: object
+      required:
+        - media_item_id
+      properties:
+        media_item_id:
+          type: integer
+          format: int64
+          minimum: 1
+      additionalProperties: false
+    CollectionOrderRequest:
+      type: object
+      required:
+        - media_item_ids
+      properties:
+        media_item_ids:
+          type: array
+          uniqueItems: true
+          items:
+            type: integer
+            format: int64
+            minimum: 1
+      additionalProperties: false
     MediaItem:
       type: object
       required:
@@ -2000,6 +2568,7 @@ components:
         - match_score
         - watched
         - progress
+        - collections
       properties:
         id:
           type: integer
@@ -2102,6 +2671,11 @@ components:
             - $ref: '#/components/schemas/PlaybackProgress'
           nullable: true
           description: Progreso del usuario de la sesión; null si no hay.
+        collections:
+          type: array
+          description: Colecciones visibles a las que pertenece el ítem; siempre un array.
+          items:
+            $ref: '#/components/schemas/ItemCollection'
       additionalProperties: false
     ItemsResponse:
       type: object

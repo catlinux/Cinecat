@@ -185,7 +185,7 @@ El usuario quiere un panel de administración bien estructurado para configurar 
 - Criterios: tests de cada regla (creación, colección borrada que no reaparece, película excluida que no vuelve, `edited` que conserva el nombre).
 - Esfuerzo: alto.
 
-### T8 — API de colecciones
+### ✅ T8 — API de colecciones
 - Archivos: `internal/library/collections_http.go` (nuevo), `internal/library/collections_http_test.go`, `internal/library/http.go` (registro de rutas), `api/openapi.yaml`.
 - `GET /api/v1/collections?page_size&offset&q=` → `{collections: [{id, name, poster_url, item_count, source}], total}`; solo `deleted=0` y (`source='manual'` o ≥ 2 películas no excluidas). Cartel: el de la colección o, si no tiene, el de su primera película.
 - `GET /api/v1/collections/{id}` → colección + películas en orden (DTO de ítem).
