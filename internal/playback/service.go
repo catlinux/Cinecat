@@ -54,6 +54,7 @@ type Service struct {
 type hlsEntry struct {
 	dir      string
 	lastUsed time.Time
+	mode     Mode
 }
 
 // New crea el servicio de reproducción.

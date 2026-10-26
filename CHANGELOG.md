@@ -7,6 +7,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.8.0] - 2026-10-26
+
+### Añadido
+- Transcodificación de vídeo por software cuando el intervalo entre keyframes impide un remux HLS razonable: en vez de fallar, se recodifica solo el vídeo con libx264 `veryfast`/CRF 20, audio AAC 160k y keyframes forzados cada 6 s, manteniendo el resto del flujo HLS. Esto resuelve la reproducción de `.avi`/DivX con keyframes dispersos como el caso real de producción; no implementa todavía el motor completo de perfiles ni aceleración por hardware, y la API sigue anunciando `mode: "remux"` (el cliente recibe HLS en ambos casos).
+
 ## [0.7.3] - 2026-10-26
 
 ### Corregido

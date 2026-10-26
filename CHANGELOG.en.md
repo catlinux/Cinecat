@@ -7,6 +7,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-26
+
+### Added
+- Software video transcoding when the keyframe interval prevents a reasonable HLS remux: instead of failing, only the video is re-encoded with libx264 `veryfast`/CRF 20, AAC 160k audio and keyframes forced every 6 s, keeping the rest of the HLS flow. This fixes playback of `.avi`/DivX files with sparse keyframes such as the real production case; it does not implement the full device-profile engine or hardware acceleration yet, and the API still reports `mode: "remux"` (the client receives HLS either way).
+
 ## [0.7.3] - 2026-10-26
 
 ### Fixed

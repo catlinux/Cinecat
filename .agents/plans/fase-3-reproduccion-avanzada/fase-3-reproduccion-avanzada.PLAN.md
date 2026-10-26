@@ -17,7 +17,7 @@ Cada paso es autocontenido. Al completarlo, el ejecutor lo marca `[x]` aquí y a
 - **Ejecutor:** AgentRelay, esfuerzo alto (lógica de `ffprobe` delicada, hay que acertar la invocación y el parseo).
 - **Versión/CHANGELOG:** parche o menor según alcance final — Añadido: detección de intervalos de keyframe que hacen inviable el remux sin recodificar.
 
-## Paso 2 — Transcodificación de vídeo cuando el remux puro no basta
+## Paso 2 — Transcodificación de vídeo cuando el remux puro no basta [x] hecho (ejecución 20261026-025251-fc7c)
 
 - **Archivos:** `internal/playback/hls.go`, `internal/playback/service.go`, `internal/playback/decision.go`.
 - **Qué hace:** cuando el Paso 1 detecta que hace falta transcodificar, añade un nuevo `Mode` (p. ej. `ModeTranscode`) que invoca FFmpeg con `-c:v libx264` (u otro códec soportado ampliamente, a decidir) en vez de `-c:v copy`, manteniendo `-c:a copy` si el audio ya es compatible (AAC/AC3/MP3; si no, aplicar también `-c:a aac` — puede ser parte de este paso o uno posterior, decidir según cuánto crezca). Sin aceleración por hardware todavía (software puro); eso es un paso posterior si hace falta por rendimiento. Reutiliza el resto de la infraestructura ya existente (firmas, caché de workDir, servir los segmentos) sin tocarla si no hace falta.

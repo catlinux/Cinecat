@@ -17,6 +17,9 @@ const (
 	ModeDirect Mode = "direct"
 	// ModeRemux reempaqueta a HLS fMP4 sin recodificar.
 	ModeRemux Mode = "remux"
+	// ModeTranscode reempaqueta a HLS fMP4 recodificando solo el vídeo cuando
+	// los keyframes del original no permiten segmentar sin tocar el códec.
+	ModeTranscode Mode = "transcode"
 )
 
 // Errores del paquete.

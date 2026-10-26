@@ -38,6 +38,52 @@ func hlsArgs(inputPath string) []string {
 	}
 }
 
+// hlsTranscodeArgs construye los argumentos para el caso en que el remux sin
+// recodificar no es viable. Se recodifica solo el vídeo con libx264 veryfast y
+// CRF 20: es un equilibrio razonable entre velocidad y calidad para una
+// biblioteca personal, sin depender de aceleración por hardware. Se fuerzan
+// keyframes cada 6 s para que los segmentos HLS ronden hls_time. El audio se
+// convierte a AAC 160k porque en AVI/DivX antiguos puede ser MP3, AC-3 o DTS y
+// no hay garantía de que el navegador lo reproduzca; AAC es universal y barato
+// comparado con recodificar el vídeo.
+func hlsTranscodeArgs(inputPath string) []string {
+	return []string{
+		"-hide_banner",
+		"-loglevel", "error",
+		"-nostdin",
+		"-y",
+		"-i", inputPath,
+		"-map", "0:v:0",
+		"-map", "0:a?",
+		"-c:v", "libx264",
+		"-preset", "veryfast",
+		"-crf", "20",
+		"-pix_fmt", "yuv420p",
+		"-force_key_frames", "expr:gte(t,n_forced*6)",
+		"-c:a", "aac",
+		"-b:a", "160k",
+		"-f", "hls",
+		"-hls_time", "6",
+		"-hls_playlist_type", "vod",
+		"-hls_segment_type", "fmp4",
+		"-hls_fmp4_init_filename", "init.mp4",
+		"-hls_segment_filename", "segment_%05d.m4s",
+		"playlist.m3u8",
+	}
+}
+
+// needsTranscode consulta al prober si el remux sin recodificar es viable. Si
+// el prober no existe se conserva el comportamiento antiguo (copy). Si falla
+// por cualquier motivo (ffprobe ausente, timeout o archivo sin keyframes
+// suficientes), se transcodifica como alternativa segura en vez de arriesgarse
+// a servir un segmento gigante.
+func (s *Service) needsTranscode(ctx context.Context, inputPath string) bool {
+	if s.prober == nil {
+		return false
+	}
+	return s.prober.CheckViable(ctx, inputPath) != nil
+}
+
 // ServeDirect sirve el archivo tal cual con http.ServeContent, que admite
 // peticiones con Range.
 func ServeDirect(w http.ResponseWriter, r *http.Request, filePath string) error {
@@ -133,10 +179,12 @@ func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string) (
 		return nil, fmt.Errorf("playback: ruta de entrada no válida: %w", err)
 	}
 
-	if s.prober != nil {
-		if err := s.prober.CheckViable(ctx, absInput); err != nil {
-			return nil, err
-		}
+	transcode := s.needsTranscode(ctx, absInput)
+	args := hlsArgs(absInput)
+	mode := ModeRemux
+	if transcode {
+		args = hlsTranscodeArgs(absInput)
+		mode = ModeTranscode
 	}
 
 	dir := filepath.Join(s.workDir, fmt.Sprintf("item-%d", itemID))
@@ -150,7 +198,7 @@ func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string) (
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Minute)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, ffmpeg, hlsArgs(absInput)...)
+	cmd := exec.CommandContext(ctx, ffmpeg, args...)
 	cmd.Dir = dir
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
@@ -164,7 +212,7 @@ func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string) (
 		return nil, fmt.Errorf("%w: no se generó la playlist", ErrFFmpegFailed)
 	}
 
-	entry := &hlsEntry{dir: dir, lastUsed: s.now()}
+	entry := &hlsEntry{dir: dir, lastUsed: s.now(), mode: mode}
 	s.entries[itemID] = entry
 	return entry, nil
 }

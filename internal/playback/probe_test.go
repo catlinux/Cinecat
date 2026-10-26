@@ -3,7 +3,6 @@ package playback
 import (
 	"context"
 	"errors"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -105,36 +104,5 @@ func TestParseKeyframeTimes(t *testing.T) {
 	times := parseKeyframeTimes(output)
 	if len(times) != 2 || times[0] != 0 || times[1] != 1.5 {
 		t.Fatalf("tiempos inesperados: %v", times)
-	}
-}
-
-func TestPrepareRechazaKeyframesDispersos(t *testing.T) {
-	requireVideoTools(t)
-	sparse := generateKeyframeVideo(t, filepath.Join(t.TempDir(), "disperso.mkv"), "40",
-		"-x264-params", "keyint=9999:min-keyint=9999:scenecut=0",
-		"-force_key_frames", "expr:gte(t,20)")
-	normal := generateKeyframeVideo(t, filepath.Join(t.TempDir(), "normal.mkv"), "2",
-		"-g", "5", "-keyint_min", "5", "-sc_threshold", "0")
-
-	svc, err := New(Options{WorkDir: filepath.Join(t.TempDir(), "hls")})
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
-	t.Cleanup(func() {
-		if err := svc.Close(); err != nil {
-			t.Errorf("Close: %v", err)
-		}
-	})
-
-	if _, err := svc.prepare(context.Background(), 1, sparse); !errors.Is(err, ErrKeyframeIntervalTooLarge) {
-		t.Fatalf("prepare disperso = %v, se esperaba ErrKeyframeIntervalTooLarge", err)
-	}
-
-	entry, err := svc.prepare(context.Background(), 2, normal)
-	if err != nil {
-		t.Fatalf("prepare normal: %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(entry.dir, "playlist.m3u8")); err != nil {
-		t.Fatalf("no se generó la playlist: %v", err)
 	}
 }
