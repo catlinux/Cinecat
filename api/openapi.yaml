@@ -888,6 +888,188 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/items/{id}/images:
+    get:
+      summary: Imágenes de TMDB disponibles para una película (solo administradores)
+      description: |
+        Devuelve los carteles y fondos de TMDB ordenados por idioma
+        (es-ES, es, en, sin idioma y el resto) y, dentro de cada idioma, por
+        valoración. Incluye una URL de listado y otra a tamaño completo.
+        Requiere una sesión con rol `admin`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        '200':
+          description: Imágenes disponibles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageOptions'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: El usuario no tiene rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No existe el ítem o no es una película
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: La película no está identificada en TMDB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: No se pudo consultar TMDB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: TMDB no está configurado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/items/{id}/images/{kind}:
+    put:
+      summary: Fija una imagen propia (solo administradores)
+      description: |
+        Guarda la URL indicada como póster o fondo y marca esa imagen como
+        fijada, para que el escaneo no la sustituya. No necesita TMDB ni que la
+        película esté identificada. Requiere una sesión con rol `admin`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - $ref: '#/components/parameters/ImageKind'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImageURLRequest'
+      responses:
+        '200':
+          description: Ítem actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaItem'
+        '400':
+          description: Cuerpo no válido o URL no permitida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: El usuario no tiene rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No existe el ítem, no es una película o el tipo de imagen no es válido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno al guardar la imagen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Vuelve a la imagen de TMDB o la deja vacía (solo administradores)
+      description: |
+        Si la película está identificada, consulta TMDB y reescribe solo esa
+        imagen con el valor actual; si no lo está, deja la imagen vacía. En
+        ambos casos quita el bloqueo. Requiere una sesión con rol `admin`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - $ref: '#/components/parameters/ImageKind'
+      responses:
+        '200':
+          description: Ítem actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaItem'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: El usuario no tiene rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No existe el ítem, no es una película o el tipo de imagen no es válido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno al actualizar la imagen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: No se pudo consultar TMDB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: TMDB no está configurado y la película está identificada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/items/{id}/play:
     get:
       summary: Prepara la reproducción de un ítem
@@ -1052,6 +1234,16 @@ components:
       type: http
       scheme: bearer
   parameters:
+    ImageKind:
+      name: kind
+      in: path
+      required: true
+      description: Tipo de imagen que se fija o se restaura.
+      schema:
+        type: string
+        enum:
+          - poster
+          - backdrop
     StreamId:
       name: id
       in: path
@@ -1523,6 +1715,60 @@ components:
               description: Ruta del archivo relativa a la raíz de su biblioteca, con separadores `/`.
             playback:
               $ref: '#/components/schemas/PlaybackInfo'
+    ImageURLRequest:
+      type: object
+      required:
+        - url
+      properties:
+        url:
+          type: string
+          description: URL http o https, sin espacios y de 2048 caracteres como máximo.
+          maxLength: 2048
+      additionalProperties: false
+    ImageOption:
+      type: object
+      required:
+        - url
+        - full_url
+        - language
+        - vote_average
+        - width
+        - height
+      properties:
+        url:
+          type: string
+          description: URL para listados.
+        full_url:
+          type: string
+          description: URL a tamaño completo.
+        language:
+          type: string
+          description: Código de idioma de la imagen; vacío si no tiene idioma.
+        vote_average:
+          type: number
+          format: double
+        width:
+          type: integer
+        height:
+          type: integer
+      additionalProperties: false
+    ImageOptions:
+      type: object
+      required:
+        - posters
+        - backdrops
+      properties:
+        posters:
+          type: array
+          description: Carteles disponibles, siempre un array.
+          items:
+            $ref: '#/components/schemas/ImageOption'
+        backdrops:
+          type: array
+          description: Fondos disponibles, siempre un array.
+          items:
+            $ref: '#/components/schemas/ImageOption'
+      additionalProperties: false
     MediaItem:
       type: object
       required:
@@ -1538,6 +1784,7 @@ components:
         - tmdb_id
         - overview
         - poster_url
+        - poster_custom
         - original_title
         - imdb_id
         - tagline
@@ -1547,6 +1794,7 @@ components:
         - directors
         - cast
         - backdrop_url
+        - backdrop_custom
         - overview_language
         - match_status
         - match_score
@@ -1591,6 +1839,9 @@ components:
         poster_url:
           type: string
           nullable: true
+        poster_custom:
+          type: boolean
+          description: El póster está fijado a mano y el escaneo no lo cambiará.
         original_title:
           type: string
           nullable: true
@@ -1625,6 +1876,9 @@ components:
         backdrop_url:
           type: string
           nullable: true
+        backdrop_custom:
+          type: boolean
+          description: El fondo está fijado a mano y el escaneo no lo cambiará.
         overview_language:
           type: string
           nullable: true

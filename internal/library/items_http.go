@@ -28,6 +28,7 @@ type mediaItemDTO struct {
 	TMDBID           *int64   `json:"tmdb_id"`
 	Overview         *string  `json:"overview"`
 	PosterURL        *string  `json:"poster_url"`
+	PosterCustom     bool     `json:"poster_custom"`
 	OriginalTitle    *string  `json:"original_title"`
 	IMDbID           *string  `json:"imdb_id"`
 	Tagline          *string  `json:"tagline"`
@@ -37,6 +38,7 @@ type mediaItemDTO struct {
 	Directors        []string `json:"directors"`
 	Cast             []string `json:"cast"`
 	BackdropURL      *string  `json:"backdrop_url"`
+	BackdropCustom   bool     `json:"backdrop_custom"`
 	OverviewLanguage *string  `json:"overview_language"`
 	MatchStatus      *string  `json:"match_status"`
 	MatchScore       *float64 `json:"match_score"`
@@ -62,9 +64,10 @@ type genresResponse struct {
 // mediaItemColumns la comparten la lista y la ficha para no divergir.
 const mediaItemColumns = `
 	id, library_id, path, title, COALESCE(display_title, title), year,
-	kind, season, episode, tmdb_id, overview, poster_url, original_title,
-	imdb_id, tagline, genres, runtime_minutes, rating, directors, cast_names,
-	backdrop_url, overview_language, match_status, match_score`
+	kind, season, episode, tmdb_id, overview, poster_url, poster_locked,
+	original_title, imdb_id, tagline, genres, runtime_minutes, rating,
+	directors, cast_names, backdrop_url, backdrop_locked, overview_language,
+	match_status, match_score`
 
 const watchedColumn = `, CASE WHEN ws.user_id IS NULL THEN 0 ELSE 1 END`
 
@@ -84,14 +87,14 @@ func scanItem(scan func(dest ...any) error) (mediaItemDTO, error) {
 	var overview, posterURL, originalTitle, imdbID, tagline sql.NullString
 	var genres, directors, castNames, backdropURL, overviewLanguage, matchStatus sql.NullString
 	var rating, matchScore sql.NullFloat64
-	var watched int
+	var posterLocked, backdropLocked, watched int
 
 	err := scan(
 		&item.ID, &item.LibraryID, &item.Path, &item.FileTitle, &item.Title,
 		&year, &item.Kind, &season, &episode, &tmdbID, &overview,
-		&posterURL, &originalTitle, &imdbID, &tagline, &genres, &runtime,
-		&rating, &directors, &castNames, &backdropURL, &overviewLanguage,
-		&matchStatus, &matchScore, &watched,
+		&posterURL, &posterLocked, &originalTitle, &imdbID, &tagline,
+		&genres, &runtime, &rating, &directors, &castNames, &backdropURL,
+		&backdropLocked, &overviewLanguage, &matchStatus, &matchScore, &watched,
 	)
 	if err != nil {
 		return mediaItemDTO{}, err
@@ -103,6 +106,7 @@ func scanItem(scan func(dest ...any) error) (mediaItemDTO, error) {
 	item.TMDBID = int64Pointer(tmdbID)
 	item.Overview = stringPointer(overview)
 	item.PosterURL = stringPointer(posterURL)
+	item.PosterCustom = posterLocked != 0
 	item.OriginalTitle = stringPointer(originalTitle)
 	item.IMDbID = stringPointer(imdbID)
 	item.Tagline = stringPointer(tagline)
@@ -112,6 +116,7 @@ func scanItem(scan func(dest ...any) error) (mediaItemDTO, error) {
 	item.Directors = decodeStringArray(directors)
 	item.Cast = decodeStringArray(castNames)
 	item.BackdropURL = stringPointer(backdropURL)
+	item.BackdropCustom = backdropLocked != 0
 	item.OverviewLanguage = stringPointer(overviewLanguage)
 	item.MatchStatus = stringPointer(matchStatus)
 	item.MatchScore = floatPointer(matchScore)

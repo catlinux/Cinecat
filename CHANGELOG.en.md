@@ -18,6 +18,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 - Per-user watched state: `PUT`/`DELETE /api/v1/items/{id}/watched`, `watched` field on items and a `watched` filter.
 - Home portal at `/` with one entry per category (Movies; Collections and Series "coming soon") and a "Recently added" row. The movie listing moves to `/movies`, paginated (48 per page), with search by title, cast or director, filters by letter and genre, sorting, watched/unwatched and, for admins, "Unidentified". "Watched" mark on posters.
 - `GET /api/v1/items/{id}/file-info`: technical file information via ffprobe (container, size, video, audio and subtitle tracks with codecs, HDR, quality) and how it will be played.
+- Customisable images (admin): `GET /api/v1/items/{id}/images` offers TMDB posters and backdrops; `PUT`/`DELETE /api/v1/items/{id}/images/{poster|backdrop}` set a custom URL or restore the TMDB one. Scans do not overwrite pinned images.
 - The server shuts down gracefully on SIGINT/SIGTERM, cancelling any running scan.
 
 ## [0.10.0] - 2026-10-26

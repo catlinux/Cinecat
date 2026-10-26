@@ -91,6 +91,37 @@ func TestMigrateEsIdempotente(t *testing.T) {
 	}
 }
 
+func TestMigracionBloqueosImagen(t *testing.T) {
+	s, ctx := openTestStore(t, filepath.Join(t.TempDir(), "cinecat.db"))
+
+	rows, err := s.DB().QueryContext(ctx,
+		`SELECT name, "notnull", dflt_value FROM pragma_table_info('media_items')
+		  WHERE name IN ('poster_locked', 'backdrop_locked') ORDER BY name`)
+	if err != nil {
+		t.Fatalf("consultar columnas de bloqueo: %v", err)
+	}
+	defer rows.Close()
+
+	found := 0
+	for rows.Next() {
+		var name, defaultValue string
+		var notNull int
+		if err := rows.Scan(&name, &notNull, &defaultValue); err != nil {
+			t.Fatalf("leer columna de bloqueo: %v", err)
+		}
+		found++
+		if notNull != 1 || defaultValue != "0" {
+			t.Errorf("%s: notnull = %d, default = %q; se esperaba 1 y 0", name, notNull, defaultValue)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("recorrer columnas de bloqueo: %v", err)
+	}
+	if found != 2 {
+		t.Fatalf("columnas de bloqueo = %d, se esperaban 2", found)
+	}
+}
+
 func TestNoGuardaSecretosEnClaro(t *testing.T) {
 	s, ctx := openTestStore(t, filepath.Join(t.TempDir(), "cinecat.db"))
 

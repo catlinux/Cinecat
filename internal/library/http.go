@@ -69,6 +69,9 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.Handle("GET /api/v1/items/{id}/candidates", a.requireAdmin(a.handleItemCandidates))
 	mux.Handle("PUT /api/v1/items/{id}/match", a.requireAdmin(a.handleItemMatch))
 	mux.Handle("DELETE /api/v1/items/{id}/match", a.requireAdmin(a.handleItemMatchDelete))
+	mux.Handle("GET /api/v1/items/{id}/images", a.requireAdmin(a.handleItemImages))
+	mux.Handle("PUT /api/v1/items/{id}/images/{kind}", a.requireAdmin(a.handleItemImagePut))
+	mux.Handle("DELETE /api/v1/items/{id}/images/{kind}", a.requireAdmin(a.handleItemImageDelete))
 	if a.playback != nil {
 		mux.Handle("GET /api/v1/items/{id}/play", a.requireSession(a.handlePlay))
 		mux.Handle("GET /api/v1/stream/{id}", http.HandlerFunc(a.handleStream))

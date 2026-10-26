@@ -29,6 +29,7 @@ func IsVideoFile(name string) bool {
 type TMDBClient interface {
 	MovieSearcher
 	MovieDetails(ctx context.Context, id int) (*metadata.Details, error)
+	MovieImages(ctx context.Context, tmdbID int) (*metadata.ImageOptions, error)
 }
 
 // Scanner recorre las bibliotecas dadas de alta y puebla media_items.
@@ -320,14 +321,20 @@ func ApplyMovieDetails(ctx context.Context, db *sql.DB, itemID int64, d *metadat
 			tmdb_id = ?, original_title = ?, imdb_id = ?, tagline = ?,
 			overview = ?, overview_language = ?, year = ?, display_title = ?,
 			sort_title = ?, sort_letter = ?, genres = ?, runtime_minutes = ?,
-			rating = ?, directors = ?, cast_names = ?, poster_url = ?,
-			backdrop_url = ?, metadata_source = 'tmdb', match_status = ?,
-			match_score = ?
+			rating = ?, directors = ?, cast_names = ?,
+			poster_url = CASE WHEN poster_locked = 1 AND tmdb_id = ? THEN poster_url ELSE ? END,
+			backdrop_url = CASE WHEN backdrop_locked = 1 AND tmdb_id = ? THEN backdrop_url ELSE ? END,
+			poster_locked = CASE WHEN tmdb_id = ? THEN poster_locked ELSE 0 END,
+			backdrop_locked = CASE WHEN tmdb_id = ? THEN backdrop_locked ELSE 0 END,
+			metadata_source = 'tmdb', match_status = ?, match_score = ?
 		WHERE id = ?`,
 		nullableInt(d.TMDBID), nullableText(d.OriginalTitle), nullableText(d.IMDbID), nullableText(d.Tagline),
 		nullableText(d.Overview), nullableText(d.OverviewLanguage), nullableInt(d.Year), nullableText(d.Title),
 		sortTitle, sortLetter, jsonArray(d.Genres), nullableInt(d.RuntimeMinutes), nullableFloat(d.Rating),
-		jsonArray(d.Directors), jsonArray(d.Cast), nullableText(d.PosterURL), nullableText(d.BackdropURL),
+		jsonArray(d.Directors), jsonArray(d.Cast),
+		d.TMDBID, nullableText(d.PosterURL),
+		d.TMDBID, nullableText(d.BackdropURL),
+		d.TMDBID, d.TMDBID,
 		nullableText(status), score, itemID,
 	)
 	if err != nil {
@@ -356,6 +363,7 @@ func ClearMovieMetadata(ctx context.Context, db *sql.DB, itemID int64, status an
 			sort_title = ?, sort_letter = ?, genres = NULL,
 			runtime_minutes = NULL, rating = NULL, directors = NULL,
 			cast_names = NULL, poster_url = NULL, backdrop_url = NULL,
+			poster_locked = 0, backdrop_locked = 0,
 			metadata_source = NULL, match_score = NULL, match_status = ?
 		WHERE id = ?`,
 		sortTitle, sortLetter, status, itemID,

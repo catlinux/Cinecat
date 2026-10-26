@@ -220,10 +220,29 @@ type imageInfo struct {
 	FilePath    string  `json:"file_path"`
 	Language    *string `json:"iso_639_1"`
 	VoteAverage float64 `json:"vote_average"`
+	Width       int     `json:"width"`
+	Height      int     `json:"height"`
 }
 
 type imagesResponse struct {
-	Posters []imageInfo `json:"posters"`
+	Posters   []imageInfo `json:"posters"`
+	Backdrops []imageInfo `json:"backdrops"`
+}
+
+// ImageOption es una imagen disponible para elegir como cartel o fondo.
+type ImageOption struct {
+	URL         string  `json:"url"`
+	FullURL     string  `json:"full_url"`
+	Language    string  `json:"language"`
+	VoteAverage float64 `json:"vote_average"`
+	Width       int     `json:"width"`
+	Height      int     `json:"height"`
+}
+
+// ImageOptions agrupa los carteles y fondos disponibles de una película.
+type ImageOptions struct {
+	Posters   []ImageOption `json:"posters"`
+	Backdrops []ImageOption `json:"backdrops"`
 }
 
 type cachedSearch struct {
@@ -517,6 +536,71 @@ func (c *Client) MovieCollection(ctx context.Context, movieID int) ([]Candidate,
 	return candidates, nil
 }
 
+// MovieImages devuelve los carteles y fondos disponibles de una película.
+func (c *Client) MovieImages(ctx context.Context, tmdbID int) (*ImageOptions, error) {
+	params := url.Values{}
+	params.Set("include_image_language", imageLanguages)
+
+	var images imagesResponse
+	path := "/movie/" + strconv.Itoa(tmdbID) + "/images"
+	if err := c.getCachedJSON(ctx, path, params, &images); err != nil {
+		return nil, err
+	}
+
+	return &ImageOptions{
+		Posters:   c.imageOptions(images.Posters, "w342", "w780"),
+		Backdrops: c.imageOptions(images.Backdrops, "w780", "w1280"),
+	}, nil
+}
+
+func (c *Client) imageOptions(images []imageInfo, listSize, fullSize string) []ImageOption {
+	sorted := make([]imageInfo, 0, len(images))
+	for _, image := range images {
+		if strings.TrimSpace(image.FilePath) != "" {
+			sorted = append(sorted, image)
+		}
+	}
+	sort.SliceStable(sorted, func(i, j int) bool {
+		leftPriority := imageLanguagePriority(posterLanguage(sorted[i]))
+		rightPriority := imageLanguagePriority(posterLanguage(sorted[j]))
+		if leftPriority != rightPriority {
+			return leftPriority < rightPriority
+		}
+		return sorted[i].VoteAverage > sorted[j].VoteAverage
+	})
+
+	if len(sorted) > 40 {
+		sorted = sorted[:40]
+	}
+	options := make([]ImageOption, 0, len(sorted))
+	for _, image := range sorted {
+		options = append(options, ImageOption{
+			URL:         c.imageURLSize(image.FilePath, listSize),
+			FullURL:     c.imageURLSize(image.FilePath, fullSize),
+			Language:    imageLanguage(image),
+			VoteAverage: image.VoteAverage,
+			Width:       image.Width,
+			Height:      image.Height,
+		})
+	}
+	return options
+}
+
+func imageLanguagePriority(language string) int {
+	switch strings.ToLower(strings.TrimSpace(language)) {
+	case "es-es":
+		return 0
+	case "es":
+		return 1
+	case "en":
+		return 2
+	case "":
+		return 3
+	default:
+		return 4
+	}
+}
+
 // SearchTV busca series por nombre y año opcional, en es-ES.
 func (c *Client) SearchTV(ctx context.Context, query string, year int) ([]Candidate, error) {
 	query = strings.TrimSpace(query)
@@ -784,6 +868,13 @@ func posterLanguage(poster imageInfo) string {
 		return ""
 	}
 	return strings.ToLower(strings.TrimSpace(*poster.Language))
+}
+
+func imageLanguage(image imageInfo) string {
+	if image.Language == nil {
+		return ""
+	}
+	return strings.TrimSpace(*image.Language)
 }
 
 func (c *Client) imageURL(filePath string) string {

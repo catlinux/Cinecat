@@ -18,6 +18,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 - Estado de visto por usuario: `PUT`/`DELETE /api/v1/items/{id}/watched`, campo `watched` en los ítems y filtro `watched`.
 - Portal inicial en `/` con una entrada por categoría (Películas; Colecciones y Series «Próximamente») y la fila «Añadido recientemente». La cartelera pasa a `/movies`, paginada (48 por página), con búsqueda por título, reparto o dirección, filtro por letra y por género, orden, visto/sin ver y, para administradores, «Sin identificar». Marca «Visto» en los carteles.
 - `GET /api/v1/items/{id}/file-info`: información técnica del archivo con ffprobe (contenedor, tamaño, pistas de vídeo, audio y subtítulos con sus códecs, HDR, calidad) y cómo se reproducirá.
+- Imágenes personalizables (administración): `GET /api/v1/items/{id}/images` ofrece los carteles y fondos de TMDB; `PUT`/`DELETE /api/v1/items/{id}/images/{poster|backdrop}` fijan una URL propia o restauran la de TMDB. El escaneo no pisa las imágenes fijadas.
 - El servidor se apaga de forma ordenada ante SIGINT/SIGTERM, cancelando el escaneo en curso.
 
 ## [0.10.0] - 2026-10-26

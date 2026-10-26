@@ -45,6 +45,7 @@ type fakeServer struct {
 	status         int
 	searchResults  []map[string]any
 	posters        []imageInfo
+	backdrops      []imageInfo
 	imageBody      []byte
 	lastSearch     url.Values
 	lastImages     url.Values
@@ -78,7 +79,10 @@ func (f *fakeServer) handle(w http.ResponseWriter, r *http.Request) {
 	case strings.HasSuffix(r.URL.Path, "/images"):
 		f.imagesCalls++
 		f.lastImages = r.URL.Query()
-		_ = json.NewEncoder(w).Encode(map[string]any{"posters": f.posters})
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"posters":   f.posters,
+			"backdrops": f.backdrops,
+		})
 	case strings.HasPrefix(r.URL.Path, "/img/"):
 		f.imageDownloads++
 		_, _ = w.Write(f.imageBody)
@@ -650,6 +654,66 @@ func TestMovieDetails(t *testing.T) {
 		query.Get("append_to_response") != "credits,images" ||
 		query.Get("include_image_language") != "es,null,en" {
 		t.Fatalf("parámetros inesperados: %v", query)
+	}
+}
+
+func TestMovieImagesOrdenTamanoLimiteYCaché(t *testing.T) {
+	server := newFakeServer(t)
+	server.posters = []imageInfo{
+		{FilePath: "/en.jpg", Language: strPtr("en"), VoteAverage: 10, Width: 342, Height: 513},
+		{FilePath: "/es.jpg", Language: strPtr("es"), VoteAverage: 9, Width: 342, Height: 513},
+		{FilePath: "/es-ES.jpg", Language: strPtr("es-ES"), VoteAverage: 5, Width: 342, Height: 513},
+		{FilePath: "/neutral.jpg", Language: nil, VoteAverage: 7, Width: 342, Height: 513},
+		{FilePath: "/fr.jpg", Language: strPtr("fr"), VoteAverage: 20, Width: 342, Height: 513},
+	}
+	for i := 0; i < 36; i++ {
+		server.posters = append(server.posters, imageInfo{
+			FilePath: fmt.Sprintf("/fr-%d.jpg", i), Language: strPtr("fr"), Width: 342, Height: 513,
+		})
+	}
+	server.backdrops = []imageInfo{
+		{FilePath: "/en-backdrop.jpg", Language: strPtr("en"), VoteAverage: 4, Width: 1280, Height: 720},
+		{FilePath: "/es-backdrop.jpg", Language: strPtr("es-ES"), VoteAverage: 8, Width: 1280, Height: 720},
+	}
+
+	client := server.client(t, newFakeClock(), nil)
+	options, err := client.MovieImages(context.Background(), 603)
+	if err != nil {
+		t.Fatalf("MovieImages: %v", err)
+	}
+	if len(options.Posters) != 40 {
+		t.Fatalf("posters = %d, se esperaban 40", len(options.Posters))
+	}
+	wantLanguages := []string{"es-ES", "es", "en", "", "fr"}
+	for i, want := range wantLanguages {
+		if options.Posters[i].Language != want {
+			t.Fatalf("poster %d: idioma %q, se esperaba %q", i, options.Posters[i].Language, want)
+		}
+	}
+	if options.Posters[4].VoteAverage != 20 {
+		t.Fatalf("dentro del mismo idioma debe ir primero la mejor nota: %+v", options.Posters[4])
+	}
+	if options.Posters[0].URL != server.URL+"/img/w342/es-ES.jpg" ||
+		options.Posters[0].FullURL != server.URL+"/img/w780/es-ES.jpg" ||
+		options.Posters[0].Width != 342 || options.Posters[0].Height != 513 {
+		t.Fatalf("cartel inesperado: %+v", options.Posters[0])
+	}
+	if len(options.Backdrops) != 2 || options.Backdrops[0].Language != "es-ES" ||
+		options.Backdrops[0].URL != server.URL+"/img/w780/es-backdrop.jpg" ||
+		options.Backdrops[0].FullURL != server.URL+"/img/w1280/es-backdrop.jpg" {
+		t.Fatalf("fondos inesperados: %+v", options.Backdrops)
+	}
+
+	_, imagesQuery := server.queries()
+	if got := imagesQuery.Get("include_image_language"); got != imageLanguages {
+		t.Fatalf("include_image_language = %q, se esperaba %q", got, imageLanguages)
+	}
+
+	if _, err := client.MovieImages(context.Background(), 603); err != nil {
+		t.Fatalf("MovieImages desde caché: %v", err)
+	}
+	if _, calls, _ := server.counts(); calls != 1 {
+		t.Fatalf("llamadas a imágenes = %d, se esperaba una sola", calls)
 	}
 }
 

@@ -21,7 +21,11 @@ type fakeTMDB struct {
 	lastDetailsID int
 	searchErr     error
 	detailsErr    error
+	imagesErr     error
 	details       *metadata.Details
+	images        *metadata.ImageOptions
+	imagesCalls   int
+	lastImagesID  int
 }
 
 func (f *fakeTMDB) SearchMovies(ctx context.Context, query string, year int) ([]metadata.Candidate, error) {
@@ -57,6 +61,21 @@ func (f *fakeTMDB) MovieDetails(ctx context.Context, id int) (*metadata.Details,
 	return f.details, nil
 }
 
+func (f *fakeTMDB) MovieImages(ctx context.Context, tmdbID int) (*metadata.ImageOptions, error) {
+	f.imagesCalls++
+	f.lastImagesID = tmdbID
+	if f.imagesErr != nil {
+		return nil, f.imagesErr
+	}
+	if f.images == nil {
+		return &metadata.ImageOptions{
+			Posters:   []metadata.ImageOption{},
+			Backdrops: []metadata.ImageOption{},
+		}, nil
+	}
+	return f.images, nil
+}
+
 type tmdbMetadataRow struct {
 	tmdbID           sql.NullInt64
 	originalTitle    sql.NullString
@@ -71,7 +90,9 @@ type tmdbMetadataRow struct {
 	directors        sql.NullString
 	castNames        sql.NullString
 	posterURL        sql.NullString
+	posterLocked     int
 	backdropURL      sql.NullString
+	backdropLocked   int
 	source           sql.NullString
 	matchStatus      sql.NullString
 	matchScore       sql.NullFloat64
@@ -83,15 +104,15 @@ func readTMDBMetadata(t *testing.T, db *sql.DB, path string) tmdbMetadataRow {
 	if err := db.QueryRow(`
 		SELECT tmdb_id, original_title, display_title, imdb_id, tagline,
 			overview, overview_language, genres, runtime_minutes, rating,
-			directors, cast_names, poster_url, backdrop_url, metadata_source,
-			match_status, match_score
+			directors, cast_names, poster_url, poster_locked, backdrop_url,
+			backdrop_locked, metadata_source, match_status, match_score
 		FROM media_items WHERE path = ?`, path,
 	).Scan(
 		&row.tmdbID, &row.originalTitle, &row.displayTitle, &row.imdbID,
 		&row.tagline, &row.overview, &row.overviewLanguage, &row.genres,
 		&row.runtime, &row.rating, &row.directors, &row.castNames,
-		&row.posterURL, &row.backdropURL, &row.source, &row.matchStatus,
-		&row.matchScore,
+		&row.posterURL, &row.posterLocked, &row.backdropURL, &row.backdropLocked,
+		&row.source, &row.matchStatus, &row.matchScore,
 	); err != nil {
 		t.Fatalf("leer metadatos de %q: %v", path, err)
 	}
@@ -372,10 +393,10 @@ func TestScannerConTMDBLimpiaMetadatosSinCoincidencia(t *testing.T) {
 	if _, err := db.Exec(`
 		INSERT INTO media_items (
 			library_id, path, title, year, kind, tmdb_id, overview, poster_url,
-			original_title, display_title, imdb_id, tagline, genres,
-			runtime_minutes, rating, directors, cast_names, backdrop_url,
-			overview_language, metadata_source, match_score
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			poster_locked, original_title, display_title, imdb_id, tagline,
+			genres, runtime_minutes, rating, directors, cast_names, backdrop_url,
+			backdrop_locked, overview_language, metadata_source, match_score
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)`,
 		libraryID, file, "Desconocida", 1999, KindMovie, 7,
 		"Sinopsis de OMDb", "https://images.example/omdb.jpg",
 		"Old original", "Título antiguo", "tt0000007", "Old tagline", `["Old genre"]`, 100, 7.1,
@@ -405,7 +426,8 @@ func TestScannerConTMDBLimpiaMetadatosSinCoincidencia(t *testing.T) {
 		row.imdbID.Valid || row.tagline.Valid || row.overview.Valid ||
 		row.overviewLanguage.Valid || row.genres.Valid || row.runtime.Valid ||
 		row.rating.Valid || row.directors.Valid || row.castNames.Valid ||
-		row.posterURL.Valid || row.backdropURL.Valid || row.source.Valid ||
+		row.posterURL.Valid || row.posterLocked != 0 ||
+		row.backdropURL.Valid || row.backdropLocked != 0 || row.source.Valid ||
 		row.matchStatus.Valid || row.matchScore.Valid {
 		t.Fatalf("los metadatos debían quedar vacíos: %+v", row)
 	}
@@ -489,19 +511,23 @@ func TestScannerConTMDBRellenaDisplayTitlePendiente(t *testing.T) {
 			if _, err := db.Exec(`
 				INSERT INTO media_items (
 					library_id, path, title, year, kind, tmdb_id, overview,
+					poster_url, poster_locked, backdrop_url, backdrop_locked,
 					metadata_source, match_status, match_score
-				) VALUES (?, ?, ?, ?, ?, ?, ?, 'tmdb', ?, ?)`,
+				) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, 1, 'tmdb', ?, ?)`,
 				libraryID, file, "Pelicula", 1999, KindMovie, 77,
-				"Sinopsis antigua", status, 0.87,
+				"Sinopsis antigua", "https://images.example/poster-fijado.jpg",
+				"https://images.example/fondo-fijado.jpg", status, 0.87,
 			); err != nil {
 				t.Fatalf("insertar fila previa: %v", err)
 			}
 
 			fake := &fakeTMDB{details: &metadata.Details{
-				TMDBID:   77,
-				Title:    "Título de TMDB",
-				Year:     1999,
-				Overview: "Sinopsis nueva",
+				TMDBID:      77,
+				PosterURL:   "https://images.example/poster-tmdb.jpg",
+				BackdropURL: "https://images.example/fondo-tmdb.jpg",
+				Title:       "Título de TMDB",
+				Year:        1999,
+				Overview:    "Sinopsis nueva",
 			}}
 			res, err := New(db).WithTMDB(fake).Scan(ctx)
 			if err != nil {
@@ -527,10 +553,93 @@ func TestScannerConTMDBRellenaDisplayTitlePendiente(t *testing.T) {
 			if !row.overview.Valid || row.overview.String != "Sinopsis nueva" {
 				t.Fatalf("overview = %+v", row.overview)
 			}
+			if !row.posterURL.Valid || row.posterURL.String != "https://images.example/poster-fijado.jpg" ||
+				row.posterLocked != 1 {
+				t.Fatalf("el escaneo pisó el póster fijado: %+v", row)
+			}
+			if !row.backdropURL.Valid || row.backdropURL.String != "https://images.example/fondo-fijado.jpg" ||
+				row.backdropLocked != 1 {
+				t.Fatalf("el escaneo pisó el fondo fijado: %+v", row)
+			}
 			if sortTitle, letter := readSortKeys(t, db, file); sortTitle != "Título de TMDB" || letter != "T" {
 				t.Fatalf("claves de orden = %q, %q", sortTitle, letter)
 			}
 		})
+	}
+}
+
+func TestApplyMovieDetailsRespetaBloqueosYLosDescartaAlCambiarTMDB(t *testing.T) {
+	ctx := context.Background()
+	db := openTestDB(t)
+	root := t.TempDir()
+	file := filepath.Join(root, "Pelicula (2019).mkv")
+	writeFile(t, file)
+	libraryID := createLibrary(t, db, root)
+
+	result, err := db.Exec(`
+		INSERT INTO media_items (
+			library_id, path, title, kind, tmdb_id, poster_url, poster_locked,
+			backdrop_url, backdrop_locked
+		) VALUES (?, ?, 'Pelicula', ?, 10, 'https://images.example/poster-propio.jpg', 1,
+			'https://images.example/fondo-propio.jpg', 1)`,
+		libraryID, file, KindMovie)
+	if err != nil {
+		t.Fatalf("insertar fila: %v", err)
+	}
+	itemID, err := result.LastInsertId()
+	if err != nil {
+		t.Fatalf("id de la fila: %v", err)
+	}
+
+	same := &metadata.Details{
+		TMDBID:      10,
+		Title:       "Pelicula",
+		PosterURL:   "https://images.example/poster-tmdb.jpg",
+		BackdropURL: "https://images.example/fondo-tmdb.jpg",
+	}
+	if err := ApplyMovieDetails(ctx, db, itemID, same, "auto", 1); err != nil {
+		t.Fatalf("ApplyMovieDetails mismo TMDB: %v", err)
+	}
+	row := readTMDBMetadata(t, db, file)
+	if !row.posterURL.Valid || row.posterURL.String != "https://images.example/poster-propio.jpg" ||
+		row.posterLocked != 1 ||
+		!row.backdropURL.Valid || row.backdropURL.String != "https://images.example/fondo-propio.jpg" ||
+		row.backdropLocked != 1 {
+		t.Fatalf("las imágenes fijadas cambiaron con el mismo TMDB: %+v", row)
+	}
+
+	changed := &metadata.Details{
+		TMDBID:      11,
+		Title:       "Pelicula",
+		PosterURL:   "https://images.example/poster-nuevo.jpg",
+		BackdropURL: "https://images.example/fondo-nuevo.jpg",
+	}
+	if err := ApplyMovieDetails(ctx, db, itemID, changed, "auto", 1); err != nil {
+		t.Fatalf("ApplyMovieDetails con otro TMDB: %v", err)
+	}
+	row = readTMDBMetadata(t, db, file)
+	if !row.posterURL.Valid || row.posterURL.String != "https://images.example/poster-nuevo.jpg" ||
+		row.posterLocked != 0 ||
+		!row.backdropURL.Valid || row.backdropURL.String != "https://images.example/fondo-nuevo.jpg" ||
+		row.backdropLocked != 0 {
+		t.Fatalf("las imágenes no se sustituyeron al cambiar de TMDB: %+v", row)
+	}
+
+	unlocked := &metadata.Details{
+		TMDBID:      11,
+		Title:       "Pelicula",
+		PosterURL:   "https://images.example/poster-sin-bloqueo.jpg",
+		BackdropURL: "https://images.example/fondo-sin-bloqueo.jpg",
+	}
+	if err := ApplyMovieDetails(ctx, db, itemID, unlocked, "auto", 1); err != nil {
+		t.Fatalf("ApplyMovieDetails sin bloqueo: %v", err)
+	}
+	row = readTMDBMetadata(t, db, file)
+	if !row.posterURL.Valid || row.posterURL.String != "https://images.example/poster-sin-bloqueo.jpg" ||
+		row.posterLocked != 0 ||
+		!row.backdropURL.Valid || row.backdropURL.String != "https://images.example/fondo-sin-bloqueo.jpg" ||
+		row.backdropLocked != 0 {
+		t.Fatalf("sin bloqueo debían actualizarse las imágenes: %+v", row)
 	}
 }
 
