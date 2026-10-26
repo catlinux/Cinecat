@@ -1,24 +1,25 @@
 <script lang="ts">
 	import SettingsForm from '$lib/components/SettingsForm.svelte';
+	import UpdatePanel from '$lib/components/UpdatePanel.svelte';
 	import { formatDateTime } from '$lib/media';
-	import { UPDATE_COMMAND, type UpdateCheck } from '$lib/updates';
 	import type { SettingsFormState } from '$lib/settings';
+	import type { UpdateActionState } from '$lib/updates';
 	import type { PageData } from './$types';
 
-	interface SettingsPageForm extends SettingsFormState {
-		update?: UpdateCheck | null;
-		command?: string;
-	}
+	interface SettingsPageForm extends SettingsFormState, UpdateActionState {}
 
 	let { data, form = null }: { data: PageData; form?: SettingsPageForm | null } = $props();
 
 	const section = $derived(data.section);
-	const checkUpdatesEnabled = $derived(
-		section.settings.find((setting) => setting.key === 'system.check_updates')?.value === true
-	);
-	const checkResult = $derived(form && 'update' in form ? form : null);
+	const updateForm = $derived(form?.updateAction ? form : null);
 	const settingsForm = $derived(
-		checkResult ? { success: checkResult.success, fields: checkResult.fields, values: checkResult.values } : form
+		updateForm
+			? {
+					success: updateForm.success,
+					fields: updateForm.fields,
+					values: updateForm.values
+				}
+			: form
 	);
 </script>
 
@@ -62,26 +63,11 @@
 				{/if}
 			</dl>
 
-			{#if checkUpdatesEnabled}
-				<form method="POST" action="?/checkUpdates" class="system-check">
-					<button class="button button-secondary" type="submit">Comprobar actualizaciones</button>
-				</form>
-				{#if checkResult?.update}
-					<p class="success" role="status">{checkResult.update.message}</p>
-					{#if !checkResult.update.upToDate}
-						<p class="admin-note">
-							Para actualizar, ejecuta <code>{checkResult.command ?? UPDATE_COMMAND}</code>.
-						</p>
-					{/if}
-				{:else if checkResult && checkResult.message}
-					<p class="error" role="alert">{checkResult.message}</p>
-				{/if}
-			{:else}
-				<p class="admin-note">
-					La búsqueda de actualizaciones es una conexión saliente opcional. Activa «Buscar
-					actualizaciones» y guarda los cambios para poder comprobarla.
-				</p>
-			{/if}
+			<UpdatePanel
+				info={data.updateInfo}
+				currentVersion={data.serverInfo?.server ?? data.webVersion}
+				form={updateForm}
+			/>
 		</section>
 	{/if}
 </section>

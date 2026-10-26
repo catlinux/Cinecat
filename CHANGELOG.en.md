@@ -9,7 +9,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ### Added
 
+- Administration → System: "Check for updates" asks the server and shows the new version's notes; "Update now" (with confirmation) asks the host service to update and follows its progress by phases, including the restart, until "Updated to X" or a notice that it rolled back to the previous version.
 - Host updater service (`scripts/cinecat-updater.sh`, systemd user units and `scripts/instalar-actualizador.sh`): picks up the server's request, backs up the database, updates to the requested tag, checks it starts and, on failure, rolls back the code and, if the containers had already been restarted, the database too. Documented in `docs/en/updates.md`.
+
+### Changed
+
+- The web's update check no longer reads `VERSION` from GitHub nor asks to run a command by hand: it uses the server's.
 
 ## [0.15.0] - 2026-10-27
 

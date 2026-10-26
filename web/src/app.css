@@ -2071,6 +2071,198 @@ footer {
 	font-size: 0.82rem;
 }
 
+.update-panel {
+	display: grid;
+	gap: 0.8rem;
+	margin-top: 1.2rem;
+	min-width: 0;
+}
+
+.update-current {
+	margin: 0;
+	color: var(--texto-tenue);
+	font-size: 0.9rem;
+}
+
+.update-current strong {
+	color: var(--granate);
+}
+
+.update-result {
+	margin: 0;
+	padding: 0.7rem 0.8rem;
+	border-left: 4px solid var(--dorado);
+	border-radius: 2px;
+	background: var(--tinte);
+	font-size: 0.9rem;
+	line-height: 1.45;
+}
+
+.update-result--new {
+	border-left-color: var(--naranja);
+	color: var(--naranja);
+	font-weight: 600;
+}
+
+.update-hint {
+	margin-top: 0;
+}
+
+.update-notes,
+.update-confirm {
+	border: 1px solid var(--borde-suave);
+	border-radius: 4px;
+	background: var(--superficie-suave);
+}
+
+.update-notes summary,
+.update-confirm summary {
+	padding: 0.6rem 0.8rem;
+	cursor: pointer;
+	color: var(--granate);
+	font-size: 0.78rem;
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.update-notes summary:focus-visible,
+.update-confirm summary:focus-visible {
+	outline: 2px solid var(--naranja);
+	outline-offset: 2px;
+}
+
+.update-notes pre {
+	max-width: 100%;
+	margin: 0;
+	padding: 0 0.8rem 0.8rem;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	color: var(--texto-tenue);
+	font-family: 'Inter', system-ui, sans-serif;
+	font-size: 0.84rem;
+	line-height: 1.55;
+}
+
+.update-confirm summary {
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: var(--boton-texto);
+	letter-spacing: 0.12em;
+}
+
+.update-confirm > summary.button {
+	width: fit-content;
+	margin: 0;
+	padding: 0.55rem 0.9rem;
+	background: var(--boton-fondo);
+	list-style: none;
+}
+
+.update-confirm > summary.button::-webkit-details-marker {
+	display: none;
+}
+
+.update-confirm-body {
+	padding: 0.8rem;
+}
+
+.update-confirm-body p {
+	margin: 0 0 0.8rem;
+	color: var(--texto-tenue);
+	font-size: 0.88rem;
+	line-height: 1.5;
+}
+
+.update-confirm-body form {
+	margin: 0;
+}
+
+.update-unsupported {
+	display: grid;
+	gap: 0.35rem;
+	min-width: 0;
+}
+
+.update-unsupported .admin-note {
+	margin: 0;
+}
+
+.update-command {
+	max-width: 100%;
+	margin: 0;
+	padding: 0.6rem 0.75rem;
+	overflow-x: auto;
+	border: 1px solid var(--borde-tenue);
+	border-radius: 3px;
+	background: var(--tinte);
+	color: var(--granate);
+	font-size: 0.82rem;
+}
+
+.update-tracking {
+	display: grid;
+	gap: 0.35rem;
+	padding: 0.8rem;
+	border-left: 4px solid var(--dorado);
+	border-radius: 2px;
+	background: var(--tinte);
+}
+
+.update-phase {
+	margin: 0;
+	color: var(--granate);
+	font-family: 'Fraunces', Georgia, serif;
+	font-size: 1.1rem;
+	font-weight: 600;
+}
+
+.update-tracking .admin-note {
+	margin: 0;
+}
+
+.update-progress {
+	position: relative;
+	width: 100%;
+	height: 6px;
+	margin-top: 0.3rem;
+	overflow: hidden;
+	border-radius: 999px;
+	background: var(--borde-tenue);
+}
+
+.update-progress::after {
+	position: absolute;
+	inset: 0;
+	width: 40%;
+	border-radius: inherit;
+	background: var(--dorado);
+	content: '';
+	animation: update-progress 1.4s ease-in-out infinite;
+}
+
+.update-refresh {
+	margin-top: 0.2rem;
+}
+
+@keyframes update-progress {
+	from {
+		transform: translateX(-100%);
+	}
+	to {
+		transform: translateX(250%);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.update-progress::after {
+		animation: none;
+		transform: translateX(30%);
+	}
+}
+
 @media (max-width: 900px) {
 	.admin-shell {
 		grid-template-columns: 1fr;

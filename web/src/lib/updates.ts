@@ -1,7 +1,10 @@
-export const UPDATE_VERSION_URL =
-	'https://raw.githubusercontent.com/catlinux/Cinecat/main/VERSION';
+import type { UpdateInfo, UpdateStatus } from './api';
 
-export const UPDATE_COMMAND = './scripts/actualizar.sh';
+export const UPDATE_INSTALL_COMMAND = './scripts/instalar-actualizador.sh';
+export const UPDATE_MANUAL_COMMAND = './scripts/actualizar.sh';
+export const UPDATE_POLL_INTERVAL = 3000;
+export const UPDATE_POLL_MAX_INTERVAL = 10000;
+export const UPDATE_TRACKING_LIMIT = 30 * 60 * 1000;
 
 export interface ParsedVersion {
 	major: number;
@@ -10,12 +13,28 @@ export interface ParsedVersion {
 	prerelease: Array<string | number>;
 }
 
-export interface UpdateCheck {
-	latest: string;
-	current: string;
-	upToDate: boolean;
-	message: string;
+export interface UpdateActionState {
+	updateAction?: boolean;
+	success?: boolean;
+	message?: string;
+	updateInfo?: UpdateInfo | null;
+	appliedTag?: string | null;
+	installHelp?: boolean;
 }
+
+export type UpdateOutcome = 'ok' | 'failed' | 'rolled_back' | null;
+
+const PHASE_LABELS: Record<string, string> = {
+	Validando: 'Validando la petición',
+	'Comprobando espacio': 'Comprobando espacio libre',
+	'Copia de la base de datos': 'Guardando una copia de la base de datos',
+	'Descargando la versión': 'Descargando la versión',
+	Compilando: 'Compilando la versión nueva',
+	Reiniciando: 'Reiniciando el servidor',
+	'Comprobando que arranca': 'Comprobando que arranca',
+	Terminado: 'Terminado',
+	Revertido: 'Revertido'
+};
 
 export function parseVersion(raw: unknown): ParsedVersion | null {
 	const text = String(raw ?? '').trim();
@@ -46,11 +65,6 @@ export function parseVersion(raw: unknown): ParsedVersion | null {
 		patch: Number(match[3]),
 		prerelease
 	};
-}
-
-export function formatVersion(version: ParsedVersion): string {
-	const base = `${version.major}.${version.minor}.${version.patch}`;
-	return version.prerelease.length > 0 ? `${base}-${version.prerelease.join('.')}` : base;
 }
 
 export function compareVersions(left: string, right: string): number | null {
@@ -103,61 +117,96 @@ export function compareVersions(left: string, right: string): number | null {
 	return 0;
 }
 
-export function isNewerVersion(latest: string, current: string): boolean {
-	return compareVersions(latest, current) === 1;
+export function versionMatches(current: string, tag: string): boolean {
+	const comparison = compareVersions(current, tag);
+	if (comparison !== null) {
+		return comparison === 0;
+	}
+	return current.trim().replace(/^v/, '') === tag.trim().replace(/^v/, '');
 }
 
-export function buildUpdateCheck(latestRaw: string, currentRaw: string): UpdateCheck {
-	const latestVersion = parseVersion(latestRaw);
-	const currentVersion = parseVersion(currentRaw);
-	if (!latestVersion || !currentVersion) {
-		throw new Error('La versión no tiene un formato válido.');
-	}
-
-	const latest = formatVersion(latestVersion);
-	const current = formatVersion(currentVersion);
-	const comparison = compareVersions(latest, current);
-	const upToDate = comparison === null || comparison <= 0;
-	return {
-		latest,
-		current,
-		upToDate,
-		message: upToDate
-			? `Estás al día (${current})`
-			: `Hay una versión nueva: ${latest}`
-	};
+export function isUpdateInProgress(status: UpdateStatus | null | undefined): boolean {
+	return Boolean(status && status.result === '' && status.phase.trim() !== '');
 }
 
-export async function fetchLatestVersion(
-	fetchImpl: typeof fetch,
-	url = UPDATE_VERSION_URL,
-	timeoutMs = 5000
-): Promise<string> {
-	const controller = new AbortController();
-	const timer = setTimeout(() => controller.abort(), timeoutMs);
-	try {
-		const response = await fetchImpl(url, {
-			headers: { Accept: 'text/plain' },
-			signal: controller.signal,
-			cache: 'no-store'
-		});
-		if (!response.ok) {
-			throw new Error(`No se pudo consultar la versión publicada (${response.status}).`);
-		}
-		const text = (await response.text()).trim();
-		if (!parseVersion(text)) {
-			throw new Error('La versión publicada no tiene un formato válido.');
-		}
-		return text;
-	} catch (reason) {
-		if (reason instanceof Error && reason.name === 'AbortError') {
-			throw new Error('La consulta de actualizaciones tardó demasiado.');
-		}
-		if (reason instanceof Error && reason.message) {
-			throw reason;
-		}
-		throw new Error('No se pudo consultar la versión publicada.');
-	} finally {
-		clearTimeout(timer);
+export function phaseLabel(phase: string | null | undefined): string {
+	const text = String(phase ?? '').trim();
+	return PHASE_LABELS[text] ?? (text || 'Actualización en curso');
+}
+
+export function updatedTag(
+	info: UpdateInfo | null | undefined,
+	expectedTag: string | null = null
+): string | null {
+	const status = info?.status;
+	if (!status || status.result !== 'ok' || !status.tag) {
+		return null;
 	}
+	if (expectedTag && !versionMatches(status.tag, expectedTag)) {
+		return null;
+	}
+	return versionMatches(info.current, status.tag) ? status.tag : null;
+}
+
+export function updateOutcome(
+	info: UpdateInfo | null | undefined,
+	expectedTag: string | null = null
+): UpdateOutcome {
+	const status = info?.status;
+	const result = status?.result;
+	if (expectedTag && (!status?.tag || !versionMatches(status.tag, expectedTag))) {
+		return null;
+	}
+	if (result === 'ok') {
+		return updatedTag(info, expectedTag) ? 'ok' : null;
+	}
+	if (result === 'failed' || result === 'rolled_back') {
+		return result;
+	}
+	return null;
+}
+
+export function elapsedSeconds(startedAt: string | null | undefined, now = Date.now()): number {
+	if (!startedAt) {
+		return 0;
+	}
+	const started = Date.parse(startedAt);
+	if (Number.isNaN(started)) {
+		return 0;
+	}
+	return Math.max(0, Math.floor((now - started) / 1000));
+}
+
+export function formatElapsed(totalSeconds: number): string {
+	const seconds = Math.max(0, Math.floor(totalSeconds));
+	const hours = Math.floor(seconds / 3600);
+	const minutes = Math.floor((seconds % 3600) / 60);
+	const remainder = seconds % 60;
+	if (hours > 0) {
+		return `${hours}:${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`;
+	}
+	return `${minutes}:${String(remainder).padStart(2, '0')}`;
+}
+
+export function pollDelay(errorCount: number): number {
+	const failures = Number.isFinite(errorCount) ? Math.max(0, Math.floor(errorCount)) : 0;
+	if (failures === 0) {
+		return UPDATE_POLL_INTERVAL;
+	}
+	return Math.min(UPDATE_POLL_INTERVAL * 2 ** failures, UPDATE_POLL_MAX_INTERVAL);
+}
+
+export function trackingExpired(
+	startedAt: string | null | undefined,
+	now = Date.now(),
+	limit = UPDATE_TRACKING_LIMIT
+): boolean {
+	if (!startedAt) {
+		return false;
+	}
+	const started = Date.parse(startedAt);
+	if (Number.isNaN(started)) {
+		return false;
+	}
+	return now - started >= limit;
 }

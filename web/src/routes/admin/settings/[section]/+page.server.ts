@@ -1,13 +1,8 @@
 import { error, fail, redirect } from '@sveltejs/kit';
-import type { ServerVersion, Setting, SettingsSection } from '$lib/api';
+import type { ServerVersion, SettingsSection, UpdateInfo } from '$lib/api';
 import { ApiError } from '$lib/api';
 import { createApiClient } from '$lib/api-factory';
 import { requireSessionToken } from '$lib/session';
-import {
-	buildUpdateCheck,
-	fetchLatestVersion,
-	UPDATE_COMMAND
-} from '$lib/updates';
 import {
 	collectSettingsForm,
 	findSettingsSection,
@@ -18,6 +13,12 @@ import type { Actions, PageServerLoad } from './$types';
 
 const ADMIN_MESSAGE = 'Esta sección es solo para administradores.';
 const LOAD_ERROR = 'No se pudieron cargar los ajustes. Inténtalo de nuevo.';
+const UPDATE_CHECK_ERROR = 'No se pudo comprobar si hay una versión nueva.';
+const UPDATE_APPLY_ERROR = 'No se pudo solicitar la actualización.';
+const UPDATE_OBSOLETE = 'Esa versión ya no es la última: vuelve a comprobar';
+const UPDATE_RUNNING = 'Ya hay una actualización en curso';
+const UPDATE_UNSUPPORTED =
+	'La actualización automática no está instalada en este servidor';
 
 function sectionError(reason: unknown, fallback = LOAD_ERROR): never {
 	if (reason instanceof ApiError) {
@@ -69,10 +70,6 @@ async function loadSettingsSection(
 	return section;
 }
 
-function settingValue(section: SettingsSection, key: string): unknown {
-	return section.settings.find((setting: Setting) => setting.key === key)?.value;
-}
-
 export const load: PageServerLoad = async ({ params, locals, fetch }) => {
 	const sectionKey = params.section;
 	if (!isSettingsSection(sectionKey)) {
@@ -88,15 +85,23 @@ export const load: PageServerLoad = async ({ params, locals, fetch }) => {
 	}
 
 	let serverInfo: ServerVersion | null = null;
+	let updateInfo: UpdateInfo | null = null;
 	if (sectionKey === 'system') {
+		const api = createApiClient(fetch);
 		try {
-			serverInfo = await createApiClient(fetch).getServerVersion();
+			serverInfo = await api.getServerVersion();
 		} catch {
 			serverInfo = null;
 		}
+		try {
+			updateInfo = await api.getUpdate(token);
+		} catch {
+			// La tarjeta de versiones sigue siendo útil sin el estado de actualización.
+			updateInfo = null;
+		}
 	}
 
-	return { section, serverInfo, webVersion };
+	return { section, serverInfo, updateInfo, webVersion };
 };
 
 export const actions: Actions = {
@@ -181,36 +186,58 @@ export const actions: Actions = {
 		}
 		const token = requireSessionToken(locals);
 
-		let section: SettingsSection;
 		try {
-			section = await loadSettingsSection(fetch, token, 'system');
+			const updateInfo = await createApiClient(fetch).checkUpdate(token);
+			return { updateAction: true, success: true, updateInfo };
 		} catch (reason) {
-			return actionFailure(reason, LOAD_ERROR);
+			if (reason instanceof ApiError) {
+				if (reason.status === 401) {
+					redirect(303, '/login');
+				}
+				if (reason.status === 403) {
+					return fail(403, { updateAction: true, message: ADMIN_MESSAGE });
+				}
+			}
+			return fail(502, { updateAction: true, message: UPDATE_CHECK_ERROR });
 		}
-		if (settingValue(section, 'system.check_updates') !== true) {
-			return fail(400, {
-				message: 'Activa «Buscar actualizaciones» y guarda los cambios antes de comprobar.',
-				update: null
-			});
+	},
+
+	applyUpdate: async ({ request, locals, fetch, params }) => {
+		if (params.section !== 'system') {
+			return fail(404, { message: 'Sección de ajustes no encontrada.' });
+		}
+		const token = requireSessionToken(locals);
+		const tag = String((await request.formData()).get('tag') ?? '').trim();
+		if (!tag) {
+			return fail(400, { updateAction: true, message: UPDATE_OBSOLETE });
 		}
 
 		try {
-			const latest = await fetchLatestVersion(fetch);
-			const update = buildUpdateCheck(latest, webVersion);
-			return {
-				success: true,
-				message: update.message,
-				update,
-				command: UPDATE_COMMAND
-			};
+			const updateInfo = await createApiClient(fetch).applyUpdate(tag, token);
+			return { updateAction: true, success: true, updateInfo, appliedTag: tag };
 		} catch (reason) {
-			return fail(502, {
-				message:
-					reason instanceof Error
-						? reason.message
-						: 'No se pudo consultar la versión publicada.',
-				update: null
-			});
+			if (reason instanceof ApiError) {
+				if (reason.status === 401) {
+					redirect(303, '/login');
+				}
+				if (reason.status === 403) {
+					return fail(403, { updateAction: true, message: ADMIN_MESSAGE });
+				}
+				if (reason.status === 400) {
+					return fail(400, { updateAction: true, message: UPDATE_OBSOLETE });
+				}
+				if (reason.status === 409) {
+					return fail(409, { updateAction: true, message: UPDATE_RUNNING });
+				}
+				if (reason.status === 503) {
+					return fail(503, {
+						updateAction: true,
+						message: UPDATE_UNSUPPORTED,
+						installHelp: true
+					});
+				}
+			}
+			return fail(502, { updateAction: true, message: UPDATE_APPLY_ERROR });
 		}
 	}
 };

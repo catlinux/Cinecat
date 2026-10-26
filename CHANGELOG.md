@@ -9,7 +9,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ### Añadido
 
+- Administración → Sistema: «Buscar actualizaciones» consulta al servidor y muestra las notas de la versión nueva; «Actualizar ahora» (con confirmación) pide la actualización al servicio del host y sigue su progreso por fases, incluido el reinicio, hasta «Actualizado a X» o el aviso de que se volvió a la versión anterior.
 - Servicio actualizador para el host (`scripts/cinecat-updater.sh`, unidades de systemd de usuario e `scripts/instalar-actualizador.sh`): recoge la petición del servidor, hace copia de la base de datos, actualiza a la etiqueta pedida, comprueba que arranca y, si falla, vuelve al código y, si ya se habían reiniciado los contenedores, también a la base de datos anteriores. Documentado en `docs/es/actualizaciones.md`.
+
+### Cambiado
+
+- La comprobación de actualizaciones de la web ya no lee `VERSION` de GitHub ni pide ejecutar un comando a mano: usa la del servidor.
 
 ## [0.15.0] - 2026-10-27
 

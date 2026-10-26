@@ -472,6 +472,26 @@ export interface CurrentUserResponse {
 	role: 'admin' | 'user';
 }
 
+export interface UpdateStatus {
+	phase: string;
+	tag: string;
+	message: string;
+	started_at: string;
+	finished_at: string;
+	result: 'ok' | 'failed' | 'rolled_back' | '';
+}
+
+export interface UpdateInfo {
+	current: string;
+	latest: string;
+	available: boolean;
+	checked_at: string;
+	notes: string;
+	apply_supported: boolean;
+	check_enabled: boolean;
+	status: UpdateStatus;
+}
+
 // Error del servidor o de red. status 0 significa que no se pudo contactar.
 export class ApiError extends Error {
 	readonly status: number;
@@ -558,6 +578,18 @@ export class ApiClient {
 
 	async getServerVersion(): Promise<ServerVersion> {
 		return this.get<ServerVersion>('/api/v1/system/version');
+	}
+
+	async getUpdate(token: string): Promise<UpdateInfo> {
+		return this.get<UpdateInfo>('/api/v1/system/update', token);
+	}
+
+	async checkUpdate(token: string): Promise<UpdateInfo> {
+		return this.post<UpdateInfo>('/api/v1/system/update/check', undefined, token);
+	}
+
+	async applyUpdate(tag: string, token: string): Promise<UpdateInfo> {
+		return this.post<UpdateInfo>('/api/v1/system/update/apply', { tag }, token);
 	}
 
 	async getSettings(token: string): Promise<SettingsResponse> {

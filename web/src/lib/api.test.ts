@@ -72,4 +72,43 @@ describe('ApiClient', () => {
 
 		await expect(client.get('/api/v1/items')).rejects.toMatchObject({ status: 0 });
 	});
+
+	it('consulta, fuerza y solicita actualizaciones del sistema', async () => {
+		const info = {
+			current: '0.15.0',
+			latest: 'v0.16.0',
+			available: true,
+			checked_at: '',
+			notes: '',
+			apply_supported: true,
+			check_enabled: true,
+			status: {
+				phase: '',
+				tag: '',
+				message: '',
+				started_at: '',
+				finished_at: '',
+				result: ''
+			}
+		};
+		const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
+			jsonResponse(info)
+		);
+		const client = new ApiClient({ baseUrl: 'http://api.test', fetch: fetchMock });
+
+		await client.getUpdate('token-123');
+		await client.checkUpdate('token-123');
+		await client.applyUpdate('v0.16.0', 'token-123');
+
+		expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
+			'http://api.test/api/v1/system/update',
+			'http://api.test/api/v1/system/update/check',
+			'http://api.test/api/v1/system/update/apply'
+		]);
+		expect(fetchMock.mock.calls[1][1]?.method).toBe('POST');
+		expect(JSON.parse(String(fetchMock.mock.calls[2][1]?.body))).toEqual({ tag: 'v0.16.0' });
+		for (const [, init] of fetchMock.mock.calls) {
+			expect((init?.headers as Record<string, string>).Authorization).toBe('Bearer token-123');
+		}
+	});
 });

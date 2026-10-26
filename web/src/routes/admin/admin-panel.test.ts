@@ -6,7 +6,9 @@ import type {
 	ServerVersion,
 	Setting,
 	SettingsResponse,
-	SettingsSection
+	SettingsSection,
+	UpdateInfo,
+	UpdateStatus
 } from '$lib/api';
 import AdminNav from '$lib/components/AdminNav.svelte';
 import SettingsForm from '$lib/components/SettingsForm.svelte';
@@ -21,6 +23,7 @@ import { actions as settingsActions, load as loadSettings } from './settings/[se
 const save = settingsActions.save!;
 const reset = settingsActions.reset!;
 const checkUpdates = settingsActions.checkUpdates!;
+const applyUpdate = settingsActions.applyUpdate!;
 
 function jsonResponse(body: unknown, status = 200): Response {
 	return new Response(JSON.stringify(body), {
@@ -274,6 +277,32 @@ const serverInfo: ServerVersion = {
 	built_at: '2026-10-26T09:00:00Z'
 };
 
+function updateStatus(overrides: Partial<UpdateStatus> = {}): UpdateStatus {
+	return {
+		phase: '',
+		tag: '',
+		message: '',
+		started_at: '',
+		finished_at: '',
+		result: '',
+		...overrides
+	};
+}
+
+function updateInfo(overrides: Partial<UpdateInfo> = {}): UpdateInfo {
+	return {
+		current: webVersion,
+		latest: 'v99.0.0',
+		available: true,
+		checked_at: '2026-10-27T10:00:00Z',
+		notes: 'Novedades',
+		apply_supported: true,
+		check_enabled: true,
+		status: updateStatus(),
+		...overrides
+	};
+}
+
 describe('layout de administración', () => {
 	it('redirige sin sesión', async () => {
 		await expect(
@@ -463,12 +492,50 @@ describe('carga de ajustes', () => {
 	it('carga cada sección del catálogo', async () => {
 		const response = settingsResponse();
 		for (const key of ['scan', 'metadata', 'ui', 'playback', 'system']) {
-			const fetchMock = vi.fn().mockResolvedValue(jsonResponse(response));
+			const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+				const path = new URL(String(input)).pathname;
+				if (path === '/api/v1/settings') {
+					return jsonResponse(response);
+				}
+				if (path === '/api/v1/system/version') {
+					return jsonResponse(serverInfo);
+				}
+				if (path === '/api/v1/system/update') {
+					return jsonResponse(updateInfo());
+				}
+				throw new Error(`URL inesperada: ${path}`);
+			});
 			const result = (await loadSettings(
 				sectionLoadEvent(fetchMock, key) as never
-			)) as { section: SettingsSection };
+			)) as { section: SettingsSection; updateInfo: UpdateInfo | null };
 			expect(result.section.key).toBe(key);
+			expect(result.updateInfo?.latest ?? null).toBe(key === 'system' ? 'v99.0.0' : null);
 		}
+	});
+
+	it('no bloquea la sección si falla el estado de actualización', async () => {
+		const response = settingsResponse();
+		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+			const path = new URL(String(input)).pathname;
+			if (path === '/api/v1/settings') {
+				return jsonResponse(response);
+			}
+			if (path === '/api/v1/system/version') {
+				return jsonResponse(serverInfo);
+			}
+			if (path === '/api/v1/system/update') {
+				return jsonResponse({ error: 'sin actualizador' }, 502);
+			}
+			throw new Error(`URL inesperada: ${path}`);
+		});
+		const result = (await loadSettings(sectionLoadEvent(fetchMock, 'system') as never)) as {
+			section: SettingsSection;
+			serverInfo: ServerVersion | null;
+			updateInfo: UpdateInfo | null;
+		};
+		expect(result.section.key).toBe('system');
+		expect(result.serverInfo?.commit).toBe('abc1234');
+		expect(result.updateInfo).toBeNull();
 	});
 
 	it('devuelve 404 para una sección desconocida', async () => {
@@ -627,88 +694,153 @@ describe('acciones de ajustes', () => {
 });
 
 describe('sistema y actualizaciones', () => {
-	function systemFetch(
-		checkEnabled: boolean,
-		remote: () => Response | Promise<Response>
-	) {
-		return vi.fn(async (input: RequestInfo | URL) => {
+	it('fuerza la comprobación con el servidor y devuelve su estado', async () => {
+		const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
 			const url = new URL(String(input));
-			if (url.pathname === '/api/v1/settings') {
-				return jsonResponse(settingsResponse(checkEnabled));
-			}
-			if (url.hostname === 'raw.githubusercontent.com') {
-				return remote();
+			if (url.pathname === '/api/v1/system/update/check') {
+				expect(init?.method).toBe('POST');
+				expect(init?.headers).toMatchObject({ Authorization: 'Bearer token-123' });
+				return jsonResponse(updateInfo({ check_enabled: false }));
 			}
 			throw new Error(`URL inesperada: ${url}`);
 		});
-	}
-
-	it('avisa de una versión nueva', async () => {
-		const fetchMock = systemFetch(true, () => new Response('99.0.0\n', { status: 200 }));
 		const result = (await checkUpdates(
 			actionEvent(fetchMock, 'checkUpdates', {}, 'system') as never
-		)) as { success?: boolean; update: { upToDate: boolean; message: string } };
+		)) as { updateAction: boolean; success: boolean; updateInfo: UpdateInfo };
+
+		expect(result.updateAction).toBe(true);
 		expect(result.success).toBe(true);
-		expect(result.update.upToDate).toBe(false);
-		expect(result.update.message).toContain('99.0.0');
-	});
-
-	it('indica que está al día', async () => {
-		const fetchMock = systemFetch(true, () => new Response(`${webVersion}\n`, { status: 200 }));
-		const result = (await checkUpdates(
-			actionEvent(fetchMock, 'checkUpdates', {}, 'system') as never
-		)) as { update: { upToDate: boolean } };
-		expect(result.update.upToDate).toBe(true);
-	});
-
-	it('no consulta la red si el ajuste está desactivado', async () => {
-		const fetchMock = systemFetch(false, () => new Response('99.0.0', { status: 200 }));
-		const result = (await checkUpdates(
-			actionEvent(fetchMock, 'checkUpdates', {}, 'system') as never
-		)) as { status: number };
-		expect(result.status).toBe(400);
+		expect(result.updateInfo.latest).toBe('v99.0.0');
+		const [url] = fetchMock.mock.calls[0];
+		expect(url).toBe('http://api.test/api/v1/system/update/check');
 		expect(
-			fetchMock.mock.calls.some(([input]) => String(input).includes('raw.githubusercontent.com'))
+			fetchMock.mock.calls.some(([input]) => String(input).includes('/api/v1/settings'))
 		).toBe(false);
 	});
 
-	it('muestra un error claro si falla la consulta', async () => {
-		const fetchMock = systemFetch(true, () => {
-			throw new Error('sin conexión');
-		});
+	it('muestra un error claro si falla la comprobación', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ error: 'sin conexión' }, 502));
 		const result = (await checkUpdates(
 			actionEvent(fetchMock, 'checkUpdates', {}, 'system') as never
 		)) as { status: number; data: { message: string } };
 		expect(result.status).toBe(502);
-		expect(result.data.message).toContain('sin conexión');
+		expect(result.data.message).toBe('No se pudo comprobar si hay una versión nueva.');
 	});
 
-	it('renderiza las versiones y el botón solo con el ajuste activo', () => {
-		const enabled = render(SettingsPage, {
+	it('solicita la actualización con la etiqueta elegida', async () => {
+		let requestBody: unknown = null;
+		const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+			const url = new URL(String(input));
+			if (url.pathname === '/api/v1/system/update/apply' && init?.method === 'POST') {
+				requestBody = JSON.parse(String(init.body));
+				return jsonResponse(
+					updateInfo({
+						status: updateStatus({
+							phase: 'Validando',
+							tag: 'v99.0.0',
+							started_at: '2026-10-27T10:00:00Z'
+						})
+					}),
+					202
+				);
+			}
+			throw new Error(`URL inesperada: ${url}`);
+		});
+		const result = (await applyUpdate(
+			actionEvent(fetchMock, 'applyUpdate', { tag: 'v99.0.0' }, 'system') as never
+		)) as {
+			updateAction: boolean;
+			success: boolean;
+			appliedTag: string;
+			updateInfo: UpdateInfo;
+		};
+
+		expect(result.updateAction).toBe(true);
+		expect(result.success).toBe(true);
+		expect(result.appliedTag).toBe('v99.0.0');
+		expect(result.updateInfo.status.phase).toBe('Validando');
+		expect(requestBody).toEqual({ tag: 'v99.0.0' });
+	});
+
+	it('traduce los errores 400, 409 y 503 al aplicar', async () => {
+		const cases = [
+			[400, 'Esa versión ya no es la última: vuelve a comprobar', false],
+			[409, 'Ya hay una actualización en curso', false],
+			[503, 'La actualización automática no está instalada en este servidor', true]
+		] as const;
+		for (const [status, message, installHelp] of cases) {
+			const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ error: 'error' }, status));
+			const result = (await applyUpdate(
+				actionEvent(fetchMock, 'applyUpdate', { tag: 'v99.0.0' }, 'system') as never
+			)) as {
+				status: number;
+				data: { message: string; updateAction: boolean; installHelp?: boolean };
+			};
+			expect(result.status).toBe(status);
+			expect(result.data.message).toBe(message);
+			expect(result.data.updateAction).toBe(true);
+			expect(Boolean(result.data.installHelp)).toBe(installHelp);
+		}
+	});
+
+	it('convierte otros fallos al aplicar en 502', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ error: 'fallo' }, 500));
+		const result = (await applyUpdate(
+			actionEvent(fetchMock, 'applyUpdate', { tag: 'v99.0.0' }, 'system') as never
+		)) as { status: number; data: { message: string } };
+		expect(result.status).toBe(502);
+		expect(result.data.message).toBe('No se pudo solicitar la actualización.');
+	});
+
+	it('redirige al login sin sesión en ambas acciones', async () => {
+		await expect(
+			checkUpdates(
+				actionEvent(vi.fn(), 'checkUpdates', {}, 'system', null) as never
+			)
+		).rejects.toMatchObject({ status: 303, location: '/login' });
+		await expect(
+			applyUpdate(
+				actionEvent(vi.fn(), 'applyUpdate', { tag: 'v99.0.0' }, 'system', null) as never
+			)
+		).rejects.toMatchObject({ status: 303, location: '/login' });
+	});
+
+	it('renderiza la versión nueva y las instrucciones si no hay actualizador', () => {
+		const html = render(SettingsPage, {
+			props: {
+				data: {
+					section: systemSection(false),
+					serverInfo,
+					updateInfo: updateInfo({ check_enabled: false, apply_supported: false }),
+					webVersion
+				} as never,
+				form: null
+			}
+		}).body;
+		expect(html).toContain('Hay una versión nueva: v99.0.0');
+		expect(html).toContain('La búsqueda automática está desactivada; puedes comprobar a mano');
+		expect(html).toContain('La actualización automática no está instalada en este servidor');
+		expect(html).toContain('./scripts/instalar-actualizador.sh');
+		expect(html).toContain('./scripts/actualizar.sh');
+		expect(html).toContain('abc1234');
+	});
+
+	it('muestra el error de una acción de actualización', () => {
+		const html = render(SettingsPage, {
 			props: {
 				data: {
 					section: systemSection(true),
 					serverInfo,
+					updateInfo: updateInfo(),
 					webVersion
 				} as never,
 				form: {
-					update: { latest: '99.0.0', current: webVersion, upToDate: false, message: 'Hay una versión nueva: 99.0.0' },
-					command: './scripts/actualizar.sh'
+					updateAction: true,
+					message: 'Ya hay una actualización en curso'
 				}
 			}
 		}).body;
-		expect(enabled).toContain('Comprobar actualizaciones');
-		expect(enabled).toContain('Hay una versión nueva: 99.0.0');
-		expect(enabled).toContain('./scripts/actualizar.sh');
-		expect(enabled).toContain('abc1234');
-
-		const disabled = render(SettingsPage, {
-			props: {
-				data: { section: systemSection(false), serverInfo: null, webVersion } as never
-			}
-		}).body;
-		expect(disabled).not.toContain('Comprobar actualizaciones');
-		expect(disabled).toContain('conexión saliente opcional');
+		expect(html).toContain('Ya hay una actualización en curso');
 	});
 });
 
