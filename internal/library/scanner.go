@@ -3,6 +3,7 @@ package library
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"io/fs"
 	"os"
@@ -23,10 +24,17 @@ func IsVideoFile(name string) bool {
 	return videoExtensions[strings.ToLower(filepath.Ext(name))]
 }
 
+// TMDBClient es lo que necesita el escáner para identificar y guardar fichas.
+type TMDBClient interface {
+	MovieSearcher
+	MovieDetails(ctx context.Context, id int) (*metadata.Details, error)
+}
+
 // Scanner recorre las bibliotecas dadas de alta y puebla media_items.
 type Scanner struct {
 	db   *sql.DB
 	omdb *metadata.OMDbClient
+	tmdb TMDBClient
 }
 
 // New crea un escáner sobre la base de datos indicada.
@@ -42,13 +50,22 @@ func (s *Scanner) WithOMDb(client *metadata.OMDbClient) *Scanner {
 	return s
 }
 
+// WithTMDB activa la identificación y las fichas de TMDB para películas. Si se
+// llama, OMDb deja de usarse aunque también se haya configurado.
+func (s *Scanner) WithTMDB(client TMDBClient) *Scanner {
+	s.tmdb = client
+	return s
+}
+
 // Result resume un escaneo. Warnings recoge rutas ilegibles o bibliotecas
 // inexistentes, que no abortan el resto del escaneo.
 type Result struct {
-	Libraries int
-	Files     int
-	Upserted  int
-	Warnings  []string
+	Libraries    int
+	Files        int
+	Upserted     int
+	Identified   int
+	Unidentified int
+	Warnings     []string
 }
 
 // Scan recorre todas las bibliotecas de la tabla libraries.
@@ -148,8 +165,13 @@ func (s *Scanner) scanLibrary(ctx context.Context, libraryID int64, root string,
 		res.Files++
 		res.Upserted++
 
-		if s.omdb != nil && media.Kind == KindMovie {
-			s.enrichMovie(ctx, libraryID, path, media, res)
+		if media.Kind == KindMovie {
+			switch {
+			case s.tmdb != nil:
+				s.enrichMovieTMDB(ctx, libraryID, path, media, res)
+			case s.omdb != nil:
+				s.enrichMovie(ctx, libraryID, path, media, res)
+			}
 		}
 		return nil
 	})
@@ -193,11 +215,137 @@ func (s *Scanner) enrichMovie(ctx context.Context, libraryID int64, path string,
 		posterValue = result.PosterURL
 	}
 	if _, err := s.db.ExecContext(ctx,
-		`UPDATE media_items SET overview = ?, poster_url = ? WHERE library_id = ? AND path = ?`,
+		`UPDATE media_items SET overview = ?, poster_url = ?, metadata_source = 'omdb'
+		 WHERE library_id = ? AND path = ?`,
 		overviewValue, posterValue, libraryID, path,
 	); err != nil {
 		res.Warnings = append(res.Warnings, fmt.Sprintf("%s: no se pudieron guardar los metadatos: %v", path, err))
 	}
+}
+
+// enrichMovieTMDB identifica la película y guarda su ficha. Respeta el estado
+// de corrección manual: lo que el usuario ha fijado no se vuelve a consultar.
+func (s *Scanner) enrichMovieTMDB(ctx context.Context, libraryID int64, path string, media Media, res *Result) {
+	var itemID int64
+	var matchStatus, source sql.NullString
+	if err := s.db.QueryRowContext(ctx,
+		`SELECT id, match_status, metadata_source FROM media_items WHERE library_id = ? AND path = ?`,
+		libraryID, path,
+	).Scan(&itemID, &matchStatus, &source); err != nil {
+		res.Warnings = append(res.Warnings, fmt.Sprintf("%s: no se pudo comprobar los metadatos: %v", path, err))
+		return
+	}
+
+	if matchStatus.Valid {
+		switch matchStatus.String {
+		case "manual", "none":
+			return
+		case "auto":
+			if source.Valid && source.String == "tmdb" {
+				return
+			}
+		}
+	}
+
+	candidate, score, ok, err := IdentifyMovie(ctx, s.tmdb, media.Title, media.Year)
+	if err != nil {
+		res.Warnings = append(res.Warnings, fmt.Sprintf("%s: no se pudo identificar: %v", path, err))
+		return
+	}
+	if !ok {
+		// Los metadatos anteriores podían ser de otra película o estar en
+		// inglés, así que no se conservan.
+		if err := ClearMovieMetadata(ctx, s.db, itemID, nil); err != nil {
+			res.Warnings = append(res.Warnings, fmt.Sprintf("%s: no se pudieron borrar los metadatos: %v", path, err))
+		}
+		res.Unidentified++
+		return
+	}
+
+	details, err := s.tmdb.MovieDetails(ctx, candidate.TMDBID)
+	if err != nil {
+		res.Warnings = append(res.Warnings, fmt.Sprintf("%s: no se pudo obtener la ficha: %v", path, err))
+		return
+	}
+	if err := ApplyMovieDetails(ctx, s.db, itemID, details, "auto", score); err != nil {
+		res.Warnings = append(res.Warnings, fmt.Sprintf("%s: no se pudieron guardar los metadatos: %v", path, err))
+		return
+	}
+	res.Identified++
+}
+
+// ApplyMovieDetails guarda la ficha completa en la fila. El título se deja
+// como está porque es el que se analizó del archivo.
+func ApplyMovieDetails(ctx context.Context, db *sql.DB, itemID int64, d *metadata.Details, status string, score float64) error {
+	_, err := db.ExecContext(ctx, `
+		UPDATE media_items SET
+			tmdb_id = ?, original_title = ?, imdb_id = ?, tagline = ?,
+			overview = ?, overview_language = ?, year = ?, genres = ?,
+			runtime_minutes = ?, rating = ?, directors = ?, cast_names = ?,
+			poster_url = ?, backdrop_url = ?, metadata_source = 'tmdb',
+			match_status = ?, match_score = ?
+		WHERE id = ?`,
+		nullableInt(d.TMDBID), nullableText(d.OriginalTitle), nullableText(d.IMDbID), nullableText(d.Tagline),
+		nullableText(d.Overview), nullableText(d.OverviewLanguage), nullableInt(d.Year), jsonArray(d.Genres),
+		nullableInt(d.RuntimeMinutes), nullableFloat(d.Rating), jsonArray(d.Directors), jsonArray(d.Cast),
+		nullableText(d.PosterURL), nullableText(d.BackdropURL),
+		nullableText(status), score, itemID,
+	)
+	if err != nil {
+		return fmt.Errorf("library: guardar la ficha de la película %d: %w", itemID, err)
+	}
+	return nil
+}
+
+// ClearMovieMetadata deja la fila sin ficha, conservando el título y el año
+// analizados del archivo.
+func ClearMovieMetadata(ctx context.Context, db *sql.DB, itemID int64, status any) error {
+	_, err := db.ExecContext(ctx, `
+		UPDATE media_items SET
+			tmdb_id = NULL, original_title = NULL, imdb_id = NULL, tagline = NULL,
+			overview = NULL, overview_language = NULL, genres = NULL,
+			runtime_minutes = NULL, rating = NULL, directors = NULL,
+			cast_names = NULL, poster_url = NULL, backdrop_url = NULL,
+			metadata_source = NULL, match_score = NULL, match_status = ?
+		WHERE id = ?`,
+		status, itemID,
+	)
+	if err != nil {
+		return fmt.Errorf("library: borrar la ficha de la película %d: %w", itemID, err)
+	}
+	return nil
+}
+
+func nullableText(value string) any {
+	if strings.TrimSpace(value) == "" {
+		return nil
+	}
+	return value
+}
+
+func nullableInt(value int) any {
+	if value == 0 {
+		return nil
+	}
+	return value
+}
+
+func nullableFloat(value float64) any {
+	if value == 0 {
+		return nil
+	}
+	return value
+}
+
+func jsonArray(values []string) any {
+	if len(values) == 0 {
+		return nil
+	}
+	data, err := json.Marshal(values)
+	if err != nil {
+		return nil
+	}
+	return string(data)
 }
 
 func upsertMediaItem(ctx context.Context, db *sql.DB, libraryID int64, path string, media Media) error {
@@ -217,7 +365,9 @@ func upsertMediaItem(ctx context.Context, db *sql.DB, libraryID int64, path stri
 		VALUES (?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT (library_id, path) DO UPDATE SET
 			title = excluded.title,
-			year = excluded.year,
+			-- El año de una ficha de TMDB es más fiable que el del nombre del
+			-- archivo, que casi nunca lo lleva.
+			year = CASE WHEN media_items.metadata_source = 'tmdb' THEN media_items.year ELSE excluded.year END,
 			kind = excluded.kind,
 			season = excluded.season,
 			episode = excluded.episode`,

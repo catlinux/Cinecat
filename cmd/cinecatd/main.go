@@ -83,7 +83,17 @@ func main() {
 	defer playSvc.Close()
 
 	scanner := library.New(st.DB())
-	if cfg.OMDbAPIKey != "" {
+	if cfg.TMDBAPIKey != "" {
+		tmdb, err := metadata.New(metadata.Options{
+			APIKey:   cfg.TMDBAPIKey,
+			CacheDir: tmdbCacheDir(cfg.DatabasePath),
+		})
+		if err != nil {
+			log.Printf("cinecatd: metadatos de TMDB desactivados: %v", err)
+		} else {
+			scanner = scanner.WithTMDB(tmdb)
+		}
+	} else if cfg.OMDbAPIKey != "" {
 		omdb, err := metadata.NewOMDbClient(metadata.OMDbOptions{APIKey: cfg.OMDbAPIKey})
 		if err != nil {
 			log.Printf("cinecatd: metadatos de OMDb desactivados: %v", err)
@@ -104,6 +114,17 @@ func main() {
 	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatalf("cinecatd: %v", err)
 	}
+}
+
+// tmdbCacheDir deja la caché junto a la base de datos para que viva en el
+// volumen de Docker y sobreviva a las actualizaciones. Con ":memory:" no hay
+// archivo junto al que guardarla.
+func tmdbCacheDir(databasePath string) string {
+	path := strings.TrimSpace(databasePath)
+	if path == "" || path == ":memory:" {
+		return ""
+	}
+	return filepath.Join(filepath.Dir(path), "cache", "tmdb")
 }
 
 func newHandler(authSvc *auth.Service, api *library.API) http.Handler {

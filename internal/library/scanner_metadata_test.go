@@ -3,6 +3,7 @@ package library
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -11,6 +12,83 @@ import (
 
 	"github.com/catlinux/cinecat/internal/metadata"
 )
+
+type fakeTMDB struct {
+	searchCalls  int
+	detailsCalls int
+	searchErr    error
+	detailsErr   error
+	details      *metadata.Details
+}
+
+func (f *fakeTMDB) SearchMovies(ctx context.Context, query string, year int) ([]metadata.Candidate, error) {
+	f.searchCalls++
+	if f.searchErr != nil {
+		return nil, f.searchErr
+	}
+	return []metadata.Candidate{{
+		TMDBID:        42,
+		Title:         query,
+		OriginalTitle: query,
+		Year:          2019,
+		Popularity:    10,
+		VoteCount:     1000,
+	}}, nil
+}
+
+func (f *fakeTMDB) MovieCollection(ctx context.Context, movieID int) ([]metadata.Candidate, error) {
+	return nil, nil
+}
+
+func (f *fakeTMDB) MovieDetails(ctx context.Context, id int) (*metadata.Details, error) {
+	f.detailsCalls++
+	if f.detailsErr != nil {
+		return nil, f.detailsErr
+	}
+	if f.details == nil {
+		return &metadata.Details{TMDBID: id}, nil
+	}
+	return f.details, nil
+}
+
+type tmdbMetadataRow struct {
+	tmdbID           sql.NullInt64
+	originalTitle    sql.NullString
+	imdbID           sql.NullString
+	tagline          sql.NullString
+	overview         sql.NullString
+	overviewLanguage sql.NullString
+	genres           sql.NullString
+	runtime          sql.NullInt64
+	rating           sql.NullFloat64
+	directors        sql.NullString
+	castNames        sql.NullString
+	posterURL        sql.NullString
+	backdropURL      sql.NullString
+	source           sql.NullString
+	matchStatus      sql.NullString
+	matchScore       sql.NullFloat64
+}
+
+func readTMDBMetadata(t *testing.T, db *sql.DB, path string) tmdbMetadataRow {
+	t.Helper()
+	var row tmdbMetadataRow
+	if err := db.QueryRow(`
+		SELECT tmdb_id, original_title, imdb_id, tagline, overview,
+			overview_language, genres, runtime_minutes, rating, directors,
+			cast_names, poster_url, backdrop_url, metadata_source,
+			match_status, match_score
+		FROM media_items WHERE path = ?`, path,
+	).Scan(
+		&row.tmdbID, &row.originalTitle, &row.imdbID, &row.tagline,
+		&row.overview, &row.overviewLanguage, &row.genres, &row.runtime,
+		&row.rating, &row.directors, &row.castNames, &row.posterURL,
+		&row.backdropURL, &row.source, &row.matchStatus, &row.matchScore,
+	); err != nil {
+		t.Fatalf("leer metadatos de %q: %v", path, err)
+	}
+	return row
+}
 
 func newMetadataTestClient(t *testing.T, baseURL string) *metadata.OMDbClient {
 	t.Helper()
@@ -148,5 +226,308 @@ func TestScannerConOMDbIgnoraSeriesYEpisodios(t *testing.T) {
 	}
 	if calls.Load() != 0 {
 		t.Fatalf("no se debe consultar OMDb para episodios: %d peticiones", calls.Load())
+	}
+}
+
+func TestScannerConTMDBIdentificaYPersisteFicha(t *testing.T) {
+	ctx := context.Background()
+	db := openTestDB(t)
+
+	root := t.TempDir()
+	file := filepath.Join(root, "Pelicula (2019).mkv")
+	writeFile(t, file)
+	createLibrary(t, db, root)
+
+	fake := &fakeTMDB{details: &metadata.Details{
+		TMDBID:           42,
+		IMDbID:           "tt0123456",
+		Title:            "Ficha de TMDB",
+		OriginalTitle:    "Original title",
+		Year:             2019,
+		Tagline:          "Un lema",
+		Overview:         "Una sinopsis en castellano.",
+		OverviewLanguage: "es-ES",
+		Genres:           []string{"Drama", "Acción"},
+		RuntimeMinutes:   121,
+		Rating:           8.4,
+		Directors:        []string{"Directora"},
+		Cast:             []string{"Actor uno", "Actor dos"},
+		PosterURL:        "https://images.example/poster.jpg",
+		BackdropURL:      "https://images.example/backdrop.jpg",
+	}}
+	scanner := New(db).WithTMDB(fake)
+
+	res, err := scanner.Scan(ctx)
+	if err != nil {
+		t.Fatalf("Scan: %v", err)
+	}
+	if res.Files != 1 || res.Identified != 1 || res.Unidentified != 0 {
+		t.Fatalf("resultado inesperado: %+v", res)
+	}
+	if len(res.Warnings) != 0 {
+		t.Fatalf("avisos inesperados: %v", res.Warnings)
+	}
+
+	row := readTMDBMetadata(t, db, file)
+	if !row.tmdbID.Valid || row.tmdbID.Int64 != 42 {
+		t.Fatalf("tmdb_id = %+v", row.tmdbID)
+	}
+	if !row.originalTitle.Valid || row.originalTitle.String != "Original title" {
+		t.Fatalf("original_title = %+v", row.originalTitle)
+	}
+	if !row.imdbID.Valid || row.imdbID.String != "tt0123456" {
+		t.Fatalf("imdb_id = %+v", row.imdbID)
+	}
+	if !row.tagline.Valid || row.tagline.String != "Un lema" {
+		t.Fatalf("tagline = %+v", row.tagline)
+	}
+	if !row.overview.Valid || row.overview.String != "Una sinopsis en castellano." {
+		t.Fatalf("overview = %+v", row.overview)
+	}
+	if !row.overviewLanguage.Valid || row.overviewLanguage.String != "es-ES" {
+		t.Fatalf("overview_language = %+v", row.overviewLanguage)
+	}
+	if !row.genres.Valid || row.genres.String != `["Drama","Acción"]` {
+		t.Fatalf("genres = %+v", row.genres)
+	}
+	if !row.runtime.Valid || row.runtime.Int64 != 121 {
+		t.Fatalf("runtime_minutes = %+v", row.runtime)
+	}
+	if !row.rating.Valid || row.rating.Float64 != 8.4 {
+		t.Fatalf("rating = %+v", row.rating)
+	}
+	if !row.directors.Valid || row.directors.String != `["Directora"]` {
+		t.Fatalf("directors = %+v", row.directors)
+	}
+	if !row.castNames.Valid || row.castNames.String != `["Actor uno","Actor dos"]` {
+		t.Fatalf("cast_names = %+v", row.castNames)
+	}
+	if !row.posterURL.Valid || row.posterURL.String != "https://images.example/poster.jpg" {
+		t.Fatalf("poster_url = %+v", row.posterURL)
+	}
+	if !row.backdropURL.Valid || row.backdropURL.String != "https://images.example/backdrop.jpg" {
+		t.Fatalf("backdrop_url = %+v", row.backdropURL)
+	}
+	if !row.source.Valid || row.source.String != "tmdb" {
+		t.Fatalf("metadata_source = %+v", row.source)
+	}
+	if !row.matchStatus.Valid || row.matchStatus.String != "auto" {
+		t.Fatalf("match_status = %+v", row.matchStatus)
+	}
+	if !row.matchScore.Valid || row.matchScore.Float64 < MatchThreshold {
+		t.Fatalf("match_score = %+v", row.matchScore)
+	}
+
+	// El título del archivo no se cambia por el de la ficha.
+	media := readMediaRow(t, db, file)
+	if media.title != "Pelicula" {
+		t.Fatalf("title = %q", media.title)
+	}
+
+	// Un segundo escaneo no vuelve a consultar TMDB para una fila auto+tmdb.
+	searches := fake.searchCalls
+	if _, err := scanner.Scan(ctx); err != nil {
+		t.Fatalf("segundo Scan: %v", err)
+	}
+	if fake.searchCalls != searches || fake.detailsCalls != 1 {
+		t.Fatalf("segundo escaneo: búsquedas %d (antes %d), fichas %d",
+			fake.searchCalls, searches, fake.detailsCalls)
+	}
+}
+
+func TestScannerConTMDBLimpiaMetadatosSinCoincidencia(t *testing.T) {
+	ctx := context.Background()
+	db := openTestDB(t)
+
+	root := t.TempDir()
+	file := filepath.Join(root, "Desconocida (1999).mkv")
+	writeFile(t, file)
+	libraryID := createLibrary(t, db, root)
+
+	if _, err := db.Exec(`
+		INSERT INTO media_items (
+			library_id, path, title, year, kind, tmdb_id, overview, poster_url,
+			original_title, imdb_id, tagline, genres, runtime_minutes, rating,
+			directors, cast_names, backdrop_url, overview_language,
+			metadata_source, match_score
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		libraryID, file, "Desconocida", 1999, KindMovie, 7,
+		"Sinopsis de OMDb", "https://images.example/omdb.jpg",
+		"Old original", "tt0000007", "Old tagline", `["Old genre"]`, 100, 7.1,
+		`["Old director"]`, `["Old actor"]`, "https://images.example/old-backdrop.jpg",
+		"en-US", "omdb", 0.9,
+	); err != nil {
+		t.Fatalf("insertar fila previa: %v", err)
+	}
+
+	fake := &fakeTMDB{searchErr: metadata.ErrNotFound}
+	res, err := New(db).WithTMDB(fake).Scan(ctx)
+	if err != nil {
+		t.Fatalf("Scan: %v", err)
+	}
+	if res.Identified != 0 || res.Unidentified != 1 {
+		t.Fatalf("resultado inesperado: %+v", res)
+	}
+	if len(res.Warnings) != 0 {
+		t.Fatalf("avisos inesperados: %v", res.Warnings)
+	}
+	if fake.detailsCalls != 0 {
+		t.Fatalf("no se debe pedir la ficha sin coincidencia: %d", fake.detailsCalls)
+	}
+
+	row := readTMDBMetadata(t, db, file)
+	if row.tmdbID.Valid || row.originalTitle.Valid || row.imdbID.Valid ||
+		row.tagline.Valid || row.overview.Valid || row.overviewLanguage.Valid ||
+		row.genres.Valid || row.runtime.Valid || row.rating.Valid ||
+		row.directors.Valid || row.castNames.Valid || row.posterURL.Valid ||
+		row.backdropURL.Valid || row.source.Valid || row.matchStatus.Valid ||
+		row.matchScore.Valid {
+		t.Fatalf("los metadatos debían quedar vacíos: %+v", row)
+	}
+}
+
+func TestScannerConTMDBNoTocaManualNiNone(t *testing.T) {
+	ctx := context.Background()
+	db := openTestDB(t)
+
+	root := t.TempDir()
+	manual := filepath.Join(root, "Manual (2001).mkv")
+	none := filepath.Join(root, "None (2002).mkv")
+	writeFile(t, manual)
+	writeFile(t, none)
+	libraryID := createLibrary(t, db, root)
+
+	for _, item := range []struct {
+		path   string
+		title  string
+		year   int
+		status string
+		source string
+	}{
+		{manual, "Manual", 2001, "manual", "tmdb"},
+		{none, "None", 2002, "none", "omdb"},
+	} {
+		if _, err := db.Exec(`
+			INSERT INTO media_items (
+				library_id, path, title, year, kind, tmdb_id, overview,
+				poster_url, metadata_source, match_status, match_score
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			libraryID, item.path, item.title, item.year, KindMovie, 99,
+			"Ficha fijada", "https://images.example/fijada.jpg",
+			item.source, item.status, 0.8,
+		); err != nil {
+			t.Fatalf("insertar %q: %v", item.path, err)
+		}
+	}
+
+	fake := &fakeTMDB{details: &metadata.Details{TMDBID: 99, Overview: "Otra"}}
+	res, err := New(db).WithTMDB(fake).Scan(ctx)
+	if err != nil {
+		t.Fatalf("Scan: %v", err)
+	}
+	if res.Identified != 0 || res.Unidentified != 0 {
+		t.Fatalf("resultado inesperado: %+v", res)
+	}
+	if len(res.Warnings) != 0 {
+		t.Fatalf("avisos inesperados: %v", res.Warnings)
+	}
+	if fake.searchCalls != 0 || fake.detailsCalls != 0 {
+		t.Fatalf("no se debe consultar TMDB: búsquedas %d, fichas %d",
+			fake.searchCalls, fake.detailsCalls)
+	}
+
+	for _, path := range []string{manual, none} {
+		row := readTMDBMetadata(t, db, path)
+		if !row.tmdbID.Valid || row.tmdbID.Int64 != 99 ||
+			!row.overview.Valid || row.overview.String != "Ficha fijada" ||
+			!row.matchScore.Valid || row.matchScore.Float64 != 0.8 {
+			t.Fatalf("la fila %q cambió: %+v", path, row)
+		}
+	}
+}
+
+func TestScannerConTMDBErrorDeRedNoTocaLaFila(t *testing.T) {
+	ctx := context.Background()
+	db := openTestDB(t)
+
+	root := t.TempDir()
+	file := filepath.Join(root, "Fallo (2020).mkv")
+	writeFile(t, file)
+	libraryID := createLibrary(t, db, root)
+
+	if _, err := db.Exec(`
+		INSERT INTO media_items (
+			library_id, path, title, year, kind, tmdb_id, overview,
+			metadata_source, match_score
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		libraryID, file, "Fallo", 2020, KindMovie, 5,
+		"Sinopsis anterior", "omdb", 0.81,
+	); err != nil {
+		t.Fatalf("insertar fila previa: %v", err)
+	}
+
+	fake := &fakeTMDB{searchErr: errors.New("red caída")}
+	res, err := New(db).WithTMDB(fake).Scan(ctx)
+	if err != nil {
+		t.Fatalf("el escaneo no debe fallar: %v", err)
+	}
+	if res.Identified != 0 || res.Unidentified != 0 {
+		t.Fatalf("resultado inesperado: %+v", res)
+	}
+	if len(res.Warnings) != 1 {
+		t.Fatalf("avisos = %v, se esperaba uno", res.Warnings)
+	}
+	if fake.detailsCalls != 0 {
+		t.Fatalf("no se debe pedir la ficha si falla la búsqueda: %d", fake.detailsCalls)
+	}
+
+	row := readTMDBMetadata(t, db, file)
+	if !row.tmdbID.Valid || row.tmdbID.Int64 != 5 ||
+		!row.overview.Valid || row.overview.String != "Sinopsis anterior" ||
+		!row.source.Valid || row.source.String != "omdb" ||
+		!row.matchScore.Valid || row.matchScore.Float64 != 0.81 {
+		t.Fatalf("la fila cambió: %+v", row)
+	}
+}
+
+func TestScannerConTMDBNoUsaOMDb(t *testing.T) {
+	ctx := context.Background()
+	db := openTestDB(t)
+
+	root := t.TempDir()
+	file := filepath.Join(root, "Pelicula TMDB (2019).mkv")
+	writeFile(t, file)
+	createLibrary(t, db, root)
+
+	var calls atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls.Add(1)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"Response":"True","Title":"Pelicula TMDB","Plot":"x"}`))
+	}))
+	t.Cleanup(server.Close)
+
+	fake := &fakeTMDB{details: &metadata.Details{
+		TMDBID:   42,
+		Title:    "Pelicula TMDB",
+		Overview: "Sinopsis de TMDB.",
+	}}
+	res, err := New(db).WithOMDb(newMetadataTestClient(t, server.URL)).WithTMDB(fake).Scan(ctx)
+	if err != nil {
+		t.Fatalf("Scan: %v", err)
+	}
+	if res.Identified != 1 || res.Unidentified != 0 {
+		t.Fatalf("resultado inesperado: %+v", res)
+	}
+	if len(res.Warnings) != 0 {
+		t.Fatalf("avisos inesperados: %v", res.Warnings)
+	}
+	if calls.Load() != 0 {
+		t.Fatalf("con TMDB no se debe consultar OMDb: %d peticiones", calls.Load())
+	}
+
+	row := readTMDBMetadata(t, db, file)
+	if !row.source.Valid || row.source.String != "tmdb" {
+		t.Fatalf("metadata_source = %+v", row.source)
 	}
 }
