@@ -7,6 +7,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-26
+
+### Added
+- The library shows the real OMDb poster when available and keeps the typographic fallback poster when it is missing. The item page also shows the real poster and adds the plot (`overview`) when available, omitting the section when there is no data.
+
 ## [0.6.0] - 2026-10-25
 
 ### Added

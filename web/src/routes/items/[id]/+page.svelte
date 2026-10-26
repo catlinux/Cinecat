@@ -18,11 +18,21 @@
 <section class="detail">
 	<div
 		class="detail-poster"
+		class:detail-poster--image={Boolean(item.poster_url)}
 		style={`--poster-a: ${colors.from}; --poster-b: ${colors.to};`}
 		aria-hidden="true"
 	>
 		<span class="poster-kind">{kindLabel(item.kind)}</span>
-		<span class="detail-poster-title">{item.title}</span>
+		{#if item.poster_url}
+			<img
+				class="detail-poster-img"
+				src={item.poster_url}
+				alt={`Cartel de ${item.title}`}
+				loading="lazy"
+			/>
+		{:else}
+			<span class="detail-poster-title">{item.title}</span>
+		{/if}
 	</div>
 
 	<div class="detail-info">
@@ -32,6 +42,10 @@
 
 		{#if item.kind === 'episode' && item.season !== null && item.episode !== null}
 			<p class="detail-extra">Temporada {item.season}, episodio {item.episode}</p>
+		{/if}
+
+		{#if item.overview}
+			<p class="detail-overview">{item.overview}</p>
 		{/if}
 
 		<a class="button" href={`/items/${item.id}/play`}>Reproducir</a>

@@ -32,6 +32,8 @@ export interface MediaItem {
 	season: number | null;
 	episode: number | null;
 	tmdb_id: number | null;
+	overview: string | null;
+	poster_url: string | null;
 }
 
 export interface ItemsResponse {

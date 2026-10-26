@@ -7,6 +7,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.7.0] - 2026-10-26
+
+### Añadido
+- La biblioteca muestra el cartel real de OMDb cuando existe y mantiene el cartel tipográfico de respaldo cuando falta. La ficha de ítem muestra también el cartel real y añade la sinopsis (`overview`) cuando está disponible, omitiendo la sección si no hay datos.
+
 ## [0.6.0] - 2026-10-25
 
 ### Añadido

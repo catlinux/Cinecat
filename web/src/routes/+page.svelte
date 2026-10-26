@@ -25,7 +25,7 @@
 	{#if data.items.length > 0}
 		<div class="poster-grid">
 			{#each data.items as item (item.id)}
-				<PosterCard {item} />
+				<PosterCard {item} posterUrl={item.poster_url} />
 			{/each}
 		</div>
 	{:else if !data.errorMessage}

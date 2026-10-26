@@ -12,7 +12,9 @@ const item: MediaItem = {
 	kind: 'movie',
 	season: null,
 	episode: null,
-	tmdb_id: 603
+	tmdb_id: 603,
+	overview: null,
+	poster_url: null
 };
 
 describe('PosterCard', () => {
@@ -24,6 +26,17 @@ describe('PosterCard', () => {
 		expect(body).toContain('/items/7');
 		expect(body).toContain('1999');
 		expect(body).toContain('--poster-a');
+	});
+
+	it('muestra el cartel real cuando posterUrl está informado', () => {
+		const { body } = render(PosterCard, {
+			props: { item, posterUrl: 'https://images.example/matrix.jpg' }
+		});
+
+		expect(body).toContain('<img');
+		expect(body).toContain('src="https://images.example/matrix.jpg"');
+		expect(body).toContain('alt="Cartel de Matrix"');
+		expect(body).not.toContain('poster-fallback');
 	});
 
 	it('usa la misma paleta en cada render para el mismo título', () => {
