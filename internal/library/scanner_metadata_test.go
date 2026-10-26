@@ -534,11 +534,11 @@ func TestScannerConTMDBNoTocaManualNiNone(t *testing.T) {
 			INSERT INTO media_items (
 				library_id, path, title, year, kind, tmdb_id, overview,
 				poster_url, display_title, metadata_source, match_status, match_score,
-				collection_checked
-			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+				collection_checked, credits
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`,
 			libraryID, item.path, item.title, item.year, KindMovie, 99,
 			"Ficha fijada", "https://images.example/fijada.jpg", "Ficha fijada",
-			item.source, item.status, 0.8,
+			item.source, item.status, 0.8, `{"cast":[],"crew":[]}`,
 		); err != nil {
 			t.Fatalf("insertar %q: %v", item.path, err)
 		}
@@ -638,6 +638,24 @@ func TestScannerConTMDBRellenaDisplayTitlePendiente(t *testing.T) {
 			if sortTitle, letter := readSortKeys(t, db, file); sortTitle != "Título de TMDB" || letter != "T" {
 				t.Fatalf("claves de orden = %q, %q", sortTitle, letter)
 			}
+			var rawCredits sql.NullString
+			if err := db.QueryRow(`SELECT credits FROM media_items WHERE id = (
+				SELECT id FROM media_items WHERE path = ?)`, file).Scan(&rawCredits); err != nil {
+				t.Fatalf("leer credits: %v", err)
+			}
+			if !rawCredits.Valid {
+				t.Fatal("el relleno debe guardar credits")
+			}
+
+			fake.searchCalls = 0
+			fake.detailsCalls = 0
+			if _, err := New(db).WithTMDB(fake).Scan(ctx); err != nil {
+				t.Fatalf("segundo Scan: %v", err)
+			}
+			if fake.searchCalls != 0 || fake.detailsCalls != 0 {
+				t.Fatalf("el segundo escaneo no debe pedir TMDB: %d, %d",
+					fake.searchCalls, fake.detailsCalls)
+			}
 		})
 	}
 }
@@ -703,6 +721,48 @@ func TestScannerConTMDBRellenaColeccionPendiente(t *testing.T) {
 					fake.searchCalls, fake.detailsCalls)
 			}
 		})
+	}
+}
+
+func TestApplyMovieDetailsGuardaYClearCredits(t *testing.T) {
+	ctx := context.Background()
+	db := openTestDB(t)
+	libraryID := createLibrary(t, db, t.TempDir())
+	itemID := insertItemFixture(t, db, itemFixture{
+		libraryID: libraryID, path: filepath.Join(t.TempDir(), "creditos.mkv"),
+		title: "Créditos", kind: KindMovie,
+	})
+
+	details := &metadata.Details{
+		TMDBID: 1,
+		Title:  "Créditos",
+		Credits: metadata.Credits{
+			Cast: []metadata.CastCredit{{Name: "Actriz", Character: "Heroína", PhotoURL: "https://images.example/a.jpg"}},
+			Crew: []metadata.CrewCredit{{Name: "Directora", Job: "Director", Department: "Directing", PhotoURL: "https://images.example/d.jpg"}},
+		},
+	}
+	if err := ApplyMovieDetails(ctx, db, itemID, details, "auto", 0.9); err != nil {
+		t.Fatalf("ApplyMovieDetails: %v", err)
+	}
+	var raw sql.NullString
+	if err := db.QueryRow(`SELECT credits FROM media_items WHERE id = ?`, itemID).Scan(&raw); err != nil {
+		t.Fatalf("leer credits: %v", err)
+	}
+	decoded := decodeCredits(raw)
+	if len(decoded.Cast) != 1 || decoded.Cast[0].Character != "Heroína" ||
+		decoded.Cast[0].PhotoURL != "https://images.example/a.jpg" ||
+		len(decoded.Crew) != 1 || decoded.Crew[0].Job != "Director" {
+		t.Fatalf("credits guardados inesperados: %+v", decoded)
+	}
+
+	if err := ClearMovieMetadata(ctx, db, itemID, nil); err != nil {
+		t.Fatalf("ClearMovieMetadata: %v", err)
+	}
+	if err := db.QueryRow(`SELECT credits FROM media_items WHERE id = ?`, itemID).Scan(&raw); err != nil {
+		t.Fatalf("leer credits tras limpiar: %v", err)
+	}
+	if raw.Valid {
+		t.Fatalf("credits debe quedar NULL: %+v", raw)
 	}
 }
 

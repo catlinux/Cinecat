@@ -37,6 +37,7 @@ type mediaItemDTO struct {
 	Rating           *float64          `json:"rating"`
 	Directors        []string          `json:"directors"`
 	Cast             []string          `json:"cast"`
+	Credits          creditsDTO        `json:"credits"`
 	BackdropURL      *string           `json:"backdrop_url"`
 	BackdropCustom   bool              `json:"backdrop_custom"`
 	OverviewLanguage *string           `json:"overview_language"`
@@ -81,7 +82,7 @@ const mediaItemColumns = `
 	match_status, match_score, series_id,
 	(SELECT COALESCE(NULLIF(s.display_title, ''), s.title)
 	   FROM series s WHERE s.id = media_items.series_id),
-	episode_title, still_url`
+	episode_title, still_url, credits`
 
 const watchedColumn = `, CASE WHEN ws.user_id IS NULL THEN 0 ELSE 1 END`
 
@@ -172,7 +173,7 @@ func scanItem(scan func(dest ...any) error) (mediaItemDTO, error) {
 	var year, season, episode, tmdbID, runtime, seriesID sql.NullInt64
 	var overview, posterURL, originalTitle, imdbID, tagline sql.NullString
 	var genres, directors, castNames, backdropURL, overviewLanguage, matchStatus sql.NullString
-	var seriesTitle, episodeTitle, stillURL sql.NullString
+	var seriesTitle, episodeTitle, stillURL, credits sql.NullString
 	var rating, matchScore, progressPosition, progressDuration sql.NullFloat64
 	var progressUpdated sql.NullString
 	var posterLocked, backdropLocked, watched int
@@ -183,7 +184,7 @@ func scanItem(scan func(dest ...any) error) (mediaItemDTO, error) {
 		&posterURL, &posterLocked, &originalTitle, &imdbID, &tagline,
 		&genres, &runtime, &rating, &directors, &castNames, &backdropURL,
 		&backdropLocked, &overviewLanguage, &matchStatus, &matchScore,
-		&seriesID, &seriesTitle, &episodeTitle, &stillURL, &watched,
+		&seriesID, &seriesTitle, &episodeTitle, &stillURL, &credits, &watched,
 		&progressPosition, &progressDuration, &progressUpdated,
 	)
 	if err != nil {
@@ -214,6 +215,7 @@ func scanItem(scan func(dest ...any) error) (mediaItemDTO, error) {
 	item.SeriesTitle = stringPointer(seriesTitle)
 	item.EpisodeTitle = stringPointer(episodeTitle)
 	item.StillURL = stringPointer(stillURL)
+	item.Credits = decodeCredits(credits)
 	item.Watched = watched != 0
 	if progressPosition.Valid && progressDuration.Valid && progressUpdated.Valid {
 		item.Progress = &playbackProgress{

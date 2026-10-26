@@ -124,7 +124,7 @@ func ApplyTVDetails(ctx context.Context, db *sql.DB, seriesID int64, d *metadata
 			tmdb_id = ?, original_title = ?, tagline = ?, overview = ?,
 			overview_language = ?, year = ?, display_title = ?,
 			sort_title = ?, sort_letter = ?, genres = ?, rating = ?,
-			directors = ?, cast_names = ?,
+			directors = ?, cast_names = ?, credits = ?,
 			poster_url = CASE WHEN poster_locked = 1 AND tmdb_id = ? THEN poster_url ELSE ? END,
 			backdrop_url = CASE WHEN backdrop_locked = 1 AND tmdb_id = ? THEN backdrop_url ELSE ? END,
 			poster_locked = CASE WHEN tmdb_id = ? THEN poster_locked ELSE 0 END,
@@ -135,7 +135,7 @@ func ApplyTVDetails(ctx context.Context, db *sql.DB, seriesID int64, d *metadata
 		nullableText(d.Overview), nullableText(d.OverviewLanguage), nullableInt(d.Year),
 		nullableText(d.Title), sortTitle, sortLetter, jsonArray(d.Genres),
 		nullableFloat(d.Rating), jsonArray(d.Directors), jsonArray(d.Cast),
-		d.TMDBID, nullableText(d.PosterURL),
+		creditsJSON(d.Credits), d.TMDBID, nullableText(d.PosterURL),
 		d.TMDBID, nullableText(d.BackdropURL),
 		d.TMDBID, d.TMDBID,
 		nullableText(status), score, seriesID,
@@ -183,7 +183,7 @@ func ClearTVMetadata(ctx context.Context, db *sql.DB, seriesID int64, status any
 			tmdb_id = NULL, original_title = NULL, year = NULL, tagline = NULL,
 			overview = NULL, overview_language = NULL, display_title = NULL,
 			sort_title = ?, sort_letter = ?, genres = NULL, rating = NULL,
-			directors = NULL, cast_names = NULL, poster_url = NULL,
+			directors = NULL, cast_names = NULL, credits = NULL, poster_url = NULL,
 			backdrop_url = NULL, poster_locked = 0, backdrop_locked = 0,
 			metadata_source = NULL, match_score = NULL, match_status = ?
 		WHERE id = ?`,
@@ -226,12 +226,13 @@ func (s *Scanner) seriesIDsWithEpisodes(ctx context.Context, libraryID int64) ([
 func (s *Scanner) enrichSeriesTMDB(ctx context.Context, seriesID int64, res *Result) {
 	var title string
 	var year sql.NullInt64
-	var matchStatus, source sql.NullString
+	var matchStatus, source, credits sql.NullString
 	var tmdbID sql.NullInt64
+	var matchScore sql.NullFloat64
 	err := s.db.QueryRowContext(ctx, `
-		SELECT title, year, match_status, metadata_source, tmdb_id
+		SELECT title, year, match_status, metadata_source, tmdb_id, match_score, credits
 		  FROM series WHERE id = ?`, seriesID,
-	).Scan(&title, &year, &matchStatus, &source, &tmdbID)
+	).Scan(&title, &year, &matchStatus, &source, &tmdbID, &matchScore, &credits)
 	if errors.Is(err, sql.ErrNoRows) {
 		return
 	}
@@ -241,14 +242,41 @@ func (s *Scanner) enrichSeriesTMDB(ctx context.Context, seriesID int64, res *Res
 	}
 
 	if matchStatus.Valid {
-		switch matchStatus.String {
-		case "manual", "none":
+		if matchStatus.String == "none" {
 			return
-		case "auto":
-			if source.Valid && source.String == "tmdb" && tmdbID.Valid && tmdbID.Int64 > 0 {
-				s.enrichSeriesSeasons(ctx, seriesID, tmdbID.Int64, title, res)
+		}
+		canUpdate := source.Valid && source.String == "tmdb" &&
+			tmdbID.Valid && tmdbID.Int64 > 0
+		if !canUpdate {
+			if matchStatus.String == "manual" {
 				return
 			}
+		} else {
+			if !credits.Valid {
+				score := 0.0
+				if matchScore.Valid {
+					score = matchScore.Float64
+				}
+				details, err := s.tmdb.TVDetails(ctx, int(tmdbID.Int64))
+				if err != nil {
+					res.Warnings = append(res.Warnings, fmt.Sprintf("%s: no se pudo obtener la ficha: %v", title, err))
+					return
+				}
+				if err := ApplyTVDetails(ctx, s.db, seriesID, details, matchStatus.String, score); err != nil {
+					res.Warnings = append(res.Warnings, fmt.Sprintf("%s: no se pudieron guardar los metadatos: %v", title, err))
+					return
+				}
+				if !matchScore.Valid {
+					if _, err := s.db.ExecContext(ctx,
+						`UPDATE series SET match_score = NULL WHERE id = ?`, seriesID); err != nil {
+						res.Warnings = append(res.Warnings, fmt.Sprintf("%s: no se pudieron guardar los metadatos: %v", title, err))
+					}
+				}
+			}
+			if matchStatus.String == "auto" {
+				s.enrichSeriesSeasons(ctx, seriesID, tmdbID.Int64, title, res)
+			}
+			return
 		}
 	}
 

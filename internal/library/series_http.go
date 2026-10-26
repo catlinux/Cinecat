@@ -64,6 +64,7 @@ type seriesDetailDTO struct {
 	Rating           *float64          `json:"rating"`
 	Directors        []string          `json:"directors"`
 	Cast             []string          `json:"cast"`
+	Credits          creditsDTO        `json:"credits"`
 	TMDBID           *int64            `json:"tmdb_id"`
 	MatchStatus      *string           `json:"match_status"`
 	MatchScore       *float64          `json:"match_score"`
@@ -219,20 +220,12 @@ func (a *API) handleSeries(w http.ResponseWriter, r *http.Request) {
 
 	series := make([]seriesListDTO, 0)
 	for rows.Next() {
-		var item seriesListDTO
-		var year sql.NullInt64
-		var poster, genres, matchStatus sql.NullString
-		if err := rows.Scan(&item.ID, &item.Title, &item.FileTitle, &year, &poster,
-			&genres, &item.SeasonCount, &item.EpisodeCount, &item.WatchedCount,
-			&matchStatus); err != nil {
+		item, err := scanSeriesList(rows.Scan)
+		if err != nil {
 			log.Printf("library: leer serie: %v", err)
 			writeJSONError(w, http.StatusInternalServerError, "error interno")
 			return
 		}
-		item.Year = intPointer(year)
-		item.PosterURL = stringPointer(poster)
-		item.Genres = decodeStringArray(genres)
-		item.MatchStatus = stringPointer(matchStatus)
 		series = append(series, item)
 	}
 	if err := rows.Err(); err != nil {
@@ -244,6 +237,22 @@ func (a *API) handleSeries(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, seriesResponse{
 		Series: series, Total: total, Limit: limit, Offset: offset,
 	})
+}
+
+func scanSeriesList(scan func(dest ...any) error) (seriesListDTO, error) {
+	var item seriesListDTO
+	var year sql.NullInt64
+	var poster, genres, matchStatus sql.NullString
+	if err := scan(&item.ID, &item.Title, &item.FileTitle, &year, &poster,
+		&genres, &item.SeasonCount, &item.EpisodeCount, &item.WatchedCount,
+		&matchStatus); err != nil {
+		return seriesListDTO{}, err
+	}
+	item.Year = intPointer(year)
+	item.PosterURL = stringPointer(poster)
+	item.Genres = decodeStringArray(genres)
+	item.MatchStatus = stringPointer(matchStatus)
+	return item, nil
 }
 
 func (a *API) handleSeriesGenres(w http.ResponseWriter, r *http.Request) {
@@ -322,7 +331,7 @@ func querySeriesDetail(
 	minimum := collectionMinimum(minCollectionItems...)
 	var detail seriesDetailDTO
 	var originalTitle, tagline, overview, overviewLanguage, poster, backdrop sql.NullString
-	var genres, directors, castNames, matchStatus sql.NullString
+	var genres, directors, castNames, matchStatus, credits sql.NullString
 	var year, tmdbID sql.NullInt64
 	var rating, matchScore sql.NullFloat64
 	var posterLocked, backdropLocked int
@@ -330,7 +339,7 @@ func querySeriesDetail(
 		SELECT s.id, COALESCE(NULLIF(s.display_title, ''), s.title), s.title, s.folder,
 		       s.original_title, s.year, s.tagline, s.overview, s.overview_language,
 		       s.poster_url, s.backdrop_url, s.genres, s.rating, s.directors,
-		       s.cast_names, s.tmdb_id, s.match_status, s.match_score,
+		       s.cast_names, s.credits, s.tmdb_id, s.match_status, s.match_score,
 		       s.poster_locked, s.backdrop_locked,
 		       (SELECT count(*) FROM media_items mi WHERE mi.series_id = s.id),
 		       (SELECT count(*) FROM media_items mi
@@ -339,7 +348,7 @@ func querySeriesDetail(
 		  FROM series s WHERE s.id = ?`, userID, seriesID).
 		Scan(&detail.ID, &detail.Title, &detail.FileTitle, &detail.Folder,
 			&originalTitle, &year, &tagline, &overview, &overviewLanguage,
-			&poster, &backdrop, &genres, &rating, &directors, &castNames,
+			&poster, &backdrop, &genres, &rating, &directors, &castNames, &credits,
 			&tmdbID, &matchStatus, &matchScore, &posterLocked, &backdropLocked,
 			&detail.EpisodeCount, &detail.WatchedCount)
 	if err != nil {
@@ -356,6 +365,7 @@ func querySeriesDetail(
 	detail.Rating = floatPointer(rating)
 	detail.Directors = decodeStringArray(directors)
 	detail.Cast = decodeStringArray(castNames)
+	detail.Credits = decodeCredits(credits)
 	detail.TMDBID = int64Pointer(tmdbID)
 	detail.MatchStatus = stringPointer(matchStatus)
 	detail.MatchScore = floatPointer(matchScore)

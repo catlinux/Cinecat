@@ -80,6 +80,27 @@ type CollectionRef struct {
 	BackdropURL string `json:"backdrop_url"`
 }
 
+// CastCredit es una persona del reparto con su personaje y foto.
+type CastCredit struct {
+	Name      string
+	Character string
+	PhotoURL  string
+}
+
+// CrewCredit es una persona del equipo técnico con su trabajo y foto.
+type CrewCredit struct {
+	Name       string
+	Job        string
+	Department string
+	PhotoURL   string
+}
+
+// Credits agrupa el reparto y el equipo de una ficha.
+type Credits struct {
+	Cast []CastCredit
+	Crew []CrewCredit
+}
+
 // Details es la ficha completa de una película o serie.
 type Details struct {
 	TMDBID           int            `json:"tmdb_id"`
@@ -95,6 +116,7 @@ type Details struct {
 	Rating           float64        `json:"rating"`
 	Directors        []string       `json:"directors"`
 	Cast             []string       `json:"cast"`
+	Credits          Credits        `json:"credits"`
 	PosterURL        string         `json:"poster_url"`
 	BackdropURL      string         `json:"backdrop_url"`
 	Collection       *CollectionRef `json:"collection,omitempty"`
@@ -431,16 +453,27 @@ type collectionResponse struct {
 }
 
 type castMember struct {
-	Name  string `json:"name"`
-	Order int    `json:"order"`
+	Name        string `json:"name"`
+	Character   string `json:"character"`
+	ProfilePath string `json:"profile_path"`
+	Order       int    `json:"order"`
+}
+
+type crewMember struct {
+	Name        string `json:"name"`
+	Job         string `json:"job"`
+	Department  string `json:"department"`
+	ProfilePath string `json:"profile_path"`
 }
 
 type creditsResponse struct {
 	Cast []castMember `json:"cast"`
-	Crew []struct {
-		Name string `json:"name"`
-		Job  string `json:"job"`
-	} `json:"crew"`
+	Crew []crewMember `json:"crew"`
+}
+
+type creatorMember struct {
+	Name        string `json:"name"`
+	ProfilePath string `json:"profile_path"`
 }
 
 type genre struct {
@@ -466,17 +499,15 @@ type movieDetailsResponse struct {
 }
 
 type tvDetailsResponse struct {
-	ID           int     `json:"id"`
-	Name         string  `json:"name"`
-	OriginalName string  `json:"original_name"`
-	FirstAirDate string  `json:"first_air_date"`
-	Tagline      string  `json:"tagline"`
-	Overview     string  `json:"overview"`
-	VoteAverage  float64 `json:"vote_average"`
-	Genres       []genre `json:"genres"`
-	CreatedBy    []struct {
-		Name string `json:"name"`
-	} `json:"created_by"`
+	ID           int             `json:"id"`
+	Name         string          `json:"name"`
+	OriginalName string          `json:"original_name"`
+	FirstAirDate string          `json:"first_air_date"`
+	Tagline      string          `json:"tagline"`
+	Overview     string          `json:"overview"`
+	VoteAverage  float64         `json:"vote_average"`
+	Genres       []genre         `json:"genres"`
+	CreatedBy    []creatorMember `json:"created_by"`
 	Credits      creditsResponse `json:"credits"`
 	Images       imagesResponse  `json:"images"`
 	PosterPath   string          `json:"poster_path"`
@@ -744,6 +775,7 @@ func (c *Client) MovieDetails(ctx context.Context, id int) (*Details, error) {
 		Genres:         genreNames(response.Genres),
 		Directors:      directorsFromCrew(response.Credits.Crew),
 		Cast:           castNames(response.Credits.Cast),
+		Credits:        c.credits(response.Credits.Cast, response.Credits.Crew, nil),
 		PosterURL:      c.posterURL(response.Images.Posters, response.PosterPath),
 		BackdropURL:    c.imageURLSize(response.BackdropPath, "w1280"),
 	}
@@ -796,6 +828,7 @@ func (c *Client) TVDetails(ctx context.Context, id int) (*Details, error) {
 		Genres:         genreNames(response.Genres),
 		Directors:      directors,
 		Cast:           castNames(response.Credits.Cast),
+		Credits:        c.credits(response.Credits.Cast, response.Credits.Crew, response.CreatedBy),
 		PosterURL:      c.posterURL(response.Images.Posters, response.PosterPath),
 		BackdropURL:    c.imageURLSize(response.BackdropPath, "w1280"),
 	}
@@ -877,10 +910,7 @@ func genreNames(genres []genre) []string {
 	return names
 }
 
-func directorsFromCrew(crew []struct {
-	Name string `json:"name"`
-	Job  string `json:"job"`
-}) []string {
+func directorsFromCrew(crew []crewMember) []string {
 	var directors []string
 	for _, member := range crew {
 		if member.Job == "Director" && strings.TrimSpace(member.Name) != "" {
@@ -890,12 +920,15 @@ func directorsFromCrew(crew []struct {
 	return directors
 }
 
-func castNames(cast []castMember) []string {
+func sortedCast(cast []castMember) []castMember {
 	sorted := append([]castMember(nil), cast...)
 	sort.SliceStable(sorted, func(i, j int) bool { return sorted[i].Order < sorted[j].Order })
+	return sorted
+}
 
+func castNames(cast []castMember) []string {
 	names := make([]string, 0, 8)
-	for _, member := range sorted {
+	for _, member := range sortedCast(cast) {
 		if len(names) == 8 {
 			break
 		}
@@ -904,6 +937,91 @@ func castNames(cast []castMember) []string {
 		}
 	}
 	return names
+}
+
+func (c *Client) castCredits(cast []castMember) []CastCredit {
+	credits := make([]CastCredit, 0, 30)
+	for _, member := range sortedCast(cast) {
+		if len(credits) == 30 {
+			break
+		}
+		name := strings.TrimSpace(member.Name)
+		if name == "" {
+			continue
+		}
+		credits = append(credits, CastCredit{
+			Name:      name,
+			Character: strings.TrimSpace(member.Character),
+			PhotoURL:  c.imageURLSize(member.ProfilePath, "w185"),
+		})
+	}
+	return credits
+}
+
+var crewJobOrder = []string{
+	"Director",
+	"Writer",
+	"Screenplay",
+	"Novel",
+	"Story",
+	"Producer",
+	"Executive Producer",
+	"Original Music Composer",
+	"Director of Photography",
+	"Editor",
+}
+
+func (c *Client) crewCredits(crew []crewMember, creators []creatorMember) []CrewCredit {
+	credits := make([]CrewCredit, 0, 12)
+	seen := make(map[string]bool)
+	add := func(credit CrewCredit) bool {
+		name := strings.TrimSpace(credit.Name)
+		if name == "" || credit.Job == "" {
+			return false
+		}
+		key := strings.ToLower(name) + "\x00" + credit.Job
+		if seen[key] {
+			return false
+		}
+		seen[key] = true
+		credit.Name = name
+		credits = append(credits, credit)
+		return len(credits) == 12
+	}
+
+	for _, creator := range creators {
+		if add(CrewCredit{
+			Name:     creator.Name,
+			Job:      "Creator",
+			PhotoURL: c.imageURLSize(creator.ProfilePath, "w185"),
+		}) {
+			return credits
+		}
+	}
+
+	for _, job := range crewJobOrder {
+		for _, member := range crew {
+			if member.Job != job {
+				continue
+			}
+			if add(CrewCredit{
+				Name:       member.Name,
+				Job:        member.Job,
+				Department: strings.TrimSpace(member.Department),
+				PhotoURL:   c.imageURLSize(member.ProfilePath, "w185"),
+			}) {
+				return credits
+			}
+		}
+	}
+	return credits
+}
+
+func (c *Client) credits(cast []castMember, crew []crewMember, creators []creatorMember) Credits {
+	return Credits{
+		Cast: c.castCredits(cast),
+		Crew: c.crewCredits(crew, creators),
+	}
 }
 
 func (c *Client) posterURL(posters []imageInfo, fallbackPath string) string {

@@ -265,28 +265,28 @@ func (s *Scanner) enrichMovie(ctx context.Context, libraryID int64, path string,
 // de corrección manual: lo que el usuario ha fijado no se vuelve a consultar.
 func (s *Scanner) enrichMovieTMDB(ctx context.Context, libraryID int64, path string, media Media, res *Result) {
 	var itemID int64
-	var matchStatus, source, displayTitle sql.NullString
+	var matchStatus, source, displayTitle, credits sql.NullString
 	var tmdbID sql.NullInt64
 	var matchScore sql.NullFloat64
 	var collectionChecked int
 	if err := s.db.QueryRowContext(ctx,
 		`SELECT id, match_status, metadata_source, tmdb_id, match_score,
-		        display_title, collection_checked
+		        display_title, collection_checked, credits
 		   FROM media_items WHERE library_id = ? AND path = ?`,
 		libraryID, path,
 	).Scan(&itemID, &matchStatus, &source, &tmdbID, &matchScore,
-		&displayTitle, &collectionChecked); err != nil {
+		&displayTitle, &collectionChecked, &credits); err != nil {
 		res.Warnings = append(res.Warnings, fmt.Sprintf("%s: no se pudo comprobar los metadatos: %v", path, err))
 		return
 	}
 
 	if matchStatus.Valid {
-		// Las fichas antiguas pueden necesitar display_title o la colección.
-		// Se unifican ambas comprobaciones para pedir la ficha una sola vez.
+		// Las fichas antiguas pueden necesitar display_title, la colección o el
+		// reparto. Se unifican las comprobaciones para pedir la ficha una vez.
 		if (matchStatus.String == "auto" || matchStatus.String == "manual") &&
 			source.Valid && source.String == "tmdb" &&
 			tmdbID.Valid && tmdbID.Int64 > 0 &&
-			(!displayTitle.Valid || collectionChecked == 0) {
+			(!displayTitle.Valid || collectionChecked == 0 || !credits.Valid) {
 			score := 0.0
 			if matchScore.Valid {
 				score = matchScore.Float64
@@ -361,7 +361,7 @@ func ApplyMovieDetails(ctx context.Context, db *sql.DB, itemID int64, d *metadat
 			tmdb_id = ?, original_title = ?, imdb_id = ?, tagline = ?,
 			overview = ?, overview_language = ?, year = ?, display_title = ?,
 			sort_title = ?, sort_letter = ?, genres = ?, runtime_minutes = ?,
-			rating = ?, directors = ?, cast_names = ?,
+			rating = ?, directors = ?, cast_names = ?, credits = ?,
 			poster_url = CASE WHEN poster_locked = 1 AND tmdb_id = ? THEN poster_url ELSE ? END,
 			backdrop_url = CASE WHEN backdrop_locked = 1 AND tmdb_id = ? THEN backdrop_url ELSE ? END,
 			poster_locked = CASE WHEN tmdb_id = ? THEN poster_locked ELSE 0 END,
@@ -371,7 +371,7 @@ func ApplyMovieDetails(ctx context.Context, db *sql.DB, itemID int64, d *metadat
 		nullableInt(d.TMDBID), nullableText(d.OriginalTitle), nullableText(d.IMDbID), nullableText(d.Tagline),
 		nullableText(d.Overview), nullableText(d.OverviewLanguage), nullableInt(d.Year), nullableText(d.Title),
 		sortTitle, sortLetter, jsonArray(d.Genres), nullableInt(d.RuntimeMinutes), nullableFloat(d.Rating),
-		jsonArray(d.Directors), jsonArray(d.Cast),
+		jsonArray(d.Directors), jsonArray(d.Cast), creditsJSON(d.Credits),
 		d.TMDBID, nullableText(d.PosterURL),
 		d.TMDBID, nullableText(d.BackdropURL),
 		d.TMDBID, d.TMDBID,
@@ -416,7 +416,7 @@ func ClearMovieMetadata(ctx context.Context, db *sql.DB, itemID int64, status an
 			overview = NULL, overview_language = NULL, display_title = NULL,
 			sort_title = ?, sort_letter = ?, genres = NULL,
 			runtime_minutes = NULL, rating = NULL, directors = NULL,
-			cast_names = NULL, poster_url = NULL, backdrop_url = NULL,
+			cast_names = NULL, credits = NULL, poster_url = NULL, backdrop_url = NULL,
 			poster_locked = 0, backdrop_locked = 0, collection_checked = 0,
 			metadata_source = NULL, match_score = NULL, match_status = ?
 		WHERE id = ?`,

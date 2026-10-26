@@ -393,7 +393,8 @@ func TestScannerRespetaSeriesManualYNone(t *testing.T) {
 			UPDATE series
 			   SET match_status = ?, metadata_source = 'tmdb', tmdb_id = 7,
 			       display_title = ?, overview = 'Sinopsis fijada', year = 2001,
-			       sort_title = ?, sort_letter = 'F'
+			       sort_title = ?, sort_letter = 'F',
+			       credits = '{"cast":[],"crew":[]}'
 			 WHERE folder = ?`,
 			item.status, item.title, item.title, item.folder); err != nil {
 			t.Fatalf("fijar serie %q: %v", item.folder, err)
@@ -523,6 +524,120 @@ func TestScannerAvisaTemporadaInexistenteUnaVez(t *testing.T) {
 		if episode.title.Valid {
 			t.Fatalf("el episodio %q no debería tener título: %+v", path, episode)
 		}
+	}
+}
+
+func TestScannerRellenaCreditsSeriesAntiguas(t *testing.T) {
+	ctx := context.Background()
+	db := openTestDB(t)
+	root := t.TempDir()
+	path := filepath.Join(root, "Serie", "Temporada 1", "1x01.mkv")
+	writeFile(t, path)
+	createLibrary(t, db, root)
+
+	if _, err := New(db).Scan(ctx); err != nil {
+		t.Fatalf("primer Scan: %v", err)
+	}
+	var seriesID int64
+	if err := db.QueryRow(`SELECT id FROM series WHERE folder = 'Serie'`).Scan(&seriesID); err != nil {
+		t.Fatalf("leer serie: %v", err)
+	}
+	if _, err := db.Exec(`
+		UPDATE series
+		   SET tmdb_id = 7, metadata_source = 'tmdb', match_status = 'auto',
+		       display_title = 'Serie', overview = 'Sinopsis antigua', year = 2001,
+		       match_score = 0.9, credits = NULL
+		 WHERE id = ?`, seriesID); err != nil {
+		t.Fatalf("preparar serie antigua: %v", err)
+	}
+	if _, err := db.Exec(`
+		INSERT INTO series_seasons (series_id, season, name) VALUES (?, 1, 'Temporada 1')`,
+		seriesID); err != nil {
+		t.Fatalf("crear temporada completa: %v", err)
+	}
+	if _, err := db.Exec(`
+		UPDATE media_items SET episode_title = 'Episodio' WHERE series_id = ?`, seriesID); err != nil {
+		t.Fatalf("completar episodio: %v", err)
+	}
+
+	fake := &fakeTMDB{
+		tvDetails: &metadata.Details{
+			TMDBID: 7, Title: "Serie",
+			Credits: metadata.Credits{
+				Cast: []metadata.CastCredit{{Name: "Actriz", Character: "Papel"}},
+				Crew: []metadata.CrewCredit{{Name: "Creadora", Job: "Creator"}},
+			},
+		},
+	}
+	res, err := New(db).WithTMDB(fake).Scan(ctx)
+	if err != nil {
+		t.Fatalf("segundo Scan: %v", err)
+	}
+	if res.Identified != 0 || res.SeriesIdentified != 0 {
+		t.Fatalf("el relleno no debe contar: %+v", res)
+	}
+	if fake.tvSearchCalls != 0 || fake.tvDetailsCalls != 1 || fake.seasonCalls != 0 {
+		t.Fatalf("peticiones del relleno: %d, %d, %d",
+			fake.tvSearchCalls, fake.tvDetailsCalls, fake.seasonCalls)
+	}
+
+	var rawCredits sql.NullString
+	var status string
+	var score sql.NullFloat64
+	if err := db.QueryRow(`SELECT credits, match_status, match_score FROM series WHERE id = ?`,
+		seriesID).Scan(&rawCredits, &status, &score); err != nil {
+		t.Fatalf("leer serie rellenada: %v", err)
+	}
+	if !rawCredits.Valid || status != "auto" || !score.Valid || score.Float64 != 0.9 {
+		t.Fatalf("la serie antigua cambió: %+v %q %+v", rawCredits, status, score)
+	}
+
+	fake.tvSearchCalls = 0
+	fake.tvDetailsCalls = 0
+	fake.seasonCalls = 0
+	if _, err := New(db).WithTMDB(fake).Scan(ctx); err != nil {
+		t.Fatalf("tercer Scan: %v", err)
+	}
+	if fake.tvSearchCalls != 0 || fake.tvDetailsCalls != 0 || fake.seasonCalls != 0 {
+		t.Fatalf("el tercer escaneo no debe pedir TMDB: %d, %d, %d",
+			fake.tvSearchCalls, fake.tvDetailsCalls, fake.seasonCalls)
+	}
+}
+
+func TestApplyTVDetailsGuardaYClearCredits(t *testing.T) {
+	ctx := context.Background()
+	db := openTestDB(t)
+	libraryID := createLibrary(t, db, t.TempDir())
+	seriesID, err := ensureSeries(ctx, db, libraryID, "Créditos", "Créditos", 0)
+	if err != nil {
+		t.Fatalf("ensureSeries: %v", err)
+	}
+	if err := ApplyTVDetails(ctx, db, seriesID, &metadata.Details{
+		TMDBID: 2, Title: "Créditos",
+		Credits: metadata.Credits{
+			Cast: []metadata.CastCredit{{Name: "Actor", Character: "Personaje"}},
+			Crew: []metadata.CrewCredit{{Name: "Creador", Job: "Creator"}},
+		},
+	}, "auto", 1); err != nil {
+		t.Fatalf("ApplyTVDetails: %v", err)
+	}
+	var raw sql.NullString
+	if err := db.QueryRow(`SELECT credits FROM series WHERE id = ?`, seriesID).Scan(&raw); err != nil {
+		t.Fatalf("leer credits: %v", err)
+	}
+	decoded := decodeCredits(raw)
+	if len(decoded.Cast) != 1 || decoded.Cast[0].Character != "Personaje" ||
+		len(decoded.Crew) != 1 || decoded.Crew[0].Job != "Creator" {
+		t.Fatalf("credits de serie inesperados: %+v", decoded)
+	}
+	if err := ClearTVMetadata(ctx, db, seriesID, nil); err != nil {
+		t.Fatalf("ClearTVMetadata: %v", err)
+	}
+	if err := db.QueryRow(`SELECT credits FROM series WHERE id = ?`, seriesID).Scan(&raw); err != nil {
+		t.Fatalf("leer credits tras limpiar: %v", err)
+	}
+	if raw.Valid {
+		t.Fatalf("credits debe quedar NULL: %+v", raw)
 	}
 }
 

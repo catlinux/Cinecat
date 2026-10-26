@@ -667,6 +667,15 @@ func TestMovieDetails(t *testing.T) {
 	if len(details.Cast) != 8 || details.Cast[0] != "Actor 0" || details.Cast[7] != "Actor 7" {
 		t.Fatalf("reparto inesperado: %v", details.Cast)
 	}
+	if len(details.Credits.Cast) != 10 || details.Credits.Cast[0].Name != "Actor 0" ||
+		details.Credits.Cast[0].Character != "" || details.Credits.Cast[0].PhotoURL != "" {
+		t.Fatalf("créditos sin foto/personaje inesperados: %+v", details.Credits.Cast)
+	}
+	if len(details.Credits.Crew) != 3 || details.Credits.Crew[0].Name != "Lana Wachowski" ||
+		details.Credits.Crew[1].Name != "Lilly Wachowski" || details.Credits.Crew[2].Name != "Productor" ||
+		details.Credits.Crew[0].PhotoURL != "" {
+		t.Fatalf("equipo sin foto inesperado: %+v", details.Credits.Crew)
+	}
 	if want := api.URL + "/img/w500/es-ES.jpg"; details.PosterURL != want {
 		t.Fatalf("PosterURL = %q, se esperaba %q", details.PosterURL, want)
 	}
@@ -685,6 +694,137 @@ func TestMovieDetails(t *testing.T) {
 		query.Get("append_to_response") != "credits,images" ||
 		query.Get("include_image_language") != "es,null,en" {
 		t.Fatalf("parámetros inesperados: %v", query)
+	}
+}
+
+func TestMovieDetailsCreditsConFotosYLimites(t *testing.T) {
+	api := newTestAPI(t)
+	cast := make([]map[string]any, 0, 32)
+	for i := 0; i < 32; i++ {
+		entry := map[string]any{
+			"name":      fmt.Sprintf("Actor %02d", i),
+			"character": fmt.Sprintf("Personaje %d", i),
+			"order":     i,
+		}
+		if i == 0 {
+			entry["profile_path"] = "/actor.jpg"
+		}
+		cast = append(cast, entry)
+	}
+	api.route("/movie/700", jsonRoute(map[string]any{
+		"id":    700,
+		"title": "Reparto",
+		"credits": map[string]any{
+			"cast": cast,
+			"crew": []map[string]any{
+				{"name": "Directora", "job": "Director", "department": "Directing", "profile_path": "/directora.jpg"},
+				{"name": "Guionista", "job": "Writer", "department": "Writing"},
+				{"name": "Guionista", "job": "Writer", "department": "Writing"},
+				{"name": "Catering", "job": "Catering", "department": "Crew"},
+				{"name": "Productora", "job": "Producer", "department": "Production"},
+				{"name": "Compositor", "job": "Original Music Composer", "department": "Sound"},
+				{"name": "Fotógrafo", "job": "Director of Photography", "department": "Camera"},
+				{"name": "Editor", "job": "Editor", "department": "Editing"},
+			},
+		},
+	}))
+	client := newAPIClient(t, api, t.TempDir(), nil, "clave-de-prueba")
+	details, err := client.MovieDetails(context.Background(), 700)
+	if err != nil {
+		t.Fatalf("MovieDetails: %v", err)
+	}
+	if len(details.Credits.Cast) != 30 {
+		t.Fatalf("reparto = %d, se esperaban 30", len(details.Credits.Cast))
+	}
+	first := details.Credits.Cast[0]
+	if first.Name != "Actor 00" || first.Character != "Personaje 0" ||
+		first.PhotoURL != api.URL+"/img/w185/actor.jpg" {
+		t.Fatalf("primera ficha de reparto inesperada: %+v", first)
+	}
+	if details.Credits.Cast[29].Name != "Actor 29" {
+		t.Fatalf("última ficha de reparto inesperada: %+v", details.Credits.Cast[29])
+	}
+	if len(details.Cast) != 8 {
+		t.Fatalf("el campo antiguo cast cambió: %v", details.Cast)
+	}
+
+	crew := details.Credits.Crew
+	if len(crew) != 6 {
+		t.Fatalf("equipo = %d, se esperaban 6: %+v", len(crew), crew)
+	}
+	wantJobs := []string{"Director", "Writer", "Producer", "Original Music Composer", "Director of Photography", "Editor"}
+	wantNames := []string{"Directora", "Guionista", "Productora", "Compositor", "Fotógrafo", "Editor"}
+	for i := range wantJobs {
+		if crew[i].Job != wantJobs[i] || crew[i].Name != wantNames[i] {
+			t.Fatalf("equipo %d = %+v, se esperaba %s/%s", i, crew[i], wantNames[i], wantJobs[i])
+		}
+	}
+	if crew[0].Department != "Directing" || crew[0].PhotoURL != api.URL+"/img/w185/directora.jpg" {
+		t.Fatalf("equipo con foto inesperado: %+v", crew[0])
+	}
+}
+
+func TestMovieDetailsLimitaElEquipoADoce(t *testing.T) {
+	api := newTestAPI(t)
+	crew := make([]map[string]any, 0, 13)
+	for i := 0; i < 13; i++ {
+		crew = append(crew, map[string]any{
+			"name": fmt.Sprintf("Director %02d", i), "job": "Director",
+		})
+	}
+	api.route("/movie/702", jsonRoute(map[string]any{
+		"id": 702, "title": "Equipo largo",
+		"credits": map[string]any{"crew": crew},
+	}))
+	client := newAPIClient(t, api, t.TempDir(), nil, "clave-de-prueba")
+	details, err := client.MovieDetails(context.Background(), 702)
+	if err != nil {
+		t.Fatalf("MovieDetails: %v", err)
+	}
+	if len(details.Credits.Crew) != 12 || details.Credits.Crew[11].Name != "Director 11" {
+		t.Fatalf("equipo limitado inesperado: %+v", details.Credits.Crew)
+	}
+}
+
+func TestTVDetailsCreadoresConFoto(t *testing.T) {
+	api := newTestAPI(t)
+	api.route("/tv/701", jsonRoute(map[string]any{
+		"id": 701, "name": "Serie", "overview": "Sinopsis",
+		"created_by": []map[string]any{
+			{"name": "Creadora", "profile_path": "/creadora.jpg"},
+			{"name": "Creador"},
+		},
+		"credits": map[string]any{
+			"cast": []map[string]any{
+				{"name": "Actriz", "character": "Protagonista", "order": 0, "profile_path": "/actriz.jpg"},
+			},
+			"crew": []map[string]any{
+				{"name": "Director TV", "job": "Director", "department": "Directing"},
+				{"name": "Catering", "job": "Catering"},
+			},
+		},
+	}))
+	client := newAPIClient(t, api, t.TempDir(), nil, "clave-de-prueba")
+	details, err := client.TVDetails(context.Background(), 701)
+	if err != nil {
+		t.Fatalf("TVDetails: %v", err)
+	}
+	if len(details.Credits.Crew) != 3 {
+		t.Fatalf("equipo = %+v", details.Credits.Crew)
+	}
+	if details.Credits.Crew[0].Name != "Creadora" || details.Credits.Crew[0].Job != "Creator" ||
+		details.Credits.Crew[0].PhotoURL != api.URL+"/img/w185/creadora.jpg" {
+		t.Fatalf("creadora inesperada: %+v", details.Credits.Crew[0])
+	}
+	if details.Credits.Crew[1].Name != "Creador" || details.Credits.Crew[1].Job != "Creator" {
+		t.Fatalf("creador inesperado: %+v", details.Credits.Crew[1])
+	}
+	if details.Credits.Crew[2].Job != "Director" {
+		t.Fatalf("equipo inesperado: %+v", details.Credits.Crew[2])
+	}
+	if details.Credits.Cast[0].Character != "Protagonista" ||
+		details.Credits.Cast[0].PhotoURL != api.URL+"/img/w185/actriz.jpg" {
+		t.Fatalf("reparto inesperado: %+v", details.Credits.Cast)
 	}
 }
 

@@ -1006,6 +1006,64 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/items/{id}/similar:
+    get:
+      summary: Películas similares a un ítem
+      description: |
+        Devuelve películas parecidas a la indicada usando sus géneros,
+        dirección, colección, reparto, año y nota. Solo se consideran
+        candidatas con cartel y que compartan al menos un género, una
+        persona de la dirección o un actor del reparto principal. No consulta
+        servicios externos. Requiere sesión y que el ítem sea una película.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 24
+            default: 12
+      responses:
+        '200':
+          description: Películas similares ordenadas por afinidad
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimilarItemsResponse'
+        '400':
+          description: Límite fuera de rango
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No existe una película con ese identificador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/items/{id}/progress:
     put:
       summary: Guarda el progreso de reproducción (cualquier usuario)
@@ -1882,6 +1940,64 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SeriesDetail'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Serie no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/series/{id}/similar:
+    get:
+      summary: Series similares a una serie
+      description: |
+        Devuelve series parecidas a la indicada usando sus géneros,
+        creadores, reparto, año y nota. Solo se consideran candidatas con
+        cartel y que compartan al menos un género, una persona de la
+        dirección o un actor del reparto principal. No consulta servicios
+        externos. Requiere sesión.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 24
+            default: 12
+      responses:
+        '200':
+          description: Series similares ordenadas por afinidad
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimilarSeriesResponse'
+        '400':
+          description: Límite fuera de rango
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '401':
           description: Sesión no válida o ausente
           content:
@@ -3386,6 +3502,55 @@ components:
             format: int64
             minimum: 1
       additionalProperties: false
+    CastCredit:
+      type: object
+      required:
+        - name
+        - character
+        - photo_url
+      properties:
+        name:
+          type: string
+        character:
+          type: string
+          description: Personaje interpretado; puede quedar vacío si TMDB no lo trae.
+        photo_url:
+          type: string
+          description: URL de la foto o cadena vacía si no hay.
+      additionalProperties: false
+    CrewCredit:
+      type: object
+      required:
+        - name
+        - job
+        - photo_url
+      properties:
+        name:
+          type: string
+        job:
+          type: string
+          description: Trabajo realizado, por ejemplo Director, Writer o Creator.
+        photo_url:
+          type: string
+          description: URL de la foto o cadena vacía si no hay.
+      additionalProperties: false
+    Credits:
+      type: object
+      required:
+        - cast
+        - crew
+      properties:
+        cast:
+          type: array
+          description: Reparto principal; siempre un array, aunque esté vacío.
+          items:
+            $ref: '#/components/schemas/CastCredit'
+        crew:
+          type: array
+          description: Equipo principal; siempre un array, aunque esté vacío.
+          items:
+            $ref: '#/components/schemas/CrewCredit'
+      additionalProperties: false
     Series:
       type: object
       required:
@@ -3454,6 +3619,17 @@ components:
         offset:
           type: integer
       additionalProperties: false
+    SimilarSeriesResponse:
+      type: object
+      required:
+        - series
+      properties:
+        series:
+          type: array
+          description: Series similares en orden de afinidad; siempre un array.
+          items:
+            $ref: '#/components/schemas/Series'
+      additionalProperties: false
     Season:
       type: object
       required:
@@ -3500,6 +3676,7 @@ components:
         - rating
         - directors
         - cast
+        - credits
         - tmdb_id
         - match_status
         - match_score
@@ -3558,6 +3735,8 @@ components:
           type: array
           items:
             type: string
+        credits:
+          $ref: '#/components/schemas/Credits'
         tmdb_id:
           type: integer
           format: int64
@@ -3640,6 +3819,7 @@ components:
         - rating
         - directors
         - cast
+        - credits
         - backdrop_url
         - backdrop_custom
         - overview_language
@@ -3726,6 +3906,8 @@ components:
           description: Reparto; siempre es un array, aunque esté vacío.
           items:
             type: string
+        credits:
+          $ref: '#/components/schemas/Credits'
         backdrop_url:
           type: string
           nullable: true
@@ -3792,6 +3974,17 @@ components:
           type: integer
         offset:
           type: integer
+      additionalProperties: false
+    SimilarItemsResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          description: Películas similares en orden de afinidad; siempre un array.
+          items:
+            $ref: '#/components/schemas/MediaItem'
       additionalProperties: false
     PlayResponse:
       type: object

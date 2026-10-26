@@ -8,6 +8,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 ## [Sin publicar]
 
 ### Añadido
+- Reparto y equipo con foto y personaje (`credits` en películas y series; las fichas ya guardadas se rellenan desde la caché de TMDB) y «Más como este» calculado en local: `GET /api/v1/items/{id}/similar` y `GET /api/v1/series/{id}/similar`.
 - Panel de administración en la web con menú lateral: Resumen (versiones, último escaneo, recuentos y pendientes de identificar), Bibliotecas, y formularios de ajustes por sección (Escaneo, Metadatos, Interfaz, Reproducción, Sistema) con valores por defecto, validación por campo y «Restablecer». Comprobación opcional de actualizaciones, solo si se activa y se pulsa el botón.
 - Los ajustes se aplican en caliente, sin reiniciar: intervalo y arranque del escaneo automático, idioma de TMDB, umbral de identificación, calidad de la transcodificación (altura máxima, CRF y preset) y mínimo de películas por colección automática.
 - Ajustes del servidor guardados en la base de datos con registro tipado y validación (escaneo, metadatos, interfaz, reproducción y sistema): `GET`/`PATCH /api/v1/settings`, `DELETE /api/v1/settings/{clave}` y `GET /api/v1/settings/public`. Las variables de entorno siguen dando el valor inicial.

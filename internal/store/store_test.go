@@ -189,7 +189,7 @@ func TestMigracionSeries(t *testing.T) {
 	s, ctx := openTestStore(t, filepath.Join(t.TempDir(), "cinecat.db"))
 
 	mediaColumns := columns(t, ctx, s, "media_items")
-	for _, name := range []string{"series_id", "episode_title", "still_url"} {
+	for _, name := range []string{"series_id", "episode_title", "still_url", "credits"} {
 		if !mediaColumns[name] {
 			t.Errorf("media_items: falta la columna %q", name)
 		}
@@ -199,6 +199,7 @@ func TestMigracionSeries(t *testing.T) {
 	for _, name := range []string{
 		"library_id", "folder", "title", "display_title", "tmdb_id",
 		"match_status", "sort_title", "sort_letter", "poster_locked", "backdrop_locked",
+		"credits",
 	} {
 		if !seriesColumns[name] {
 			t.Errorf("series: falta la columna %q", name)
