@@ -1,6 +1,6 @@
 {
   "name": "cinecat-web",
-  "version": "0.13.1",
+  "version": "0.14.0",
   "private": true,
   "description": "Cliente web de Cinecat (SvelteKit + TypeScript).",
   "license": "GPL-3.0-or-later",
