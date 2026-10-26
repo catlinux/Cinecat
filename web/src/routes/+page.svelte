@@ -1,6 +1,6 @@
 <script lang="ts">
 	import CategoryArt from '$lib/components/CategoryArt.svelte';
-	import PosterCard from '$lib/components/PosterCard.svelte';
+	import PosterRow from '$lib/components/PosterRow.svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -102,25 +102,26 @@
 	</div>
 
 	{#if !data.errorMessage}
-		<section class="recent-section">
-			<div class="recent-head">
-				<div>
-					<p class="kicker">Estrenos</p>
-					<h2>Añadido recientemente</h2>
-				</div>
-				<a class="text-link" href="/movies?sort=added">Ver todas →</a>
-			</div>
-			{#if data.recent.length > 0}
-				<div class="recent-row">
-					{#each data.recent as item (item.id)}
-						<div class="recent-item">
-							<PosterCard {item} posterUrl={item.poster_url} />
-						</div>
-					{/each}
-				</div>
-			{:else}
-				<p class="admin-note">Todavía no hay películas recientes. La cartelera está esperando.</p>
+		<div class="portal-rows">
+			{#if data.continueWatching.length > 0}
+				<PosterRow
+					title="Continuar viendo"
+					kicker="En pausa"
+					items={data.continueWatching}
+				/>
 			{/if}
-		</section>
+
+			{#if data.nextUp.length > 0}
+				<PosterRow title="Siguiente episodio" kicker="Series" items={data.nextUp} />
+			{/if}
+
+			<PosterRow
+				title="Añadido recientemente"
+				kicker="Estrenos"
+				items={data.recent}
+				href="/movies?sort=added"
+				emptyMessage="Todavía no hay películas recientes. La cartelera está esperando."
+			/>
+		</div>
 	{/if}
 </section>

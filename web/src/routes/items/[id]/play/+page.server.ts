@@ -3,10 +3,11 @@ import { ApiError } from '$lib/api';
 import type { MediaItem, PlayResponse } from '$lib/api';
 import { ConfigurationError, createApiClient } from '$lib/api-factory';
 import { apiBaseUrl } from '$lib/config';
+import { resolveStartAt } from '$lib/progress';
 import { requireSessionToken } from '$lib/session';
 import type { PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ params, locals, fetch }) => {
+export const load: PageServerLoad = async ({ params, locals, fetch, url }) => {
 	const token = requireSessionToken(locals);
 	const id = Number(params.id);
 	if (!Number.isInteger(id) || id <= 0) {
@@ -59,6 +60,7 @@ export const load: PageServerLoad = async ({ params, locals, fetch }) => {
 		item,
 		play,
 		playUrl: play ? `${base}${play.url}` : null,
-		playError
+		playError,
+		startAt: resolveStartAt(item.progress, url.searchParams.get('t'))
 	};
 };

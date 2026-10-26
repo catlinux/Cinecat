@@ -1945,6 +1945,100 @@ footer {
 	scroll-snap-align: start;
 }
 
+.portal-rows {
+	display: grid;
+	gap: 1.4rem;
+	margin-top: 1rem;
+}
+
+.poster-row-section {
+	padding-top: 1.2rem;
+	border-top: 4px double var(--granate);
+}
+
+.poster-row-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: end;
+	justify-content: space-between;
+	gap: 0.8rem 1.5rem;
+}
+
+.poster-row-head h2 {
+	margin: 0.2rem 0 0;
+	font-family: 'Fraunces', Georgia, serif;
+	font-size: clamp(1.7rem, 4vw, 2.4rem);
+	color: var(--granate);
+}
+
+.poster-row-scroll {
+	margin-top: 1.2rem;
+	padding: 0.2rem 0 1rem;
+	overflow-x: auto;
+	scroll-snap-type: x mandatory;
+}
+
+.poster-row-list {
+	display: flex;
+	gap: 1.1rem;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.poster-row-item {
+	flex: 0 0 clamp(9rem, 17vw, 12rem);
+	scroll-snap-align: start;
+}
+
+.poster-progress {
+	position: absolute;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	z-index: 2;
+	height: 4px;
+	background: rgba(20, 10, 11, 0.5);
+}
+
+.poster-progress span,
+.detail-progress span {
+	display: block;
+	height: 100%;
+	background: var(--dorado);
+}
+
+.poster-caption .poster-continues {
+	margin-top: 0.15rem;
+	color: var(--naranja);
+	font-weight: 600;
+}
+
+.detail-progress {
+	width: min(22rem, 100%);
+	height: 4px;
+	margin-top: 0.65rem;
+	border-radius: 999px;
+	background: var(--tinte);
+	overflow: hidden;
+}
+
+.continue-note {
+	margin: 0.9rem 0 1rem;
+	padding: 0.7rem 0.85rem;
+	border-left: 3px solid var(--dorado);
+	background: var(--tinte);
+	font-size: 0.88rem;
+	line-height: 1.5;
+	color: var(--texto-tenue);
+}
+
+.continue-note a {
+	color: var(--naranja);
+	font-weight: 600;
+	text-underline-offset: 0.2em;
+}
+
 .movies-toolbar {
 	margin: 0 0 1.4rem;
 	padding: 1rem 0;
@@ -2151,7 +2245,8 @@ footer {
 		min-height: 15rem;
 	}
 
-	.recent-item {
+	.recent-item,
+	.poster-row-item {
 		flex-basis: 8.5rem;
 	}
 }

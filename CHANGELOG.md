@@ -22,6 +22,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 - Ficha de película completa (título original, lema, duración, géneros, nota, dirección, reparto, enlaces a IMDb y TMDB, fondo), botón de visto/no visto y, para administradores, «Corregir ficha» con búsqueda de candidatos en TMDB, «No es ninguna» y «Volver a automático».
 - Progreso de reproducción por usuario (`PUT`/`DELETE /api/v1/items/{id}/progress`; al 90 % se marca como visto) y `GET /api/v1/home` con «continuar viendo», lo añadido recientemente y los contadores del portal.
 - Panel «Archivo» en la ficha (calidad, contenedor, tamaño, pistas de vídeo, audio y subtítulos, cómo se reproducirá) y, para administradores, panel «Imagen» para elegir el cartel y el fondo entre los de TMDB o fijar una URL propia.
+- El reproductor guarda el progreso cada 15 s y al salir, y permite continuar donde se dejó («Continuar · 1 h 12 min» en la ficha, «Empezar desde el principio»). El portal muestra «Continuar viendo» y «Añadido recientemente».
 - El servidor se apaga de forma ordenada ante SIGINT/SIGTERM, cancelando el escaneo en curso.
 
 ## [0.10.0] - 2026-10-26

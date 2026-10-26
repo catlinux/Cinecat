@@ -30,7 +30,8 @@ const item: MediaItem = {
 	overview_language: null,
 	match_status: null,
 	match_score: null,
-	watched: false
+	watched: false,
+	progress: null
 };
 
 describe('PosterCard', () => {
@@ -61,6 +62,46 @@ describe('PosterCard', () => {
 		expect(body).toContain('src="https://images.example/matrix.jpg"');
 		expect(body).toContain('alt="Cartel de Matrix"');
 		expect(body).not.toContain('poster-fallback');
+	});
+
+	it('muestra el progreso y el texto de continuación', () => {
+		const { body } = render(PosterCard, {
+			props: {
+				item: {
+					...item,
+					progress: {
+						position_seconds: 4320,
+						duration_seconds: 7200,
+						updated_at: '2026-10-26T10:00:00Z'
+					}
+				}
+			}
+		});
+
+		expect(body).toContain('poster-progress');
+		expect(body).toContain('role="progressbar"');
+		expect(body).toContain('aria-valuenow="60"');
+		expect(body).toContain('Continúas por 1 h 12 min');
+	});
+
+	it('en episodios con progreso indica la serie y el capítulo', () => {
+		const { body } = render(PosterCard, {
+			props: {
+				item: {
+					...item,
+					kind: 'episode',
+					season: 2,
+					episode: 5,
+					progress: {
+						position_seconds: 300,
+						duration_seconds: 1800,
+						updated_at: '2026-10-26T10:00:00Z'
+					}
+				}
+			}
+		});
+
+		expect(body).toContain('Serie · T2 E5');
 	});
 
 	it('usa la misma paleta en cada render para el mismo título', () => {

@@ -22,6 +22,12 @@ export interface LibrariesResponse {
 	libraries: Library[];
 }
 
+export interface PlaybackProgress {
+	position_seconds: number;
+	duration_seconds: number;
+	updated_at: string;
+}
+
 export interface MediaItem {
 	id: number;
 	library_id: number;
@@ -50,6 +56,19 @@ export interface MediaItem {
 	match_status: 'auto' | 'manual' | 'none' | null;
 	match_score: number | null;
 	watched: boolean;
+	progress: PlaybackProgress | null;
+}
+
+export interface HomeCounts {
+	movies: number;
+	episodes: number;
+}
+
+export interface HomeResponse {
+	continue: MediaItem[];
+	next_up: MediaItem[];
+	recent_movies: MediaItem[];
+	counts: HomeCounts;
 }
 
 export interface Candidate {
@@ -329,6 +348,30 @@ export class ApiClient {
 			method: 'DELETE',
 			token
 		});
+	}
+
+	async getHome(token: string): Promise<HomeResponse> {
+		return this.get<HomeResponse>('/api/v1/home', token);
+	}
+
+	async putProgress(
+		id: number,
+		positionSeconds: number,
+		durationSeconds: number,
+		token: string
+	): Promise<void> {
+		await this.put<void>(
+			`/api/v1/items/${id}/progress`,
+			{
+				position_seconds: positionSeconds,
+				duration_seconds: durationSeconds
+			},
+			token
+		);
+	}
+
+	async deleteProgress(id: number, token: string): Promise<void> {
+		await this.delete(`/api/v1/items/${id}/progress`, token);
 	}
 
 	async getFileInfo(id: number, token: string): Promise<FileInfo> {

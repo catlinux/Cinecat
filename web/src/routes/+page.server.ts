@@ -1,6 +1,5 @@
 import { redirect } from '@sveltejs/kit';
 import { ApiError } from '$lib/api';
-import type { ItemsResponse } from '$lib/api';
 import { ConfigurationError, createApiClient } from '$lib/api-factory';
 import { requireSessionToken } from '$lib/session';
 import type { PageServerLoad } from './$types';
@@ -13,16 +12,14 @@ export const load: PageServerLoad = async ({ locals, fetch, url }) => {
 	}
 
 	const token = requireSessionToken(locals);
-	const api = createApiClient(fetch);
 
 	try {
-		const [all, recent] = await Promise.all([
-			api.get<ItemsResponse>('/api/v1/items?kind=movie&limit=1', token),
-			api.get<ItemsResponse>('/api/v1/items?kind=movie&sort=added&limit=12', token)
-		]);
+		const home = await createApiClient(fetch).getHome(token);
 		return {
-			moviesTotal: all.total,
-			recent: recent.items,
+			moviesTotal: home.counts.movies,
+			continueWatching: home.continue ?? [],
+			nextUp: home.next_up ?? [],
+			recent: home.recent_movies ?? [],
 			errorMessage: null
 		};
 	} catch (error) {
@@ -31,6 +28,8 @@ export const load: PageServerLoad = async ({ locals, fetch, url }) => {
 		}
 		return {
 			moviesTotal: 0,
+			continueWatching: [],
+			nextUp: [],
 			recent: [],
 			errorMessage:
 				error instanceof ConfigurationError

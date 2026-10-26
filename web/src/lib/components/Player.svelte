@@ -2,15 +2,26 @@
 	import { onDestroy, onMount } from 'svelte';
 	import type Hls from 'hls.js';
 	import { chooseHlsStrategy } from '$lib/hls-strategy';
+	import {
+		decideProgress,
+		progressEnabled,
+		resumeTarget,
+		type ProgressDecision,
+		type ProgressSnapshot
+	} from '$lib/progress';
 
 	let {
 		src,
 		mode,
-		title = 'Vídeo'
+		title = 'Vídeo',
+		itemId = undefined,
+		startAt = 0
 	}: {
 		src: string;
 		mode: 'direct' | 'remux';
 		title?: string;
+		itemId?: number;
+		startAt?: number;
 	} = $props();
 
 	let video: HTMLVideoElement;
@@ -18,16 +29,40 @@
 	let hls: Hls | null = null;
 	let destroyed = false;
 
+	let resumeApplied = false;
+	let lastProgressAt: number | null = null;
+	let beaconSent = false;
+
 	// Reintentos ante errores fatales antes de rendirse: un salto puede tardar
 	// unos segundos mientras el servidor relanza FFmpeg en el punto pedido.
 	const maxNetworkRecoveries = 5;
 	const maxMediaRecoveries = 2;
 
 	onMount(() => {
-		if (mode !== 'remux' || !video) {
+		if (mode === 'remux' && video) {
+			void setupHls();
+		}
+		if (!progressEnabled(itemId)) {
 			return;
 		}
-		void setupHls();
+
+		const onVisibility = () => {
+			if (document.visibilityState === 'hidden') {
+				sendBeaconProgress();
+			} else {
+				beaconSent = false;
+			}
+		};
+		const onPageHide = () => {
+			sendBeaconProgress();
+		};
+
+		document.addEventListener('visibilitychange', onVisibility);
+		window.addEventListener('pagehide', onPageHide);
+		return () => {
+			document.removeEventListener('visibilitychange', onVisibility);
+			window.removeEventListener('pagehide', onPageHide);
+		};
 	});
 
 	async function setupHls() {
@@ -99,6 +134,105 @@
 		hls?.destroy();
 		hls = null;
 	});
+
+	function snapshot(): ProgressSnapshot {
+		return {
+			position: video?.currentTime ?? 0,
+			duration: video?.duration ?? Number.NaN
+		};
+	}
+
+	function handleLoadedMetadata() {
+		if (!video || resumeApplied) {
+			return;
+		}
+		const target = resumeTarget(startAt, video.duration, resumeApplied);
+		resumeApplied = true;
+		if (target !== null) {
+			try {
+				video.currentTime = target;
+			} catch {
+				// El navegador puede rechazar el salto si aún no puede buscar.
+			}
+		}
+	}
+
+	function sendDecision(decision: ProgressDecision, now: number) {
+		if (!progressEnabled(itemId) || !decision.send) {
+			return;
+		}
+		lastProgressAt = now;
+		const path = `/items/${itemId}/progress`;
+		const body = JSON.stringify({
+			position_seconds: decision.position,
+			duration_seconds: decision.duration
+		});
+		void fetch(path, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body,
+			keepalive: true
+		}).catch(() => {
+			// Un fallo de progreso no debe afectar a la reproducción.
+		});
+	}
+
+	function saveSnapshot(event: 'timeupdate' | 'pause' | 'ended') {
+		if (!progressEnabled(itemId) || !video) {
+			return;
+		}
+		const now = Date.now();
+		sendDecision(decideProgress(event, snapshot(), lastProgressAt, now), now);
+	}
+
+	function handleTimeUpdate() {
+		saveSnapshot('timeupdate');
+	}
+
+	function handlePause() {
+		saveSnapshot('pause');
+	}
+
+	function handleEnded() {
+		saveSnapshot('ended');
+	}
+
+	function sendBeaconProgress() {
+		if (!progressEnabled(itemId) || !video || beaconSent) {
+			return;
+		}
+		const now = Date.now();
+		const decision = decideProgress('pagehide', snapshot(), lastProgressAt, now);
+		if (!decision.send) {
+			return;
+		}
+		beaconSent = true;
+		lastProgressAt = now;
+		const path = `/items/${itemId}/progress`;
+		const body = JSON.stringify({
+			position_seconds: decision.position,
+			duration_seconds: decision.duration
+		});
+
+		try {
+			if (typeof navigator.sendBeacon === 'function') {
+				const blob = new Blob([body], { type: 'application/json' });
+				if (navigator.sendBeacon(path, blob)) {
+					return;
+				}
+			}
+		} catch {
+			// Si sendBeacon falla, se intenta el fetch con keepalive.
+		}
+		void fetch(path, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body,
+			keepalive: true
+		}).catch(() => {
+			// La página se está cerrando; no hay nada más que hacer.
+		});
+	}
 </script>
 
 <div class="player">
@@ -115,5 +249,9 @@
 		preload="metadata"
 		src={mode === 'direct' ? src : undefined}
 		aria-label={title}
+		onloadedmetadata={handleLoadedMetadata}
+		ontimeupdate={handleTimeUpdate}
+		onpause={handlePause}
+		onended={handleEnded}
 	></video>
 </div>

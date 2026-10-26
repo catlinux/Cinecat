@@ -40,7 +40,8 @@ const item: MediaItem = {
 	overview_language: 'es-ES',
 	match_status: 'auto',
 	match_score: 1,
-	watched: false
+	watched: false,
+	progress: null
 };
 
 const filters: MovieFilters = {

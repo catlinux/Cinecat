@@ -126,7 +126,7 @@ Cubiertas por el plan tal cual: corregir/identificar desde la ficha (T6), repart
 3. ✅ **T6** (ficha completa: reparto, dirección, corregir ficha, visto/no visto; con huecos para «Archivo» y «Póster») → cierra 0.11.0 → ▶ **desplegar** + D1.
 4. ✅ **T4c** (info del archivo con ffprobe) + ✅ **T6b** (panel «Archivo» en la ficha) → ▶ desplegar.
 5. ✅ **T4d** (editar póster) + **T6c** (selector de póster en la ficha).
-6. ✅ **T4e** (progreso de reproducción y `/api/v1/home`) + **T5b** (filas «Continuar viendo», «Siguiente episodio» y «Recientes» en el portal, y reanudar en el reproductor) → ▶ desplegar.
+6. ✅ **T4e** (progreso de reproducción y `/api/v1/home`) + ✅ **T5b** (filas «Continuar viendo», «Siguiente episodio» y «Recientes» en el portal, y reanudar en el reproductor) → ▶ desplegar.
 7. **A1 → A2 → A3 → A4** (ajustes y panel de administración) → ▶ desplegar; **U1 → U2** (panel de usuario y personalización del portal) → ▶; **A5 → A6 → A7 → A8**.
 8. Hito 2 (colecciones T7–T9) y hito 3 (series T10–T13) pueden adelantarse a 7 si el usuario lo prefiere, porque el portal ya los espera.
 9. Diseños con Opus (**T6s** subtítulos, **P0** complementos, **P1** DLNA) cuando el usuario los priorice.

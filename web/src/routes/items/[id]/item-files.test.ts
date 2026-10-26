@@ -41,6 +41,7 @@ function makeItem(overrides: Partial<MediaItem> = {}): MediaItem {
 		match_status: 'auto',
 		match_score: 1,
 		watched: false,
+		progress: null,
 		...overrides
 	};
 }

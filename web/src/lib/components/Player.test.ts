@@ -1,5 +1,6 @@
 import { render } from 'svelte/server';
 import { describe, expect, it } from 'vitest';
+import { progressEnabled, resumeTarget } from '$lib/progress';
 import Player from './Player.svelte';
 
 describe('Player', () => {
@@ -21,5 +22,23 @@ describe('Player', () => {
 
 		expect(body).toContain('<video');
 		expect(body).not.toContain('src="http://api.test/playlist.m3u8"');
+	});
+});
+
+describe('lógica de reanudación y guardado', () => {
+	it('reanuda una sola vez', () => {
+		expect(resumeTarget(70, 3600, false)).toBe(70);
+		expect(resumeTarget(70, 3600, true)).toBeNull();
+	});
+
+	it('no reanuda si queda menos de 15 segundos', () => {
+		expect(resumeTarget(85, 100, false)).toBe(85);
+		expect(resumeTarget(86, 100, false)).toBeNull();
+	});
+
+	it('no guarda nada sin un identificador válido', () => {
+		expect(progressEnabled(undefined)).toBe(false);
+		expect(progressEnabled(0)).toBe(false);
+		expect(progressEnabled(7)).toBe(true);
 	});
 });

@@ -40,6 +40,7 @@ function makeItem(overrides: Partial<MediaItem> = {}): MediaItem {
 		match_status: 'auto',
 		match_score: 0.92,
 		watched: false,
+		progress: null,
 		...overrides
 	};
 }
@@ -171,6 +172,30 @@ describe('ficha de película', () => {
 		const body = renderPage(makeItem({ overview_language: 'es-ES' }));
 
 		expect(body).not.toContain('Sinopsis no disponible en castellano');
+	});
+
+	it('convierte Reproducir en Continuar y muestra la barra de progreso', () => {
+		const body = renderPage(
+			makeItem({
+				progress: {
+					position_seconds: 4320,
+					duration_seconds: 7200,
+					updated_at: '2026-10-26T10:00:00Z'
+				}
+			})
+		);
+
+		expect(body).toContain('Continuar · 1 h 12 min');
+		expect(body).toContain('Desde el principio');
+		expect(body).toContain('/items/7/play?t=0');
+		expect(body).toContain('role="progressbar"');
+		expect(body).toContain('aria-valuenow="60"');
+	});
+
+	it('mantiene Reproducir si no hay progreso', () => {
+		const body = renderPage(makeItem());
+		expect(body).toContain('Reproducir');
+		expect(body).not.toContain('Continuar ·');
 	});
 
 	it('muestra el botón de visto en sus dos estados', () => {

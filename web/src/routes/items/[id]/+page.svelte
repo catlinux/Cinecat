@@ -18,6 +18,7 @@
 		overviewInSpanish
 	} from '$lib/media';
 	import { posterColors } from '$lib/poster-color';
+	import { formatProgressTime, progressPercent } from '$lib/progress';
 	import type { PageData } from './$types';
 
 	interface MatchSearch {
@@ -39,6 +40,14 @@
 	let { data, form }: { data: PageData; form?: ActionForm | null } = $props();
 
 	const item = $derived(data.item);
+	const progress = $derived(item.progress);
+	const hasProgress = $derived(progress !== null && progress.position_seconds > 0);
+	const progressLabel = $derived(
+		progress ? formatProgressTime(progress.position_seconds) : ''
+	);
+	const progressValue = $derived(
+		progress ? progressPercent(progress.position_seconds, progress.duration_seconds) : 0
+	);
 	const isMovie = $derived(item.kind === 'movie');
 	const colors = $derived(posterColors(item.title));
 	const meta = $derived(isMovie ? formatMovieMeta(item) : itemSubtitle(item));
@@ -135,7 +144,14 @@
 		{/if}
 
 		<div class="detail-actions">
-			<a class="button" href={`/items/${item.id}/play`}>Reproducir</a>
+			{#if hasProgress}
+				<a class="button" href={`/items/${item.id}/play`}>Continuar · {progressLabel}</a>
+				<a class="button button-secondary" href={`/items/${item.id}/play?t=0`}>
+					Desde el principio
+				</a>
+			{:else}
+				<a class="button" href={`/items/${item.id}/play`}>Reproducir</a>
+			{/if}
 			<form method="POST" action="?/watched" use:enhance>
 				<input type="hidden" name="watched" value={item.watched ? '0' : '1'} />
 				<button class="button button-secondary" type="submit" aria-pressed={item.watched}>
@@ -143,6 +159,19 @@
 				</button>
 			</form>
 		</div>
+
+		{#if hasProgress}
+			<div
+				class="detail-progress"
+				role="progressbar"
+				aria-label={`Progreso de ${item.title}`}
+				aria-valuemin="0"
+				aria-valuemax="100"
+				aria-valuenow={progressValue}
+			>
+				<span style={`width: ${progressValue}%`}></span>
+			</div>
+		{/if}
 
 		{#if actionForm?.message}
 			<p
