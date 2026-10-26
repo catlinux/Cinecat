@@ -7,6 +7,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-10-26
+
+### Added
+- `GET /api/v1/items` accepts an optional `library_id` to filter by library (needed on the web client side, since with 1652 real items in production the flat, unfiltered, unpaginated list was unmanageable).
+
 ## [0.7.1] - 2026-10-26
 
 ### Fixed

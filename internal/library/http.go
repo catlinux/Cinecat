@@ -282,19 +282,38 @@ func (a *API) handleItems(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var libraryID int64
+	filterByLibrary := false
+	if raw := strings.TrimSpace(r.URL.Query().Get("library_id")); raw != "" {
+		libraryID, err = strconv.ParseInt(raw, 10, 64)
+		if err != nil || libraryID <= 0 {
+			writeJSONError(w, http.StatusBadRequest, "library_id debe ser un entero positivo")
+			return
+		}
+		filterByLibrary = true
+	}
+
+	where := ""
+	var args []any
+	if filterByLibrary {
+		where = " WHERE library_id = ?"
+		args = append(args, libraryID)
+	}
+
 	var total int64
 	if err := a.db.QueryRowContext(r.Context(),
-		`SELECT count(*) FROM media_items`).Scan(&total); err != nil {
+		`SELECT count(*) FROM media_items`+where, args...).Scan(&total); err != nil {
 		log.Printf("library: contar ítems: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
 		return
 	}
 
+	queryArgs := append(args, limit, offset)
 	rows, err := a.db.QueryContext(r.Context(), `
 		SELECT id, library_id, path, title, year, kind, season, episode, tmdb_id, overview, poster_url
-		  FROM media_items
+		  FROM media_items`+where+`
 		 ORDER BY id
-		 LIMIT ? OFFSET ?`, limit, offset)
+		 LIMIT ? OFFSET ?`, queryArgs...)
 	if err != nil {
 		log.Printf("library: listar ítems: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")

@@ -173,3 +173,89 @@ func TestItemsExponeMetadatosOMDb(t *testing.T) {
 		t.Fatalf("la ficha sin metadatos debe tener nulos: %+v", item)
 	}
 }
+
+func TestItemsFiltraPorBiblioteca(t *testing.T) {
+	server, db, token := newLibraryHTTPTestServer(t)
+
+	libA, err := db.Exec(`INSERT INTO libraries (path, name) VALUES (?, ?)`, "/media/a", "A")
+	if err != nil {
+		t.Fatalf("crear biblioteca A: %v", err)
+	}
+	libraryA, err := libA.LastInsertId()
+	if err != nil {
+		t.Fatalf("id biblioteca A: %v", err)
+	}
+	libB, err := db.Exec(`INSERT INTO libraries (path, name) VALUES (?, ?)`, "/media/b", "B")
+	if err != nil {
+		t.Fatalf("crear biblioteca B: %v", err)
+	}
+	libraryB, err := libB.LastInsertId()
+	if err != nil {
+		t.Fatalf("id biblioteca B: %v", err)
+	}
+
+	for _, item := range []struct {
+		libraryID int64
+		path      string
+	}{
+		{libraryA, "/media/a/Uno (2019).mp4"},
+		{libraryA, "/media/a/Dos (2020).mp4"},
+		{libraryB, "/media/b/Tres (2021).mp4"},
+	} {
+		if _, err := db.Exec(
+			`INSERT INTO media_items (library_id, path, title, kind) VALUES (?, ?, ?, 'movie')`,
+			item.libraryID, item.path, item.path,
+		); err != nil {
+			t.Fatalf("crear ítem %q: %v", item.path, err)
+		}
+	}
+
+	status, body := libraryHTTPGet(t,
+		server.URL+"/api/v1/items?library_id="+strconv.FormatInt(libraryA, 10), token)
+	if status != http.StatusOK {
+		t.Fatalf("filtro: código = %d, cuerpo = %s", status, body)
+	}
+	var filtered itemsResponse
+	if err := json.Unmarshal(body, &filtered); err != nil {
+		t.Fatalf("respuesta filtrada: %v", err)
+	}
+	if filtered.Total != 2 || len(filtered.Items) != 2 {
+		t.Fatalf("total = %d, ítems = %d; se esperaban 2 de la biblioteca A", filtered.Total, len(filtered.Items))
+	}
+	for _, item := range filtered.Items {
+		if item.LibraryID != libraryA {
+			t.Fatalf("ítem de otra biblioteca: %+v", item)
+		}
+	}
+
+	status, body = libraryHTTPGet(t, server.URL+"/api/v1/items", token)
+	if status != http.StatusOK {
+		t.Fatalf("sin filtro: código = %d", status)
+	}
+	var all itemsResponse
+	if err := json.Unmarshal(body, &all); err != nil {
+		t.Fatalf("respuesta sin filtro: %v", err)
+	}
+	if all.Total != 3 || len(all.Items) != 3 {
+		t.Fatalf("sin filtro: total = %d, ítems = %d", all.Total, len(all.Items))
+	}
+
+	status, body = libraryHTTPGet(t,
+		server.URL+"/api/v1/items?library_id="+strconv.FormatInt(libraryB, 10), token)
+	if status != http.StatusOK {
+		t.Fatalf("filtro B: código = %d", status)
+	}
+	if err := json.Unmarshal(body, &filtered); err != nil {
+		t.Fatalf("respuesta filtrada B: %v", err)
+	}
+	if filtered.Total != 1 || len(filtered.Items) != 1 {
+		t.Fatalf("filtro B: total = %d, ítems = %d", filtered.Total, len(filtered.Items))
+	}
+
+	for _, invalid := range []string{"noesnumero", "0", "-3"} {
+		status, body = libraryHTTPGet(t, server.URL+"/api/v1/items?library_id="+invalid, token)
+		if status != http.StatusBadRequest {
+			t.Fatalf("library_id=%s: código = %d, se esperaba 400; cuerpo = %s", invalid, status, body)
+		}
+	}
+}

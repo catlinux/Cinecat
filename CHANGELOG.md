@@ -7,6 +7,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.7.2] - 2026-10-26
+
+### Añadido
+- `GET /api/v1/items` acepta `library_id` opcional para filtrar por biblioteca (necesario de cara al cliente web, con 1652 ítems reales en producción la lista plana sin filtro ni paginación visible resultaba inmanejable).
+
 ## [0.7.1] - 2026-10-26
 
 ### Corregido
