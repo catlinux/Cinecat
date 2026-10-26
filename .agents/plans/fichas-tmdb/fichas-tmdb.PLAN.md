@@ -1,6 +1,6 @@
 # Fichas en castellano, colecciones, series y navegación de la biblioteca
 
-Estado (2026-10-26): T1, T2, T3a–T3d hechas. **Siguiente: ▶ desplegar** (con aprobación del usuario) y luego T4.
+Estado (2026-10-26): T1–T4 hechas y T1–T3d desplegadas (0.10.0 en producción). **Siguiente: T4b** (ver «Ampliaciones pedidas»).
 
 Orden: Hito 1 (T3b → T3c → T3d → ▶ → T4 → T5 → T6 → D1) → Hito 1b (A1 → A2 → A3 → ▶ → A4 → ▶) → Hito 2 (T7 → T8 → T9 → ▶) → Hito 3 (T10 → T11 → T12 → T13 → D2).
 
@@ -89,6 +89,23 @@ Convenciones para el `context` de cada tarea: Go 1.22+ (módulo `github.com/catl
 ### D1 — Despliegue y medición del hito 1 (sesión)
 - Con aprobación del usuario: push y `actualizar.sh`. Lanzar el escaneo desde el panel y esperar a que acabe.
 - Medir con una copia de la BD (`docker cp cinecat-servidor-1:/data/cinecat.db /tmp/x.db` y `sqlite3`): % de películas con `match_status='auto'`, lista de las sin identificar para el usuario. Revisar 40 al azar (`display_title` frente a la ruta): ninguna con la ficha de otra película. Esperado ≈ 98 % (lo medido en T2).
+
+## Ampliaciones pedidas por el usuario (2026-10-26, 2.ª tanda)
+
+Cubiertas por el plan tal cual: corregir/identificar desde la ficha (T6), reparto y dirección (T6), duración (T6), paginación (T5). **Nuevas o que cambian tareas:**
+
+| Petición | Dónde entra |
+|---|---|
+| Portal inicial con entradas Películas · Colecciones · Series (luego Imágenes y Vídeos musicales) | **T5 cambia:** `/` pasa a ser el portal (una tarjeta grande por categoría, con contador y cartel/ilustración propia «Marquesina»; las categorías futuras se añaden como tarjeta). La cartelera de películas pasa a `/movies`; la cabecera enlaza a `/`, `/movies`, `/collections`, `/series`. Redirigir lo que apunte a la `/` antigua con `?q=`/`?page=` a `/movies`. |
+| Búsqueda por título, actor, director… | **T4b**: `q` amplía a `cast_names`, `directors`, `original_title` y `tagline`; parámetro `field=title\|cast\|director\|all` (por defecto `all`). Web: T5. |
+| Filtro por letra | **T4b**: `letter=A..Z` o `#` (no alfabético) sobre el título mostrado, sin tildes ni artículos iniciales («El», «La», «Los»… → ordena y filtra por la palabra principal; decidir y documentar). Web: T5 (tira A–Z). |
+| Filtro por género | **T4b**: `genre=<nombre>` y `GET /api/v1/genres?kind=movie` → `{genres:[{name,count}]}`. Web: T5 (selector). |
+| Visionado marcado/desmarcado | **T4b**: tabla `watch_state(user_id, media_item_id, watched_at)` (por usuario); `PUT/DELETE /api/v1/items/{id}/watched`; el DTO incluye `watched bool` del usuario de la sesión; filtro `watched=true\|false`. Web: botón en la ficha (T6) y marca en el cartel (T5). Más adelante: posición de reanudación. |
+| Info técnica del archivo: duración, códec de vídeo y audio y su información, tamaño, contenedor, pistas | **T4c**: `GET /api/v1/items/{id}/file-info` (admin o sesión) con `ffprobe` (ya hay `internal/playback/probe.go`: reutilizarlo): contenedor, tamaño, duración, por pista de vídeo (códec, perfil, resolución, fps, bitrate, 10 bits/HDR), de audio (códec, canales, idioma, bitrate) y de subtítulos; más ruta relativa y fecha de modificación; y cómo se reproducirá (directo / recodificado). Web: panel «Archivo» en la ficha (T6). Otros extras: calidad (SD/HD/FHD), otras versiones (T-versiones), enlace a IMDb/TMDB, última reproducción. |
+| Editar imagen/póster | **T4d**: `PUT /api/v1/items/{id}/poster` (admin): elegir entre los carteles que ofrece TMDB (`/movie/{id}/images`, añadir `MoviePosters` al cliente) o pegar una URL; se guarda `poster_url` con `poster_locked=1` para que el escaneo no lo pise (y `DELETE` vuelve al de TMDB). Opcional: subir archivo (se guarda en `/data/images`). Web: en `MatchDialog`/ficha (T6). |
+| Añadir subtítulos desde la ficha | **Diseño pendiente (Opus)** antes de implementar, tarea **T6s**: `/media` está montado solo lectura, así que se guardan en `/data/subtitles/<item>/…`; formatos de entrada SRT/VTT/ASS (convertir a WebVTT), idioma y nombre; subida (admin), listado y borrado; detección de subtítulos externos junto al vídeo (`Peli.es.srt`) y de pistas internas; entrega al reproductor como `<track>` (directo) y en HLS (playlist de subtítulos o pista WebVTT aparte). Hoy el HLS descarta los subtítulos (TODO.md). |
+
+**Orden revisado del hito 1:** T4 ✅ → **T4b** (búsqueda ampliada, letra, género, visionado) → **T4c** (info del archivo) → **T4d** (póster) → T5 (portal, `/movies`, filtros, paginación) → T6 (ficha completa con todo lo anterior; subtítulos aparte en T6s) → D1. Cada una con su commit y, tras T5 y T6, ▶ desplegar.
 
 ## Hito 1b — Panel de administración (→ 0.11.x/0.12.0 según encaje)
 
