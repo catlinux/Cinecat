@@ -3,6 +3,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        COMMIT: ${COMMIT:-}
+        BUILT_AT: ${BUILT_AT:-}
     restart: unless-stopped
     ports:
       - "127.0.0.1:${CINECAT_API_PORT:-8080}:8080"
@@ -18,8 +21,8 @@ services:
 
   web:
     build:
-      context: ./web
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: web/Dockerfile
     restart: unless-stopped
     ports:
       - "127.0.0.1:${CINECAT_WEB_PORT:-8081}:3000"

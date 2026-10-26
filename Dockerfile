@@ -1,9 +1,11 @@
 FROM golang:1.22-bookworm AS build
+ARG COMMIT=""
+ARG BUILT_AT=""
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 go build -ldflags "-X main.version=$(cat VERSION)" -o /out/cinecatd ./cmd/cinecatd
+RUN CGO_ENABLED=0 go build -ldflags "-X main.version=$(cat VERSION) -X main.commit=${COMMIT} -X main.builtAt=${BUILT_AT}" -o /out/cinecatd ./cmd/cinecatd
 
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg ca-certificates \

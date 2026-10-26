@@ -4,8 +4,13 @@
 	import type { LayoutData } from './$types';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import { apiBaseUrl } from '$lib/config';
+	import { versionMismatch } from '$lib/version';
 
 	let { data, children }: { data: LayoutData; children: Snippet } = $props();
+
+	const versionLabel = $derived(
+		`${data.serverVersion ?? data.webVersion}${data.serverCommit ? ` (${data.serverCommit})` : ''}`
+	);
 </script>
 
 <svelte:head>
@@ -34,7 +39,21 @@
 	</main>
 
 	<footer>
-		<span>Cinecat · GPL-3.0</span>
+		<span>Cinecat {versionLabel} · GPL-3.0</span>
 		<span class="server">Servidor: {apiBaseUrl || 'sin configurar'}</span>
 	</footer>
+	{#if versionMismatch(data.serverVersion, data.webVersion)}
+		<p class="version-warning" role="status">
+			La web y el servidor tienen versiones distintas: recarga o actualiza.
+		</p>
+	{/if}
 </div>
+
+<style>
+	.version-warning {
+		margin: 0.5rem 0 0;
+		font-size: 0.78rem;
+		line-height: 1.5;
+		color: var(--naranja);
+	}
+</style>

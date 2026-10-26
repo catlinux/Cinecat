@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -26,6 +27,12 @@ import (
 // version se puede fijar en tiempo de compilación con
 // -ldflags "-X main.version=<versión>"; si no, se lee del archivo VERSION.
 var version string
+
+// commit y builtAt se inyectan con -ldflags "-X main.commit=... -X main.builtAt=...".
+var (
+	commit  string
+	builtAt string
+)
 
 func main() {
 	showVersion := flag.Bool("version", false, "imprime la versión y sale")
@@ -180,6 +187,7 @@ func newHandler(authSvc *auth.Service, api *library.API) http.Handler {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintln(w, "ok")
 	})
+	mux.HandleFunc("GET /api/v1/system/version", handleVersion)
 	if authSvc != nil {
 		mux.Handle("POST /api/v1/auth/login", authSvc.LoginHandler())
 		mux.Handle("POST /api/v1/auth/logout", authSvc.LogoutHandler())
@@ -190,6 +198,23 @@ func newHandler(authSvc *auth.Service, api *library.API) http.Handler {
 		api.Register(mux)
 	}
 	return mux
+}
+
+type versionResponse struct {
+	Server  string `json:"server"`
+	Commit  string `json:"commit"`
+	BuiltAt string `json:"built_at"`
+}
+
+func handleVersion(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	if err := json.NewEncoder(w).Encode(versionResponse{
+		Server:  applicationVersion(),
+		Commit:  commit,
+		BuiltAt: builtAt,
+	}); err != nil {
+		log.Printf("cinecatd: escribir versión: %v", err)
+	}
 }
 
 // applicationVersion devuelve la versión compilada o, si no la hay, el

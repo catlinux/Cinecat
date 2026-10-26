@@ -1,7 +1,14 @@
 .git
+.agentrelay
+.agents
+.claude
 web/node_modules
 web/.svelte-kit
+web/.vite
 web/build
+web/coverage
+cinecatd
+cinecatd.exe
 *.db
 *.db-shm
 *.db-wal

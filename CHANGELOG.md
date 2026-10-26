@@ -11,6 +11,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 - El escaneo de bibliotecas se ejecuta en segundo plano: `POST /api/v1/libraries/scan` responde 202 (o 409 si ya hay uno en marcha) y `GET /api/v1/libraries/scan` informa del estado y del último resultado.
 - Escaneo automático un minuto después de arrancar y después cada `CINECAT_SCAN_INTERVAL` (por defecto `6h`; `0` lo desactiva).
 - El panel de bibliotecas lanza el escaneo en segundo plano y muestra «Escaneo en curso…» con sondeo cada 3 s; al acabar, archivos, identificadas, sin identificar y avisos plegables.
+- `GET /api/v1/system/version` (sin sesión) con la versión, el commit y la fecha de compilación; el pie de la web muestra la versión del servidor y avisa si la web y el servidor tienen versiones distintas. La versión de la web sale del `VERSION` de la raíz (la imagen de la web se construye ahora desde la raíz del repositorio).
 - El servidor se apaga de forma ordenada ante SIGINT/SIGTERM, cancelando el escaneo en curso.
 
 ## [0.10.0] - 2026-10-26

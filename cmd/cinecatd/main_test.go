@@ -47,6 +47,35 @@ func TestHealthzRechazaOtrosMetodos(t *testing.T) {
 	}
 }
 
+func TestVersionEndpointSinSesion(t *testing.T) {
+	oldVersion, oldCommit, oldBuiltAt := version, commit, builtAt
+	t.Cleanup(func() {
+		version, commit, builtAt = oldVersion, oldCommit, oldBuiltAt
+	})
+	version = "1.2.3"
+	commit = "abc1234"
+	builtAt = "2026-10-26T09:00:00Z"
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/system/version", nil)
+	rec := httptest.NewRecorder()
+	newHandler(nil, nil).ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("código = %d, se esperaba %d", rec.Code, http.StatusOK)
+	}
+	if contentType := rec.Header().Get("Content-Type"); contentType != "application/json; charset=utf-8" {
+		t.Fatalf("Content-Type = %q", contentType)
+	}
+
+	var body versionResponse
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatalf("respuesta de versión: %v", err)
+	}
+	if body.Server != "1.2.3" || body.Commit != "abc1234" || body.BuiltAt != "2026-10-26T09:00:00Z" {
+		t.Fatalf("versión inesperada: %+v", body)
+	}
+}
+
 type testServer struct {
 	*httptest.Server
 	db      *sql.DB

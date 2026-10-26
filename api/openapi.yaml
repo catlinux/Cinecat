@@ -139,6 +139,21 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/system/version:
+    get:
+      summary: Devuelve la versión del servidor
+      description: |
+        Informa de la versión compilada del servidor, el commit y la fecha de
+        compilación. No exige sesión: la web lo usa para mostrar el pie y
+        avisar si su propia versión no coincide.
+      security: []
+      responses:
+        '200':
+          description: Versión del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerVersion'
   /api/v1/libraries:
     get:
       summary: Lista las bibliotecas
@@ -616,6 +631,23 @@ components:
         error:
           type: string
           description: Mensaje de error para el cliente.
+      additionalProperties: false
+    ServerVersion:
+      type: object
+      required:
+        - server
+        - commit
+        - built_at
+      properties:
+        server:
+          type: string
+          description: Versión del servidor, tomada del archivo VERSION al compilar.
+        commit:
+          type: string
+          description: Hash corto del commit de la compilación; vacío si no se inyectó.
+        built_at:
+          type: string
+          description: Fecha UTC de la compilación en RFC3339; vacía si no se inyectó.
       additionalProperties: false
     LoginRequest:
       type: object

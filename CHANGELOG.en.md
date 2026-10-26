@@ -11,6 +11,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 - Library scans run in the background: `POST /api/v1/libraries/scan` returns 202 (or 409 if one is already running) and `GET /api/v1/libraries/scan` reports the status and the last result.
 - Automatic scan one minute after startup and then every `CINECAT_SCAN_INTERVAL` (default `6h`; `0` disables it).
 - The libraries panel starts the scan in the background and shows "Escaneo en curso…" polling every 3 s; when done, it shows files, identified, unidentified and collapsible warnings.
+- `GET /api/v1/system/version` (no session) with the version, commit and build date; the web footer shows the server version and warns if web and server versions differ. The web version comes from the root `VERSION` (the web image is now built from the repository root).
 - The server shuts down gracefully on SIGINT/SIGTERM, cancelling any running scan.
 
 ## [0.10.0] - 2026-10-26

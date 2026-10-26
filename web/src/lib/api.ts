@@ -66,6 +66,12 @@ export interface ScanStarted {
 	started: boolean;
 }
 
+export interface ServerVersion {
+	server: string;
+	commit: string;
+	built_at: string;
+}
+
 export interface CurrentUserResponse {
 	username: string;
 	role: 'admin' | 'user';
@@ -151,6 +157,10 @@ export class ApiClient {
 
 	async getScanStatus(token: string): Promise<ScanStatus> {
 		return this.get<ScanStatus>('/api/v1/libraries/scan', token);
+	}
+
+	async getServerVersion(): Promise<ServerVersion> {
+		return this.get<ServerVersion>('/api/v1/system/version');
 	}
 
 	async get<T>(path: string, token?: string): Promise<T> {

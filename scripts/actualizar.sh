@@ -6,6 +6,9 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 git pull --ff-only
+COMMIT=$(git rev-parse --short HEAD)
+BUILT_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+export COMMIT BUILT_AT
 docker compose build
 docker compose up -d
 docker compose ps

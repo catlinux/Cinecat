@@ -1,6 +1,6 @@
 # Fichas en castellano, colecciones, series y navegación de la biblioteca
 
-Estado (2026-10-26): T1, T2, T3a, T3b y T3c hechas. **Siguiente: T3d** (luego ▶ desplegar).
+Estado (2026-10-26): T1, T2, T3a–T3d hechas. **Siguiente: ▶ desplegar** (con aprobación del usuario) y luego T4.
 
 Orden: Hito 1 (T3b → T3c → T3d → ▶ → T4 → T5 → T6 → D1) → Hito 1b (A1 → A2 → A3 → ▶ → A4 → ▶) → Hito 2 (T7 → T8 → T9 → ▶) → Hito 3 (T10 → T11 → T12 → T13 → D2).
 
@@ -45,7 +45,7 @@ Convenciones para el `context` de cada tarea: Go 1.22+ (módulo `github.com/catl
 - Criterios: tests de `ScanJob` (dos `Start` seguidos → el segundo false; `Status` refleja el resultado) y de los dos endpoints; `go test ./...` en verde.
 - Esfuerzo: alto.
 
-### T3d — Versión visible en servidor y web
+### ✅ T3d — Versión visible en servidor y web
 - Archivos: `cmd/cinecatd/main.go` (ya hay una versión: se registra «cinecatd 0.9.1 escuchando» — ver cómo se inyecta), `internal/library/http.go` o nuevo `internal/system/`, `api/openapi.yaml`, `web/src/routes/+layout.svelte` (pie), `web/vite.config.ts` o equivalente, `web/Dockerfile`/`Dockerfile`, tests.
 - `GET /api/v1/system/version` (sin sesión) → `{"server": "0.11.0", "commit": "<hash corto o vacío>", "built_at": "..."}`. La versión sale de `VERSION` en tiempo de compilación (`-ldflags -X`), nunca escrita a mano en el código.
 - La web muestra en el pie «Cinecat 0.11.0» (versión del servidor) y, si la de su propio build (también desde `VERSION`, inyectada en la compilación de Vite) no coincide con la del servidor, un aviso «La web y el servidor tienen versiones distintas: recarga o actualiza». Resolver cómo llega `VERSION` al build de la web en Docker (contexto de build; si no lo incluye, `ARG`).
