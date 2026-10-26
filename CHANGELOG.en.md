@@ -7,6 +7,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-10-27
+
 ### Added
 
 - Administration → System: "Check for updates" asks the server and shows the new version's notes; "Update now" (with confirmation) asks the host service to update and follows its progress by phases, including the restart, until "Updated to X" or a notice that it rolled back to the previous version.

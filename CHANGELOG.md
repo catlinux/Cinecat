@@ -7,6 +7,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.16.0] - 2026-10-27
+
 ### Añadido
 
 - Administración → Sistema: «Buscar actualizaciones» consulta al servidor y muestra las notas de la versión nueva; «Actualizar ahora» (con confirmación) pide la actualización al servicio del host y sigue su progreso por fases, incluido el reinicio, hasta «Actualizado a X» o el aviso de que se volvió a la versión anterior.
