@@ -3,14 +3,46 @@ package playback
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
+)
+
+const (
+	// hlsStartupTimeout acota lo que espera prepare() a que aparezca la primera
+	// playlist. Con veryfast, el primer segmento de 6 s suele tardar bastante
+	// menos; 20 s evita dejar una petición HTTP colgada si FFmpeg no arranca.
+	hlsStartupTimeout = 20 * time.Second
+	// hlsSegmentPoll es el intervalo de comprobación de segmentos: 150 ms da
+	// una latencia baja sin convertir la espera en un bucle de CPU.
+	hlsSegmentPoll = 150 * time.Millisecond
+	// hlsSegmentWaitTimeout limita la espera de un segmento concreto; cinco
+	// minutos cubren con holgura el avance normal de una transcodificación.
+	hlsSegmentWaitTimeout = 5 * time.Minute
+	// hlsProcessTimeout es el límite total del proceso FFmpeg en segundo plano.
+	// Antes eran 30 min, pero una película larga transcodificada por software en
+	// un servidor modesto puede superarlos; como ya no bloquea peticiones, se
+	// deja un margen amplio (2 h) y el proceso se cancela al cerrar el servicio.
+	hlsProcessTimeout = 2 * time.Hour
+)
+
+// hlsPlaylistType es event, no vod: con vod FFmpeg escribe la playlist solo al
+// terminar todo el vídeo, lo que impediría servir el primer segmento mientras
+// se genera. Con event la playlist crece con cada segmento y recibe ENDLIST al
+// final, así que sigue siendo un VOD completo una vez terminado.
+const hlsPlaylistType = "event"
+
+// Errores del flujo progresivo.
+var (
+	ErrHLSStartupTimeout = errors.New("playback: ffmpeg no generó la playlist HLS a tiempo")
+	ErrHLSSegmentTimeout = errors.New("playback: el segmento HLS no apareció a tiempo")
 )
 
 // hlsArgs construye los argumentos de FFmpeg para reempaquetar a HLS fMP4 sin
@@ -30,7 +62,7 @@ func hlsArgs(inputPath string) []string {
 		"-c:a", "copy",
 		"-f", "hls",
 		"-hls_time", "6",
-		"-hls_playlist_type", "vod",
+		"-hls_playlist_type", hlsPlaylistType,
 		"-hls_segment_type", "fmp4",
 		"-hls_fmp4_init_filename", "init.mp4",
 		"-hls_segment_filename", "segment_%05d.m4s",
@@ -64,7 +96,7 @@ func hlsTranscodeArgs(inputPath string) []string {
 		"-b:a", "160k",
 		"-f", "hls",
 		"-hls_time", "6",
-		"-hls_playlist_type", "vod",
+		"-hls_playlist_type", hlsPlaylistType,
 		"-hls_segment_type", "fmp4",
 		"-hls_fmp4_init_filename", "init.mp4",
 		"-hls_segment_filename", "segment_%05d.m4s",
@@ -146,6 +178,10 @@ func (s *Service) ServeHLSFile(w http.ResponseWriter, r *http.Request, itemID in
 		return nil
 	}
 
+	if err := s.waitForHLSFile(r.Context(), entry, name); err != nil {
+		return err
+	}
+
 	file, err := os.Open(filePath)
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrFileNotFound, err)
@@ -166,8 +202,8 @@ func (s *Service) ServeHLSFile(w http.ResponseWriter, r *http.Request, itemID in
 	return nil
 }
 
-// prepare genera el remux del ítem si no hay uno vigente y lo reutiliza
-// mientras se siga usando.
+// prepare arranca FFmpeg en segundo plano y devuelve la entrada en cuanto
+// existe la playlist inicial, sin esperar a que termine el vídeo completo.
 func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string) (*hlsEntry, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -175,12 +211,25 @@ func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string) (
 	s.cleanupLocked()
 
 	if entry, ok := s.entries[itemID]; ok {
-		if _, err := os.Stat(filepath.Join(entry.dir, "playlist.m3u8")); err == nil {
-			entry.lastUsed = s.now()
+		entry.lastUsed = s.now()
+		if s.playlistExists(entry) {
 			return entry, nil
 		}
-		delete(s.entries, itemID)
-		_ = os.RemoveAll(entry.dir)
+		if s.entryFinished(entry) {
+			delete(s.entries, itemID)
+			_ = os.RemoveAll(entry.dir)
+			if entry.err != nil {
+				return nil, entry.err
+			}
+		} else {
+			if err := s.waitForPlaylist(ctx, entry); err != nil {
+				if errors.Is(err, ErrHLSStartupTimeout) {
+					s.stopEntryLocked(itemID, entry)
+				}
+				return nil, err
+			}
+			return entry, nil
+		}
 	}
 
 	ffmpeg, err := exec.LookPath("ffmpeg")
@@ -209,26 +258,178 @@ func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string) (
 		return nil, fmt.Errorf("playback: crear el directorio del remux: %w", err)
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Minute)
-	defer cancel()
-
-	cmd := exec.CommandContext(ctx, ffmpeg, args...)
+	// El proceso vive ligado al contexto del servicio, no al de la petición
+	// HTTP que lo arranca, para que no se cancele al terminar esa petición.
+	procCtx, cancel := context.WithTimeout(s.procCtx, hlsProcessTimeout)
+	cmd := exec.CommandContext(procCtx, ffmpeg, args...)
 	cmd.Dir = dir
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 
-	if err := cmd.Run(); err != nil {
+	if err := cmd.Start(); err != nil {
+		cancel()
 		_ = os.RemoveAll(dir)
-		return nil, fmt.Errorf("%w: %v: %s", ErrFFmpegFailed, err, tailString(stderr.String(), 500))
-	}
-	if _, err := os.Stat(filepath.Join(dir, "playlist.m3u8")); err != nil {
-		_ = os.RemoveAll(dir)
-		return nil, fmt.Errorf("%w: no se generó la playlist", ErrFFmpegFailed)
+		return nil, fmt.Errorf("%w: %v", ErrFFmpegFailed, err)
 	}
 
-	entry := &hlsEntry{dir: dir, lastUsed: s.now(), mode: mode}
+	entry := &hlsEntry{
+		dir:      dir,
+		lastUsed: s.now(),
+		mode:     mode,
+		done:     make(chan struct{}),
+		cancel:   cancel,
+	}
 	s.entries[itemID] = entry
+
+	go func() {
+		err := cmd.Wait()
+		if err != nil {
+			entry.err = fmt.Errorf("%w: %v: %s", ErrFFmpegFailed, err, tailString(stderr.String(), 500))
+		} else if _, statErr := os.Stat(filepath.Join(dir, "playlist.m3u8")); statErr != nil {
+			entry.err = fmt.Errorf("%w: no se generó la playlist", ErrFFmpegFailed)
+		}
+		cancel()
+		close(entry.done)
+	}()
+
+	if err := s.waitForPlaylist(ctx, entry); err != nil {
+		if ctx.Err() != nil {
+			// El cliente se fue, pero el proceso sigue en segundo plano y otra
+			// petición podrá reutilizarlo.
+			return nil, ctx.Err()
+		}
+		s.stopEntryLocked(itemID, entry)
+		return nil, err
+	}
 	return entry, nil
+}
+
+func (s *Service) playlistExists(entry *hlsEntry) bool {
+	_, err := os.Stat(filepath.Join(entry.dir, "playlist.m3u8"))
+	return err == nil
+}
+
+func (s *Service) entryFinished(entry *hlsEntry) bool {
+	select {
+	case <-entry.done:
+		return true
+	default:
+		return false
+	}
+}
+
+// waitForPlaylist espera a que FFmpeg escriba la playlist inicial. Con
+// hls_playlist_type event aparece tras el primer segmento, no al final.
+func (s *Service) waitForPlaylist(ctx context.Context, entry *hlsEntry) error {
+	playlist := filepath.Join(entry.dir, "playlist.m3u8")
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+	deadline := time.NewTimer(hlsStartupTimeout)
+	defer deadline.Stop()
+
+	for {
+		if _, err := os.Stat(playlist); err == nil {
+			return nil
+		}
+		select {
+		case <-entry.done:
+			if _, err := os.Stat(playlist); err == nil {
+				return nil
+			}
+			if entry.err != nil {
+				return entry.err
+			}
+			return fmt.Errorf("%w: ffmpeg terminó sin generar la playlist", ErrFFmpegFailed)
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-deadline.C:
+			return ErrHLSStartupTimeout
+		case <-ticker.C:
+		}
+	}
+}
+
+func (s *Service) stopEntryLocked(itemID int64, entry *hlsEntry) {
+	entry.cancel()
+	<-entry.done
+	delete(s.entries, itemID)
+	_ = os.RemoveAll(entry.dir)
+}
+
+// waitForHLSFile espera a que un segmento (o el init de fMP4) esté listo para
+// servirse. Un segmento se considera completo si existe y FFmpeg ya terminó o
+// ya existe el segmento siguiente; así no se sirve un archivo a medio escribir.
+func (s *Service) waitForHLSFile(ctx context.Context, entry *hlsEntry, name string) error {
+	next, ok := hlsCompletionFile(name)
+	if !ok {
+		return ErrFileNotFound
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, hlsSegmentWaitTimeout)
+	defer cancel()
+	ticker := time.NewTicker(hlsSegmentPoll)
+	defer ticker.Stop()
+
+	path := filepath.Join(entry.dir, name)
+	nextPath := filepath.Join(entry.dir, next)
+
+	for {
+		if s.hlsFileReady(entry, path, nextPath) {
+			return nil
+		}
+		select {
+		case <-entry.done:
+			if s.hlsFileReady(entry, path, nextPath) {
+				return nil
+			}
+			if entry.err != nil {
+				return entry.err
+			}
+			return fmt.Errorf("%w: %s", ErrFileNotFound, name)
+		case <-ctx.Done():
+			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				return fmt.Errorf("%w: %s", ErrHLSSegmentTimeout, name)
+			}
+			return ctx.Err()
+		case <-ticker.C:
+		}
+	}
+}
+
+func (s *Service) hlsFileReady(entry *hlsEntry, path, nextPath string) bool {
+	info, err := os.Stat(path)
+	if err != nil || info.Size() == 0 {
+		return false
+	}
+	if s.entryFinished(entry) {
+		return true
+	}
+	_, err = os.Stat(nextPath)
+	return err == nil
+}
+
+// hlsCompletionFile devuelve el archivo que debe existir para dar por completo
+// el solicitado: el segmento siguiente, o el primero tras init.mp4.
+func hlsCompletionFile(name string) (string, bool) {
+	if name == "init.mp4" {
+		return "segment_00000.m4s", true
+	}
+	index, ok := segmentIndex(name)
+	if !ok {
+		return "", false
+	}
+	return fmt.Sprintf("segment_%05d.m4s", index+1), true
+}
+
+func segmentIndex(name string) (int, bool) {
+	if !strings.HasPrefix(name, "segment_") || !strings.HasSuffix(name, ".m4s") {
+		return 0, false
+	}
+	index, err := strconv.Atoi(strings.TrimSuffix(strings.TrimPrefix(name, "segment_"), ".m4s"))
+	if err != nil || index < 0 {
+		return 0, false
+	}
+	return index, true
 }
 
 func (s *Service) cleanupLocked() {

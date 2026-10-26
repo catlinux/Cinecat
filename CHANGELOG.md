@@ -7,6 +7,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.9.0] - 2026-10-26
+
+### Corregido
+- La generación HLS ya no bloquea hasta procesar el vídeo completo: `Service.prepare()` arranca FFmpeg en segundo plano y devuelve en cuanto existe la playlist inicial, y los segmentos se sirven en cuanto FFmpeg los genera (con espera acotada y comprobación de que el segmento está completo). Para que la playlist exista desde el primer segmento se usa `-hls_playlist_type event` en vez de `vod` (con `vod` FFmpeg solo la escribía al terminar); al acabar se añade `ENDLIST` y sigue siendo un VOD normal. El proceso queda ligado al ciclo de vida del servicio, no a la petición HTTP que lo lanza, y dos peticiones simultáneas del mismo ítem reutilizan el mismo proceso. Antes, una película de una hora podía tardar más de 25 minutos en empezar.
+
 ## [0.8.1] - 2026-10-26
 
 ### Corregido

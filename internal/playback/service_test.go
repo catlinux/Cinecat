@@ -3,11 +3,16 @@ package playback
 import (
 	"bufio"
 	"context"
+	"errors"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 )
 
 func playlistSegmentDurations(t *testing.T, playlistPath string) []float64 {
@@ -84,8 +89,20 @@ func TestPrepareTranscodificaKeyframesDispersos(t *testing.T) {
 	if entry.mode != ModeTranscode {
 		t.Fatalf("modo = %q, se esperaba %q", entry.mode, ModeTranscode)
 	}
+	if _, err := os.Stat(filepath.Join(entry.dir, "playlist.m3u8")); err != nil {
+		t.Fatalf("prepare debe devolver la playlist inicial: %v", err)
+	}
+	select {
+	case <-entry.done:
+	case <-time.After(60 * time.Second):
+		t.Fatal("FFmpeg no terminó en 60 s")
+	}
+	if entry.err != nil {
+		t.Fatalf("FFmpeg terminó con error: %v", entry.err)
+	}
 
 	durations := playlistSegmentDurations(t, filepath.Join(entry.dir, "playlist.m3u8"))
+	t.Logf("segmentos finales: %v", durations)
 	if len(durations) < 2 {
 		t.Fatalf("se esperaban varios segmentos, hay %d: %v", len(durations), durations)
 	}
@@ -161,5 +178,177 @@ func TestNeedsTranscodeSiElProberFalla(t *testing.T) {
 
 	if !svc.needsTranscode(context.Background(), "inexistente.mkv") {
 		t.Fatal("si no se puede comprobar la viabilidad, debe usarse la transcodificación como fallback")
+	}
+}
+
+func TestPrepareDevuelveAntesDeTerminarYEsperaSegmentos(t *testing.T) {
+	requireVideoTools(t)
+	source := generateKeyframeVideo(t, filepath.Join(t.TempDir(), "larga.mkv"), "300",
+		"-x264-params", "keyint=9999:min-keyint=9999:scenecut=0",
+		"-force_key_frames", "expr:gte(t,120)")
+
+	svc, err := New(Options{WorkDir: filepath.Join(t.TempDir(), "hls")})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := svc.Close(); err != nil {
+			t.Errorf("Close: %v", err)
+		}
+	})
+
+	start := time.Now()
+	entry, err := svc.prepare(context.Background(), 1, source)
+	prepareElapsed := time.Since(start)
+	if err != nil {
+		t.Fatalf("prepare: %v", err)
+	}
+	t.Logf("prepare() devolvió en %s y FFmpeg sigue en segundo plano", prepareElapsed)
+	if prepareElapsed > 15*time.Second {
+		t.Fatalf("prepare tardó %s; debería devolver tras la playlist inicial", prepareElapsed)
+	}
+	if _, err := os.Stat(filepath.Join(entry.dir, "playlist.m3u8")); err != nil {
+		t.Fatalf("no hay playlist inicial: %v", err)
+	}
+
+	select {
+	case <-entry.done:
+		t.Fatal("FFmpeg terminó antes de poder comprobar que prepare() devuelve en segundo plano")
+	default:
+	}
+
+	start = time.Now()
+	if err := svc.waitForHLSFile(context.Background(), entry, "segment_00000.m4s"); err != nil {
+		t.Fatalf("esperar primer segmento: %v", err)
+	}
+	firstElapsed := time.Since(start)
+	t.Logf("primer segmento servible en %s", firstElapsed)
+	if firstElapsed > 15*time.Second {
+		t.Fatalf("el primer segmento tardó %s", firstElapsed)
+	}
+
+	// Un segmento más avanzado también debe esperarse hasta que FFmpeg llegue.
+	if err := svc.waitForHLSFile(context.Background(), entry, "segment_00002.m4s"); err != nil {
+		t.Fatalf("esperar segmento avanzado: %v", err)
+	}
+}
+
+func TestPrepareConcurrenteNoDuplicaProceso(t *testing.T) {
+	requireVideoTools(t)
+	source := generateKeyframeVideo(t, filepath.Join(t.TempDir(), "concurrente.mkv"), "60",
+		"-x264-params", "keyint=9999:min-keyint=9999:scenecut=0",
+		"-force_key_frames", "expr:gte(t,30)")
+
+	svc, err := New(Options{WorkDir: filepath.Join(t.TempDir(), "hls")})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := svc.Close(); err != nil {
+			t.Errorf("Close: %v", err)
+		}
+	})
+
+	var entries [2]*hlsEntry
+	var errs [2]error
+	var wg sync.WaitGroup
+	for i := 0; i < 2; i++ {
+		wg.Add(1)
+		go func(index int) {
+			defer wg.Done()
+			entries[index], errs[index] = svc.prepare(context.Background(), 9, source)
+		}(i)
+	}
+	wg.Wait()
+
+	if errs[0] != nil || errs[1] != nil {
+		t.Fatalf("errores concurrentes: %v, %v", errs[0], errs[1])
+	}
+	if entries[0] == nil || entries[0] != entries[1] {
+		t.Fatalf("las dos peticiones deben reutilizar la misma entrada: %p, %p", entries[0], entries[1])
+	}
+}
+
+func TestPrepareDevuelveErrorSiFFmpegFalla(t *testing.T) {
+	requireVideoTools(t)
+	bad := filepath.Join(t.TempDir(), "roto.avi")
+	if err := os.WriteFile(bad, []byte("no es un vídeo"), 0o644); err != nil {
+		t.Fatalf("crear archivo: %v", err)
+	}
+
+	svc, err := New(Options{WorkDir: filepath.Join(t.TempDir(), "hls")})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := svc.Close(); err != nil {
+			t.Errorf("Close: %v", err)
+		}
+	})
+
+	if _, err := svc.prepare(context.Background(), 3, bad); !errors.Is(err, ErrFFmpegFailed) {
+		t.Fatalf("error = %v, se esperaba ErrFFmpegFailed", err)
+	}
+}
+
+func TestServeHLSSimultaneoReutilizaProceso(t *testing.T) {
+	requireVideoTools(t)
+	source := generateKeyframeVideo(t, filepath.Join(t.TempDir(), "http.mkv"), "60",
+		"-x264-params", "keyint=9999:min-keyint=9999:scenecut=0",
+		"-force_key_frames", "expr:gte(t,30)")
+
+	svc, err := New(Options{WorkDir: filepath.Join(t.TempDir(), "hls")})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := svc.Close(); err != nil {
+			t.Errorf("Close: %v", err)
+		}
+	})
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		name := strings.TrimPrefix(r.URL.Path, "/")
+		if err := svc.ServeHLSFile(w, r, 55, source, name, "123", "firma"); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	}))
+	t.Cleanup(server.Close)
+
+	paths := []string{"/playlist.m3u8", "/segment_00000.m4s"}
+	statuses := make([]int, len(paths))
+	var wg sync.WaitGroup
+	for i, path := range paths {
+		wg.Add(1)
+		go func(index int, path string) {
+			defer wg.Done()
+			resp, err := http.Get(server.URL + path)
+			if err != nil {
+				statuses[index] = 0
+				return
+			}
+			defer resp.Body.Close()
+			statuses[index] = resp.StatusCode
+		}(i, path)
+	}
+	wg.Wait()
+
+	for i, status := range statuses {
+		if status != http.StatusOK {
+			t.Fatalf("%s devolvió %d", paths[i], status)
+		}
+	}
+
+	svc.mu.Lock()
+	entry := svc.entries[55]
+	svc.mu.Unlock()
+	if entry == nil {
+		t.Fatal("no se creó la entrada del ítem")
+	}
+	// Solo debe existir un directorio de trabajo para el ítem: no se lanzó
+	// un segundo FFmpeg para la petición simultánea.
+	matches, err := filepath.Glob(filepath.Join(svc.workDir, "item-55"))
+	if err != nil || len(matches) != 1 {
+		t.Fatalf("directorios del ítem: %v, error %v", matches, err)
 	}
 }

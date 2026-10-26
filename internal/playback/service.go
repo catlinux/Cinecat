@@ -1,6 +1,7 @@
 package playback
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
@@ -44,6 +45,9 @@ type Service struct {
 	workDir string
 	prober  *Prober
 
+	procCtx    context.Context
+	procCancel context.CancelFunc
+
 	mu        sync.Mutex
 	entries   map[int64]*hlsEntry
 	stop      chan struct{}
@@ -55,6 +59,12 @@ type hlsEntry struct {
 	dir      string
 	lastUsed time.Time
 	mode     Mode
+
+	// done se cierra cuando termina el proceso FFmpeg. err se escribe antes de
+	// cerrar done, así que leerlo después de recibir del canal es seguro.
+	done   chan struct{}
+	err    error
+	cancel context.CancelFunc
 }
 
 // New crea el servicio de reproducción.
@@ -92,15 +102,18 @@ func New(opts Options) (*Service, error) {
 		prober = NewProber()
 	}
 
+	procCtx, procCancel := context.WithCancel(context.Background())
 	svc := &Service{
-		key:     key,
-		ttl:     ttl,
-		now:     now,
-		workDir: workDir,
-		prober:  prober,
-		entries: make(map[int64]*hlsEntry),
-		stop:    make(chan struct{}),
-		done:    make(chan struct{}),
+		key:        key,
+		ttl:        ttl,
+		now:        now,
+		workDir:    workDir,
+		prober:     prober,
+		procCtx:    procCtx,
+		procCancel: procCancel,
+		entries:    make(map[int64]*hlsEntry),
+		stop:       make(chan struct{}),
+		done:       make(chan struct{}),
 	}
 	go svc.cleanupLoop()
 	return svc, nil
@@ -109,12 +122,25 @@ func New(opts Options) (*Service, error) {
 // Close detiene la limpieza periódica y elimina el directorio de trabajo con
 // los remux pendientes.
 func (s *Service) Close() error {
-	s.closeOnce.Do(func() { close(s.stop) })
+	s.closeOnce.Do(func() {
+		close(s.stop)
+		s.procCancel()
+	})
 	<-s.done
 
 	s.mu.Lock()
-	defer s.mu.Unlock()
+	entries := make([]*hlsEntry, 0, len(s.entries))
+	for _, entry := range s.entries {
+		entries = append(entries, entry)
+	}
 	s.entries = make(map[int64]*hlsEntry)
+	s.mu.Unlock()
+
+	// Los procesos se cancelan con procCtx; se espera a que Wait termine antes
+	// de borrar el directorio de trabajo.
+	for _, entry := range entries {
+		<-entry.done
+	}
 	return os.RemoveAll(s.workDir)
 }
 
