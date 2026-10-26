@@ -21,6 +21,7 @@ import (
 	"github.com/catlinux/cinecat/internal/library"
 	"github.com/catlinux/cinecat/internal/metadata"
 	"github.com/catlinux/cinecat/internal/playback"
+	"github.com/catlinux/cinecat/internal/settings"
 	"github.com/catlinux/cinecat/internal/store"
 )
 
@@ -74,6 +75,13 @@ func main() {
 		log.Printf("cinecatd: títulos normalizados pendientes: %v", err)
 	}
 
+	settingsStore := settings.NewStore(st.DB(), map[string]any{
+		settings.KeyScanInterval: cfg.ScanInterval,
+	})
+	if err := settingsStore.Load(ctx); err != nil {
+		log.Printf("cinecatd: no se pudieron cargar los ajustes guardados: %v", err)
+	}
+
 	bootstrap, err := auth.BootstrapAdmin(ctx, st.DB(), os.Getenv(auth.EnvAdminPassword))
 	if err != nil {
 		log.Fatalf("cinecatd: %v", err)
@@ -123,6 +131,7 @@ func main() {
 	go scheduleScans(ctx, scanJob, time.Minute, cfg.ScanInterval)
 
 	api := library.NewAPI(st.DB(), authSvc, playSvc, scanJob, tmdbClient)
+	api = api.WithSettings(settingsStore)
 	api = api.WithFileInspector(playSvc)
 
 	srv := &http.Server{

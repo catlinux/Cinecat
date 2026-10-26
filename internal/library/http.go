@@ -16,6 +16,7 @@ import (
 
 	"github.com/catlinux/cinecat/internal/auth"
 	"github.com/catlinux/cinecat/internal/playback"
+	"github.com/catlinux/cinecat/internal/settings"
 )
 
 const (
@@ -32,6 +33,7 @@ type API struct {
 	tmdb          TMDBClient
 	fileInspector FileInspector
 	fileInfoCache *fileInfoCache
+	settingsStore *settings.Store
 }
 
 // NewAPI crea los handlers de la API de biblioteca.
@@ -51,8 +53,20 @@ func NewAPI(db *sql.DB, authSvc *auth.Service, playSvc *playback.Service, scanJo
 	}
 }
 
+// WithSettings activa los endpoints de ajustes. Con nil no se registran.
+func (a *API) WithSettings(store *settings.Store) *API {
+	a.settingsStore = store
+	return a
+}
+
 // Register monta los endpoints versionados en el mux indicado.
 func (a *API) Register(mux *http.ServeMux) {
+	if a.settingsStore != nil {
+		mux.Handle("GET /api/v1/settings", a.requireAdmin(a.handleSettings))
+		mux.Handle("PATCH /api/v1/settings", a.requireAdmin(a.handleSettingsPatch))
+		mux.Handle("DELETE /api/v1/settings/{key}", a.requireAdmin(a.handleSettingDelete))
+		mux.Handle("GET /api/v1/settings/public", a.requireSession(a.handleSettingsPublic))
+	}
 	mux.Handle("GET /api/v1/libraries", a.requireSession(a.handleLibraries))
 	mux.Handle("POST /api/v1/libraries", a.requireAdmin(a.handleCreateLibrary))
 	if a.scanJob != nil {

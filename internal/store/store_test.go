@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"io/fs"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -57,6 +58,7 @@ func TestMigrateCreaTablas(t *testing.T) {
 	for _, name := range []string{
 		"schema_migrations", "users", "sessions", "libraries", "media_items", "playback_state",
 		"playback_progress", "collections", "collection_items", "series", "series_seasons",
+		"settings",
 	} {
 		if !got[name] {
 			t.Errorf("falta la tabla %q", name)
@@ -161,6 +163,26 @@ func columns(t *testing.T, ctx context.Context, s *Store, table string) map[stri
 		t.Fatalf("recorrer columnas de %s: %v", table, err)
 	}
 	return got
+}
+
+func TestMigracionSettings(t *testing.T) {
+	s, ctx := openTestStore(t, filepath.Join(t.TempDir(), "cinecat.db"))
+
+	columns := columns(t, ctx, s, "settings")
+	for _, name := range []string{"key", "value", "updated_at"} {
+		if !columns[name] {
+			t.Errorf("settings: falta la columna %q", name)
+		}
+	}
+
+	var script string
+	if err := s.DB().QueryRowContext(ctx,
+		`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'settings'`).Scan(&script); err != nil {
+		t.Fatalf("leer definición de settings: %v", err)
+	}
+	if !strings.Contains(script, "STRICT") {
+		t.Fatalf("settings debe ser STRICT: %s", script)
+	}
 }
 
 func TestMigracionSeries(t *testing.T) {

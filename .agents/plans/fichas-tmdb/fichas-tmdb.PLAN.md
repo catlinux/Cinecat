@@ -137,7 +137,7 @@ Versiones: 0.11.0 al cerrar T6; los pasos 4–6 son 0.12.0 salvo que cierren ant
 
 El usuario quiere un panel de administración bien estructurado para configurar todo lo posible de la interfaz y las opciones. Hoy hay `/admin/libraries` y «Mi cuenta» sueltos.
 
-### A1 — Ajustes guardados en la base de datos
+### ✅ A1 — Ajustes guardados en la base de datos
 - Archivos: `internal/store/migrations/0005b_settings.sql` (numerar tras la última existente), `internal/settings/settings.go` (nuevo, +test), `internal/settings/http.go` (+test), `cmd/cinecatd/main.go`, `api/openapi.yaml`.
 - Tabla `settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)` (valor JSON). Registro tipado en Go de cada ajuste: clave, tipo, valor por defecto, validación (rango/opciones), sección y descripción en castellano. Las variables de entorno siguen existiendo como valor por defecto inicial; lo guardado en el panel manda.
 - Ajustes iniciales (cada uno lo consume la parte correspondiente, leyendo en caliente sin reiniciar):

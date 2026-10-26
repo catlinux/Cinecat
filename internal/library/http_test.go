@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/catlinux/cinecat/internal/auth"
+	"github.com/catlinux/cinecat/internal/settings"
 	"github.com/catlinux/cinecat/internal/store"
 )
 
@@ -66,7 +67,11 @@ func newLibraryHTTPTestServer(t *testing.T, tmdb ...TMDBClient) *libraryTestServ
 	if len(tmdb) > 0 {
 		client = tmdb[0]
 	}
-	api := NewAPI(db, authSvc, nil, job, client)
+	settingsStore := settings.NewStore(db, nil)
+	if err := settingsStore.Load(ctx); err != nil {
+		t.Fatalf("settings.Load: %v", err)
+	}
+	api := NewAPI(db, authSvc, nil, job, client).WithSettings(settingsStore)
 	mux := http.NewServeMux()
 	api.Register(mux)
 	server := httptest.NewServer(mux)

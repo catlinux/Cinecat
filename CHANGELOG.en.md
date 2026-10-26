@@ -7,6 +7,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+### Added
+- Server settings stored in the database with a typed, validated registry (scan, metadata, interface, playback and system): `GET`/`PATCH /api/v1/settings`, `DELETE /api/v1/settings/{key}` and `GET /api/v1/settings/public`. Environment variables still provide the initial value.
+
 ## [0.11.0] - 2026-10-26
 
 ### Changed
