@@ -23,6 +23,7 @@ import (
 	"github.com/catlinux/cinecat/internal/playback"
 	"github.com/catlinux/cinecat/internal/settings"
 	"github.com/catlinux/cinecat/internal/store"
+	"github.com/catlinux/cinecat/internal/update"
 )
 
 // version se puede fijar en tiempo de compilación con
@@ -151,13 +152,42 @@ func main() {
 	defer scanJob.Close()
 	go scheduleScans(ctx, scanJob, time.Minute, newStoreScanSettings(settingsStore))
 
+	updateChecker := update.NewChecker(update.CheckerOptions{Current: applicationVersion()})
+	updateRequester := update.NewRequester(os.Getenv(update.EnvRunDir))
+	updateChanges := make(chan struct{}, 1)
+	settingsStore.OnChange(func(keys []string) {
+		for _, key := range keys {
+			if key == "system.check_updates" {
+				select {
+				case updateChanges <- struct{}{}:
+				default:
+				}
+				return
+			}
+		}
+	})
+	go update.RunBackground(
+		ctx,
+		updateChecker,
+		func() bool { return settingsStore.Bool("system.check_updates") },
+		updateChanges,
+		2*time.Minute,
+		6*time.Hour,
+	)
+
 	api := library.NewAPI(st.DB(), authSvc, playSvc, scanJob, tmdbClient)
 	api = api.WithSettings(settingsStore)
 	api = api.WithFileInspector(playSvc)
 
+	updateAPI := update.NewAPI(
+		authSvc.Authenticate,
+		updateChecker,
+		updateRequester,
+		func() bool { return settingsStore.Bool("system.check_updates") },
+	)
 	srv := &http.Server{
 		Addr:              cfg.ListenAddr,
-		Handler:           newHandler(authSvc, api),
+		Handler:           newHandler(authSvc, api, updateAPI),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
@@ -320,7 +350,7 @@ func tmdbCacheDir(databasePath string) string {
 	return filepath.Join(filepath.Dir(path), "cache", "tmdb")
 }
 
-func newHandler(authSvc *auth.Service, api *library.API) http.Handler {
+func newHandler(authSvc *auth.Service, api *library.API, updateAPIs ...*update.API) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
@@ -336,6 +366,9 @@ func newHandler(authSvc *auth.Service, api *library.API) http.Handler {
 	}
 	if api != nil {
 		api.Register(mux)
+	}
+	if len(updateAPIs) > 0 && updateAPIs[0] != nil {
+		updateAPIs[0].Register(mux)
 	}
 	return mux
 }
