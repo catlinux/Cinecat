@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.13.1] - 2026-10-26
+
+### Corregido
+
+- La web no compilaba en el contenedor: la navegación entre episodios se exportaba desde `+page.server.ts`, algo que SvelteKit no admite. Pasa a `$lib/episode-navigation.ts`.
+
 ## [0.13.0] - 2026-10-26
 
 ### Añadido

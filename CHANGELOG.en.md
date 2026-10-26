@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-10-26
+
+### Fixed
+
+- The web failed to build in the container: episode navigation was exported from `+page.server.ts`, which SvelteKit does not allow. It now lives in `$lib/episode-navigation.ts`.
+
 ## [0.13.0] - 2026-10-26
 
 ### Added

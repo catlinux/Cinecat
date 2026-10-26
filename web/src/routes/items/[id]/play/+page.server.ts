@@ -5,7 +5,7 @@ import { ConfigurationError, createApiClient } from '$lib/api-factory';
 import { apiBaseUrl } from '$lib/config';
 import { resolveStartAt } from '$lib/progress';
 import { requireSessionToken } from '$lib/session';
-import { loadEpisodeNavigation } from '../+page.server';
+import { loadEpisodeNavigation } from '$lib/episode-navigation';
 import type { PageServerLoad } from './$types';
 
 const QUALITY_VALUES = new Set(['auto', 'original', '480', '720', '1080']);
