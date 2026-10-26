@@ -564,7 +564,11 @@ func TestScannerRellenaCreditsSeriesAntiguas(t *testing.T) {
 		tvDetails: &metadata.Details{
 			TMDBID: 7, Title: "Serie",
 			Credits: metadata.Credits{
-				Cast: []metadata.CastCredit{{Name: "Actriz", Character: "Papel"}},
+				Cast: []metadata.CastCredit{{
+					Name:      "Actriz",
+					Character: "Papel",
+					PhotoURL:  "https://images.example/w185/actriz.jpg",
+				}},
 				Crew: []metadata.CrewCredit{{Name: "Creadora", Job: "Creator"}},
 			},
 		},
@@ -590,6 +594,11 @@ func TestScannerRellenaCreditsSeriesAntiguas(t *testing.T) {
 	}
 	if !rawCredits.Valid || status != "auto" || !score.Valid || score.Float64 != 0.9 {
 		t.Fatalf("la serie antigua cambió: %+v %q %+v", rawCredits, status, score)
+	}
+	decoded := decodeCredits(rawCredits)
+	if len(decoded.Cast) != 1 || decoded.Cast[0].Character != "Papel" ||
+		decoded.Cast[0].PhotoURL != "https://images.example/w185/actriz.jpg" {
+		t.Fatalf("créditos de la serie inesperados: %+v", decoded)
 	}
 
 	fake.tvSearchCalls = 0

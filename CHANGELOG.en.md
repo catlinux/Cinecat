@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.12.1] - 2026-10-26
+
+### Fixed
+- Cast photos and characters, automatic collections and series credits are now actually filled in: the TMDB cache stored only the fields the program knew when it was created, so fields added later (photo, character, collection) were missing. It now stores the full original response, old entries are discarded and the next scan rebuilds the records.
+- Credits of already identified series are filled in even when their seasons are complete.
+
 ## [0.12.0] - 2026-10-26
 
 ### Fixed

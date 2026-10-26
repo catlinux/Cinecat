@@ -602,6 +602,17 @@ func TestScannerConTMDBRellenaDisplayTitlePendiente(t *testing.T) {
 				Title:       "Título de TMDB",
 				Year:        1999,
 				Overview:    "Sinopsis nueva",
+				Credits: metadata.Credits{
+					Cast: []metadata.CastCredit{{
+						Name:      "Actriz",
+						Character: "Heroína",
+						PhotoURL:  "https://images.example/w185/actriz.jpg",
+					}},
+				},
+				Collection: &metadata.CollectionRef{
+					TMDBID: 900,
+					Name:   "La saga",
+				},
 			}}
 			res, err := New(db).WithTMDB(fake).Scan(ctx)
 			if err != nil {
@@ -645,6 +656,32 @@ func TestScannerConTMDBRellenaDisplayTitlePendiente(t *testing.T) {
 			}
 			if !rawCredits.Valid {
 				t.Fatal("el relleno debe guardar credits")
+			}
+			decodedCredits := decodeCredits(rawCredits)
+			if len(decodedCredits.Cast) != 1 ||
+				decodedCredits.Cast[0].Character != "Heroína" ||
+				decodedCredits.Cast[0].PhotoURL != "https://images.example/w185/actriz.jpg" {
+				t.Fatalf("créditos rellenados inesperados: %+v", decodedCredits)
+			}
+			var collectionChecked int
+			if err := db.QueryRow(
+				`SELECT collection_checked FROM media_items WHERE path = ?`, file,
+			).Scan(&collectionChecked); err != nil {
+				t.Fatalf("leer collection_checked: %v", err)
+			}
+			if collectionChecked != 1 {
+				t.Fatalf("collection_checked = %d, se esperaba 1", collectionChecked)
+			}
+			var collectionName string
+			if err := db.QueryRow(`
+				SELECT c.name FROM collections c
+				  JOIN collection_items ci ON ci.collection_id = c.id
+				  JOIN media_items mi ON mi.id = ci.media_item_id
+				 WHERE mi.path = ?`, file).Scan(&collectionName); err != nil {
+				t.Fatalf("leer colección rellenada: %v", err)
+			}
+			if collectionName != "La saga" {
+				t.Fatalf("colección = %q", collectionName)
 			}
 
 			fake.searchCalls = 0

@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.12.1] - 2026-10-26
+
+### Corregido
+- El reparto con fotos y personajes, las colecciones automáticas y los créditos de las series se rellenan de verdad: la caché de TMDB guardaba solo los campos que el programa conocía al crearla, y los campos añadidos después (foto, personaje, colección) faltaban. Ahora guarda la respuesta original completa, las entradas antiguas se descartan y el siguiente escaneo rehace las fichas.
+- El relleno de los créditos de las series ya identificadas se ejecuta aunque sus temporadas estén completas.
+
 ## [0.12.0] - 2026-10-26
 
 ### Corregido

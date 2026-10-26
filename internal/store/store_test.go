@@ -214,6 +214,97 @@ func TestMigracionSeries(t *testing.T) {
 	}
 }
 
+func TestMigracionRefillTMDBCredits(t *testing.T) {
+	s, ctx := openTestStore(t, filepath.Join(t.TempDir(), "cinecat.db"))
+
+	library, err := s.DB().ExecContext(ctx,
+		`INSERT INTO libraries (path, name) VALUES ('/refill', 'Refill')`)
+	if err != nil {
+		t.Fatalf("crear biblioteca: %v", err)
+	}
+	libraryID, err := library.LastInsertId()
+	if err != nil {
+		t.Fatalf("id de biblioteca: %v", err)
+	}
+
+	if _, err := s.DB().ExecContext(ctx, `
+		INSERT INTO media_items (
+			library_id, path, title, kind, metadata_source, credits, collection_checked
+		) VALUES
+			(?, '/tmdb.mkv', 'TMDB', 'movie', 'tmdb', '{"cast":[]}', 1),
+			(?, '/omdb.mkv', 'OMDB', 'movie', 'omdb', '{"cast":[]}', 1)`,
+		libraryID, libraryID); err != nil {
+		t.Fatalf("insertar películas: %v", err)
+	}
+	if _, err := s.DB().ExecContext(ctx, `
+		INSERT INTO series (library_id, folder, title, metadata_source, match_status, credits)
+		VALUES
+			(?, 'TMDB', 'TMDB', 'tmdb', 'auto', '{"cast":[]}'),
+			(?, 'Manual', 'Manual', NULL, 'auto', '{"cast":[]}')`,
+		libraryID, libraryID); err != nil {
+		t.Fatalf("insertar series: %v", err)
+	}
+
+	script, err := migrations.ReadFile("migrations/0013_refill_tmdb_metadata.sql")
+	if err != nil {
+		t.Fatalf("leer migración 0013: %v", err)
+	}
+	if _, err := s.DB().ExecContext(ctx, string(script)); err != nil {
+		t.Fatalf("aplicar migración 0013: %v", err)
+	}
+
+	rows, err := s.DB().QueryContext(ctx, `
+		SELECT path, metadata_source, credits, collection_checked
+		  FROM media_items ORDER BY path`)
+	if err != nil {
+		t.Fatalf("leer películas: %v", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var path, source string
+		var credits sql.NullString
+		var checked int
+		if err := rows.Scan(&path, &source, &credits, &checked); err != nil {
+			t.Fatalf("leer película: %v", err)
+		}
+		if source == "tmdb" {
+			if credits.Valid || checked != 0 {
+				t.Fatalf("%s: se esperaba credits NULL y collection_checked 0", path)
+			}
+		} else if !credits.Valid || checked != 1 {
+			t.Fatalf("%s: la migración tocó una fila que no era de TMDB", path)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("recorrer películas: %v", err)
+	}
+
+	seriesRows, err := s.DB().QueryContext(ctx, `
+		SELECT folder, metadata_source, credits FROM series ORDER BY folder`)
+	if err != nil {
+		t.Fatalf("leer series: %v", err)
+	}
+	defer seriesRows.Close()
+	for seriesRows.Next() {
+		var folder string
+		var source sql.NullString
+		var credits sql.NullString
+		if err := seriesRows.Scan(&folder, &source, &credits); err != nil {
+			t.Fatalf("leer serie: %v", err)
+		}
+		if source.Valid && source.String == "tmdb" {
+			if credits.Valid {
+				t.Fatalf("%s: la serie de TMDB debe quedar sin credits", folder)
+			}
+		} else if !credits.Valid {
+			t.Fatalf("%s: la migración tocó una serie que no era de TMDB", folder)
+		}
+	}
+	if err := seriesRows.Err(); err != nil {
+		t.Fatalf("recorrer series: %v", err)
+	}
+}
+
 func TestBorradoDeSerieEnCascadaYDesasociaEpisodios(t *testing.T) {
 	s, ctx := openTestStore(t, filepath.Join(t.TempDir(), "cinecat.db"))
 

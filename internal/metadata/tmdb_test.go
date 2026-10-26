@@ -2,6 +2,8 @@ package metadata
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -1305,6 +1307,96 @@ func TestCacheKeyNoIncluyeAPIKey(t *testing.T) {
 	}
 	if api.pathCount("/search/movie") != 1 {
 		t.Fatalf("cambiar la api_key invalidó la caché: %d peticiones", api.pathCount("/search/movie"))
+	}
+}
+
+func TestCacheGuardaLaRespuestaCrudaCompleta(t *testing.T) {
+	api := newTestAPI(t)
+	api.route("/cache/completa", jsonRoute(map[string]any{
+		"id":          7,
+		"campo_nuevo": "visible",
+	}))
+	client := newAPIClient(t, api, t.TempDir(), nil, "clave-de-prueba")
+	ctx := context.Background()
+
+	var first struct {
+		ID int `json:"id"`
+	}
+	if err := client.getCachedJSON(ctx, "/cache/completa", nil, &first); err != nil {
+		t.Fatalf("primera lectura: %v", err)
+	}
+	var second struct {
+		ID         int    `json:"id"`
+		CampoNuevo string `json:"campo_nuevo"`
+	}
+	if err := client.getCachedJSON(ctx, "/cache/completa", nil, &second); err != nil {
+		t.Fatalf("lectura ampliada: %v", err)
+	}
+	if second.ID != 7 || second.CampoNuevo != "visible" {
+		t.Fatalf("la caché perdió campos de la respuesta: %+v", second)
+	}
+	if api.pathCount("/cache/completa") != 1 {
+		t.Fatalf("la lectura ampliada volvió a pedir TMDB: %d peticiones", api.pathCount("/cache/completa"))
+	}
+}
+
+func TestCacheAPIRoundTripY404(t *testing.T) {
+	api := newTestAPI(t)
+	api.route("/cache/existe", jsonRoute(map[string]any{"id": 3}))
+	api.route("/cache/falta", func(w http.ResponseWriter, r *http.Request) {
+		http.NotFound(w, r)
+	})
+	client := newAPIClient(t, api, t.TempDir(), nil, "clave-de-prueba")
+	ctx := context.Background()
+
+	var ok struct {
+		ID int `json:"id"`
+	}
+	for i := 0; i < 2; i++ {
+		if err := client.getCachedJSON(ctx, "/cache/existe", nil, &ok); err != nil {
+			t.Fatalf("lectura %d: %v", i+1, err)
+		}
+	}
+	if ok.ID != 3 || api.pathCount("/cache/existe") != 1 {
+		t.Fatalf("round-trip inesperado: %+v, %d peticiones", ok, api.pathCount("/cache/existe"))
+	}
+
+	for i := 0; i < 2; i++ {
+		if err := client.getCachedJSON(ctx, "/cache/falta", nil, &ok); !errors.Is(err, ErrNotFound) {
+			t.Fatalf("404 %d: %v", i+1, err)
+		}
+	}
+	if api.pathCount("/cache/falta") != 1 {
+		t.Fatalf("el 404 no se cacheó: %d peticiones", api.pathCount("/cache/falta"))
+	}
+}
+
+func TestCacheIgnoraLasClavesDelFormatoAntiguo(t *testing.T) {
+	api := newTestAPI(t)
+	api.route("/cache/version", jsonRoute(map[string]any{"id": 2, "title": "nuevo"}))
+	client := newAPIClient(t, api, t.TempDir(), nil, "clave-de-prueba")
+	ctx := context.Background()
+
+	// Clave del formato anterior: path + "?" + parámetros, sin versión.
+	sum := sha256.Sum256([]byte("/cache/version?"))
+	oldKey := hex.EncodeToString(sum[:])
+	client.writeCache("api", oldKey, cachedAPIResponse{
+		Found: true,
+		Data:  json.RawMessage(`{"id":1,"title":"viejo"}`),
+	})
+
+	var got struct {
+		ID    int    `json:"id"`
+		Title string `json:"title"`
+	}
+	if err := client.getCachedJSON(ctx, "/cache/version", nil, &got); err != nil {
+		t.Fatalf("lectura: %v", err)
+	}
+	if got.ID != 2 || got.Title != "nuevo" {
+		t.Fatalf("se usó una entrada antigua: %+v", got)
+	}
+	if api.pathCount("/cache/version") != 1 {
+		t.Fatalf("la clave antigua evitó la petición nueva: %d", api.pathCount("/cache/version"))
 	}
 }
 

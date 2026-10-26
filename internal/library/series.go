@@ -241,42 +241,45 @@ func (s *Scanner) enrichSeriesTMDB(ctx context.Context, seriesID int64, res *Res
 		return
 	}
 
-	if matchStatus.Valid {
-		if matchStatus.String == "none" {
+	canUpdate := source.Valid && source.String == "tmdb" &&
+		tmdbID.Valid && tmdbID.Int64 > 0
+
+	// El relleno de créditos va antes de cualquier salida por serie ya
+	// identificada: si faltan, hay que pedir la ficha aunque sus temporadas
+	// estén completas.
+	if matchStatus.Valid && matchStatus.String != "none" && canUpdate && !credits.Valid {
+		score := 0.0
+		if matchScore.Valid {
+			score = matchScore.Float64
+		}
+		details, err := s.tmdb.TVDetails(ctx, int(tmdbID.Int64))
+		if err != nil {
+			res.Warnings = append(res.Warnings, fmt.Sprintf("%s: no se pudo obtener la ficha: %v", title, err))
 			return
 		}
-		canUpdate := source.Valid && source.String == "tmdb" &&
-			tmdbID.Valid && tmdbID.Int64 > 0
-		if !canUpdate {
-			if matchStatus.String == "manual" {
+		if err := ApplyTVDetails(ctx, s.db, seriesID, details, matchStatus.String, score); err != nil {
+			res.Warnings = append(res.Warnings, fmt.Sprintf("%s: no se pudieron guardar los metadatos: %v", title, err))
+			return
+		}
+		if !matchScore.Valid {
+			if _, err := s.db.ExecContext(ctx,
+				`UPDATE series SET match_score = NULL WHERE id = ?`, seriesID); err != nil {
+				res.Warnings = append(res.Warnings, fmt.Sprintf("%s: no se pudieron guardar los metadatos: %v", title, err))
+			}
+		}
+	}
+
+	if matchStatus.Valid {
+		switch matchStatus.String {
+		case "none":
+			return
+		case "manual":
+			return
+		case "auto":
+			if canUpdate {
+				s.enrichSeriesSeasons(ctx, seriesID, tmdbID.Int64, title, res)
 				return
 			}
-		} else {
-			if !credits.Valid {
-				score := 0.0
-				if matchScore.Valid {
-					score = matchScore.Float64
-				}
-				details, err := s.tmdb.TVDetails(ctx, int(tmdbID.Int64))
-				if err != nil {
-					res.Warnings = append(res.Warnings, fmt.Sprintf("%s: no se pudo obtener la ficha: %v", title, err))
-					return
-				}
-				if err := ApplyTVDetails(ctx, s.db, seriesID, details, matchStatus.String, score); err != nil {
-					res.Warnings = append(res.Warnings, fmt.Sprintf("%s: no se pudieron guardar los metadatos: %v", title, err))
-					return
-				}
-				if !matchScore.Valid {
-					if _, err := s.db.ExecContext(ctx,
-						`UPDATE series SET match_score = NULL WHERE id = ?`, seriesID); err != nil {
-						res.Warnings = append(res.Warnings, fmt.Sprintf("%s: no se pudieron guardar los metadatos: %v", title, err))
-					}
-				}
-			}
-			if matchStatus.String == "auto" {
-				s.enrichSeriesSeasons(ctx, seriesID, tmdbID.Int64, title, res)
-			}
-			return
 		}
 	}
 

@@ -31,6 +31,10 @@ const (
 	maxResponseBytes = 4 << 20  // 4 MiB
 	maxImageBytes    = 20 << 20 // 20 MiB
 
+	// cacheSchemaVersion separa las respuestas crudas actuales de las entradas
+	// antiguas, que guardaban solo los campos reducidos del struct de turno.
+	cacheSchemaVersion = 2
+
 	// minRequestInterval mantiene el límite de TMDB de ~20 peticiones/s.
 	minRequestInterval = 50 * time.Millisecond
 )
@@ -1274,6 +1278,19 @@ func imageExtension(path string) string {
 // reintento tras 429. Nunca incluye la URL completa en los errores, porque
 // lleva la clave de API.
 func (c *Client) getJSON(ctx context.Context, path string, params url.Values, dst any) error {
+	body, err := c.getJSONBytes(ctx, path, params)
+	if err != nil {
+		return err
+	}
+	if err := json.Unmarshal(body, dst); err != nil {
+		return fmt.Errorf("metadata: respuesta no válida de %s", path)
+	}
+	return nil
+}
+
+// getJSONBytes devuelve el cuerpo original de la respuesta para poder
+// cachearlo completo, aunque el struct que lo decodifica conozca menos campos.
+func (c *Client) getJSONBytes(ctx context.Context, path string, params url.Values) ([]byte, error) {
 	u := *c.baseURL
 	u.Path = strings.TrimRight(u.Path, "/") + path
 	query := u.Query()
@@ -1287,48 +1304,55 @@ func (c *Client) getJSON(ctx context.Context, path string, params url.Values, ds
 
 	for attempt := 0; attempt < 2; attempt++ {
 		if err := c.waitForRateLimit(ctx); err != nil {
-			return err
+			return nil, err
 		}
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 		if err != nil {
-			return errors.New("metadata: no se pudo preparar la petición a TMDB")
+			return nil, errors.New("metadata: no se pudo preparar la petición a TMDB")
 		}
 		req.Header.Set("Accept", "application/json")
 
 		resp, err := c.httpClient.Do(req)
 		if err != nil {
-			return fmt.Errorf("metadata: error de red al consultar %s", path)
+			return nil, fmt.Errorf("metadata: error de red al consultar %s", path)
 		}
 
 		if resp.StatusCode == http.StatusTooManyRequests {
 			resp.Body.Close()
 			if attempt == 1 {
-				return ErrRateLimited
+				return nil, ErrRateLimited
 			}
 			if err := sleepContext(ctx, c.retryDelay); err != nil {
-				return err
+				return nil, err
 			}
 			continue
 		}
-		defer resp.Body.Close()
 
 		switch resp.StatusCode {
 		case http.StatusUnauthorized:
-			return ErrInvalidAPIKey
+			resp.Body.Close()
+			return nil, ErrInvalidAPIKey
 		case http.StatusNotFound:
-			return ErrNotFound
+			resp.Body.Close()
+			return nil, ErrNotFound
 		}
 		if resp.StatusCode < 200 || resp.StatusCode > 299 {
-			return fmt.Errorf("metadata: TMDB respondió %d en %s", resp.StatusCode, path)
+			resp.Body.Close()
+			return nil, fmt.Errorf("metadata: TMDB respondió %d en %s", resp.StatusCode, path)
 		}
 
-		if err := json.NewDecoder(io.LimitReader(resp.Body, maxResponseBytes)).Decode(dst); err != nil {
-			return fmt.Errorf("metadata: respuesta no válida de %s", path)
+		body, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes+1))
+		resp.Body.Close()
+		if err != nil {
+			return nil, fmt.Errorf("metadata: respuesta no válida de %s", path)
 		}
-		return nil
+		if len(body) > maxResponseBytes {
+			return nil, fmt.Errorf("metadata: respuesta no válida de %s", path)
+		}
+		return body, nil
 	}
-	return ErrRateLimited
+	return nil, ErrRateLimited
 }
 
 func (c *Client) waitForRateLimit(ctx context.Context) error {
@@ -1363,8 +1387,10 @@ type cachedAPIResponse struct {
 	Data  json.RawMessage `json:"data,omitempty"`
 }
 
-// getCachedJSON cachea en disco cada petición nueva. La clave excluye api_key
-// para que cambiarla no invalide la caché. Los 404 también se recuerdan.
+// getCachedJSON cachea en disco el cuerpo JSON original de cada petición.
+// Guardar los bytes, y no el struct reducido, permite añadir campos al destino
+// en el futuro sin perder datos de las entradas ya cacheadas. La clave excluye
+// api_key para que cambiarla no invalide la caché; los 404 también se recuerdan.
 func (c *Client) getCachedJSON(ctx context.Context, path string, params url.Values, dst any) error {
 	key := requestCacheKey(path, params)
 	var cached cachedAPIResponse
@@ -1377,21 +1403,22 @@ func (c *Client) getCachedJSON(ctx context.Context, path string, params url.Valu
 		}
 	}
 
-	if err := c.getJSON(ctx, path, params, dst); err != nil {
+	data, err := c.getJSONBytes(ctx, path, params)
+	if err != nil {
 		if errors.Is(err, ErrNotFound) {
 			c.writeCache("api", key, cachedAPIResponse{Found: false})
 		}
 		return err
 	}
-
-	data, err := json.Marshal(dst)
-	if err != nil {
-		return nil
+	if err := json.Unmarshal(data, dst); err != nil {
+		return fmt.Errorf("metadata: respuesta no válida de %s", path)
 	}
 	c.writeCache("api", key, cachedAPIResponse{Found: true, Data: data})
 	return nil
 }
 
+// requestCacheKey incluye la versión del esquema para no reutilizar entradas
+// escritas cuando la caché guardaba solo campos reducidos.
 func requestCacheKey(path string, params url.Values) string {
 	filtered := url.Values{}
 	for key, values := range params {
@@ -1402,7 +1429,9 @@ func requestCacheKey(path string, params url.Values) string {
 			filtered.Add(key, value)
 		}
 	}
-	sum := sha256.Sum256([]byte(path + "?" + filtered.Encode()))
+	sum := sha256.Sum256([]byte(fmt.Sprintf(
+		"v%d|%s?%s", cacheSchemaVersion, path, filtered.Encode(),
+	)))
 	return hex.EncodeToString(sum[:])
 }
 
@@ -1412,7 +1441,8 @@ func cacheKey(title string, year int, languages ...string) string {
 		language = languages[0]
 	}
 	sum := sha256.Sum256([]byte(fmt.Sprintf(
-		"movie|%s|%d|%s", strings.ToLower(strings.TrimSpace(title)), year, language,
+		"v%d|movie|%s|%d|%s", cacheSchemaVersion,
+		strings.ToLower(strings.TrimSpace(title)), year, language,
 	)))
 	return hex.EncodeToString(sum[:])
 }
