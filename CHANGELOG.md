@@ -7,6 +7,15 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.11.0] - 2026-10-26
+
+### Cambiado
+- TMDB pasa a ser la fuente principal de fichas (en castellano); OMDb queda como respaldo si no hay clave de TMDB.
+- La cartelera pasa de `/` a `/movies`; `/` es ahora el portal.
+
+### Corregido
+- «Volver a automático» reanaliza el nombre del archivo desde la raíz de su biblioteca, no desde la ruta absoluta.
+
 ### Añadido
 - El escaneo de bibliotecas se ejecuta en segundo plano: `POST /api/v1/libraries/scan` responde 202 (o 409 si ya hay uno en marcha) y `GET /api/v1/libraries/scan` informa del estado y del último resultado.
 - Escaneo automático un minuto después de arrancar y después cada `CINECAT_SCAN_INTERVAL` (por defecto `6h`; `0` lo desactiva).

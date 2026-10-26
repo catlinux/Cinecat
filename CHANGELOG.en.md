@@ -7,6 +7,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-10-26
+
+### Changed
+- TMDB becomes the main source of records (in Spanish); OMDb stays as a fallback when there is no TMDB key.
+- The movie listing moves from `/` to `/movies`; `/` is now the portal.
+
+### Fixed
+- "Back to automatic" re-parses the file name from the library root, not from the absolute path.
+
 ### Added
 - Library scans run in the background: `POST /api/v1/libraries/scan` returns 202 (or 409 if one is already running) and `GET /api/v1/libraries/scan` reports the status and the last result.
 - Automatic scan one minute after startup and then every `CINECAT_SCAN_INTERVAL` (default `6h`; `0` disables it).

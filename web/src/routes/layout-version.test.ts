@@ -46,7 +46,7 @@ describe('cálculo del aviso de versión', () => {
 	});
 
 	it('avisa si las versiones son distintas', () => {
-		expect(versionMismatch('0.11.0', webVersion)).toBe(true);
+		expect(versionMismatch('999.0.0', webVersion)).toBe(true);
 	});
 
 	it('no avisa si el servidor no responde', () => {
@@ -71,7 +71,7 @@ describe('carga de la versión del servidor', () => {
 	it('devuelve la versión y el commit del servidor', async () => {
 		const fetchMock = vi.fn().mockResolvedValue(
 			jsonResponse({
-				server: '0.11.0',
+				server: '999.0.0',
 				commit: 'abc1234',
 				built_at: '2026-10-26T09:00:00Z'
 			})
@@ -87,14 +87,14 @@ describe('carga de la versión del servidor', () => {
 			webVersion: string;
 		};
 
-		expect(result.serverVersion).toBe('0.11.0');
+		expect(result.serverVersion).toBe('999.0.0');
 		expect(result.serverCommit).toBe('abc1234');
 		expect(fetchMock.mock.calls[0][0]).toBe('http://api.test/api/v1/system/version');
 	});
 
 	it('marca Películas como categoría activa en su ruta', async () => {
 		const fetchMock = vi.fn().mockResolvedValue(
-			jsonResponse({ server: '0.11.0', commit: '', built_at: '' })
+			jsonResponse({ server: '999.0.0', commit: '', built_at: '' })
 		);
 
 		const result = (await load({
@@ -108,7 +108,7 @@ describe('carga de la versión del servidor', () => {
 
 	it('marca Colecciones como categoría activa en sus rutas', async () => {
 		const fetchMock = vi.fn().mockResolvedValue(
-			jsonResponse({ server: '0.11.0', commit: '', built_at: '' })
+			jsonResponse({ server: '999.0.0', commit: '', built_at: '' })
 		);
 
 		const result = (await load({
@@ -122,7 +122,7 @@ describe('carga de la versión del servidor', () => {
 
 	it('marca Series como categoría activa en sus rutas', async () => {
 		const fetchMock = vi.fn().mockResolvedValue(
-			jsonResponse({ server: '0.11.0', commit: '', built_at: '' })
+			jsonResponse({ server: '999.0.0', commit: '', built_at: '' })
 		);
 
 		const result = (await load({
@@ -145,9 +145,9 @@ describe('pie de página', () => {
 	});
 
 	it('avisa de forma visible si las versiones no coinciden', () => {
-		const body = renderFooter('0.11.0', 'def5678');
+		const body = renderFooter('999.0.0', 'def5678');
 
-		expect(visibleText(body)).toContain('Cinecat 0.11.0 (def5678) · GPL-3.0');
+		expect(visibleText(body)).toContain('Cinecat 999.0.0 (def5678) · GPL-3.0');
 		expect(body).toContain(
 			'La web y el servidor tienen versiones distintas: recarga o actualiza.'
 		);
