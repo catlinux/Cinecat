@@ -26,6 +26,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 - Automatic collections: movies that belong to a TMDB saga are grouped into a collection automatically; a collection deleted or a movie removed by the user does not reappear in later scans. Already identified movies join their collection on the first scan.
 - Collections API: paginated list and detail, and admin management (create, edit, delete, add and remove movies, reorder). Movies list the collections they belong to and can be filtered by `collection_id`.
 - Collections on the web: active category in the portal and header, paginated list with search and sorting, a page per collection with its movies and, for admins, management (create, edit, change poster and backdrop, add and remove movies, reorder, delete). The movie page links to its collections.
+- The name parser takes the series from the top-level folder and recognises episodes in formats such as `ChicagoFire720p4x17` or `MR_Robot_305` inside a season folder (they used to be taken for movies).
 - The server shuts down gracefully on SIGINT/SIGTERM, cancelling any running scan.
 
 ## [0.10.0] - 2026-10-26

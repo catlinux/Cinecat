@@ -1,6 +1,9 @@
 package library
 
-import "testing"
+import (
+	"path/filepath"
+	"testing"
+)
 
 func TestParseFilename(t *testing.T) {
 	tests := []struct {
@@ -124,27 +127,27 @@ func TestParsePath(t *testing.T) {
 		{
 			name: "título de serie desde la carpeta cuando el archivo solo trae SxxEyy",
 			path: "Series/Season 1/S01E03.mkv",
-			want: Media{Title: "Series", Kind: KindEpisode, Season: 1, Episode: 3},
+			want: Media{Title: "Series", SeriesFolder: "Series", Kind: KindEpisode, Season: 1, Episode: 3},
 		},
 		{
 			name: "serie con título y temporada en la ruta",
 			path: "Breaking Bad/Season 2/Breaking Bad S02E05.mkv",
-			want: Media{Title: "Breaking Bad", Kind: KindEpisode, Season: 2, Episode: 5},
+			want: Media{Title: "Breaking Bad", SeriesFolder: "Breaking Bad", Kind: KindEpisode, Season: 2, Episode: 5},
 		},
 		{
 			name: "número de episodio al principio del archivo dentro de una temporada",
 			path: "Dark/Season 1/04 - Secretos.mkv",
-			want: Media{Title: "Dark", Kind: KindEpisode, Season: 1, Episode: 4},
+			want: Media{Title: "Dark", SeriesFolder: "Dark", Kind: KindEpisode, Season: 1, Episode: 4},
 		},
 		{
 			name: "episodio con E05 dentro de una temporada",
 			path: "Show/Season 1/Show - E05 - Un título.mkv",
-			want: Media{Title: "Show", Kind: KindEpisode, Season: 1, Episode: 5},
+			want: Media{Title: "Show", SeriesFolder: "Show", Kind: KindEpisode, Season: 1, Episode: 5},
 		},
 		{
 			name: "año de la carpeta de la serie",
 			path: "Series (2008)/Season 1/S01E01.mkv",
-			want: Media{Title: "Series", Year: 2008, Kind: KindEpisode, Season: 1, Episode: 1},
+			want: Media{Title: "Series", SeriesFolder: "Series (2008)", Year: 2008, Kind: KindEpisode, Season: 1, Episode: 1},
 		},
 		{
 			name: "película dentro de una carpeta con año",
@@ -154,13 +157,164 @@ func TestParsePath(t *testing.T) {
 		{
 			name: "temporada abreviada S1",
 			path: "Serie/S1/Serie - 1x02.mkv",
-			want: Media{Title: "Serie", Kind: KindEpisode, Season: 1, Episode: 2},
+			want: Media{Title: "Serie", SeriesFolder: "Serie", Kind: KindEpisode, Season: 1, Episode: 2},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ParsePath(tt.path)
+			got := ParsePath(filepath.FromSlash(tt.path))
+			if got != tt.want {
+				t.Fatalf("ParsePath(%q) = %+v, se esperaba %+v", tt.path, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestParsePathSeriesFolderAndSeasonPatterns(t *testing.T) {
+	tests := []struct {
+		name string
+		path string
+		want Media
+	}{
+		{
+			name: "NxMM pegado a letras",
+			path: "Chicago fire/Temporada 4/ChicagoFire720p4x17 [www.torrentlocura.com].mkv",
+			want: Media{
+				Title: "Chicago fire", SeriesFolder: "Chicago fire",
+				Kind: KindEpisode, Season: 4, Episode: 17,
+			},
+		},
+		{
+			name: "tres cifras entre separadores",
+			path: "Mr Robot/Temporada 3/MR_Robot_305_DivxTotaL.avi",
+			want: Media{
+				Title: "Mr Robot", SeriesFolder: "Mr Robot",
+				Kind: KindEpisode, Season: 3, Episode: 5,
+			},
+		},
+		{
+			name: "NxMM con separadores",
+			path: "The Big Bang theory/Temporada 3/Big Bang - 3x12.avi",
+			want: Media{
+				Title: "The Big Bang theory", SeriesFolder: "The Big Bang theory",
+				Kind: KindEpisode, Season: 3, Episode: 12,
+			},
+		},
+		{
+			name: "NxMM con puntos",
+			path: "Serie/Temporada 2/Serie.x264.2x05.mkv",
+			want: Media{
+				Title: "Serie", SeriesFolder: "Serie",
+				Kind: KindEpisode, Season: 2, Episode: 5,
+			},
+		},
+		{
+			name: "carpeta de serie conservada",
+			path: "Juego de tronos/Temporada 1/Juego de tronos 1x01.avi",
+			want: Media{
+				Title: "Juego de tronos", SeriesFolder: "Juego de tronos",
+				Kind: KindEpisode, Season: 1, Episode: 1,
+			},
+		},
+		{
+			name: "carpeta de serie conservada con otra capitalización",
+			path: "juego de tronos/Temporada 1/Juego de tronos 1x01.avi",
+			want: Media{
+				Title: "juego de tronos", SeriesFolder: "juego de tronos",
+				Kind: KindEpisode, Season: 1, Episode: 1,
+			},
+		},
+		{
+			name: "episodio al principio y año en la carpeta",
+			path: "Serie (2012)/Temporada 2/02 - Título.mkv",
+			want: Media{
+				Title: "Serie", SeriesFolder: "Serie (2012)", Year: 2012,
+				Kind: KindEpisode, Season: 2, Episode: 2,
+			},
+		},
+		{
+			name: "episodio suelto en la raíz",
+			path: "Serie S01E02.mkv",
+			want: Media{Title: "Serie", Kind: KindEpisode, Season: 1, Episode: 2},
+		},
+		{
+			name: "película dentro de su carpeta",
+			path: "El Orfanato (2007)/El Orfanato.mkv",
+			want: Media{Title: "El Orfanato", Year: 2007, Kind: KindMovie},
+		},
+		{
+			name: "película con 720p fuera de una temporada",
+			path: "Peliculas/Una pelicula 720p.mkv",
+			want: Media{Title: "Una pelicula", Kind: KindMovie},
+		},
+		{
+			name: "carpeta de temporada como primer nivel",
+			path: "Temporada 1/Serie S01E02.mkv",
+			want: Media{Title: "Serie", Kind: KindEpisode, Season: 1, Episode: 2},
+		},
+		{
+			name: "carpeta basura como primer nivel",
+			path: "Extras/Serie/Temporada 1/S01E02.mkv",
+			want: Media{Title: "Serie", Kind: KindEpisode, Season: 1, Episode: 2},
+		},
+		{
+			name: "archivo basura dentro de una temporada no es episodio",
+			path: "Serie/Temporada 2/Extras/x.mkv",
+			want: Media{Title: "x", Kind: KindMovie},
+		},
+		{
+			name: "1080p y x264 no son episodio",
+			path: "Serie/Temporada 1/Serie 1080p x264.mkv",
+			want: Media{Title: "Serie", Kind: KindMovie},
+		},
+		{
+			name: "NxMM con temporada distinta creíble",
+			path: "Serie/Temporada 3/Serie720p2x05.mkv",
+			want: Media{
+				Title: "Serie", SeriesFolder: "Serie",
+				Kind: KindEpisode, Season: 2, Episode: 5,
+			},
+		},
+		{
+			name: "NxMM con temporada distinta no creíble",
+			path: "Serie/Temporada 3/Serie720p99x05.mkv",
+			want: Media{
+				Title: "Serie", SeriesFolder: "Serie",
+				Kind: KindEpisode, Season: 3, Episode: 5,
+			},
+		},
+		{
+			name: "tres cifras sin separadores no son episodio",
+			path: "Serie/Temporada 3/Serie2020305.mkv",
+			want: Media{Title: "Serie2020305", Kind: KindMovie},
+		},
+		{
+			name: "tres cifras sueltas",
+			path: "Serie/Temporada 3/305.mkv",
+			want: Media{
+				Title: "Serie", SeriesFolder: "Serie",
+				Kind: KindEpisode, Season: 3, Episode: 5,
+			},
+		},
+		{
+			name: "gana la primera candidata de tres cifras",
+			path: "Serie/Temporada 3/Serie 305 306.mkv",
+			want: Media{
+				Title: "Serie", SeriesFolder: "Serie",
+				Kind: KindEpisode, Season: 3, Episode: 5,
+			},
+		},
+		{
+			name: "720 suelto no es episodio",
+			path: "Serie/Temporada 3/720.mkv",
+			want: Media{Title: "720", Kind: KindMovie},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ParsePath(filepath.FromSlash(tt.path))
 			if got != tt.want {
 				t.Fatalf("ParsePath(%q) = %+v, se esperaba %+v", tt.path, got, tt.want)
 			}

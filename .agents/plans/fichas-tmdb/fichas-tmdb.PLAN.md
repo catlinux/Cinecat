@@ -205,7 +205,7 @@ El usuario quiere un panel de administración bien estructurado para configurar 
 
 ## Hito 3 — Series (→ 0.13.0)
 
-### T10 — Analizador: serie por carpeta y episodios mal reconocidos
+### ✅ T10 — Analizador: serie por carpeta y episodios mal reconocidos
 - Archivos: `internal/library/nameparser.go`, `internal/library/nameparser_test.go`.
 - En una biblioteca de series, el nombre de la serie es la carpeta de primer nivel (`folderTitle`), no el nombre del archivo: «The Big Bang theory/Temporada 3/Big Bang - 3x12.avi» → serie «The Big Bang theory». Exponer también esa carpeta (`Media.SeriesFolder`).
 - Dentro de una carpeta de temporada, reconocer `NxMM` pegado a otras letras («ChicagoFire720p4x17») y el número de 3 cifras cuya primera cifra es la temporada de la carpeta («MR_Robot_305_DivxTotaL» en «Temporada 3» → 3x05). Así los 16 archivos de `Series/` que hoy son películas pasan a episodios.

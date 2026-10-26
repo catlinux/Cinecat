@@ -18,11 +18,12 @@ const (
 
 // Media es lo que se extrae de un nombre de archivo o de una ruta relativa.
 type Media struct {
-	Title   string
-	Year    int
-	Kind    string
-	Season  int
-	Episode int
+	Title        string
+	SeriesFolder string
+	Year         int
+	Kind         string
+	Season       int
+	Episode      int
 }
 
 // El analizador es propio y no usa librerías de terceros: las alternativas
@@ -33,6 +34,8 @@ var (
 	reSeasonEpisode = regexp.MustCompile(`(?i)\b(?:season|temporada|temp)[\s._-]*(\d{1,2})[\s._-]*(?:episode|episodio|ep)[\s._-]*(\d{1,3})\b`)
 	reSxxEyy        = regexp.MustCompile(`(?i)\bs(\d{1,2})[\s._-]*e(\d{1,3})(?:[\s._-]*e\d{1,3})?\b`)
 	reNxM           = regexp.MustCompile(`(?i)\b(\d{1,2})x(\d{2,3})\b`)
+	reNxMGlued      = regexp.MustCompile(`(?i)(\d{1,2})x(\d{2})`)
+	reThreeDigits   = regexp.MustCompile(`\d{3}`)
 	reSeasonOnly    = regexp.MustCompile(`(?i)\b(?:season|temporada|temp)[\s._-]*(\d{1,2})\b`)
 	reYear          = regexp.MustCompile(`\b(?:19|20)\d{2}\b`)
 
@@ -89,6 +92,15 @@ var junkFolders = map[string]bool{
 	"artwork": true, "backdrops": true,
 }
 
+// Una temporada de 1 a 30 es plausible para una serie; si el nombre trae otra,
+// nos quedamos con la temporada de la carpeta.
+const maxPlausibleSeason = 30
+
+// Números que suelen ser resolución o códec, no episodios.
+var nonEpisodeNumbers = map[int]bool{
+	264: true, 265: true, 480: true, 720: true, 1080: true,
+}
+
 // ParsePath analiza la ruta relativa de un archivo dentro de una biblioteca,
 // usando también las carpetas (serie, temporada, año) cuando el nombre del
 // archivo no basta.
@@ -98,6 +110,15 @@ func ParsePath(relPath string) Media {
 	media := ParseFilename(file)
 
 	dirs := splitDirs(dir)
+	seriesFolder := ""
+	if len(dirs) > 0 {
+		first := dirs[0]
+		if !junkFolders[strings.ToLower(first)] {
+			if _, isSeason := seasonFromFolder(first); !isSeason {
+				seriesFolder = first
+			}
+		}
+	}
 	season, seriesDir := 0, ""
 	for i := len(dirs) - 1; i >= 0; i-- {
 		name := dirs[i]
@@ -117,35 +138,54 @@ func ParsePath(relPath string) Media {
 	base := strings.TrimSuffix(file, filepath.Ext(file))
 
 	if media.Episode == 0 && season > 0 {
-		// "04 - Título.mkv", "04.mkv" o "Serie - E04.mkv" dentro de una temporada.
-		switch {
-		case reLeadingEpisode.MatchString(base):
-			episode, _ := strconv.Atoi(reLeadingEpisode.FindStringSubmatch(base)[1])
+		// "ChicagoFire720p4x17" y "Serie.x264.2x05" dentro de una temporada.
+		if episodeSeason, episode, ok := firstGluedNxM(base, season); ok {
+			media.Kind = KindEpisode
+			media.Season = episodeSeason
+			media.Episode = episode
+		} else if episode, ok := firstThreeDigitEpisode(base, season); ok {
 			media.Kind = KindEpisode
 			media.Season = season
 			media.Episode = episode
-			rest := reLeadingEpisode.ReplaceAllString(base, "")
-			if seriesDir != "" {
-				media.Title = folderTitle(seriesDir)
-			} else {
-				media.Title = ParseFilename(rest).Title
-			}
-		case reBareEpisode.MatchString(strings.TrimSpace(base)):
-			episode, _ := strconv.Atoi(strings.TrimSpace(base))
-			media.Kind = KindEpisode
-			media.Season = season
-			media.Episode = episode
-			if seriesDir != "" {
-				media.Title = folderTitle(seriesDir)
-			}
-		default:
-			if m := reEpisodeLetter.FindStringSubmatch(base); m != nil {
-				episode, _ := strconv.Atoi(m[1])
+		} else {
+			// "04 - Título.mkv", "04.mkv" o "Serie - E04.mkv" dentro de una temporada.
+			switch {
+			case reLeadingEpisode.MatchString(base):
+				raw := reLeadingEpisode.FindStringSubmatch(base)[1]
+				if isIgnoredThreeDigitNumber(raw) {
+					break
+				}
+				episode, _ := strconv.Atoi(raw)
+				media.Kind = KindEpisode
+				media.Season = season
+				media.Episode = episode
+				rest := reLeadingEpisode.ReplaceAllString(base, "")
+				if seriesDir != "" {
+					media.Title = folderTitle(seriesDir)
+				} else {
+					media.Title = ParseFilename(rest).Title
+				}
+			case reBareEpisode.MatchString(strings.TrimSpace(base)):
+				raw := strings.TrimSpace(base)
+				if isIgnoredThreeDigitNumber(raw) {
+					break
+				}
+				episode, _ := strconv.Atoi(raw)
 				media.Kind = KindEpisode
 				media.Season = season
 				media.Episode = episode
 				if seriesDir != "" {
 					media.Title = folderTitle(seriesDir)
+				}
+			default:
+				if m := reEpisodeLetter.FindStringSubmatch(base); m != nil {
+					episode, _ := strconv.Atoi(m[1])
+					media.Kind = KindEpisode
+					media.Season = season
+					media.Episode = episode
+					if seriesDir != "" {
+						media.Title = folderTitle(seriesDir)
+					}
 				}
 			}
 		}
@@ -155,7 +195,15 @@ func ParsePath(relPath string) Media {
 		if media.Season == 0 {
 			media.Season = season
 		}
-		if seriesDir != "" {
+		if seriesFolder != "" {
+			media.SeriesFolder = seriesFolder
+			if title := folderTitle(seriesFolder); title != "" {
+				media.Title = title
+			}
+			if media.Year == 0 {
+				media.Year = ParseFilename(seriesFolder).Year
+			}
+		} else if seriesDir != "" {
 			if media.Title == "" {
 				media.Title = folderTitle(seriesDir)
 			}
@@ -249,6 +297,69 @@ func findEpisode(text string) (episodeMatch, bool) {
 	consider(reSxxEyy)
 	consider(reNxM)
 	return best, found
+}
+
+// firstGluedNxM busca un NxMM pegado a letras o números. Si la temporada del
+// nombre no coincide con la carpeta, manda la del nombre cuando es creíble.
+func firstGluedNxM(text string, folderSeason int) (season, episode int, ok bool) {
+	for _, m := range reNxMGlued.FindAllStringSubmatchIndex(text, -1) {
+		start, end := m[0], m[1]
+		if start > 0 && isASCIIDigit(text[start-1]) {
+			continue
+		}
+		if end < len(text) && isASCIIDigit(text[end]) {
+			continue
+		}
+		nameSeason, err1 := strconv.Atoi(text[m[2]:m[3]])
+		nameEpisode, err2 := strconv.Atoi(text[m[4]:m[5]])
+		if err1 != nil || err2 != nil || nameSeason <= 0 || nameEpisode <= 0 {
+			continue
+		}
+		if nameSeason == folderSeason || nameSeason <= maxPlausibleSeason {
+			return nameSeason, nameEpisode, true
+		}
+		return folderSeason, nameEpisode, true
+	}
+	return 0, 0, false
+}
+
+// firstThreeDigitEpisode acepta un número de tres cifras aislado por
+// separadores: la primera cifra es la temporada y las dos últimas el episodio.
+func firstThreeDigitEpisode(text string, folderSeason int) (episode int, ok bool) {
+	for _, loc := range reThreeDigits.FindAllStringIndex(text, -1) {
+		start, end := loc[0], loc[1]
+		if start > 0 && isASCIIDigitOrLetter(text[start-1]) {
+			continue
+		}
+		if end < len(text) && isASCIIDigitOrLetter(text[end]) {
+			continue
+		}
+		value, err := strconv.Atoi(text[start:end])
+		if err != nil || nonEpisodeNumbers[value] || value/100 != folderSeason {
+			continue
+		}
+		episode = value % 100
+		if episode > 0 {
+			return episode, true
+		}
+	}
+	return 0, false
+}
+
+func isIgnoredThreeDigitNumber(raw string) bool {
+	if len(raw) != 3 {
+		return false
+	}
+	value, err := strconv.Atoi(raw)
+	return err == nil && nonEpisodeNumbers[value]
+}
+
+func isASCIIDigit(b byte) bool {
+	return b >= '0' && b <= '9'
+}
+
+func isASCIIDigitOrLetter(b byte) bool {
+	return isASCIIDigit(b) || (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z')
 }
 
 func findSeason(text string) (season, start int, ok bool) {
