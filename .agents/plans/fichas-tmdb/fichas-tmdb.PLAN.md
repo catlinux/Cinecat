@@ -122,7 +122,7 @@ Cubiertas por el plan tal cual: corregir/identificar desde la ficha (T6), repart
 **Orden definitivo (decidido por el orquestador por facilidad y para desplegar pronto):**
 
 1. ✅ **T4b** (API: búsqueda ampliada, letra, género, visionado).
-2. **T5** (portal `/`, `/movies` paginada con búsqueda, letra y género; el portal empieza con las tres categorías y «Añadido recientemente» usando `sort=added`) → ▶ **desplegar**.
+2. ✅ **T5** (portal `/`, `/movies` paginada con búsqueda, letra y género; el portal empieza con las tres categorías y «Añadido recientemente» usando `sort=added`) → ▶ **desplegar**.
 3. **T6** (ficha completa: reparto, dirección, corregir ficha, visto/no visto; con huecos para «Archivo» y «Póster») → cierra 0.11.0 → ▶ **desplegar** + D1.
 4. **T4c** (info del archivo con ffprobe) + **T6b** (panel «Archivo» en la ficha) → ▶ desplegar.
 5. **T4d** (editar póster) + **T6c** (selector de póster en la ficha).

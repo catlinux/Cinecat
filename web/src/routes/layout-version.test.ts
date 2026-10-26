@@ -20,6 +20,7 @@ function layoutData(serverVersion: string | null, serverCommit: string | null = 
 	return {
 		hasSession: false,
 		isAdmin: false,
+		activeCategory: null,
 		serverVersion,
 		serverCommit,
 		webVersion
@@ -59,7 +60,8 @@ describe('carga de la versión del servidor', () => {
 
 		const result = (await load({
 			locals: { sessionToken: null },
-			fetch: fetchMock
+			fetch: fetchMock,
+			url: new URL('http://localhost/')
 		} as never)) as { serverVersion: string | null; webVersion: string };
 
 		expect(result.serverVersion).toBeNull();
@@ -77,7 +79,8 @@ describe('carga de la versión del servidor', () => {
 
 		const result = (await load({
 			locals: { sessionToken: null },
-			fetch: fetchMock
+			fetch: fetchMock,
+			url: new URL('http://localhost/')
 		} as never)) as {
 			serverVersion: string | null;
 			serverCommit: string | null;
@@ -87,6 +90,20 @@ describe('carga de la versión del servidor', () => {
 		expect(result.serverVersion).toBe('0.11.0');
 		expect(result.serverCommit).toBe('abc1234');
 		expect(fetchMock.mock.calls[0][0]).toBe('http://api.test/api/v1/system/version');
+	});
+
+	it('marca Películas como categoría activa en su ruta', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(
+			jsonResponse({ server: '0.11.0', commit: '', built_at: '' })
+		);
+
+		const result = (await load({
+			locals: { sessionToken: null },
+			fetch: fetchMock,
+			url: new URL('http://localhost/movies')
+		} as never)) as { activeCategory: string | null };
+
+		expect(result.activeCategory).toBe('movies');
 	});
 });
 
@@ -114,5 +131,20 @@ describe('pie de página', () => {
 
 		expect(visibleText(body)).toContain(`Cinecat ${webVersion} · GPL-3.0`);
 		expect(body).not.toContain('La web y el servidor tienen versiones distintas');
+	});
+
+	it('marca Películas como categoría activa y deja las demás para después', () => {
+		const { body } = render(Layout, {
+			props: {
+				data: { ...layoutData(null), activeCategory: 'movies' },
+				children
+			}
+		});
+
+		expect(body).toContain('href="/movies"');
+		expect(body).toContain('aria-current="page"');
+		expect(body).toContain('Colecciones');
+		expect(body).toContain('Series');
+		expect(body).toContain('Próximamente');
 	});
 });

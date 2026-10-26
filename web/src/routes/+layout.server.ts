@@ -6,7 +6,12 @@ import { webVersion } from '$lib/version';
 // consulta del rol solo se hace con sesión; si la API falla, se oculta la
 // administración sin romper la página. La versión del servidor es pública y
 // también se consulta sin sesión; si no responde, el pie usa la de la web.
-export const load: LayoutServerLoad = async ({ locals, fetch }) => {
+export const load: LayoutServerLoad = async ({ locals, fetch, url }) => {
+	const pathname = url?.pathname ?? '';
+	const activeCategory =
+		pathname === '/movies' || pathname.startsWith('/movies/') || pathname.startsWith('/items/')
+			? 'movies'
+			: null;
 	let serverVersion: string | null = null;
 	let serverCommit: string | null = null;
 	try {
@@ -18,7 +23,14 @@ export const load: LayoutServerLoad = async ({ locals, fetch }) => {
 	}
 
 	if (!locals.sessionToken) {
-		return { hasSession: false, isAdmin: false, serverVersion, serverCommit, webVersion };
+		return {
+			hasSession: false,
+			isAdmin: false,
+			activeCategory,
+			serverVersion,
+			serverCommit,
+			webVersion
+		};
 	}
 
 	let isAdmin = false;
@@ -29,5 +41,12 @@ export const load: LayoutServerLoad = async ({ locals, fetch }) => {
 		isAdmin = false;
 	}
 
-	return { hasSession: true, isAdmin, serverVersion, serverCommit, webVersion };
+	return {
+		hasSession: true,
+		isAdmin,
+		activeCategory,
+		serverVersion,
+		serverCommit,
+		webVersion
+	};
 };

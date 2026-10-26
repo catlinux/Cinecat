@@ -118,7 +118,7 @@
 	<title>Bibliotecas · Cinecat</title>
 </svelte:head>
 
-<a class="back" href="/">← Volver a la cartelera</a>
+<a class="back" href="/movies">← Volver a la cartelera</a>
 
 <section class="admin">
 	<div class="admin-head">

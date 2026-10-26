@@ -24,6 +24,19 @@
 			<a class="wordmark" href="/">Cinecat</a>
 		</div>
 		<div class="marquee-tools">
+			<nav class="category-nav" aria-label="Categorías">
+				<a
+					href="/movies"
+					class:category-active={data.activeCategory === 'movies'}
+					aria-current={data.activeCategory === 'movies' ? 'page' : undefined}>Películas</a
+				>
+				<span class="category-soon" aria-disabled="true">
+					Colecciones <span class="category-soon-tag">Próximamente</span>
+				</span>
+				<span class="category-soon" aria-disabled="true">
+					Series <span class="category-soon-tag">Próximamente</span>
+				</span>
+			</nav>
 			{#if data.isAdmin}
 				<a class="account-link" href="/admin/libraries">Bibliotecas</a>
 			{/if}

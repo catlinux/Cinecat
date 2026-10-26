@@ -28,6 +28,9 @@
 			</div>
 		{/if}
 		<span class="poster-kind">{kindLabel(item.kind)}</span>
+		{#if item.watched}
+			<span class="poster-watched">Visto</span>
+		{/if}
 	</div>
 
 	<div class="poster-caption">

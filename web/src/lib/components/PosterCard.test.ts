@@ -8,13 +8,27 @@ const item: MediaItem = {
 	library_id: 1,
 	path: '/media/peliculas/Matrix (1999).mp4',
 	title: 'Matrix',
+	file_title: 'Matrix',
 	year: 1999,
 	kind: 'movie',
 	season: null,
 	episode: null,
 	tmdb_id: 603,
 	overview: null,
-	poster_url: null
+	poster_url: null,
+	original_title: null,
+	imdb_id: null,
+	tagline: null,
+	genres: [],
+	runtime_minutes: null,
+	rating: null,
+	directors: [],
+	cast: [],
+	backdrop_url: null,
+	overview_language: null,
+	match_status: null,
+	match_score: null,
+	watched: false
 };
 
 describe('PosterCard', () => {
@@ -26,6 +40,14 @@ describe('PosterCard', () => {
 		expect(body).toContain('/items/7');
 		expect(body).toContain('1999');
 		expect(body).toContain('--poster-a');
+		expect(body).not.toContain('Visto');
+	});
+
+	it('marca discretamente los ítems vistos con texto accesible', () => {
+		const { body } = render(PosterCard, { props: { item: { ...item, watched: true } } });
+
+		expect(body).toContain('Visto');
+		expect(body).toContain('poster-watched');
 	});
 
 	it('muestra el cartel real cuando posterUrl está informado', () => {

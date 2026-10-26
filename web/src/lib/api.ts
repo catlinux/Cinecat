@@ -27,6 +27,7 @@ export interface MediaItem {
 	library_id: number;
 	path: string;
 	title: string;
+	file_title: string;
 	year: number | null;
 	kind: 'movie' | 'series' | 'episode';
 	season: number | null;
@@ -34,6 +35,28 @@ export interface MediaItem {
 	tmdb_id: number | null;
 	overview: string | null;
 	poster_url: string | null;
+	original_title: string | null;
+	imdb_id: string | null;
+	tagline: string | null;
+	genres: string[];
+	runtime_minutes: number | null;
+	rating: number | null;
+	directors: string[];
+	cast: string[];
+	backdrop_url: string | null;
+	overview_language: string | null;
+	match_status: 'auto' | 'manual' | 'none' | null;
+	match_score: number | null;
+	watched: boolean;
+}
+
+export interface GenreCount {
+	name: string;
+	count: number;
+}
+
+export interface GenresResponse {
+	genres: GenreCount[];
 }
 
 export interface ItemsResponse {
