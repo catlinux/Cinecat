@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.16.1] - 2026-10-27
+
+### Corregido
+
+- El instalador del actualizador define las variables del bus de usuario de systemd cuando faltan (entrada con `su` o sin sesión de login) y avisa de que la instalación está incompleta si no puede activar las unidades, en lugar de decir que terminó bien. Además verifica antes los requisitos (programas, acceso a Docker y que `git` llegue a `origin` sin pedir contraseña) y la documentación incluye una guía para servidor nuevo o cambio de dominio.
+
 ## [0.16.0] - 2026-10-27
 
 ### Añadido

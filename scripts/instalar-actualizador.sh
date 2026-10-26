@@ -13,12 +13,45 @@ RUN_DIR=${RUN_DIR:-$REPO/run}
 BACKUP_DIR=${BACKUP_DIR:-$HOME/cinecat-backups}
 CACHE_DIR=${CACHE_DIR:-$HOME/.cache/cinecat-tmp}
 USER_NAME=${USER:-$(id -un)}
+PROBLEMS=0
+
+# Con `su` o una shell sin sesión de login faltan estas variables y
+# `systemctl --user` no encuentra el bus del usuario.
+if [ -z "${XDG_RUNTIME_DIR:-}" ] && [ -d "/run/user/$(id -u)" ]; then
+	export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+fi
+if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ] && [ -n "${XDG_RUNTIME_DIR:-}" ] && [ -S "$XDG_RUNTIME_DIR/bus" ]; then
+	export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
+fi
 
 usage() {
 	printf 'Uso: %s [--desinstalar]\n' "$(basename "$0")"
 }
 
+check_requirements() {
+	local cmd
+	for cmd in docker git sqlite3 curl flock python3; do
+		if ! command -v "$cmd" >/dev/null 2>&1; then
+			printf 'Falta el programa requerido: %s\n' "$cmd" >&2
+			PROBLEMS=1
+		fi
+	done
+	if command -v docker >/dev/null 2>&1 && ! docker info >/dev/null 2>&1; then
+		printf 'El usuario %s no puede usar Docker (¿falta añadirlo al grupo docker?).\n' "$USER_NAME" >&2
+		PROBLEMS=1
+	fi
+	# El servicio no tiene terminal ni agente SSH: si git necesita contraseña o
+	# frase de paso, la actualización fallaría en el momento de descargar.
+	if command -v git >/dev/null 2>&1 &&
+		! env -u SSH_AUTH_SOCK GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="ssh -o BatchMode=yes" \
+			git -C "$REPO" ls-remote --tags origin >/dev/null 2>&1; then
+		printf 'git no puede consultar origin sin pedir contraseña ni frase de paso; el servicio no podrá descargar versiones.\n' >&2
+		PROBLEMS=1
+	fi
+}
+
 install_units() {
+	check_requirements
 	mkdir -p "$UNIT_DIR" "$RUN_DIR" "$BACKUP_DIR" "$CACHE_DIR"
 
 	local unit
@@ -38,9 +71,11 @@ install_units() {
 
 	if ! "$SYSTEMCTL_BIN" --user daemon-reload; then
 		printf 'No se pudo recargar systemd; ejecuta systemctl --user daemon-reload cuando esté disponible.\n' >&2
+		PROBLEMS=1
 	fi
 	if ! "$SYSTEMCTL_BIN" --user enable --now cinecat-update.path; then
 		printf 'No se pudo activar cinecat-update.path; revisa el estado con systemctl --user status cinecat-update.path.\n' >&2
+		PROBLEMS=1
 	fi
 
 	local linger
@@ -51,7 +86,11 @@ install_units() {
 		fi
 	fi
 
-	printf '\nActualizador instalado.\n'
+	if [ "$PROBLEMS" -eq 0 ]; then
+		printf '\nActualizador instalado.\n'
+	else
+		printf '\nInstalación INCOMPLETA: las unidades están copiadas pero no activadas. Revisa los avisos de arriba.\n'
+	fi
 	printf '  Repositorio: %s\n' "$REPO"
 	printf '  Unidades:    %s\n' "$UNIT_DIR"
 	printf '  Peticiones:  %s\n' "$RUN_DIR"

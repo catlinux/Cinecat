@@ -27,10 +27,44 @@ docker compose up -d
 bash scripts/instalar-actualizador.sh
 ```
 
-El instalador crea las unidades en `~/.config/systemd/user/`, sustituye la ruta
-real del repositorio, activa `cinecat-update.path` y prepara `run/`,
-`~/cinecat-backups` y `~/.cache/cinecat-tmp`. Si no puede activar linger,
-muestra el comando exacto que hay que ejecutar con `sudo`; no lo ejecuta.
+El instalador primero **verifica los requisitos** (programas, acceso a Docker y
+que `git` llegue a `origin` sin pedir contraseña ni frase de paso, porque el
+servicio no tiene terminal). Después crea las unidades en
+`~/.config/systemd/user/`, sustituye la ruta real del repositorio, activa
+`cinecat-update.path` y prepara `run/`, `~/cinecat-backups` y
+`~/.cache/cinecat-tmp`. Si no puede activar linger, muestra el comando exacto que
+hay que ejecutar con `sudo`; no lo ejecuta. Si algo falla termina con
+«Instalación INCOMPLETA» y explica qué corregir; al acabar bien, el estado debe
+ser `path=active, service=inactive` (el servicio solo arranca cuando hay una
+petición).
+
+Si entras al servidor con `su` o con una shell sin sesión de login, el instalador
+define por su cuenta `XDG_RUNTIME_DIR` y `DBUS_SESSION_BUS_ADDRESS`. Para usar
+`systemctl --user` a mano en esa situación:
+
+```bash
+export XDG_RUNTIME_DIR=/run/user/$(id -u)
+export DBUS_SESSION_BUS_ADDRESS=unix:path=$XDG_RUNTIME_DIR/bus
+```
+
+### Servidor nuevo o cambio de dominio
+
+El actualizador no depende del dominio: habla con los contenedores por
+`127.0.0.1` (puertos `CINECAT_API_PORT` y `CINECAT_WEB_PORT` de `.env`) y con
+GitHub por `origin`. En un servidor nuevo, o tras cambiar de dominio:
+
+1. Clona el repositorio en `/opt/cinecat` con el usuario que lo va a gestionar y
+   crea `.env` (ver `docs/es/`).
+2. Deja el proxy inverso del dominio nuevo apuntando a `127.0.0.1:8080` (`/api/`
+   y `/healthz`) y a `127.0.0.1:8081` (resto); ejemplo en `deploy/`.
+3. `mkdir -p run` y `docker compose up -d` **antes** de instalar, para que `run/`
+   pertenezca al usuario y no a root (si Docker lo crea, el actualizador no podrá
+   borrar las peticiones).
+4. `bash scripts/instalar-actualizador.sh` y corrige lo que avise.
+5. Prueba el ciclo completo con una versión pequeña antes de fiarte de él: desde
+   Administración → Sistema, «Buscar actualizaciones» y «Actualizar ahora».
+6. Si el servidor está en otra distribución o no tiene `flock` o `python3`,
+   instálalos (el instalador lo detecta).
 
 Para retirarlo:
 
@@ -56,8 +90,11 @@ Las copias y el registro se conservan.
 6. Espera hasta 90 segundos a `/healthz`, a que `/api/v1/system/version`
    devuelva la versión nueva y a que responda la web.
 7. Si falla cualquiera de los pasos anteriores desde la descarga: vuelve al
-   commit guardado, restaura la copia de la base de datos, reconstruye la versión
-   anterior y deja el resultado en `update-status.json`.
+   commit guardado y deja el resultado en `update-status.json`. Si todavía no se
+   habían recreado los contenedores (falló la descarga o la compilación), el
+   servidor anterior sigue en marcha y no se toca su base de datos. Si ya se
+   habían recreado, restaura también la copia de la base de datos y reconstruye la
+   versión anterior.
 
 El estado se escribe de forma atómica en `run/update-status.json`. Las fases son
 «Validando», «Comprobando espacio», «Copia de la base de datos», «Descargando la

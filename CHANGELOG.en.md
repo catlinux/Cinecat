@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.16.1] - 2026-10-27
+
+### Fixed
+
+- The updater installer sets the systemd user bus variables when they are missing (entering with `su` or without a login session) and reports an incomplete installation if it cannot enable the units, instead of claiming success. It also checks the requirements first (programs, Docker access and that `git` can reach `origin` without asking for a password) and the documentation now includes a guide for a new server or a domain change.
+
 ## [0.16.0] - 2026-10-27
 
 ### Added

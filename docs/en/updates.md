@@ -25,10 +25,44 @@ docker compose up -d
 bash scripts/instalar-actualizador.sh
 ```
 
-The installer creates the units in `~/.config/systemd/user/`, replaces the real
-repository path, enables `cinecat-update.path` and prepares `run/`,
-`~/cinecat-backups` and `~/.cache/cinecat-tmp`. If it cannot enable linger, it
-prints the exact command to run with `sudo`; it does not run it.
+The installer first **checks the requirements** (programs, Docker access and
+that `git` can reach `origin` without asking for a password or passphrase, since
+the service has no terminal). Then it creates the units in
+`~/.config/systemd/user/`, replaces the real repository path, enables
+`cinecat-update.path` and prepares `run/`, `~/cinecat-backups` and
+`~/.cache/cinecat-tmp`. If it cannot enable linger, it prints the exact command
+to run with `sudo`; it does not run it. If anything fails it ends with
+"Instalación INCOMPLETA" and says what to fix; on success the state must be
+`path=active, service=inactive` (the service only starts when there is a
+request).
+
+If you enter the server with `su` or a shell without a login session, the
+installer sets `XDG_RUNTIME_DIR` and `DBUS_SESSION_BUS_ADDRESS` itself. To use
+`systemctl --user` by hand in that situation:
+
+```bash
+export XDG_RUNTIME_DIR=/run/user/$(id -u)
+export DBUS_SESSION_BUS_ADDRESS=unix:path=$XDG_RUNTIME_DIR/bus
+```
+
+### New server or domain change
+
+The updater does not depend on the domain: it talks to the containers over
+`127.0.0.1` (`CINECAT_API_PORT` and `CINECAT_WEB_PORT` from `.env`) and to GitHub
+through `origin`. On a new server, or after changing domain:
+
+1. Clone the repository to `/opt/cinecat` as the user that will manage it and
+   create `.env` (see `docs/en/`).
+2. Point the new domain's reverse proxy at `127.0.0.1:8080` (`/api/` and
+   `/healthz`) and `127.0.0.1:8081` (everything else); example in `deploy/`.
+3. Run `mkdir -p run` and `docker compose up -d` **before** installing, so `run/`
+   belongs to the user and not to root (if Docker creates it, the updater cannot
+   delete requests).
+4. `bash scripts/instalar-actualizador.sh` and fix whatever it reports.
+5. Test the whole cycle with a small version before relying on it: Administration
+   → System, "Check for updates" and "Update now".
+6. If the server runs another distribution or lacks `flock` or `python3`, install
+   them (the installer detects it).
 
 To remove it:
 
@@ -53,9 +87,11 @@ Backups and the log are kept.
    `~/.cache/cinecat-tmp`.
 6. Waits up to 90 seconds for `/healthz`, for `/api/v1/system/version` to return
    the new version and for the web container to respond.
-7. If any step after the download fails: restores the saved commit and database
-   copy, rebuilds the previous version and records the result in
-   `update-status.json`.
+7. If any step after the download fails: restores the saved commit and records
+   the result in `update-status.json`. If the containers had not been recreated
+   yet (the download or the build failed), the previous server keeps running and
+   its database is left alone. If they had, it also restores the database copy
+   and rebuilds the previous version.
 
 Status is written atomically to `run/update-status.json`. Phases are
 “Validando”, “Comprobando espacio”, “Copia de la base de datos”, “Descargando la
