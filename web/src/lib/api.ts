@@ -50,6 +50,21 @@ export interface MediaItem {
 	watched: boolean;
 }
 
+export interface Candidate {
+	tmdb_id: number;
+	title: string;
+	original_title: string;
+	year: number;
+	overview: string;
+	poster_url: string;
+	popularity: number;
+	vote_count: number;
+}
+
+export interface CandidatesResponse {
+	candidates: Candidate[];
+}
+
 export interface GenreCount {
 	name: string;
 	count: number;
@@ -117,7 +132,7 @@ export interface ApiClientOptions {
 }
 
 interface RequestOptions {
-	method?: 'GET' | 'POST' | 'DELETE';
+	method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
 	body?: unknown;
 	token?: string;
 	empty?: boolean;
@@ -186,12 +201,57 @@ export class ApiClient {
 		return this.get<ServerVersion>('/api/v1/system/version');
 	}
 
+	async getItem(id: number, token: string): Promise<MediaItem> {
+		return this.get<MediaItem>(`/api/v1/items/${id}`, token);
+	}
+
+	async getCandidates(
+		id: number,
+		query: string,
+		year: number,
+		token: string
+	): Promise<CandidatesResponse> {
+		const params = new URLSearchParams({ q: query });
+		if (year > 0) {
+			params.set('year', String(year));
+		}
+		return this.get<CandidatesResponse>(`/api/v1/items/${id}/candidates?${params}`, token);
+	}
+
+	async setWatched(id: number, watched: boolean, token: string): Promise<void> {
+		const path = `/api/v1/items/${id}/watched`;
+		if (watched) {
+			await this.put<void>(path, undefined, token);
+			return;
+		}
+		await this.delete(path, token);
+	}
+
+	async matchItem(id: number, tmdbID: number | null, token: string): Promise<MediaItem> {
+		return this.put<MediaItem>(
+			`/api/v1/items/${id}/match`,
+			{ tmdb_id: tmdbID },
+			token
+		);
+	}
+
+	async resetMatch(id: number, token: string): Promise<MediaItem> {
+		return this.request<MediaItem>(`/api/v1/items/${id}/match`, {
+			method: 'DELETE',
+			token
+		});
+	}
+
 	async get<T>(path: string, token?: string): Promise<T> {
 		return this.request<T>(path, { token });
 	}
 
 	async post<T>(path: string, body?: unknown, token?: string): Promise<T> {
 		return this.request<T>(path, { method: 'POST', body, token });
+	}
+
+	async put<T>(path: string, body?: unknown, token?: string): Promise<T> {
+		return this.request<T>(path, { method: 'PUT', body, token });
 	}
 
 	async delete(path: string, token?: string): Promise<void> {
