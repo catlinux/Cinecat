@@ -1,6 +1,6 @@
 # Fichas en castellano con TMDB, corrección manual y no identificadas
 
-Estado: diseño cerrado (2026-10-26). Ningún paso hecho.
+Estado: pasos 1 y 2 hechos (2026-10-26). Siguiente: paso 3.
 
 ## Problema (medido en producción, copia de la BD del 2026-10-26)
 
@@ -23,7 +23,8 @@ Estado: diseño cerrado (2026-10-26). Ningún paso hecho.
 
 Convenciones de todos los pasos: Go con `export PATH="/c/Users/msanc/tools/go1.26.9/bin:$PATH"`; validar con `gofmt -l internal cmd` (vacío), `go vet ./...`, `go test ./...`; web con `cd web && npm run check && npx vitest run`. Commits en castellano. Documentación es/en sincronizada. Archivos del repo en CRLF.
 
-### Paso 1 — Cliente TMDB completo (películas y series)
+### Paso 1 — Cliente TMDB completo (películas y series) ✅ hecho
+- Hecho además: `Candidate.VoteCount` y `MovieCollection(ctx, movieID)` (partes de la saga ordenadas por estreno), que usa el paso 2.
 - Archivos: `internal/metadata/tmdb.go`, `internal/metadata/tmdb_test.go`.
 - Añadir (manteniendo `Search` para compatibilidad):
   - `SearchMovies(ctx, query string, year int) ([]Candidate, error)`: `/search/movie` es-ES, hasta 10 resultados. `Candidate{TMDBID, Title, OriginalTitle, Year, Overview, PosterURL (w185), Popularity}`.
@@ -36,7 +37,12 @@ Convenciones de todos los pasos: Go con `export PATH="/c/Users/msanc/tools/go1.2
 - Ejecutor: AgentRelay, esfuerzo medio.
 - Versión: 0.11.0 lo agrupa con el paso 2–3 (no publicar entre medias); CHANGELOG en «Sin publicar».
 
-### Paso 2 — Identificación con puntuación (diseño delicado)
+### Paso 2 — Identificación con puntuación ✅ hecho
+- Implementado en `internal/library/match.go`: `IdentifyMovie(ctx, MovieSearcher, title, year) (Candidate, score, ok, err)`, umbral `MatchThreshold` = 0.75. Busca SIN año; el año solo puntúa.
+- Ajustado con las 870 películas reales contra TMDB (prototipo en Python, fuera del repo): 854 identificadas (98 %), revisadas a mano todas las aproximadas. Reglas finales: variantes solo para buscar y puntuación siempre contra el título completo; F1 ponderado por IDF entre candidatos; contención 0.85; números de secuela (arábigos/romanos) suman o restan; saga + número sin subtítulo → parte N de la colección de TMDB; homónima con < 200 votos cede ante otra ≥ 20× más votada; «Título (Original)» como título alternativo; «Dr» → «Doctor».
+- Test con respuestas reales grabadas: `internal/library/testdata/match_fixture.json` (53 casos). Si el código cambia las búsquedas que hace, el test falla.
+- Fallos conocidos (corrección manual): «MEGAN» (M3GAN), «Desafío total - Remake» (elige 1990), Star Wars IV–VI (TMDB no lleva el subtítulo), erratas.
+- Diseño original del paso (referencia):
 - Archivos: `internal/library/match.go`, `internal/library/match_test.go`.
 - `QueryVariants(title string, folder string) []string`, en orden: título limpio; sin número de saga final cuando la carpeta es una colección («Harry Potter Y El Prisionero De Azkaban 3» → sin « 3»; «Logan 8» → «Logan»); partes separadas por « - » («El Señor de los Anillos - 3 - El retorno del Rey» → «El Señor de los Anillos El retorno del Rey», «El retorno del Rey»); «HarryPotter» → «Harry Potter» (separar camelCase); «S A» → «S.A.».
 - `BestMatch(parsedTitle string, year int, candidates []metadata.Candidate) (metadata.Candidate, float64, bool)`: similitud normalizada (minúsculas, sin acentos ni puntuación, sin artículos iniciales) contra `Title` y `OriginalTitle` (la mayor); +0.15 si el año coincide (±1), −0.3 si hay año y difiere más de 1; desempate por popularidad. Aceptar si ≥ 0.75.

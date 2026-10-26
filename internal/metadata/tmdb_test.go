@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -484,6 +485,44 @@ func jsonRoute(body any) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(body)
+	}
+}
+
+func TestMovieCollectionOrdenaPorEstreno(t *testing.T) {
+	api := newTestAPI(t)
+	api.route("/movie/562", jsonRoute(map[string]any{
+		"id": 562, "belongs_to_collection": map[string]any{"id": 1570},
+	}))
+	api.route("/collection/1570", jsonRoute(map[string]any{"parts": []map[string]any{
+		{"id": 1573, "title": "Jungla de cristal: la venganza", "release_date": "1995-05-19", "vote_count": 6000},
+		{"id": 562, "title": "Jungla de cristal", "release_date": "1988-07-15", "vote_count": 11000},
+		{"id": 999, "title": "Sin estrenar", "release_date": ""},
+		{"id": 1572, "title": "La jungla 2: Alerta roja", "release_date": "1990-07-02", "vote_count": 5000},
+	}}))
+	api.route("/movie/7", jsonRoute(map[string]any{"id": 7}))
+	client := newAPIClient(t, api, t.TempDir(), nil, "clave-de-prueba")
+
+	parts, err := client.MovieCollection(context.Background(), 562)
+	if err != nil {
+		t.Fatalf("MovieCollection: %v", err)
+	}
+	var ids []int
+	for _, part := range parts {
+		ids = append(ids, part.TMDBID)
+	}
+	if fmt.Sprint(ids) != "[562 1572 1573]" {
+		t.Fatalf("partes = %v, se esperaban por fecha y sin la que no tiene fecha", ids)
+	}
+	if parts[0].Year != 1988 || parts[0].VoteCount != 11000 {
+		t.Fatalf("primera parte = %+v", parts[0])
+	}
+	if got := api.query("/collection/1570").Get("language"); got != "es-ES" {
+		t.Fatalf("language = %q", got)
+	}
+
+	none, err := client.MovieCollection(context.Background(), 7)
+	if err != nil || len(none) != 0 {
+		t.Fatalf("sin colección: %v, %v", none, err)
 	}
 }
 

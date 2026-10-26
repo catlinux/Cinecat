@@ -1,0 +1,4649 @@
+{
+ "cases": [
+  {
+   "expected_id": 424,
+   "expected_title": "La lista de Schindler (1993)",
+   "title": "La lista de Schindler",
+   "year": 0
+  },
+  {
+   "expected_id": 16869,
+   "expected_title": "Malditos bastardos (2009)",
+   "title": "Malditos bastardos",
+   "year": 0
+  },
+  {
+   "expected_id": 1427,
+   "expected_title": "El perfume: Historia de un asesino (2006)",
+   "title": "El perfume - Historia de un asesino",
+   "year": 0
+  },
+  {
+   "expected_id": 673,
+   "expected_title": "Harry Potter y el prisionero de Azkaban (2004)",
+   "title": "Harry Potter Y El Prisionero De Azkaban 3",
+   "year": 0
+  },
+  {
+   "expected_id": 767,
+   "expected_title": "Harry Potter y el misterio del príncipe (2009)",
+   "title": "HarryPotter y el misterio del principe 6",
+   "year": 0
+  },
+  {
+   "expected_id": 12444,
+   "expected_title": "Harry Potter y las Reliquias de la Muerte - Parte 1 (2010)",
+   "title": "Harry Potter Y Las Reliquias De La Muerte 7 - Parte I",
+   "year": 0
+  },
+  {
+   "expected_id": 12445,
+   "expected_title": "Harry Potter y las Reliquias de la Muerte - Parte 2 (2011)",
+   "title": "Harry Potter y las reliquias de la muerte 8 - Parte II",
+   "year": 0
+  },
+  {
+   "expected_id": 122,
+   "expected_title": "El señor de los anillos: El retorno del rey (2003)",
+   "title": "El Señor de los Anillos - 3 - El retorno del Rey",
+   "year": 0
+  },
+  {
+   "expected_id": 585,
+   "expected_title": "Monstruos, S.A. (2001)",
+   "title": "Monstruos S A",
+   "year": 0
+  },
+  {
+   "expected_id": 3489,
+   "expected_title": "88 minutos (2007)",
+   "title": "88 Minutos",
+   "year": 0
+  },
+  {
+   "expected_id": 584,
+   "expected_title": "2 Fast 2 Furious: A todo gas 2 (2003)",
+   "title": "A Todo Gas 2",
+   "year": 0
+  },
+  {
+   "expected_id": 9615,
+   "expected_title": "A todo gas: Tokyo Race (2006)",
+   "title": "A Todo Gas 3",
+   "year": 0
+  },
+  {
+   "expected_id": 51497,
+   "expected_title": "Fast & Furious 5 (2011)",
+   "title": "A Todo Gas 5",
+   "year": 0
+  },
+  {
+   "expected_id": 168259,
+   "expected_title": "Fast & Furious 7 (2015)",
+   "title": "Fast And Furious 7",
+   "year": 0
+  },
+  {
+   "expected_id": 679,
+   "expected_title": "Aliens: El regreso (1986)",
+   "title": "Alien 2",
+   "year": 0
+  },
+  {
+   "expected_id": 8077,
+   "expected_title": "Alien III (1992)",
+   "title": "Alien 3",
+   "year": 0
+  },
+  {
+   "expected_id": 395,
+   "expected_title": "Alien contra predator (2004)",
+   "title": "Alien vs Predator",
+   "year": 0
+  },
+  {
+   "expected_id": 941,
+   "expected_title": "Arma letal (1987)",
+   "title": "Arma letal 1",
+   "year": 0
+  },
+  {
+   "expected_id": 942,
+   "expected_title": "Arma letal II (1989)",
+   "title": "Arma letal 2",
+   "year": 0
+  },
+  {
+   "expected_id": 76600,
+   "expected_title": "Avatar: El sentido del agua (2022)",
+   "title": "Avatar - El sentido del agua",
+   "year": 0
+  },
+  {
+   "expected_id": 19995,
+   "expected_title": "Avatar (2009)",
+   "title": "Avatar",
+   "year": 0
+  },
+  {
+   "expected_id": 335984,
+   "expected_title": "Blade Runner 2049 (2017)",
+   "title": "Blade Runner",
+   "year": 2049
+  },
+  {
+   "expected_id": 78,
+   "expected_title": "Blade Runner (1982)",
+   "title": "Blade Runner",
+   "year": 0
+  },
+  {
+   "expected_id": 464052,
+   "expected_title": "Wonder Woman 1984 (2020)",
+   "title": "Wonder Woman",
+   "year": 1984
+  },
+  {
+   "expected_id": 155,
+   "expected_title": "El caballero oscuro (2008)",
+   "title": "El caballero oscuro 2",
+   "year": 0
+  },
+  {
+   "expected_id": 1571,
+   "expected_title": "La jungla 4.0 (2007)",
+   "title": "Jungla de Cristal 4",
+   "year": 0
+  },
+  {
+   "expected_id": 351286,
+   "expected_title": "Jurassic World: El reino caído (2018)",
+   "title": "Jurassic World 2",
+   "year": 0
+  },
+  {
+   "expected_id": 324552,
+   "expected_title": "John Wick: Pacto de sangre (2017)",
+   "title": "John Wick 2",
+   "year": 0
+  },
+  {
+   "expected_id": 1375,
+   "expected_title": "Rocky V (1990)",
+   "title": "Rocky 5",
+   "year": 0
+  },
+  {
+   "expected_id": 1246,
+   "expected_title": "Rocky Balboa (2006)",
+   "title": "Rocky Balboa 6",
+   "year": 0
+  },
+  {
+   "expected_id": 263115,
+   "expected_title": "Logan (2017)",
+   "title": "Logan 8",
+   "year": 0
+  },
+  {
+   "expected_id": 127585,
+   "expected_title": "X-Men: Días del futuro pasado (2014)",
+   "title": "X-Men 7 -Dias del pasado futuro",
+   "year": 0
+  },
+  {
+   "expected_id": 70160,
+   "expected_title": "Los Juegos del Hambre (2012)",
+   "title": "Los juegos del hambre 1",
+   "year": 0
+  },
+  {
+   "expected_id": 131631,
+   "expected_title": "Los Juegos del Hambre: Sinsajo - Parte 1 (2014)",
+   "title": "Los juegos del hambre 3 - Sinsajo - Parte 1",
+   "year": 0
+  },
+  {
+   "expected_id": 8373,
+   "expected_title": "Transformers: La venganza de los caídos (2009)",
+   "title": "Transformers 2 - La venganza de los caidos",
+   "year": 0
+  },
+  {
+   "expected_id": 954,
+   "expected_title": "Misión imposible (1996)",
+   "title": "Mision Imposible 1",
+   "year": 0
+  },
+  {
+   "expected_id": 280,
+   "expected_title": "Terminator 2: El juicio final (1991)",
+   "title": "Terminator 2",
+   "year": 0
+  },
+  {
+   "expected_id": 60308,
+   "expected_title": "Moneyball: Rompiendo las reglas (2011)",
+   "title": "MoneyBall - Rompiendo las reglas",
+   "year": 0
+  },
+  {
+   "expected_id": 8456,
+   "expected_title": "Rompiendo las reglas (2008)",
+   "title": "Rompiendo Las Reglas",
+   "year": 0
+  },
+  {
+   "expected_id": 225574,
+   "expected_title": "Non-Stop (Sin escalas) (2014)",
+   "title": "Sin escalas",
+   "year": 0
+  },
+  {
+   "expected_id": 286217,
+   "expected_title": "Marte (The Martian) (2015)",
+   "title": "Marte",
+   "year": 0
+  },
+  {
+   "expected_id": 284052,
+   "expected_title": "Doctor Strange (2016)",
+   "title": "Dr Strange",
+   "year": 0
+  },
+  {
+   "expected_id": 495764,
+   "expected_title": "Aves de Presa y la fantabulosa emancipación de Harley Quinn (2020)",
+   "title": "Aves de presa",
+   "year": 0
+  },
+  {
+   "expected_id": 1991,
+   "expected_title": "Death Proof (2007)",
+   "title": "Grindhouse Death Proof",
+   "year": 0
+  },
+  {
+   "expected_id": 2034,
+   "expected_title": "Training Day (Día de entrenamiento) (2001)",
+   "title": "Día de entrenamiento",
+   "year": 0
+  },
+  {
+   "expected_id": 259693,
+   "expected_title": "Expediente Warren: El caso Enfield (2016)",
+   "title": "Expediente Warren - El caso Einfield",
+   "year": 0
+  },
+  {
+   "expected_id": 75656,
+   "expected_title": "Ahora me ves… (2013)",
+   "title": "Ahora me ves (Extendida",
+   "year": 0
+  },
+  {
+   "expected_id": 383498,
+   "expected_title": "Deadpool 2 (2018)",
+   "title": "Deadpool 2 Version Extendida",
+   "year": 0
+  },
+  {
+   "expected_id": 0,
+   "expected_title": "",
+   "title": "El silencio de los corderos 2 - Hannibal",
+   "year": 0
+  },
+  {
+   "expected_id": 0,
+   "expected_title": "",
+   "title": "Star Wars Episodio V El Imperio Contraataca",
+   "year": 0
+  },
+  {
+   "expected_id": 140607,
+   "expected_title": "Star Wars: El despertar de la fuerza (2015)",
+   "title": "Star Wars Episodio VII El despertar de la fuerza",
+   "year": 0
+  },
+  {
+   "expected_id": 0,
+   "expected_title": "",
+   "title": "Black Haw derribado",
+   "year": 0
+  },
+  {
+   "expected_id": 10395,
+   "expected_title": "Lobo (1994)",
+   "title": "Lobo",
+   "year": 0
+  }
+ ],
+ "collections": {
+  "122": [
+   {
+    "id": 120,
+    "original_title": "The Lord of the Rings: The Fellowship of the Ring",
+    "title": "El señor de los anillos: La comunidad del anillo",
+    "votes": 28684,
+    "year": 2001
+   },
+   {
+    "id": 121,
+    "original_title": "The Lord of the Rings: The Two Towers",
+    "title": "El señor de los anillos: Las dos torres",
+    "votes": 24836,
+    "year": 2002
+   },
+   {
+    "id": 122,
+    "original_title": "The Lord of the Rings: The Return of the King",
+    "title": "El señor de los anillos: El retorno del rey",
+    "votes": 27673,
+    "year": 2003
+   }
+  ],
+  "12444": [
+   {
+    "id": 671,
+    "original_title": "Harry Potter and the Philosopher's Stone",
+    "title": "Harry Potter y la piedra filosofal",
+    "votes": 30499,
+    "year": 2001
+   },
+   {
+    "id": 672,
+    "original_title": "Harry Potter and the Chamber of Secrets",
+    "title": "Harry Potter y la cámara secreta",
+    "votes": 24294,
+    "year": 2002
+   },
+   {
+    "id": 673,
+    "original_title": "Harry Potter and the Prisoner of Azkaban",
+    "title": "Harry Potter y el prisionero de Azkaban",
+    "votes": 23865,
+    "year": 2004
+   },
+   {
+    "id": 674,
+    "original_title": "Harry Potter and the Goblet of Fire",
+    "title": "Harry Potter y el cáliz de fuego",
+    "votes": 22832,
+    "year": 2005
+   },
+   {
+    "id": 675,
+    "original_title": "Harry Potter and the Order of the Phoenix",
+    "title": "Harry Potter y la Orden del Fénix",
+    "votes": 21402,
+    "year": 2007
+   },
+   {
+    "id": 767,
+    "original_title": "Harry Potter and the Half-Blood Prince",
+    "title": "Harry Potter y el misterio del príncipe",
+    "votes": 21360,
+    "year": 2009
+   },
+   {
+    "id": 12444,
+    "original_title": "Harry Potter and the Deathly Hallows: Part 1",
+    "title": "Harry Potter y las Reliquias de la Muerte - Parte 1",
+    "votes": 20967,
+    "year": 2010
+   },
+   {
+    "id": 12445,
+    "original_title": "Harry Potter and the Deathly Hallows: Part 2",
+    "title": "Harry Potter y las Reliquias de la Muerte - Parte 2",
+    "votes": 22632,
+    "year": 2011
+   }
+  ],
+  "1246": [
+   {
+    "id": 1366,
+    "original_title": "Rocky",
+    "title": "Rocky",
+    "votes": 9022,
+    "year": 1976
+   },
+   {
+    "id": 1367,
+    "original_title": "Rocky II",
+    "title": "Rocky II",
+    "votes": 5026,
+    "year": 1979
+   },
+   {
+    "id": 1371,
+    "original_title": "Rocky III",
+    "title": "Rocky III",
+    "votes": 4699,
+    "year": 1982
+   },
+   {
+    "id": 1374,
+    "original_title": "Rocky IV",
+    "title": "Rocky IV",
+    "votes": 5027,
+    "year": 1985
+   },
+   {
+    "id": 1375,
+    "original_title": "Rocky V",
+    "title": "Rocky V",
+    "votes": 3611,
+    "year": 1990
+   },
+   {
+    "id": 1246,
+    "original_title": "Rocky Balboa",
+    "title": "Rocky Balboa",
+    "votes": 3969,
+    "year": 2006
+   }
+  ],
+  "127585": [
+   {
+    "id": 36657,
+    "original_title": "X-Men",
+    "title": "X-Men",
+    "votes": 12664,
+    "year": 2000
+   },
+   {
+    "id": 36658,
+    "original_title": "X2",
+    "title": "X-Men II",
+    "votes": 11296,
+    "year": 2003
+   },
+   {
+    "id": 36668,
+    "original_title": "X-Men: The Last Stand",
+    "title": "X-Men III: La decisión final",
+    "votes": 10770,
+    "year": 2006
+   },
+   {
+    "id": 49538,
+    "original_title": "X-Men: First Class",
+    "title": "X-Men: Primera Generación",
+    "votes": 13987,
+    "year": 2011
+   },
+   {
+    "id": 127585,
+    "original_title": "X-Men: Days of Future Past",
+    "title": "X-Men: Días del futuro pasado",
+    "votes": 16827,
+    "year": 2014
+   },
+   {
+    "id": 246655,
+    "original_title": "X-Men: Apocalypse",
+    "title": "X-Men: Apocalipsis",
+    "votes": 14239,
+    "year": 2016
+   },
+   {
+    "id": 320288,
+    "original_title": "Dark Phoenix",
+    "title": "X-Men: Fénix Oscura",
+    "votes": 7390,
+    "year": 2019
+   }
+  ],
+  "131631": [
+   {
+    "id": 70160,
+    "original_title": "The Hunger Games",
+    "title": "Los Juegos del Hambre",
+    "votes": 23918,
+    "year": 2012
+   },
+   {
+    "id": 101299,
+    "original_title": "The Hunger Games: Catching Fire",
+    "title": "Los Juegos del Hambre: En llamas",
+    "votes": 18954,
+    "year": 2013
+   },
+   {
+    "id": 131631,
+    "original_title": "The Hunger Games: Mockingjay - Part 1",
+    "title": "Los Juegos del Hambre: Sinsajo - Parte 1",
+    "votes": 17156,
+    "year": 2014
+   },
+   {
+    "id": 131634,
+    "original_title": "The Hunger Games: Mockingjay - Part 2",
+    "title": "Los Juegos del Hambre: Sinsajo - Parte 2",
+    "votes": 13709,
+    "year": 2015
+   }
+  ],
+  "135397": [
+   {
+    "id": 329,
+    "original_title": "Jurassic Park",
+    "title": "Jurassic Park (Parque Jurásico)",
+    "votes": 18524,
+    "year": 1993
+   },
+   {
+    "id": 330,
+    "original_title": "The Lost World: Jurassic Park",
+    "title": "El mundo perdido: Jurassic Park",
+    "votes": 9560,
+    "year": 1997
+   },
+   {
+    "id": 331,
+    "original_title": "Jurassic Park III",
+    "title": "Jurassic Park III (Parque Jurásico III)",
+    "votes": 8141,
+    "year": 2001
+   },
+   {
+    "id": 135397,
+    "original_title": "Jurassic World",
+    "title": "Jurassic World",
+    "votes": 22058,
+    "year": 2015
+   },
+   {
+    "id": 351286,
+    "original_title": "Jurassic World: Fallen Kingdom",
+    "title": "Jurassic World: El reino caído",
+    "votes": 13114,
+    "year": 2018
+   },
+   {
+    "id": 507086,
+    "original_title": "Jurassic World Dominion",
+    "title": "Jurassic World: Dominion",
+    "votes": 7365,
+    "year": 2022
+   },
+   {
+    "id": 1234821,
+    "original_title": "Jurassic World Rebirth",
+    "title": "Jurassic World: El renacer",
+    "votes": 3884,
+    "year": 2025
+   }
+  ],
+  "1366": [
+   {
+    "id": 1366,
+    "original_title": "Rocky",
+    "title": "Rocky",
+    "votes": 9022,
+    "year": 1976
+   },
+   {
+    "id": 1367,
+    "original_title": "Rocky II",
+    "title": "Rocky II",
+    "votes": 5026,
+    "year": 1979
+   },
+   {
+    "id": 1371,
+    "original_title": "Rocky III",
+    "title": "Rocky III",
+    "votes": 4699,
+    "year": 1982
+   },
+   {
+    "id": 1374,
+    "original_title": "Rocky IV",
+    "title": "Rocky IV",
+    "votes": 5027,
+    "year": 1985
+   },
+   {
+    "id": 1375,
+    "original_title": "Rocky V",
+    "title": "Rocky V",
+    "votes": 3611,
+    "year": 1990
+   },
+   {
+    "id": 1246,
+    "original_title": "Rocky Balboa",
+    "title": "Rocky Balboa",
+    "votes": 3969,
+    "year": 2006
+   }
+  ],
+  "140607": [
+   {
+    "id": 11,
+    "original_title": "Star Wars",
+    "title": "La guerra de las galaxias",
+    "votes": 23078,
+    "year": 1977
+   },
+   {
+    "id": 1891,
+    "original_title": "The Empire Strikes Back",
+    "title": "El imperio contraataca",
+    "votes": 19040,
+    "year": 1980
+   },
+   {
+    "id": 1892,
+    "original_title": "Return of the Jedi",
+    "title": "El retorno del Jedi",
+    "votes": 17482,
+    "year": 1983
+   },
+   {
+    "id": 1893,
+    "original_title": "Star Wars: Episode I - The Phantom Menace",
+    "title": "La guerra de las galaxias. Episodio I: La amenaza fantasma",
+    "votes": 16364,
+    "year": 1999
+   },
+   {
+    "id": 1894,
+    "original_title": "Star Wars: Episode II - Attack of the Clones",
+    "title": "La guerra de las galaxias. Episodio II: El ataque de los clones",
+    "votes": 14832,
+    "year": 2002
+   },
+   {
+    "id": 1895,
+    "original_title": "Star Wars: Episode III - Revenge of the Sith",
+    "title": "La guerra de las galaxias. Episodio III: La venganza de los Sith",
+    "votes": 15448,
+    "year": 2005
+   },
+   {
+    "id": 140607,
+    "original_title": "Star Wars: The Force Awakens",
+    "title": "Star Wars: El despertar de la fuerza",
+    "votes": 21069,
+    "year": 2015
+   },
+   {
+    "id": 181808,
+    "original_title": "Star Wars: The Last Jedi",
+    "title": "Star Wars: Los últimos Jedi",
+    "votes": 16820,
+    "year": 2017
+   },
+   {
+    "id": 181812,
+    "original_title": "Star Wars: The Rise of Skywalker",
+    "title": "Star Wars: El ascenso de Skywalker",
+    "votes": 11275,
+    "year": 2019
+   }
+  ],
+  "155": [
+   {
+    "id": 272,
+    "original_title": "Batman Begins",
+    "title": "Batman Begins",
+    "votes": 23421,
+    "year": 2005
+   },
+   {
+    "id": 155,
+    "original_title": "The Dark Knight",
+    "title": "El caballero oscuro",
+    "votes": 37087,
+    "year": 2008
+   },
+   {
+    "id": 49026,
+    "original_title": "The Dark Knight Rises",
+    "title": "El caballero oscuro: La leyenda renace",
+    "votes": 25201,
+    "year": 2012
+   }
+  ],
+  "168259": [
+   {
+    "id": 9799,
+    "original_title": "The Fast and the Furious",
+    "title": "A todo gas",
+    "votes": 11285,
+    "year": 2001
+   },
+   {
+    "id": 584,
+    "original_title": "2 Fast 2 Furious",
+    "title": "2 Fast 2 Furious: A todo gas 2",
+    "votes": 8480,
+    "year": 2003
+   },
+   {
+    "id": 9615,
+    "original_title": "The Fast and the Furious: Tokyo Drift",
+    "title": "A todo gas: Tokyo Race",
+    "votes": 7974,
+    "year": 2006
+   },
+   {
+    "id": 13804,
+    "original_title": "Fast & Furious",
+    "title": "Fast & Furious: Aún más rápido",
+    "votes": 8100,
+    "year": 2009
+   },
+   {
+    "id": 51497,
+    "original_title": "Fast Five",
+    "title": "Fast & Furious 5",
+    "votes": 9187,
+    "year": 2011
+   },
+   {
+    "id": 82992,
+    "original_title": "Fast & Furious 6",
+    "title": "Fast & Furious 6",
+    "votes": 11452,
+    "year": 2013
+   },
+   {
+    "id": 168259,
+    "original_title": "Furious 7",
+    "title": "Fast & Furious 7",
+    "votes": 11597,
+    "year": 2015
+   },
+   {
+    "id": 337339,
+    "original_title": "The Fate of the Furious",
+    "title": "Fast & Furious 8",
+    "votes": 11074,
+    "year": 2017
+   },
+   {
+    "id": 384018,
+    "original_title": "Fast & Furious Presents: Hobbs & Shaw",
+    "title": "Fast & Furious: Hobbs & Shaw",
+    "votes": 8007,
+    "year": 2019
+   },
+   {
+    "id": 385128,
+    "original_title": "F9",
+    "title": "Fast & Furious 9",
+    "votes": 7934,
+    "year": 2021
+   },
+   {
+    "id": 385687,
+    "original_title": "Fast X",
+    "title": "Fast & Furious X",
+    "votes": 6600,
+    "year": 2023
+   },
+   {
+    "id": 755679,
+    "original_title": "Fast Forever",
+    "title": "Fast Forever",
+    "votes": 0,
+    "year": 2028
+   }
+  ],
+  "263115": [
+   {
+    "id": 2080,
+    "original_title": "X-Men Origins: Wolverine",
+    "title": "X-Men orígenes: Lobezno",
+    "votes": 11648,
+    "year": 2009
+   },
+   {
+    "id": 76170,
+    "original_title": "The Wolverine",
+    "title": "Lobezno inmortal",
+    "votes": 10664,
+    "year": 2013
+   },
+   {
+    "id": 263115,
+    "original_title": "Logan",
+    "title": "Logan",
+    "votes": 21008,
+    "year": 2017
+   }
+  ],
+  "280": [
+   {
+    "id": 218,
+    "original_title": "The Terminator",
+    "title": "Terminator",
+    "votes": 15339,
+    "year": 1984
+   },
+   {
+    "id": 280,
+    "original_title": "Terminator 2: Judgment Day",
+    "title": "Terminator 2: El juicio final",
+    "votes": 15092,
+    "year": 1991
+   },
+   {
+    "id": 296,
+    "original_title": "Terminator 3: Rise of the Machines",
+    "title": "Terminator 3: La rebelión de las máquinas",
+    "votes": 7589,
+    "year": 2003
+   },
+   {
+    "id": 534,
+    "original_title": "Terminator Salvation",
+    "title": "Terminator Salvation",
+    "votes": 7321,
+    "year": 2009
+   },
+   {
+    "id": 87101,
+    "original_title": "Terminator Genisys",
+    "title": "Terminator Génesis",
+    "votes": 9260,
+    "year": 2015
+   },
+   {
+    "id": 290859,
+    "original_title": "Terminator: Dark Fate",
+    "title": "Terminator: Destino oscuro",
+    "votes": 5941,
+    "year": 2019
+   }
+  ],
+  "324552": [
+   {
+    "id": 245891,
+    "original_title": "John Wick",
+    "title": "John Wick",
+    "votes": 21529,
+    "year": 2014
+   },
+   {
+    "id": 324552,
+    "original_title": "John Wick: Chapter 2",
+    "title": "John Wick: Pacto de sangre",
+    "votes": 14775,
+    "year": 2017
+   },
+   {
+    "id": 458156,
+    "original_title": "John Wick: Chapter 3 - Parabellum",
+    "title": "John Wick: Capítulo 3 - Parabellum",
+    "votes": 12215,
+    "year": 2019
+   },
+   {
+    "id": 603692,
+    "original_title": "John Wick: Chapter 4",
+    "title": "John Wick 4",
+    "votes": 8465,
+    "year": 2023
+   }
+  ],
+  "348": [
+   {
+    "id": 348,
+    "original_title": "Alien",
+    "title": "Alien: El octavo pasajero",
+    "votes": 17042,
+    "year": 1979
+   },
+   {
+    "id": 679,
+    "original_title": "Aliens",
+    "title": "Aliens: El regreso",
+    "votes": 11323,
+    "year": 1986
+   },
+   {
+    "id": 8077,
+    "original_title": "Alien³",
+    "title": "Alien III",
+    "votes": 6675,
+    "year": 1992
+   },
+   {
+    "id": 8078,
+    "original_title": "Alien Resurrection",
+    "title": "Alien: Resurrección",
+    "votes": 5838,
+    "year": 1997
+   }
+  ],
+  "383498": [
+   {
+    "id": 293660,
+    "original_title": "Deadpool",
+    "title": "Deadpool",
+    "votes": 33531,
+    "year": 2016
+   },
+   {
+    "id": 383498,
+    "original_title": "Deadpool 2",
+    "title": "Deadpool 2",
+    "votes": 19850,
+    "year": 2018
+   },
+   {
+    "id": 533535,
+    "original_title": "Deadpool & Wolverine",
+    "title": "Deadpool y Lobezno",
+    "votes": 9718,
+    "year": 2024
+   }
+  ],
+  "562": [
+   {
+    "id": 562,
+    "original_title": "Die Hard",
+    "title": "Jungla de cristal",
+    "votes": 12797,
+    "year": 1988
+   },
+   {
+    "id": 1573,
+    "original_title": "Die Hard 2",
+    "title": "La jungla 2: Alerta roja",
+    "votes": 6669,
+    "year": 1990
+   },
+   {
+    "id": 1572,
+    "original_title": "Die Hard: With a Vengeance",
+    "title": "Jungla de cristal: la venganza",
+    "votes": 6921,
+    "year": 1995
+   },
+   {
+    "id": 1571,
+    "original_title": "Live Free or Die Hard",
+    "title": "La jungla 4.0",
+    "votes": 6586,
+    "year": 2007
+   },
+   {
+    "id": 47964,
+    "original_title": "A Good Day to Die Hard",
+    "title": "La jungla de cristal V. Un buen día para morir",
+    "votes": 6919,
+    "year": 2013
+   }
+  ],
+  "584": [
+   {
+    "id": 9799,
+    "original_title": "The Fast and the Furious",
+    "title": "A todo gas",
+    "votes": 11285,
+    "year": 2001
+   },
+   {
+    "id": 584,
+    "original_title": "2 Fast 2 Furious",
+    "title": "2 Fast 2 Furious: A todo gas 2",
+    "votes": 8480,
+    "year": 2003
+   },
+   {
+    "id": 9615,
+    "original_title": "The Fast and the Furious: Tokyo Drift",
+    "title": "A todo gas: Tokyo Race",
+    "votes": 7974,
+    "year": 2006
+   },
+   {
+    "id": 13804,
+    "original_title": "Fast & Furious",
+    "title": "Fast & Furious: Aún más rápido",
+    "votes": 8100,
+    "year": 2009
+   },
+   {
+    "id": 51497,
+    "original_title": "Fast Five",
+    "title": "Fast & Furious 5",
+    "votes": 9187,
+    "year": 2011
+   },
+   {
+    "id": 82992,
+    "original_title": "Fast & Furious 6",
+    "title": "Fast & Furious 6",
+    "votes": 11452,
+    "year": 2013
+   },
+   {
+    "id": 168259,
+    "original_title": "Furious 7",
+    "title": "Fast & Furious 7",
+    "votes": 11597,
+    "year": 2015
+   },
+   {
+    "id": 337339,
+    "original_title": "The Fate of the Furious",
+    "title": "Fast & Furious 8",
+    "votes": 11074,
+    "year": 2017
+   },
+   {
+    "id": 384018,
+    "original_title": "Fast & Furious Presents: Hobbs & Shaw",
+    "title": "Fast & Furious: Hobbs & Shaw",
+    "votes": 8007,
+    "year": 2019
+   },
+   {
+    "id": 385128,
+    "original_title": "F9",
+    "title": "Fast & Furious 9",
+    "votes": 7934,
+    "year": 2021
+   },
+   {
+    "id": 385687,
+    "original_title": "Fast X",
+    "title": "Fast & Furious X",
+    "votes": 6600,
+    "year": 2023
+   },
+   {
+    "id": 755679,
+    "original_title": "Fast Forever",
+    "title": "Fast Forever",
+    "votes": 0,
+    "year": 2028
+   }
+  ],
+  "673": [
+   {
+    "id": 671,
+    "original_title": "Harry Potter and the Philosopher's Stone",
+    "title": "Harry Potter y la piedra filosofal",
+    "votes": 30499,
+    "year": 2001
+   },
+   {
+    "id": 672,
+    "original_title": "Harry Potter and the Chamber of Secrets",
+    "title": "Harry Potter y la cámara secreta",
+    "votes": 24294,
+    "year": 2002
+   },
+   {
+    "id": 673,
+    "original_title": "Harry Potter and the Prisoner of Azkaban",
+    "title": "Harry Potter y el prisionero de Azkaban",
+    "votes": 23865,
+    "year": 2004
+   },
+   {
+    "id": 674,
+    "original_title": "Harry Potter and the Goblet of Fire",
+    "title": "Harry Potter y el cáliz de fuego",
+    "votes": 22832,
+    "year": 2005
+   },
+   {
+    "id": 675,
+    "original_title": "Harry Potter and the Order of the Phoenix",
+    "title": "Harry Potter y la Orden del Fénix",
+    "votes": 21402,
+    "year": 2007
+   },
+   {
+    "id": 767,
+    "original_title": "Harry Potter and the Half-Blood Prince",
+    "title": "Harry Potter y el misterio del príncipe",
+    "votes": 21360,
+    "year": 2009
+   },
+   {
+    "id": 12444,
+    "original_title": "Harry Potter and the Deathly Hallows: Part 1",
+    "title": "Harry Potter y las Reliquias de la Muerte - Parte 1",
+    "votes": 20967,
+    "year": 2010
+   },
+   {
+    "id": 12445,
+    "original_title": "Harry Potter and the Deathly Hallows: Part 2",
+    "title": "Harry Potter y las Reliquias de la Muerte - Parte 2",
+    "votes": 22632,
+    "year": 2011
+   }
+  ],
+  "767": [
+   {
+    "id": 671,
+    "original_title": "Harry Potter and the Philosopher's Stone",
+    "title": "Harry Potter y la piedra filosofal",
+    "votes": 30499,
+    "year": 2001
+   },
+   {
+    "id": 672,
+    "original_title": "Harry Potter and the Chamber of Secrets",
+    "title": "Harry Potter y la cámara secreta",
+    "votes": 24294,
+    "year": 2002
+   },
+   {
+    "id": 673,
+    "original_title": "Harry Potter and the Prisoner of Azkaban",
+    "title": "Harry Potter y el prisionero de Azkaban",
+    "votes": 23865,
+    "year": 2004
+   },
+   {
+    "id": 674,
+    "original_title": "Harry Potter and the Goblet of Fire",
+    "title": "Harry Potter y el cáliz de fuego",
+    "votes": 22832,
+    "year": 2005
+   },
+   {
+    "id": 675,
+    "original_title": "Harry Potter and the Order of the Phoenix",
+    "title": "Harry Potter y la Orden del Fénix",
+    "votes": 21402,
+    "year": 2007
+   },
+   {
+    "id": 767,
+    "original_title": "Harry Potter and the Half-Blood Prince",
+    "title": "Harry Potter y el misterio del príncipe",
+    "votes": 21360,
+    "year": 2009
+   },
+   {
+    "id": 12444,
+    "original_title": "Harry Potter and the Deathly Hallows: Part 1",
+    "title": "Harry Potter y las Reliquias de la Muerte - Parte 1",
+    "votes": 20967,
+    "year": 2010
+   },
+   {
+    "id": 12445,
+    "original_title": "Harry Potter and the Deathly Hallows: Part 2",
+    "title": "Harry Potter y las Reliquias de la Muerte - Parte 2",
+    "votes": 22632,
+    "year": 2011
+   }
+  ],
+  "8077": [
+   {
+    "id": 348,
+    "original_title": "Alien",
+    "title": "Alien: El octavo pasajero",
+    "votes": 17042,
+    "year": 1979
+   },
+   {
+    "id": 679,
+    "original_title": "Aliens",
+    "title": "Aliens: El regreso",
+    "votes": 11323,
+    "year": 1986
+   },
+   {
+    "id": 8077,
+    "original_title": "Alien³",
+    "title": "Alien III",
+    "votes": 6675,
+    "year": 1992
+   },
+   {
+    "id": 8078,
+    "original_title": "Alien Resurrection",
+    "title": "Alien: Resurrección",
+    "votes": 5838,
+    "year": 1997
+   }
+  ],
+  "8373": [
+   {
+    "id": 1858,
+    "original_title": "Transformers",
+    "title": "Transformers",
+    "votes": 12674,
+    "year": 2007
+   },
+   {
+    "id": 8373,
+    "original_title": "Transformers: Revenge of the Fallen",
+    "title": "Transformers: La venganza de los caídos",
+    "votes": 9500,
+    "year": 2009
+   },
+   {
+    "id": 38356,
+    "original_title": "Transformers: Dark of the Moon",
+    "title": "Transformers: El lado oscuro de la Luna",
+    "votes": 9250,
+    "year": 2011
+   },
+   {
+    "id": 91314,
+    "original_title": "Transformers: Age of Extinction",
+    "title": "Transformers: La era de la extinción",
+    "votes": 9028,
+    "year": 2014
+   },
+   {
+    "id": 335988,
+    "original_title": "Transformers: The Last Knight",
+    "title": "Transformers: El último caballero",
+    "votes": 6953,
+    "year": 2017
+   }
+  ],
+  "942": [
+   {
+    "id": 941,
+    "original_title": "Lethal Weapon",
+    "title": "Arma letal",
+    "votes": 5282,
+    "year": 1987
+   },
+   {
+    "id": 942,
+    "original_title": "Lethal Weapon 2",
+    "title": "Arma letal II",
+    "votes": 3919,
+    "year": 1989
+   },
+   {
+    "id": 943,
+    "original_title": "Lethal Weapon 3",
+    "title": "Arma letal III",
+    "votes": 3409,
+    "year": 1992
+   },
+   {
+    "id": 944,
+    "original_title": "Lethal Weapon 4",
+    "title": "Arma letal IV",
+    "votes": 3112,
+    "year": 1998
+   }
+  ],
+  "9799": [
+   {
+    "id": 9799,
+    "original_title": "The Fast and the Furious",
+    "title": "A todo gas",
+    "votes": 11285,
+    "year": 2001
+   },
+   {
+    "id": 584,
+    "original_title": "2 Fast 2 Furious",
+    "title": "2 Fast 2 Furious: A todo gas 2",
+    "votes": 8480,
+    "year": 2003
+   },
+   {
+    "id": 9615,
+    "original_title": "The Fast and the Furious: Tokyo Drift",
+    "title": "A todo gas: Tokyo Race",
+    "votes": 7974,
+    "year": 2006
+   },
+   {
+    "id": 13804,
+    "original_title": "Fast & Furious",
+    "title": "Fast & Furious: Aún más rápido",
+    "votes": 8100,
+    "year": 2009
+   },
+   {
+    "id": 51497,
+    "original_title": "Fast Five",
+    "title": "Fast & Furious 5",
+    "votes": 9187,
+    "year": 2011
+   },
+   {
+    "id": 82992,
+    "original_title": "Fast & Furious 6",
+    "title": "Fast & Furious 6",
+    "votes": 11452,
+    "year": 2013
+   },
+   {
+    "id": 168259,
+    "original_title": "Furious 7",
+    "title": "Fast & Furious 7",
+    "votes": 11597,
+    "year": 2015
+   },
+   {
+    "id": 337339,
+    "original_title": "The Fate of the Furious",
+    "title": "Fast & Furious 8",
+    "votes": 11074,
+    "year": 2017
+   },
+   {
+    "id": 384018,
+    "original_title": "Fast & Furious Presents: Hobbs & Shaw",
+    "title": "Fast & Furious: Hobbs & Shaw",
+    "votes": 8007,
+    "year": 2019
+   },
+   {
+    "id": 385128,
+    "original_title": "F9",
+    "title": "Fast & Furious 9",
+    "votes": 7934,
+    "year": 2021
+   },
+   {
+    "id": 385687,
+    "original_title": "Fast X",
+    "title": "Fast & Furious X",
+    "votes": 6600,
+    "year": 2023
+   },
+   {
+    "id": 755679,
+    "original_title": "Fast Forever",
+    "title": "Fast Forever",
+    "votes": 0,
+    "year": 2028
+   }
+  ]
+ },
+ "searches": {
+  "88 Minutos": [
+   {
+    "id": 3489,
+    "original_title": "88 Minutes",
+    "title": "88 minutos",
+    "votes": 1231,
+    "year": 2007
+   }
+  ],
+  "A Todo Gas": [
+   {
+    "id": 9615,
+    "original_title": "The Fast and the Furious: Tokyo Drift",
+    "title": "A todo gas: Tokyo Race",
+    "votes": 7974,
+    "year": 2006
+   },
+   {
+    "id": 9799,
+    "original_title": "The Fast and the Furious",
+    "title": "A todo gas",
+    "votes": 11285,
+    "year": 2001
+   },
+   {
+    "id": 1316147,
+    "original_title": "Grand Prix of Europe",
+    "title": "El Gran Premio; A todo Gas!!",
+    "votes": 68,
+    "year": 2025
+   },
+   {
+    "id": 80500,
+    "original_title": "Amor a todo gas",
+    "title": "Amor a todo gas",
+    "votes": 4,
+    "year": 1969
+   },
+   {
+    "id": 284279,
+    "original_title": "Børning",
+    "title": "Børning: A todo gas",
+    "votes": 111,
+    "year": 2014
+   },
+   {
+    "id": 145993,
+    "original_title": "À tout casser",
+    "title": "A todo gas",
+    "votes": 5,
+    "year": 1968
+   },
+   {
+    "id": 584,
+    "original_title": "2 Fast 2 Furious",
+    "title": "2 Fast 2 Furious: A todo gas 2",
+    "votes": 8480,
+    "year": 2003
+   },
+   {
+    "id": 77959,
+    "original_title": "The Turbo Charged Prelude for 2 Fast 2 Furious",
+    "title": "A todo gas: Turbo-Charged Prelude",
+    "votes": 267,
+    "year": 2003
+   },
+   {
+    "id": 755679,
+    "original_title": "Fast Forever",
+    "title": "Fast Forever",
+    "votes": 0,
+    "year": 2028
+   },
+   {
+    "id": 385687,
+    "original_title": "Fast X",
+    "title": "Fast & Furious X",
+    "votes": 6600,
+    "year": 2023
+   }
+  ],
+  "A Todo Gas 2": [
+   {
+    "id": 584,
+    "original_title": "2 Fast 2 Furious",
+    "title": "2 Fast 2 Furious: A todo gas 2",
+    "votes": 8480,
+    "year": 2003
+   },
+   {
+    "id": 755679,
+    "original_title": "Fast Forever",
+    "title": "Fast Forever",
+    "votes": 0,
+    "year": 2028
+   },
+   {
+    "id": 77959,
+    "original_title": "The Turbo Charged Prelude for 2 Fast 2 Furious",
+    "title": "A todo gas: Turbo-Charged Prelude",
+    "votes": 267,
+    "year": 2003
+   }
+  ],
+  "A Todo Gas 3": [
+   {
+    "id": 9615,
+    "original_title": "The Fast and the Furious: Tokyo Drift",
+    "title": "A todo gas: Tokyo Race",
+    "votes": 7974,
+    "year": 2006
+   }
+  ],
+  "A Todo Gas 5": [
+   {
+    "id": 51497,
+    "original_title": "Fast Five",
+    "title": "Fast & Furious 5",
+    "votes": 9187,
+    "year": 2011
+   }
+  ],
+  "Ahora me ves": [
+   {
+    "id": 75656,
+    "original_title": "Now You See Me",
+    "title": "Ahora me ves…",
+    "votes": 17277,
+    "year": 2013
+   },
+   {
+    "id": 425274,
+    "original_title": "Now You See Me: Now You Don't",
+    "title": "Ahora me ves 3",
+    "votes": 1923,
+    "year": 2025
+   },
+   {
+    "id": 291805,
+    "original_title": "Now You See Me 2",
+    "title": "Ahora me ves 2",
+    "votes": 11916,
+    "year": 2016
+   },
+   {
+    "id": 1450771,
+    "original_title": "Ahora Me Ves... De Nicolás de Jesús",
+    "title": "Y Ahora Me Ves...",
+    "votes": 0,
+    "year": 2027
+   },
+   {
+    "id": 1457735,
+    "original_title": "Now You See Me 4",
+    "title": "Ahora me ves 4",
+    "votes": 0,
+    "year": 0
+   }
+  ],
+  "Alien": [
+   {
+    "id": 348,
+    "original_title": "Alien",
+    "title": "Alien: El octavo pasajero",
+    "votes": 17042,
+    "year": 1979
+   },
+   {
+    "id": 945961,
+    "original_title": "Alien: Romulus",
+    "title": "Alien. Romulus",
+    "votes": 5005,
+    "year": 2024
+   },
+   {
+    "id": 8077,
+    "original_title": "Alien³",
+    "title": "Alien III",
+    "votes": 6675,
+    "year": 1992
+   },
+   {
+    "id": 8078,
+    "original_title": "Alien Resurrection",
+    "title": "Alien: Resurrección",
+    "votes": 5838,
+    "year": 1997
+   },
+   {
+    "id": 126889,
+    "original_title": "Alien: Covenant",
+    "title": "Alien: Covenant",
+    "votes": 9773,
+    "year": 2017
+   },
+   {
+    "id": 395,
+    "original_title": "AVP: Alien vs. Predator",
+    "title": "Alien contra predator",
+    "votes": 5206,
+    "year": 2004
+   },
+   {
+    "id": 440,
+    "original_title": "Aliens vs Predator: Requiem",
+    "title": "Alien contra predator II",
+    "votes": 3483,
+    "year": 2007
+   },
+   {
+    "id": 258193,
+    "original_title": "Alien Abduction",
+    "title": "Abducción Alienígena",
+    "votes": 419,
+    "year": 2014
+   },
+   {
+    "id": 10128,
+    "original_title": "Alien Nation",
+    "title": "Alien Nación",
+    "votes": 353,
+    "year": 1988
+   },
+   {
+    "id": 9773,
+    "original_title": "Alien Autopsy",
+    "title": "Autopsia de un alien",
+    "votes": 144,
+    "year": 2006
+   }
+  ],
+  "Alien 2": [
+   {
+    "id": 42872,
+    "original_title": "Alien 2 - Sulla terra",
+    "title": "Alien-2: Sobre la Tierra",
+    "votes": 79,
+    "year": 1980
+   },
+   {
+    "id": 18443,
+    "original_title": "Decoys 2: Alien Seduction",
+    "title": "Decoys 2",
+    "votes": 79,
+    "year": 2007
+   },
+   {
+    "id": 912263,
+    "original_title": "My Alien Girlfriend 2",
+    "title": "My Alien Girlfriend 2",
+    "votes": 0,
+    "year": 0
+   },
+   {
+    "id": 1438082,
+    "original_title": "Alien Story 2",
+    "title": "Alien Story 2",
+    "votes": 1,
+    "year": 2025
+   },
+   {
+    "id": 1199578,
+    "original_title": "Alien Atom 2",
+    "title": "Alien Atom 2",
+    "votes": 0,
+    "year": 2007
+   },
+   {
+    "id": 1338965,
+    "original_title": "Alien Infestation: Part 2",
+    "title": "Alien Infestation: Part 2",
+    "votes": 2,
+    "year": 2018
+   },
+   {
+    "id": 85865,
+    "original_title": "Alien Factor 2: The Alien Rampage",
+    "title": "Alien Factor 2: The Alien Rampage",
+    "votes": 10,
+    "year": 2001
+   },
+   {
+    "id": 1400701,
+    "original_title": "The Alien Hand 2",
+    "title": "The Alien Hand 2",
+    "votes": 1,
+    "year": 2024
+   },
+   {
+    "id": 496894,
+    "original_title": "Alien Contact: NASA Exposed 2",
+    "title": "Alien Contact: NASA Exposed 2",
+    "votes": 3,
+    "year": 2017
+   },
+   {
+    "id": 987275,
+    "original_title": "Ultimate Kill 2: Alien",
+    "title": "Ultimate Kill 2: Alien",
+    "votes": 0,
+    "year": 2014
+   }
+  ],
+  "Alien 3": [
+   {
+    "id": 1419169,
+    "original_title": "The Alien Hand 3",
+    "title": "The Alien Hand 3",
+    "votes": 0,
+    "year": 0
+   },
+   {
+    "id": 1137173,
+    "original_title": "Alien Danger 3! With Raven Van Slender",
+    "title": "Alien Danger 3! With Raven Van Slender",
+    "votes": 0,
+    "year": 0
+   },
+   {
+    "id": 1613464,
+    "original_title": "Les 3 Patamod - S.O.S. Alien",
+    "title": "Les 3 Patamod - S.O.S. Alien",
+    "votes": 0,
+    "year": 2015
+   },
+   {
+    "id": 725862,
+    "original_title": "ETs Among Us 3: Secret Space Program, Alien Psychics & Crop Circle Clues",
+    "title": "ETs Among Us 3: Secret Space Program, Alien Psychics & Crop Circle Clues",
+    "votes": 2,
+    "year": 2018
+   },
+   {
+    "id": 354091,
+    "original_title": "Alien Babes",
+    "title": "Alien Babes",
+    "votes": 1,
+    "year": 2009
+   },
+   {
+    "id": 70849,
+    "original_title": "Wreckage and Rage: Making 'Alien³'",
+    "title": "Destrucción y Rabia: Así se hizo 'Alien³'",
+    "votes": 23,
+    "year": 2003
+   },
+   {
+    "id": 58784,
+    "original_title": "Aliens Gone Wild",
+    "title": "Aliens Gone Wild",
+    "votes": 13,
+    "year": 2008
+   },
+   {
+    "id": 70981,
+    "original_title": "Prometheus",
+    "title": "Prometheus",
+    "votes": 13757,
+    "year": 2012
+   },
+   {
+    "id": 77348,
+    "original_title": "Alien Nation: Body and Soul",
+    "title": "Alien Nación: En cuerpo y alma",
+    "votes": 22,
+    "year": 1995
+   },
+   {
+    "id": 8077,
+    "original_title": "Alien³",
+    "title": "Alien III",
+    "votes": 6675,
+    "year": 1992
+   }
+  ],
+  "Alien vs Predator": [
+   {
+    "id": 395,
+    "original_title": "AVP: Alien vs. Predator",
+    "title": "Alien contra predator",
+    "votes": 5206,
+    "year": 2004
+   },
+   {
+    "id": 960947,
+    "original_title": "Alien vs Predator",
+    "title": "Alien vs Predator",
+    "votes": 2,
+    "year": 2022
+   },
+   {
+    "id": 548257,
+    "original_title": "Alien Predator",
+    "title": "Alien Predator",
+    "votes": 46,
+    "year": 2018
+   },
+   {
+    "id": 180109,
+    "original_title": "Alien Showdown: The Day the Old West Stood Still",
+    "title": "Alien Showdown: The Day the Old West Stood Still",
+    "votes": 16,
+    "year": 2013
+   },
+   {
+    "id": 467839,
+    "original_title": "Aliens vs. Titanic",
+    "title": "Aliens vs. Titanic",
+    "votes": 28,
+    "year": 2017
+   },
+   {
+    "id": 440,
+    "original_title": "Aliens vs Predator: Requiem",
+    "title": "Alien contra predator II",
+    "votes": 3483,
+    "year": 2007
+   }
+  ],
+  "Arma letal": [
+   {
+    "id": 941,
+    "original_title": "Lethal Weapon",
+    "title": "Arma letal",
+    "votes": 5282,
+    "year": 1987
+   },
+   {
+    "id": 942,
+    "original_title": "Lethal Weapon 2",
+    "title": "Arma letal II",
+    "votes": 3919,
+    "year": 1989
+   },
+   {
+    "id": 944,
+    "original_title": "Lethal Weapon 4",
+    "title": "Arma letal IV",
+    "votes": 3112,
+    "year": 1998
+   },
+   {
+    "id": 943,
+    "original_title": "Lethal Weapon 3",
+    "title": "Arma letal III",
+    "votes": 3409,
+    "year": 1992
+   },
+   {
+    "id": 134385,
+    "original_title": "Arma letal 5",
+    "title": "Arma letal 5",
+    "votes": 4,
+    "year": 1999
+   },
+   {
+    "id": 479753,
+    "original_title": "Shockwave: Countdown to Disaster",
+    "title": "Shockwave: arma letal",
+    "votes": 110,
+    "year": 2017
+   },
+   {
+    "id": 1528550,
+    "original_title": "Lethal Weapon 5",
+    "title": "Arma Letal 5",
+    "votes": 0,
+    "year": 0
+   },
+   {
+    "id": 425505,
+    "original_title": "Kin",
+    "title": "Kin",
+    "votes": 908,
+    "year": 2018
+   },
+   {
+    "id": 10855,
+    "original_title": "赤裸特工",
+    "title": "Arma desnuda",
+    "votes": 416,
+    "year": 2002
+   }
+  ],
+  "Arma letal 1": [
+   {
+    "id": 941,
+    "original_title": "Lethal Weapon",
+    "title": "Arma letal",
+    "votes": 5282,
+    "year": 1987
+   }
+  ],
+  "Arma letal 2": [
+   {
+    "id": 942,
+    "original_title": "Lethal Weapon 2",
+    "title": "Arma letal II",
+    "votes": 3919,
+    "year": 1989
+   }
+  ],
+  "Avatar": [
+   {
+    "id": 19995,
+    "original_title": "Avatar",
+    "title": "Avatar",
+    "votes": 34914,
+    "year": 2009
+   },
+   {
+    "id": 83533,
+    "original_title": "Avatar: Fire and Ash",
+    "title": "Avatar: Fuego y ceniza",
+    "votes": 4594,
+    "year": 2025
+   },
+   {
+    "id": 980431,
+    "original_title": "Avatar Aang: The Last Airbender",
+    "title": "Avatar Aang: El último maestro del aire",
+    "votes": 1379,
+    "year": 2026
+   },
+   {
+    "id": 76600,
+    "original_title": "Avatar: The Way of Water",
+    "title": "Avatar: El sentido del agua",
+    "votes": 14821,
+    "year": 2022
+   },
+   {
+    "id": 216527,
+    "original_title": "Avatar 4",
+    "title": "Avatar 4",
+    "votes": 0,
+    "year": 2029
+   },
+   {
+    "id": 183392,
+    "original_title": "Capturing Avatar",
+    "title": "Capturing Avatar",
+    "votes": 113,
+    "year": 2010
+   },
+   {
+    "id": 393209,
+    "original_title": "Avatar 5",
+    "title": "Avatar 5",
+    "votes": 0,
+    "year": 2031
+   },
+   {
+    "id": 1096978,
+    "original_title": "Avatar",
+    "title": "Avatar",
+    "votes": 60,
+    "year": 2006
+   },
+   {
+    "id": 1544429,
+    "original_title": "Avatar",
+    "title": "Avatar",
+    "votes": 0,
+    "year": 1964
+   },
+   {
+    "id": 1609324,
+    "original_title": "Avatar",
+    "title": "Avatar",
+    "votes": 0,
+    "year": 1982
+   }
+  ],
+  "Avatar - El sentido del agua": [
+   {
+    "id": 76600,
+    "original_title": "Avatar: The Way of Water",
+    "title": "Avatar: El sentido del agua",
+    "votes": 14821,
+    "year": 2022
+   }
+  ],
+  "Aves de presa": [
+   {
+    "id": 495764,
+    "original_title": "Birds of Prey (and the Fantabulous Emancipation of One Harley Quinn)",
+    "title": "Aves de Presa y la fantabulosa emancipación de Harley Quinn",
+    "votes": 11075,
+    "year": 2020
+   }
+  ],
+  "Black Haw derribado": [],
+  "Blade Runner": [
+   {
+    "id": 78,
+    "original_title": "Blade Runner",
+    "title": "Blade Runner",
+    "votes": 15560,
+    "year": 1982
+   },
+   {
+    "id": 335984,
+    "original_title": "Blade Runner 2049",
+    "title": "Blade Runner 2049",
+    "votes": 15912,
+    "year": 2017
+   },
+   {
+    "id": 57656,
+    "original_title": "Dangerous Days: Making Blade Runner",
+    "title": "Días peligrosos: Creando Blade Runner",
+    "votes": 74,
+    "year": 2007
+   },
+   {
+    "id": 969452,
+    "original_title": "Blade Runner: Mundos Replicantes",
+    "title": "Blade Runner: Mundos Replicantes",
+    "votes": 2,
+    "year": 2018
+   },
+   {
+    "id": 473072,
+    "original_title": "2036: Nexus Dawn",
+    "title": "Blade Runner: 2036 Nexus Dawn",
+    "votes": 430,
+    "year": 2017
+   },
+   {
+    "id": 1527118,
+    "original_title": "Erotic Blade Runner",
+    "title": "Erotic Blade Runner",
+    "votes": 0,
+    "year": 2002
+   },
+   {
+    "id": 833898,
+    "original_title": "Das Phänomen Blade Runner",
+    "title": "Das Phänomen Blade Runner",
+    "votes": 10,
+    "year": 2021
+   },
+   {
+    "id": 85214,
+    "original_title": "On the Edge of 'Blade Runner'",
+    "title": "On the Edge of 'Blade Runner'",
+    "votes": 12,
+    "year": 2000
+   },
+   {
+    "id": 481811,
+    "original_title": "Oscar Pistorius: Blade Runner Killer",
+    "title": "Historia de un crimen",
+    "votes": 18,
+    "year": 2017
+   },
+   {
+    "id": 475946,
+    "original_title": "ブレードランナー ブラックアウト 2022",
+    "title": "Blade Runner: Apagón 2022",
+    "votes": 464,
+    "year": 2017
+   }
+  ],
+  "Blade Runner 2049": [
+   {
+    "id": 335984,
+    "original_title": "Blade Runner 2049",
+    "title": "Blade Runner 2049",
+    "votes": 15913,
+    "year": 2017
+   }
+  ],
+  "Deadpool": [
+   {
+    "id": 533535,
+    "original_title": "Deadpool & Wolverine",
+    "title": "Deadpool y Lobezno",
+    "votes": 9719,
+    "year": 2024
+   },
+   {
+    "id": 293660,
+    "original_title": "Deadpool",
+    "title": "Deadpool",
+    "votes": 33532,
+    "year": 2016
+   },
+   {
+    "id": 383498,
+    "original_title": "Deadpool 2",
+    "title": "Deadpool 2",
+    "votes": 19852,
+    "year": 2018
+   },
+   {
+    "id": 567604,
+    "original_title": "Once Upon a Deadpool",
+    "title": "Érase una vez Deadpool",
+    "votes": 882,
+    "year": 2018
+   },
+   {
+    "id": 558144,
+    "original_title": "Deadpool: No Good Deed",
+    "title": "Deadpool: No Good Deed",
+    "votes": 563,
+    "year": 2017
+   },
+   {
+    "id": 1386628,
+    "original_title": "Marvel Studios Assembled: The Making of Deadpool & Wolverine",
+    "title": "Reunidos: Así se hizo Deadpool y Lobezno",
+    "votes": 25,
+    "year": 2024
+   },
+   {
+    "id": 1423326,
+    "original_title": "Deadpool: From Comics to Screen... to Screen",
+    "title": "Deadpool: From Comics to Screen... to Screen",
+    "votes": 0,
+    "year": 0
+   },
+   {
+    "id": 1474568,
+    "original_title": "Untitled Deadpool/X-Men Teamup Film",
+    "title": "Untitled Deadpool/X-Men Teamup Film",
+    "votes": 0,
+    "year": 0
+   },
+   {
+    "id": 1693053,
+    "original_title": "Deadpool The Musical 1/2",
+    "title": "Deadpool The Musical 1/2",
+    "votes": 1,
+    "year": 0
+   }
+  ],
+  "Deadpool 2": [
+   {
+    "id": 383498,
+    "original_title": "Deadpool 2",
+    "title": "Deadpool 2",
+    "votes": 19851,
+    "year": 2018
+   },
+   {
+    "id": 1693053,
+    "original_title": "Deadpool The Musical 1/2",
+    "title": "Deadpool The Musical 1/2",
+    "votes": 1,
+    "year": 0
+   },
+   {
+    "id": 567604,
+    "original_title": "Once Upon a Deadpool",
+    "title": "Érase una vez Deadpool",
+    "votes": 882,
+    "year": 2018
+   }
+  ],
+  "Doctor Strange": [
+   {
+    "id": 284052,
+    "original_title": "Doctor Strange",
+    "title": "Doctor Strange",
+    "votes": 24124,
+    "year": 2016
+   },
+   {
+    "id": 453395,
+    "original_title": "Doctor Strange in the Multiverse of Madness",
+    "title": "Doctor Strange en el multiverso de la locura",
+    "votes": 11039,
+    "year": 2022
+   },
+   {
+    "id": 14830,
+    "original_title": "Doctor Strange",
+    "title": "Doctor Extraño: El hechicero supremo",
+    "votes": 359,
+    "year": 2007
+   },
+   {
+    "id": 448383,
+    "original_title": "Doctor Strange: The Score-Cerer Supreme",
+    "title": "Doctor Strange: The Score-Cerer Supreme",
+    "votes": 20,
+    "year": 2017
+   },
+   {
+    "id": 1772354,
+    "original_title": "Untitled Doctor Strange Movie",
+    "title": "Untitled Doctor Strange Movie",
+    "votes": 0,
+    "year": 0
+   },
+   {
+    "id": 84230,
+    "original_title": "The Strange Case of Doctor Rx",
+    "title": "The Strange Case of Doctor Rx",
+    "votes": 21,
+    "year": 1942
+   },
+   {
+    "id": 980017,
+    "original_title": "Marvel Studios Assembled: The Making of Doctor Strange in the Multiverse of Madness",
+    "title": "Reunidos: Así se hizo Doctor Strange en el multiverso de la locura",
+    "votes": 58,
+    "year": 2022
+   },
+   {
+    "id": 448387,
+    "original_title": "Doctor Strange: The Fabric of Reality",
+    "title": "Doctor Strange: The Fabric of Reality",
+    "votes": 8,
+    "year": 2017
+   },
+   {
+    "id": 1129849,
+    "original_title": "The Strange Experiment of Doctor Purefoy",
+    "title": "The Strange Experiment of Doctor Purefoy",
+    "votes": 0,
+    "year": 2009
+   },
+   {
+    "id": 1017831,
+    "original_title": "Marvel & DC's War on God: Doctor Strange, Aleister Crowley and the Multiverse of Satanism",
+    "title": "Marvel & DC's War on God: Doctor Strange, Aleister Crowley and the Multiverse of Satanism",
+    "votes": 2,
+    "year": 2022
+   }
+  ],
+  "Dr Strange": [
+   {
+    "id": 50468,
+    "original_title": "Dr. Strange",
+    "title": "Dr. Strange",
+    "votes": 124,
+    "year": 1978
+   },
+   {
+    "id": 1070729,
+    "original_title": "Dr. Strange Glove",
+    "title": "Dr. Strange Glove",
+    "votes": 1,
+    "year": 1990
+   },
+   {
+    "id": 365475,
+    "original_title": "The Strange Case of Dr. Manning",
+    "title": "The Strange Case of Dr. Manning",
+    "votes": 3,
+    "year": 1957
+   },
+   {
+    "id": 601233,
+    "original_title": "The Strange Case of Dr. Meade",
+    "title": "The Strange Case of Dr. Meade",
+    "votes": 2,
+    "year": 1938
+   },
+   {
+    "id": 153165,
+    "original_title": "Dr. Kildare's Strange Case",
+    "title": "Dr. Kildare's Strange Case",
+    "votes": 16,
+    "year": 1940
+   },
+   {
+    "id": 318100,
+    "original_title": "The Strange Eyes of Dr. Myes",
+    "title": "The Strange Eyes of Dr. Myes",
+    "votes": 1,
+    "year": 2015
+   },
+   {
+    "id": 28518,
+    "original_title": "The Strange Case of Dr. Jekyll and Mr. Hyde",
+    "title": "The Strange Case of Dr. Jekyll and Mr. Hyde",
+    "votes": 9,
+    "year": 2006
+   },
+   {
+    "id": 1149276,
+    "original_title": "The Strange Case of Dr. Jekyll & Mr. Hyde",
+    "title": "The Strange Case of Dr. Jekyll & Mr. Hyde",
+    "votes": 2,
+    "year": 2022
+   },
+   {
+    "id": 1138687,
+    "original_title": "The Strange Case of Dr. Jekyll and Mr. Hyde",
+    "title": "The Strange Case of Dr. Jekyll and Mr. Hyde",
+    "votes": 3,
+    "year": 1989
+   },
+   {
+    "id": 3024,
+    "original_title": "The Strange Case of Dr. Jekyll and Mr. Hyde",
+    "title": "La terrible historia del Dr. Jekyll y Mr. Hyde",
+    "votes": 18,
+    "year": 1968
+   }
+  ],
+  "Día de entrenamiento": [
+   {
+    "id": 2034,
+    "original_title": "Training Day",
+    "title": "Training Day (Día de entrenamiento)",
+    "votes": 6953,
+    "year": 2001
+   }
+  ],
+  "El Señor de los Anillos": [
+   {
+    "id": 122,
+    "original_title": "The Lord of the Rings: The Return of the King",
+    "title": "El señor de los anillos: El retorno del rey",
+    "votes": 27673,
+    "year": 2003
+   },
+   {
+    "id": 120,
+    "original_title": "The Lord of the Rings: The Fellowship of the Ring",
+    "title": "El señor de los anillos: La comunidad del anillo",
+    "votes": 28685,
+    "year": 2001
+   },
+   {
+    "id": 121,
+    "original_title": "The Lord of the Rings: The Two Towers",
+    "title": "El señor de los anillos: Las dos torres",
+    "votes": 24836,
+    "year": 2002
+   },
+   {
+    "id": 839033,
+    "original_title": "The Lord of the Rings: The War of the Rohirrim",
+    "title": "El señor de los anillos: La guerra de los Rohirrim",
+    "votes": 973,
+    "year": 2024
+   },
+   {
+    "id": 123,
+    "original_title": "The Lord of the Rings",
+    "title": "El Señor de los Anillos",
+    "votes": 1103,
+    "year": 1978
+   },
+   {
+    "id": 1542461,
+    "original_title": "El Señor de los Anillos",
+    "title": "El Señor de los Anillos",
+    "votes": 1,
+    "year": 0
+   },
+   {
+    "id": 1090869,
+    "original_title": "The Lord of the Rings: The Hunt for Gollum",
+    "title": "El Señor de los Anillos: La caza de Gollum",
+    "votes": 0,
+    "year": 2027
+   },
+   {
+    "id": 1362,
+    "original_title": "The Hobbit",
+    "title": "El Hobbit",
+    "votes": 384,
+    "year": 1977
+   }
+  ],
+  "El Señor de los Anillos - 3 - El retorno del Rey": [
+   {
+    "id": 122,
+    "original_title": "The Lord of the Rings: The Return of the King",
+    "title": "El señor de los anillos: El retorno del rey",
+    "votes": 27674,
+    "year": 2003
+   }
+  ],
+  "El Señor de los Anillos El retorno del Rey": [
+   {
+    "id": 122,
+    "original_title": "The Lord of the Rings: The Return of the King",
+    "title": "El señor de los anillos: El retorno del rey",
+    "votes": 27674,
+    "year": 2003
+   }
+  ],
+  "El caballero oscuro": [
+   {
+    "id": 155,
+    "original_title": "The Dark Knight",
+    "title": "El caballero oscuro",
+    "votes": 37088,
+    "year": 2008
+   },
+   {
+    "id": 49026,
+    "original_title": "The Dark Knight Rises",
+    "title": "El caballero oscuro: La leyenda renace",
+    "votes": 25202,
+    "year": 2012
+   },
+   {
+    "id": 123025,
+    "original_title": "Batman: The Dark Knight Returns, Part 1",
+    "title": "Batman: El regreso del Caballero Oscuro, Parte 1",
+    "votes": 1762,
+    "year": 2012
+   },
+   {
+    "id": 142061,
+    "original_title": "Batman: The Dark Knight Returns, Part 2",
+    "title": "Batman: El regreso del Caballero Oscuro, Parte 2",
+    "votes": 1649,
+    "year": 2013
+   },
+   {
+    "id": 472027,
+    "original_title": "Batman: The Dark Knight Returns",
+    "title": "Batman: El Regreso del Caballero Oscuro (Edición Deluxe)",
+    "votes": 172,
+    "year": 2013
+   },
+   {
+    "id": 1560520,
+    "original_title": "Batman: Knightfall Part 1: Knightfall",
+    "title": "Batman: Knightfall Part 1: Knightfall",
+    "votes": 482,
+    "year": 2026
+   },
+   {
+    "id": 272,
+    "original_title": "Batman Begins",
+    "title": "Batman Begins",
+    "votes": 23422,
+    "year": 2005
+   }
+  ],
+  "El caballero oscuro 2": [
+   {
+    "id": 142061,
+    "original_title": "Batman: The Dark Knight Returns, Part 2",
+    "title": "Batman: El regreso del Caballero Oscuro, Parte 2",
+    "votes": 1649,
+    "year": 2013
+   },
+   {
+    "id": 155,
+    "original_title": "The Dark Knight",
+    "title": "El caballero oscuro",
+    "votes": 37088,
+    "year": 2008
+   },
+   {
+    "id": 472027,
+    "original_title": "Batman: The Dark Knight Returns",
+    "title": "Batman: El Regreso del Caballero Oscuro (Edición Deluxe)",
+    "votes": 172,
+    "year": 2013
+   }
+  ],
+  "El caso Einfield": [],
+  "El perfume": [
+   {
+    "id": 1427,
+    "original_title": "Perfume: The Story of a Murderer",
+    "title": "El perfume: Historia de un asesino",
+    "votes": 5228,
+    "year": 2006
+   },
+   {
+    "id": 64724,
+    "original_title": "Le Parfum d'Yvonne",
+    "title": "El perfume de Yvonne",
+    "votes": 29,
+    "year": 1994
+   },
+   {
+    "id": 299113,
+    "original_title": "Le parfum d'Emmanuelle",
+    "title": "El perfume de Emmanuelle",
+    "votes": 17,
+    "year": 1993
+   },
+   {
+    "id": 469274,
+    "original_title": "Nicky Larson et le parfum de Cupidon",
+    "title": "City Hunter y el perfume de Cupido",
+    "votes": 857,
+    "year": 2019
+   },
+   {
+    "id": 698780,
+    "original_title": "Le parfum d'Irak",
+    "title": "El perfume de Irak",
+    "votes": 6,
+    "year": 2024
+   },
+   {
+    "id": 85126,
+    "original_title": "Hickey & Boggs",
+    "title": "El rastro de un suave perfume",
+    "votes": 42,
+    "year": 1972
+   },
+   {
+    "id": 769970,
+    "original_title": "Afrodita, el jardín de los perfumes",
+    "title": "Afrodita, el jardín de los perfumes",
+    "votes": 1,
+    "year": 1998
+   },
+   {
+    "id": 65317,
+    "original_title": "Il profumo della signora in nero",
+    "title": "Il profumo della signora in nero",
+    "votes": 109,
+    "year": 1974
+   },
+   {
+    "id": 361368,
+    "original_title": "乙女シリーズその一　福寿草",
+    "title": "乙女シリーズその一　福寿草",
+    "votes": 1,
+    "year": 1935
+   },
+   {
+    "id": 261111,
+    "original_title": "Tales of The Kama Sutra: The Perfumed Garden",
+    "title": "Cuentos de Kama Sutra: en el jardín perfumado",
+    "votes": 12,
+    "year": 2000
+   }
+  ],
+  "El perfume - Historia de un asesino": [
+   {
+    "id": 1427,
+    "original_title": "Perfume: The Story of a Murderer",
+    "title": "El perfume: Historia de un asesino",
+    "votes": 5228,
+    "year": 2006
+   }
+  ],
+  "El retorno del Rey": [
+   {
+    "id": 122,
+    "original_title": "The Lord of the Rings: The Return of the King",
+    "title": "El señor de los anillos: El retorno del rey",
+    "votes": 27673,
+    "year": 2003
+   },
+   {
+    "id": 1361,
+    "original_title": "The Return of the King",
+    "title": "El retorno del rey",
+    "votes": 229,
+    "year": 1980
+   },
+   {
+    "id": 774376,
+    "original_title": "Secrets of Middle-Earth: Inside Tolkien's The Return of the King",
+    "title": "Secretos de la Tierra Media: Inside Tolkien's El Retorno del Rey",
+    "votes": 0,
+    "year": 2003
+   },
+   {
+    "id": 630434,
+    "original_title": "A Filmmaker's Journey: Making 'The Return of the King'",
+    "title": "A Filmmaker's Journey: Making 'The Return of the King'",
+    "votes": 2,
+    "year": 2004
+   },
+   {
+    "id": 14208,
+    "original_title": "The Librarian: Return to King Solomon's Mines",
+    "title": "El bibliotecario: El mapa del rey Salomón",
+    "votes": 654,
+    "year": 2006
+   },
+   {
+    "id": 1372795,
+    "original_title": "Return of the King: The Fall and Rise of Elvis Presley",
+    "title": "El regreso del Rey: Declive y resurgimiento de Elvis Presley",
+    "votes": 68,
+    "year": 2024
+   }
+  ],
+  "El sentido del agua": [
+   {
+    "id": 76600,
+    "original_title": "Avatar: The Way of Water",
+    "title": "Avatar: El sentido del agua",
+    "votes": 14821,
+    "year": 2022
+   }
+  ],
+  "El silencio de los corderos": [
+   {
+    "id": 274,
+    "original_title": "The Silence of the Lambs",
+    "title": "El silencio de los corderos",
+    "votes": 18743,
+    "year": 1991
+   },
+   {
+    "id": 9740,
+    "original_title": "Hannibal",
+    "title": "Hannibal",
+    "votes": 5401,
+    "year": 2001
+   },
+   {
+    "id": 9533,
+    "original_title": "Red Dragon",
+    "title": "El dragón rojo",
+    "votes": 4931,
+    "year": 2002
+   }
+  ],
+  "El silencio de los corderos 2 - Hannibal": [
+   {
+    "id": 9740,
+    "original_title": "Hannibal",
+    "title": "Hannibal",
+    "votes": 5401,
+    "year": 2001
+   }
+  ],
+  "El silencio de los corderos Hannibal": [
+   {
+    "id": 9740,
+    "original_title": "Hannibal",
+    "title": "Hannibal",
+    "votes": 5401,
+    "year": 2001
+   },
+   {
+    "id": 9533,
+    "original_title": "Red Dragon",
+    "title": "El dragón rojo",
+    "votes": 4931,
+    "year": 2002
+   }
+  ],
+  "Expediente Warren": [
+   {
+    "id": 138843,
+    "original_title": "The Conjuring",
+    "title": "Expediente Warren",
+    "votes": 13235,
+    "year": 2013
+   },
+   {
+    "id": 259693,
+    "original_title": "The Conjuring 2",
+    "title": "Expediente Warren: El caso Enfield",
+    "votes": 9517,
+    "year": 2016
+   },
+   {
+    "id": 1038392,
+    "original_title": "The Conjuring: Last Rites",
+    "title": "Expediente Warren: El último rito",
+    "votes": 2218,
+    "year": 2025
+   },
+   {
+    "id": 423108,
+    "original_title": "The Conjuring: The Devil Made Me Do It",
+    "title": "Expediente Warren: Obligado por el demonio",
+    "votes": 6774,
+    "year": 2021
+   },
+   {
+    "id": 1395669,
+    "original_title": "Expediente warren extrema unción",
+    "title": "Expediente warren extrema unción",
+    "votes": 0,
+    "year": 0
+   }
+  ],
+  "Expediente Warren - El caso Einfield": [],
+  "Fast And Furious": [
+   {
+    "id": 9615,
+    "original_title": "The Fast and the Furious: Tokyo Drift",
+    "title": "A todo gas: Tokyo Race",
+    "votes": 7974,
+    "year": 2006
+   },
+   {
+    "id": 169822,
+    "original_title": "Fast and Furious",
+    "title": "Fast and Furious",
+    "votes": 11,
+    "year": 1939
+   },
+   {
+    "id": 20174,
+    "original_title": "The Fast and the Furious",
+    "title": "The Fast and the Furious",
+    "votes": 41,
+    "year": 1954
+   },
+   {
+    "id": 9799,
+    "original_title": "The Fast and the Furious",
+    "title": "A todo gas",
+    "votes": 11285,
+    "year": 2001
+   },
+   {
+    "id": 677671,
+    "original_title": "Fast and Furious",
+    "title": "Fast and Furious",
+    "votes": 2,
+    "year": 1927
+   },
+   {
+    "id": 228474,
+    "original_title": "Fast and Furious",
+    "title": "Fast and Furious",
+    "votes": 6,
+    "year": 1924
+   },
+   {
+    "id": 1187062,
+    "original_title": "Christine: Fast and Furious",
+    "title": "Christine: Fast and Furious",
+    "votes": 5,
+    "year": 2004
+   },
+   {
+    "id": 917814,
+    "original_title": "Top Gear: Fast and Furious",
+    "title": "Top Gear: Fast and Furious",
+    "votes": 0,
+    "year": 1997
+   },
+   {
+    "id": 694789,
+    "original_title": "AIP: Fast and Furious",
+    "title": "AIP: Fast and Furious",
+    "votes": 1,
+    "year": 1985
+   },
+   {
+    "id": 64833,
+    "original_title": "Jackie Chan: Fast, Funny and Furious",
+    "title": "Jackie Chan: Fast, Funny and Furious",
+    "votes": 11,
+    "year": 2002
+   }
+  ],
+  "Fast And Furious 7": [
+   {
+    "id": 168259,
+    "original_title": "Furious 7",
+    "title": "Fast & Furious 7",
+    "votes": 11597,
+    "year": 2015
+   }
+  ],
+  "Grindhouse Death Proof": [
+   {
+    "id": 1991,
+    "original_title": "Death Proof",
+    "title": "Death Proof",
+    "votes": 5870,
+    "year": 2007
+   }
+  ],
+  "Hannibal": [
+   {
+    "id": 9740,
+    "original_title": "Hannibal",
+    "title": "Hannibal",
+    "votes": 5401,
+    "year": 2001
+   },
+   {
+    "id": 1248,
+    "original_title": "Hannibal Rising",
+    "title": "Hannibal, el origen del mal",
+    "votes": 2501,
+    "year": 2007
+   },
+   {
+    "id": 26972,
+    "original_title": "Hannibal Brooks",
+    "title": "El último obstáculo",
+    "votes": 40,
+    "year": 1969
+   },
+   {
+    "id": 388859,
+    "original_title": "Hannibal",
+    "title": "Hannibal",
+    "votes": 19,
+    "year": 1972
+   },
+   {
+    "id": 116357,
+    "original_title": "Hannibal & Jerry",
+    "title": "Hannibal & Jerry",
+    "votes": 26,
+    "year": 1997
+   },
+   {
+    "id": 1650663,
+    "original_title": "Untitled Hannibal Film",
+    "title": "Untitled Hannibal Film",
+    "votes": 0,
+    "year": 0
+   },
+   {
+    "id": 574279,
+    "original_title": "Hannibal v Rome",
+    "title": "Hannibal v Rome",
+    "votes": 2,
+    "year": 2005
+   },
+   {
+    "id": 721343,
+    "original_title": "Hannibal Buress: Miami Nights",
+    "title": "Hannibal Buress: Miami Nights",
+    "votes": 22,
+    "year": 2020
+   },
+   {
+    "id": 846652,
+    "original_title": "Hannibal Hopkins et Sir Anthony",
+    "title": "Hannibal Hopkins et Sir Anthony",
+    "votes": 29,
+    "year": 2021
+   },
+   {
+    "id": 353222,
+    "original_title": "Hannibal Lickter",
+    "title": "Hannibal Lickter",
+    "votes": 3,
+    "year": 1992
+   }
+  ],
+  "Harry Potter Y El Prisionero De Azkaban": [
+   {
+    "id": 673,
+    "original_title": "Harry Potter and the Prisoner of Azkaban",
+    "title": "Harry Potter y el prisionero de Azkaban",
+    "votes": 23865,
+    "year": 2004
+   }
+  ],
+  "Harry Potter Y El Prisionero De Azkaban 3": [
+   {
+    "id": 673,
+    "original_title": "Harry Potter and the Prisoner of Azkaban",
+    "title": "Harry Potter y el prisionero de Azkaban",
+    "votes": 23867,
+    "year": 2004
+   }
+  ],
+  "Harry Potter Y Las Reliquias De La Muerte": [
+   {
+    "id": 12445,
+    "original_title": "Harry Potter and the Deathly Hallows: Part 2",
+    "title": "Harry Potter y las Reliquias de la Muerte - Parte 2",
+    "votes": 22632,
+    "year": 2011
+   },
+   {
+    "id": 12444,
+    "original_title": "Harry Potter and the Deathly Hallows: Part 1",
+    "title": "Harry Potter y las Reliquias de la Muerte - Parte 1",
+    "votes": 20967,
+    "year": 2010
+   }
+  ],
+  "Harry Potter Y Las Reliquias De La Muerte 7 - Parte I": [
+   {
+    "id": 12445,
+    "original_title": "Harry Potter and the Deathly Hallows: Part 2",
+    "title": "Harry Potter y las Reliquias de la Muerte - Parte 2",
+    "votes": 22632,
+    "year": 2011
+   },
+   {
+    "id": 12444,
+    "original_title": "Harry Potter and the Deathly Hallows: Part 1",
+    "title": "Harry Potter y las Reliquias de la Muerte - Parte 1",
+    "votes": 20967,
+    "year": 2010
+   }
+  ],
+  "Harry Potter Y Las Reliquias De La Muerte Parte I": [
+   {
+    "id": 12445,
+    "original_title": "Harry Potter and the Deathly Hallows: Part 2",
+    "title": "Harry Potter y las Reliquias de la Muerte - Parte 2",
+    "votes": 22632,
+    "year": 2011
+   },
+   {
+    "id": 12444,
+    "original_title": "Harry Potter and the Deathly Hallows: Part 1",
+    "title": "Harry Potter y las Reliquias de la Muerte - Parte 1",
+    "votes": 20967,
+    "year": 2010
+   }
+  ],
+  "Harry Potter y el misterio del principe": [
+   {
+    "id": 767,
+    "original_title": "Harry Potter and the Half-Blood Prince",
+    "title": "Harry Potter y el misterio del príncipe",
+    "votes": 21360,
+    "year": 2009
+   }
+  ],
+  "Harry Potter y el misterio del principe 6": [
+   {
+    "id": 767,
+    "original_title": "Harry Potter and the Half-Blood Prince",
+    "title": "Harry Potter y el misterio del príncipe",
+    "votes": 21360,
+    "year": 2009
+   }
+  ],
+  "Harry Potter y las reliquias de la muerte": [
+   {
+    "id": 12445,
+    "original_title": "Harry Potter and the Deathly Hallows: Part 2",
+    "title": "Harry Potter y las Reliquias de la Muerte - Parte 2",
+    "votes": 22632,
+    "year": 2011
+   },
+   {
+    "id": 12444,
+    "original_title": "Harry Potter and the Deathly Hallows: Part 1",
+    "title": "Harry Potter y las Reliquias de la Muerte - Parte 1",
+    "votes": 20967,
+    "year": 2010
+   }
+  ],
+  "Harry Potter y las reliquias de la muerte 8 - Parte II": [
+   {
+    "id": 12445,
+    "original_title": "Harry Potter and the Deathly Hallows: Part 2",
+    "title": "Harry Potter y las Reliquias de la Muerte - Parte 2",
+    "votes": 22632,
+    "year": 2011
+   },
+   {
+    "id": 12444,
+    "original_title": "Harry Potter and the Deathly Hallows: Part 1",
+    "title": "Harry Potter y las Reliquias de la Muerte - Parte 1",
+    "votes": 20967,
+    "year": 2010
+   }
+  ],
+  "Harry Potter y las reliquias de la muerte Parte II": [
+   {
+    "id": 12445,
+    "original_title": "Harry Potter and the Deathly Hallows: Part 2",
+    "title": "Harry Potter y las Reliquias de la Muerte - Parte 2",
+    "votes": 22632,
+    "year": 2011
+   },
+   {
+    "id": 12444,
+    "original_title": "Harry Potter and the Deathly Hallows: Part 1",
+    "title": "Harry Potter y las Reliquias de la Muerte - Parte 1",
+    "votes": 20967,
+    "year": 2010
+   }
+  ],
+  "Historia de un asesino": [
+   {
+    "id": 1427,
+    "original_title": "Perfume: The Story of a Murderer",
+    "title": "El perfume: Historia de un asesino",
+    "votes": 5228,
+    "year": 2006
+   },
+   {
+    "id": 468291,
+    "original_title": "An Imperfect Murder",
+    "title": "Historia de un Asesino",
+    "votes": 29,
+    "year": 2017
+   },
+   {
+    "id": 481811,
+    "original_title": "Oscar Pistorius: Blade Runner Killer",
+    "title": "Historia de un crimen",
+    "votes": 18,
+    "year": 2017
+   },
+   {
+    "id": 681434,
+    "original_title": "Psycho Therapy: The Shallow Tale of a Writer Who Decided to Write About a Serial Killer",
+    "title": "Psycho Therapy: The Shallow Tale of a Writer Who Decided to Write About a Serial Killer",
+    "votes": 81,
+    "year": 2025
+   },
+   {
+    "id": 339396,
+    "original_title": "True Memoirs of an International Assassin",
+    "title": "Memorias de un asesino internacional",
+    "votes": 880,
+    "year": 2016
+   }
+  ],
+  "John Wick": [
+   {
+    "id": 603692,
+    "original_title": "John Wick: Chapter 4",
+    "title": "John Wick 4",
+    "votes": 8465,
+    "year": 2023
+   },
+   {
+    "id": 245891,
+    "original_title": "John Wick",
+    "title": "John Wick",
+    "votes": 21529,
+    "year": 2014
+   },
+   {
+    "id": 324552,
+    "original_title": "John Wick: Chapter 2",
+    "title": "John Wick: Pacto de sangre",
+    "votes": 14775,
+    "year": 2017
+   },
+   {
+    "id": 458156,
+    "original_title": "John Wick: Chapter 3 - Parabellum",
+    "title": "John Wick: Capítulo 3 - Parabellum",
+    "votes": 12215,
+    "year": 2019
+   },
+   {
+    "id": 1457759,
+    "original_title": "John Wick: Chapter 5",
+    "title": "John Wick 5",
+    "votes": 0,
+    "year": 0
+   },
+   {
+    "id": 1412091,
+    "original_title": "John Wick: NYC Noir",
+    "title": "John Wick: NYC Noir",
+    "votes": 1,
+    "year": 2015
+   },
+   {
+    "id": 600991,
+    "original_title": "Training 'John Wick'",
+    "title": "Training 'John Wick'",
+    "votes": 58,
+    "year": 2017
+   },
+   {
+    "id": 1412096,
+    "original_title": "John Wick: The Red Circle",
+    "title": "John Wick: The Red Circle",
+    "votes": 0,
+    "year": 2015
+   },
+   {
+    "id": 1457737,
+    "original_title": "Untitled Animated John Wick Prequel",
+    "title": "Untitled Animated John Wick Prequel",
+    "votes": 0,
+    "year": 0
+   },
+   {
+    "id": 600990,
+    "original_title": "John Wick: Calling in the Cavalry",
+    "title": "John Wick: Calling in the Cavalry",
+    "votes": 18,
+    "year": 2015
+   }
+  ],
+  "John Wick 2": [
+   {
+    "id": 324552,
+    "original_title": "John Wick: Chapter 2",
+    "title": "John Wick: Pacto de sangre",
+    "votes": 14775,
+    "year": 2017
+   },
+   {
+    "id": 651445,
+    "original_title": "John Wick Chapter 2: Wick-vizzed",
+    "title": "John Wick Chapter 2: Wick-vizzed",
+    "votes": 103,
+    "year": 2017
+   },
+   {
+    "id": 1500342,
+    "original_title": "Guns and Strawberries 2",
+    "title": "Guns and Strawberries 2",
+    "votes": 0,
+    "year": 2023
+   }
+  ],
+  "Jungla de Cristal": [
+   {
+    "id": 562,
+    "original_title": "Die Hard",
+    "title": "Jungla de cristal",
+    "votes": 12797,
+    "year": 1988
+   },
+   {
+    "id": 1572,
+    "original_title": "Die Hard: With a Vengeance",
+    "title": "Jungla de cristal: la venganza",
+    "votes": 6921,
+    "year": 1995
+   },
+   {
+    "id": 47964,
+    "original_title": "A Good Day to Die Hard",
+    "title": "La jungla de cristal V. Un buen día para morir",
+    "votes": 6919,
+    "year": 2013
+   },
+   {
+    "id": 1801486,
+    "original_title": "Cómo La jungla de cristal cambió Hollywood",
+    "title": "Cómo La jungla de cristal cambió Hollywood",
+    "votes": 0,
+    "year": 2026
+   },
+   {
+    "id": 1573,
+    "original_title": "Die Hard 2",
+    "title": "La jungla 2: Alerta roja",
+    "votes": 6669,
+    "year": 1990
+   }
+  ],
+  "Jungla de Cristal 4": [],
+  "Jurassic World": [
+   {
+    "id": 135397,
+    "original_title": "Jurassic World",
+    "title": "Jurassic World",
+    "votes": 22058,
+    "year": 2015
+   },
+   {
+    "id": 1234821,
+    "original_title": "Jurassic World Rebirth",
+    "title": "Jurassic World: El renacer",
+    "votes": 3884,
+    "year": 2025
+   },
+   {
+    "id": 507086,
+    "original_title": "Jurassic World Dominion",
+    "title": "Jurassic World: Dominion",
+    "votes": 7365,
+    "year": 2022
+   },
+   {
+    "id": 351286,
+    "original_title": "Jurassic World: Fallen Kingdom",
+    "title": "Jurassic World: El reino caído",
+    "votes": 13114,
+    "year": 2018
+   },
+   {
+    "id": 1714034,
+    "original_title": "Jurassic World Liberation",
+    "title": "Jurassic World Liberation",
+    "votes": 0,
+    "year": 0
+   },
+   {
+    "id": 1036956,
+    "original_title": "Jurassic World Camp Cretaceous: Hidden Adventure",
+    "title": "Jurassic World: Campamento Cretácico: Aventura secreta",
+    "votes": 43,
+    "year": 2022
+   },
+   {
+    "id": 419566,
+    "original_title": "LEGO Jurassic World: The Indominus Escape",
+    "title": "LEGO Mundo Jurásico: El escape del Indominus",
+    "votes": 109,
+    "year": 2016
+   },
+   {
+    "id": 1575968,
+    "original_title": "Lego Jurassic World: Double Trouble",
+    "title": "Lego Jurassic World: Double Trouble",
+    "votes": 0,
+    "year": 2020
+   },
+   {
+    "id": 584088,
+    "original_title": "LEGO Jurassic World: Escape the Indoraptor",
+    "title": "LEGO Jurassic World: Escapa al Indoraptor",
+    "votes": 14,
+    "year": 2018
+   },
+   {
+    "id": 1730963,
+    "original_title": "Jurassic World Dominion Prologue",
+    "title": "Jurassic World Dominion Prologue",
+    "votes": 2,
+    "year": 2021
+   }
+  ],
+  "Jurassic World 2": [
+   {
+    "id": 1714034,
+    "original_title": "Jurassic World Liberation",
+    "title": "Jurassic World Liberation",
+    "votes": 0,
+    "year": 0
+   },
+   {
+    "id": 351286,
+    "original_title": "Jurassic World: Fallen Kingdom",
+    "title": "Jurassic World: El reino caído",
+    "votes": 13114,
+    "year": 2018
+   },
+   {
+    "id": 330,
+    "original_title": "The Lost World: Jurassic Park",
+    "title": "El mundo perdido: Jurassic Park",
+    "votes": 9560,
+    "year": 1997
+   }
+  ],
+  "La lista de Schindler": [
+   {
+    "id": 424,
+    "original_title": "Schindler's List",
+    "title": "La lista de Schindler",
+    "votes": 18103,
+    "year": 1993
+   },
+   {
+    "id": 532169,
+    "original_title": "Schindler",
+    "title": "La verdadera historia de Schindler",
+    "votes": 15,
+    "year": 1983
+   }
+  ],
+  "La venganza de los caidos": [
+   {
+    "id": 8373,
+    "original_title": "Transformers: Revenge of the Fallen",
+    "title": "Transformers: La venganza de los caídos",
+    "votes": 9500,
+    "year": 2009
+   }
+  ],
+  "Lobo": [
+   {
+    "id": 26593,
+    "original_title": "Rio Lobo",
+    "title": "Río Lobo",
+    "votes": 298,
+    "year": 1970
+   },
+   {
+    "id": 710295,
+    "original_title": "Wolf Man",
+    "title": "Hombre lobo",
+    "votes": 1093,
+    "year": 2025
+   },
+   {
+    "id": 106646,
+    "original_title": "The Wolf of Wall Street",
+    "title": "El lobo de Wall Street",
+    "votes": 26819,
+    "year": 2013
+   },
+   {
+    "id": 10395,
+    "original_title": "Wolf",
+    "title": "Lobo",
+    "votes": 1059,
+    "year": 1994
+   },
+   {
+    "id": 7978,
+    "original_title": "The Wolfman",
+    "title": "El hombre lobo",
+    "votes": 2281,
+    "year": 2010
+   },
+   {
+    "id": 1086907,
+    "original_title": "Lobo",
+    "title": "Lobo",
+    "votes": 0,
+    "year": 0
+   },
+   {
+    "id": 1320511,
+    "original_title": "LOBO",
+    "title": "LOBO",
+    "votes": 0,
+    "year": 2023
+   },
+   {
+    "id": 499537,
+    "original_title": "La casa lobo",
+    "title": "La casa lobo",
+    "votes": 209,
+    "year": 2018
+   },
+   {
+    "id": 79194,
+    "original_title": "Diamante Lobo",
+    "title": "Seis balas... una venganza... una oración",
+    "votes": 39,
+    "year": 1976
+   },
+   {
+    "id": 829669,
+    "original_title": "Lobo Mexicano",
+    "title": "Lobo Mexicano",
+    "votes": 0,
+    "year": 2020
+   }
+  ],
+  "Logan": [
+   {
+    "id": 263115,
+    "original_title": "Logan",
+    "title": "Logan",
+    "votes": 21008,
+    "year": 2017
+   },
+   {
+    "id": 399170,
+    "original_title": "Logan Lucky",
+    "title": "La suerte de los Logan",
+    "votes": 4002,
+    "year": 2017
+   },
+   {
+    "id": 10803,
+    "original_title": "Logan's Run",
+    "title": "La fuga de Logan",
+    "votes": 1103,
+    "year": 1976
+   },
+   {
+    "id": 297608,
+    "original_title": "The Taking of Deborah Logan",
+    "title": "La posesión de Deborah Logan",
+    "votes": 1568,
+    "year": 2014
+   },
+   {
+    "id": 44010,
+    "original_title": "Logan",
+    "title": "Logan",
+    "votes": 11,
+    "year": 2010
+   },
+   {
+    "id": 467721,
+    "original_title": "Giuseppi Logan",
+    "title": "Giuseppi Logan",
+    "votes": 0,
+    "year": 1966
+   },
+   {
+    "id": 78286,
+    "original_title": "The Kate Logan Affair",
+    "title": "The Kate Logan affair",
+    "votes": 24,
+    "year": 2011
+   },
+   {
+    "id": 713950,
+    "original_title": "Mark Logan",
+    "title": "Mark Logan",
+    "votes": 5,
+    "year": 2007
+   },
+   {
+    "id": 1458039,
+    "original_title": "Making 'Logan'",
+    "title": "Making 'Logan'",
+    "votes": 0,
+    "year": 2017
+   },
+   {
+    "id": 889316,
+    "original_title": "Logan",
+    "title": "Logan",
+    "votes": 1,
+    "year": 0
+   }
+  ],
+  "Logan 8": [],
+  "Los juegos del hambre": [
+   {
+    "id": 70160,
+    "original_title": "The Hunger Games",
+    "title": "Los Juegos del Hambre",
+    "votes": 23918,
+    "year": 2012
+   },
+   {
+    "id": 101299,
+    "original_title": "The Hunger Games: Catching Fire",
+    "title": "Los Juegos del Hambre: En llamas",
+    "votes": 18954,
+    "year": 2013
+   },
+   {
+    "id": 131631,
+    "original_title": "The Hunger Games: Mockingjay - Part 1",
+    "title": "Los Juegos del Hambre: Sinsajo - Parte 1",
+    "votes": 17156,
+    "year": 2014
+   },
+   {
+    "id": 131634,
+    "original_title": "The Hunger Games: Mockingjay - Part 2",
+    "title": "Los Juegos del Hambre: Sinsajo - Parte 2",
+    "votes": 13709,
+    "year": 2015
+   },
+   {
+    "id": 1300968,
+    "original_title": "The Hunger Games: Sunrise on the Reaping",
+    "title": "Los Juegos del Hambre: Amanecer en la cosecha",
+    "votes": 0,
+    "year": 2026
+   },
+   {
+    "id": 695721,
+    "original_title": "The Hunger Games: The Ballad of Songbirds & Snakes",
+    "title": "Los Juegos del Hambre: Balada de pájaros cantores y serpientes",
+    "votes": 3746,
+    "year": 2023
+   },
+   {
+    "id": 225703,
+    "original_title": "The Starving Games",
+    "title": "Los muertos del hambre",
+    "votes": 724,
+    "year": 2013
+   }
+  ],
+  "Los juegos del hambre 1": [
+   {
+    "id": 131631,
+    "original_title": "The Hunger Games: Mockingjay - Part 1",
+    "title": "Los Juegos del Hambre: Sinsajo - Parte 1",
+    "votes": 17159,
+    "year": 2014
+   },
+   {
+    "id": 70160,
+    "original_title": "The Hunger Games",
+    "title": "Los Juegos del Hambre",
+    "votes": 23919,
+    "year": 2012
+   }
+  ],
+  "Los juegos del hambre 3 - Sinsajo - Parte": [
+   {
+    "id": 131631,
+    "original_title": "The Hunger Games: Mockingjay - Part 1",
+    "title": "Los Juegos del Hambre: Sinsajo - Parte 1",
+    "votes": 17159,
+    "year": 2014
+   },
+   {
+    "id": 131634,
+    "original_title": "The Hunger Games: Mockingjay - Part 2",
+    "title": "Los Juegos del Hambre: Sinsajo - Parte 2",
+    "votes": 13709,
+    "year": 2015
+   }
+  ],
+  "Los juegos del hambre 3 - Sinsajo - Parte 1": [
+   {
+    "id": 131631,
+    "original_title": "The Hunger Games: Mockingjay - Part 1",
+    "title": "Los Juegos del Hambre: Sinsajo - Parte 1",
+    "votes": 17159,
+    "year": 2014
+   },
+   {
+    "id": 131634,
+    "original_title": "The Hunger Games: Mockingjay - Part 2",
+    "title": "Los Juegos del Hambre: Sinsajo - Parte 2",
+    "votes": 13709,
+    "year": 2015
+   }
+  ],
+  "Los juegos del hambre Sinsajo Parte": [
+   {
+    "id": 131631,
+    "original_title": "The Hunger Games: Mockingjay - Part 1",
+    "title": "Los Juegos del Hambre: Sinsajo - Parte 1",
+    "votes": 17159,
+    "year": 2014
+   },
+   {
+    "id": 131634,
+    "original_title": "The Hunger Games: Mockingjay - Part 2",
+    "title": "Los Juegos del Hambre: Sinsajo - Parte 2",
+    "votes": 13709,
+    "year": 2015
+   }
+  ],
+  "Malditos bastardos": [
+   {
+    "id": 16869,
+    "original_title": "Inglourious Basterds",
+    "title": "Malditos bastardos",
+    "votes": 25027,
+    "year": 2009
+   },
+   {
+    "id": 255392,
+    "original_title": "The Real Inglorious Bastards",
+    "title": "Los auténticos malditos bastardos",
+    "votes": 26,
+    "year": 2012
+   }
+  ],
+  "Marte": [
+   {
+    "id": 286217,
+    "original_title": "The Martian",
+    "title": "Marte (The Martian)",
+    "votes": 22024,
+    "year": 2015
+   },
+   {
+    "id": 1050391,
+    "original_title": "Marte",
+    "title": "Marte",
+    "votes": 1,
+    "year": 2022
+   },
+   {
+    "id": 913816,
+    "original_title": "Marte Um",
+    "title": "Mars One",
+    "votes": 102,
+    "year": 2022
+   },
+   {
+    "id": 50321,
+    "original_title": "Mars Needs Moms",
+    "title": "Marte necesita madres",
+    "votes": 832,
+    "year": 2011
+   },
+   {
+    "id": 1626718,
+    "original_title": "A Marte",
+    "title": "A Marte",
+    "votes": 0,
+    "year": 0
+   },
+   {
+    "id": 2067,
+    "original_title": "Mission to Mars",
+    "title": "Misión a Marte",
+    "votes": 1668,
+    "year": 2000
+   },
+   {
+    "id": 10016,
+    "original_title": "Ghosts of Mars",
+    "title": "Fantasmas de Marte",
+    "votes": 1312,
+    "year": 2001
+   },
+   {
+    "id": 420278,
+    "original_title": "Camino a Marte",
+    "title": "Camino a Marte",
+    "votes": 26,
+    "year": 2017
+   },
+   {
+    "id": 1653480,
+    "original_title": "Marte",
+    "title": "Marte",
+    "votes": 0,
+    "year": 2026
+   },
+   {
+    "id": 48250,
+    "original_title": "Fascisti su Marte",
+    "title": "Fascisti su Marte",
+    "votes": 189,
+    "year": 2006
+   }
+  ],
+  "Mision Imposible": [
+   {
+    "id": 954,
+    "original_title": "Mission: Impossible",
+    "title": "Misión imposible",
+    "votes": 10401,
+    "year": 1996
+   },
+   {
+    "id": 956,
+    "original_title": "Mission: Impossible III",
+    "title": "Misión imposible III",
+    "votes": 7948,
+    "year": 2006
+   },
+   {
+    "id": 575265,
+    "original_title": "Mission: Impossible - The Final Reckoning",
+    "title": "Misión: Imposible - Sentencia final",
+    "votes": 3281,
+    "year": 2025
+   },
+   {
+    "id": 955,
+    "original_title": "Mission: Impossible II",
+    "title": "Misión imposible II",
+    "votes": 7918,
+    "year": 2000
+   },
+   {
+    "id": 353081,
+    "original_title": "Mission: Impossible - Fallout",
+    "title": "Misión: Imposible - Fallout",
+    "votes": 9502,
+    "year": 2018
+   },
+   {
+    "id": 56292,
+    "original_title": "Mission: Impossible - Ghost Protocol",
+    "title": "Misión imposible: Protocolo fantasma",
+    "votes": 11117,
+    "year": 2011
+   },
+   {
+    "id": 177677,
+    "original_title": "Mission: Impossible - Rogue Nation",
+    "title": "Misión imposible: Nación secreta",
+    "votes": 10055,
+    "year": 2015
+   },
+   {
+    "id": 1765905,
+    "original_title": "Misión imposible, no... lo siguiente",
+    "title": "Misión imposible, no... lo siguiente",
+    "votes": 0,
+    "year": 2026
+   },
+   {
+    "id": 575264,
+    "original_title": "Mission: Impossible - Dead Reckoning Part One",
+    "title": "Misión: Imposible - Sentencia mortal parte uno",
+    "votes": 5478,
+    "year": 2023
+   },
+   {
+    "id": 541618,
+    "original_title": "Mission: Impossible vs. the Mob",
+    "title": "Misión: imposible contra el hampa",
+    "votes": 3,
+    "year": 1969
+   }
+  ],
+  "Mision Imposible 1": [
+   {
+    "id": 954,
+    "original_title": "Mission: Impossible",
+    "title": "Misión imposible",
+    "votes": 10402,
+    "year": 1996
+   },
+   {
+    "id": 575264,
+    "original_title": "Mission: Impossible - Dead Reckoning Part One",
+    "title": "Misión: Imposible - Sentencia mortal parte uno",
+    "votes": 5478,
+    "year": 2023
+   }
+  ],
+  "Money Ball": [
+   {
+    "id": 1712694,
+    "original_title": "The Art of Making Money - This Guy Has Balls",
+    "title": "The Art of Making Money - This Guy Has Balls",
+    "votes": 0,
+    "year": 0
+   },
+   {
+    "id": 1599042,
+    "original_title": "The Rise: The New MoneyBall",
+    "title": "The Rise: The New MoneyBall",
+    "votes": 0,
+    "year": 2025
+   },
+   {
+    "id": 129009,
+    "original_title": "Love is a Ball",
+    "title": "Ese desinteresado amor",
+    "votes": 8,
+    "year": 1963
+   },
+   {
+    "id": 80914,
+    "original_title": "Man braucht kein Geld",
+    "title": "No hace falta dinero",
+    "votes": 3,
+    "year": 1931
+   },
+   {
+    "id": 1122099,
+    "original_title": "The Ballad of Wallis Island",
+    "title": "The Ballad of Wallis Island",
+    "votes": 231,
+    "year": 2025
+   }
+  ],
+  "Money Ball - Rompiendo las reglas": [],
+  "Monstruos S.A.": [
+   {
+    "id": 585,
+    "original_title": "Monsters, Inc.",
+    "title": "Monstruos, S.A.",
+    "votes": 20442,
+    "year": 2001
+   },
+   {
+    "id": 1315772,
+    "original_title": "Minions & Monsters",
+    "title": "Minions & Monsters",
+    "votes": 1324,
+    "year": 2026
+   },
+   {
+    "id": 136,
+    "original_title": "Freaks",
+    "title": "La parada de los monstruos",
+    "votes": 1352,
+    "year": 1932
+   },
+   {
+    "id": 62211,
+    "original_title": "Monsters University",
+    "title": "Monstruos University",
+    "votes": 11634,
+    "year": 2013
+   },
+   {
+    "id": 3073,
+    "original_title": "Bud Abbott and Lou Costello Meet Frankenstein",
+    "title": "Abbott y Costello contra los fantasmas",
+    "votes": 371,
+    "year": 1948
+   },
+   {
+    "id": 28440,
+    "original_title": "Misterio en la isla de los monstruos",
+    "title": "Misterio en la isla de los monstruos",
+    "votes": 34,
+    "year": 1981
+   },
+   {
+    "id": 422153,
+    "original_title": "Hulk: Where Monsters Dwell",
+    "title": "Hulk: donde habitan los monstruos",
+    "votes": 99,
+    "year": 2016
+   },
+   {
+    "id": 39462,
+    "original_title": "ゴジラ・ミニラ・ガバラ オール怪獣大進撃",
+    "title": "La isla de los monstruos",
+    "votes": 229,
+    "year": 1969
+   },
+   {
+    "id": 23521,
+    "original_title": "Daffy Duck's Quackbusters",
+    "title": "El Pato Lucas en El Pato Cazafantasmas",
+    "votes": 153,
+    "year": 1988
+   },
+   {
+    "id": 624963,
+    "original_title": "A Babysitter's Guide to Monster Hunting",
+    "title": "Consejos de una canguro para cazar monstruos",
+    "votes": 329,
+    "year": 2020
+   }
+  ],
+  "Parte 1": [
+   {
+    "id": 131631,
+    "original_title": "The Hunger Games: Mockingjay - Part 1",
+    "title": "Los Juegos del Hambre: Sinsajo - Parte 1",
+    "votes": 17158,
+    "year": 2014
+   },
+   {
+    "id": 811941,
+    "original_title": "దేవర",
+    "title": "Devara: Parte 1",
+    "votes": 230,
+    "year": 2024
+   },
+   {
+    "id": 50619,
+    "original_title": "The Twilight Saga: Breaking Dawn - Part 1",
+    "title": "La saga Crepúsculo: Amanecer - Parte 1",
+    "votes": 9479,
+    "year": 2011
+   },
+   {
+    "id": 12444,
+    "original_title": "Harry Potter and the Deathly Hallows: Part 1",
+    "title": "Harry Potter y las Reliquias de la Muerte - Parte 1",
+    "votes": 20967,
+    "year": 2010
+   },
+   {
+    "id": 282069,
+    "original_title": "寄生獣",
+    "title": "Parásito. Parte 1",
+    "votes": 325,
+    "year": 2014
+   },
+   {
+    "id": 577242,
+    "original_title": "Kaamelott : Premier Volet",
+    "title": "Kaamelott: Parte 1",
+    "votes": 769,
+    "year": 2021
+   },
+   {
+    "id": 591273,
+    "original_title": "Fear Street: 1994",
+    "title": "La calle del terror - Parte 1: 1994",
+    "votes": 2795,
+    "year": 2021
+   },
+   {
+    "id": 659179,
+    "original_title": "I ragazzi latinoamericani - Parte 1",
+    "title": "I ragazzi latinoamericani - Parte 1",
+    "votes": 2,
+    "year": 2019
+   },
+   {
+    "id": 117691,
+    "original_title": "गैंग्स ऑफ़ वास्सेपुर पार्ट - १",
+    "title": "Gangs of Wasseypur. Parte 1",
+    "votes": 467,
+    "year": 2012
+   },
+   {
+    "id": 56832,
+    "original_title": "Gantz",
+    "title": "Gantz: Génesis (Gantz: Parte 1)",
+    "votes": 358,
+    "year": 2010
+   }
+  ],
+  "Parte I": [
+   {
+    "id": 155017,
+    "original_title": "Megazone 23",
+    "title": "Megazone 23 Parte I",
+    "votes": 42,
+    "year": 1985
+   },
+   {
+    "id": 659179,
+    "original_title": "I ragazzi latinoamericani - Parte 1",
+    "title": "I ragazzi latinoamericani - Parte 1",
+    "votes": 2,
+    "year": 2019
+   },
+   {
+    "id": 654770,
+    "original_title": "Notas, encantaciones: parte I",
+    "title": "Notas, encantaciones: parte I",
+    "votes": 0,
+    "year": 2020
+   },
+   {
+    "id": 24358,
+    "original_title": "The Second Renaissance Part I",
+    "title": "El Segundo Renacimiento Parte I",
+    "votes": 196,
+    "year": 2003
+   },
+   {
+    "id": 1519555,
+    "original_title": "Poraí: Parte I",
+    "title": "Poraí: Parte I",
+    "votes": 0,
+    "year": 2025
+   },
+   {
+    "id": 1669210,
+    "original_title": "Profissional Paranormal: Parte I",
+    "title": "Profissional Paranormal: Parte I",
+    "votes": 1,
+    "year": 2025
+   },
+   {
+    "id": 56780,
+    "original_title": "Atlas Shrugged: Part I",
+    "title": "La rebelión de Atlas: Parte I",
+    "votes": 225,
+    "year": 2011
+   },
+   {
+    "id": 1765882,
+    "original_title": "Independência: Parte I - Fuga",
+    "title": "Independência: Parte I - Fuga",
+    "votes": 0,
+    "year": 2026
+   },
+   {
+    "id": 147371,
+    "original_title": "Война и Мир 1: Андрей Болконский",
+    "title": "Guerra y paz, Parte I: Andrey Bolkonskiy",
+    "votes": 85,
+    "year": 1966
+   },
+   {
+    "id": 1716858,
+    "original_title": "Alma y Piedra (I parte)",
+    "title": "Alma y Piedra (I parte)",
+    "votes": 0,
+    "year": 1979
+   }
+  ],
+  "Parte II": [
+   {
+    "id": 967941,
+    "original_title": "Wicked: For Good",
+    "title": "Wicked Parte II",
+    "votes": 1204,
+    "year": 2025
+   },
+   {
+    "id": 1369,
+    "original_title": "Rambo: First Blood Part II",
+    "title": "Rambo: Acorralado Parte II",
+    "votes": 4531,
+    "year": 1985
+   },
+   {
+    "id": 204962,
+    "original_title": "Las ficheras: Bellas de noche II parte",
+    "title": "Las ficheras: Bellas de noche II parte",
+    "votes": 23,
+    "year": 1977
+   },
+   {
+    "id": 38536,
+    "original_title": "Anni 90 Parte II",
+    "title": "Anni 90 Parte II",
+    "votes": 85,
+    "year": 1993
+   },
+   {
+    "id": 618249,
+    "original_title": "Bacanales romanas, II Parte",
+    "title": "Bacanales romanas, II Parte",
+    "votes": 3,
+    "year": 1985
+   },
+   {
+    "id": 160393,
+    "original_title": "メガゾーン23 PART II 秘密く・だ・さ・い",
+    "title": "Megazone 23 Parte II",
+    "votes": 29,
+    "year": 1986
+   },
+   {
+    "id": 642781,
+    "original_title": "The Barn Part II",
+    "title": "The Barn Parte II",
+    "votes": 24,
+    "year": 2022
+   },
+   {
+    "id": 1722098,
+    "original_title": "Reino Mochica: II parte",
+    "title": "Reino Mochica: II parte",
+    "votes": 0,
+    "year": 1987
+   },
+   {
+    "id": 654771,
+    "original_title": "Notas, encantaciones: parte II, Carmela",
+    "title": "Notas, encantaciones: parte II, Carmela",
+    "votes": 0,
+    "year": 2020
+   },
+   {
+    "id": 1141557,
+    "original_title": "TRANSGRESSÃO (Parte II)",
+    "title": "TRANSGRESSÃO (Parte II)",
+    "votes": 0,
+    "year": 2020
+   }
+  ],
+  "Rocky": [
+   {
+    "id": 1366,
+    "original_title": "Rocky",
+    "title": "Rocky",
+    "votes": 9022,
+    "year": 1976
+   },
+   {
+    "id": 1246,
+    "original_title": "Rocky Balboa",
+    "title": "Rocky Balboa",
+    "votes": 3969,
+    "year": 2006
+   },
+   {
+    "id": 1371,
+    "original_title": "Rocky III",
+    "title": "Rocky III",
+    "votes": 4701,
+    "year": 1982
+   },
+   {
+    "id": 1374,
+    "original_title": "Rocky IV",
+    "title": "Rocky IV",
+    "votes": 5028,
+    "year": 1985
+   },
+   {
+    "id": 1367,
+    "original_title": "Rocky II",
+    "title": "Rocky II",
+    "votes": 5027,
+    "year": 1979
+   },
+   {
+    "id": 1286656,
+    "original_title": "I Play Rocky",
+    "title": "Yo soy Rocky",
+    "votes": 0,
+    "year": 2026
+   },
+   {
+    "id": 1375,
+    "original_title": "Rocky V",
+    "title": "Rocky V",
+    "votes": 3611,
+    "year": 1990
+   },
+   {
+    "id": 36685,
+    "original_title": "The Rocky Horror Picture Show",
+    "title": "The Rocky Horror Picture Show",
+    "votes": 3288,
+    "year": 1975
+   },
+   {
+    "id": 312221,
+    "original_title": "Creed",
+    "title": "Creed. La leyenda de Rocky",
+    "votes": 8197,
+    "year": 2015
+   },
+   {
+    "id": 480530,
+    "original_title": "Creed II",
+    "title": "Creed II: La leyenda de Rocky",
+    "votes": 5973,
+    "year": 2018
+   }
+  ],
+  "Rocky 5": [
+   {
+    "id": 1375,
+    "original_title": "Rocky V",
+    "title": "Rocky V",
+    "votes": 3611,
+    "year": 1990
+   }
+  ],
+  "Rocky Balboa": [
+   {
+    "id": 1246,
+    "original_title": "Rocky Balboa",
+    "title": "Rocky Balboa",
+    "votes": 3969,
+    "year": 2006
+   },
+   {
+    "id": 1053954,
+    "original_title": "Skill vs. Will: The Making of 'Rocky Balboa'",
+    "title": "Skill vs. Will: The Making of 'Rocky Balboa'",
+    "votes": 2,
+    "year": 2007
+   },
+   {
+    "id": 312221,
+    "original_title": "Creed",
+    "title": "Creed. La leyenda de Rocky",
+    "votes": 8197,
+    "year": 2015
+   },
+   {
+    "id": 373546,
+    "original_title": "Chuck",
+    "title": "Chuck",
+    "votes": 188,
+    "year": 2017
+   }
+  ],
+  "Rocky Balboa 6": [
+   {
+    "id": 1246,
+    "original_title": "Rocky Balboa",
+    "title": "Rocky Balboa",
+    "votes": 3969,
+    "year": 2006
+   }
+  ],
+  "Rompiendo Las Reglas": [
+   {
+    "id": 8456,
+    "original_title": "Never Back Down",
+    "title": "Rompiendo las reglas",
+    "votes": 2575,
+    "year": 2008
+   },
+   {
+    "id": 60308,
+    "original_title": "Moneyball",
+    "title": "Moneyball: Rompiendo las reglas",
+    "votes": 6088,
+    "year": 2011
+   },
+   {
+    "id": 391757,
+    "original_title": "Never Back Down: No Surrender",
+    "title": "Rompiendo las reglas 3",
+    "votes": 524,
+    "year": 2016
+   },
+   {
+    "id": 763025,
+    "original_title": "Never Back Down: Revolt",
+    "title": "Rompiendo las reglas: Rebelión",
+    "votes": 140,
+    "year": 2021
+   },
+   {
+    "id": 180162,
+    "original_title": "Breaking the Rules",
+    "title": "Rompiendo las reglas",
+    "votes": 12,
+    "year": 1992
+   },
+   {
+    "id": 70006,
+    "original_title": "Never Back Down 2: The Beatdown",
+    "title": "Rompiendo las reglas 2: El golpe final",
+    "votes": 714,
+    "year": 2011
+   },
+   {
+    "id": 277353,
+    "original_title": "Campus Code",
+    "title": "Código Campus: rompiendo las reglas",
+    "votes": 22,
+    "year": 2015
+   },
+   {
+    "id": 519176,
+    "original_title": "銀魂2 掟は破るためにこそある",
+    "title": "Gintama 2: Okite wa Yaburu tame ni koso Aru",
+    "votes": 89,
+    "year": 2018
+   },
+   {
+    "id": 567965,
+    "original_title": "Misbehaviour",
+    "title": "Rompiendo las normas",
+    "votes": 310,
+    "year": 2020
+   },
+   {
+    "id": 16428,
+    "original_title": "Breakin' All the Rules",
+    "title": "Cómo romper con tu pareja",
+    "votes": 107,
+    "year": 2004
+   }
+  ],
+  "Rompiendo las reglas": [
+   {
+    "id": 8456,
+    "original_title": "Never Back Down",
+    "title": "Rompiendo las reglas",
+    "votes": 2575,
+    "year": 2008
+   },
+   {
+    "id": 60308,
+    "original_title": "Moneyball",
+    "title": "Moneyball: Rompiendo las reglas",
+    "votes": 6088,
+    "year": 2011
+   },
+   {
+    "id": 391757,
+    "original_title": "Never Back Down: No Surrender",
+    "title": "Rompiendo las reglas 3",
+    "votes": 524,
+    "year": 2016
+   },
+   {
+    "id": 763025,
+    "original_title": "Never Back Down: Revolt",
+    "title": "Rompiendo las reglas: Rebelión",
+    "votes": 140,
+    "year": 2021
+   },
+   {
+    "id": 180162,
+    "original_title": "Breaking the Rules",
+    "title": "Rompiendo las reglas",
+    "votes": 12,
+    "year": 1992
+   },
+   {
+    "id": 70006,
+    "original_title": "Never Back Down 2: The Beatdown",
+    "title": "Rompiendo las reglas 2: El golpe final",
+    "votes": 714,
+    "year": 2011
+   },
+   {
+    "id": 277353,
+    "original_title": "Campus Code",
+    "title": "Código Campus: rompiendo las reglas",
+    "votes": 22,
+    "year": 2015
+   },
+   {
+    "id": 519176,
+    "original_title": "銀魂2 掟は破るためにこそある",
+    "title": "Gintama 2: Okite wa Yaburu tame ni koso Aru",
+    "votes": 89,
+    "year": 2018
+   },
+   {
+    "id": 567965,
+    "original_title": "Misbehaviour",
+    "title": "Rompiendo las normas",
+    "votes": 310,
+    "year": 2020
+   },
+   {
+    "id": 16428,
+    "original_title": "Breakin' All the Rules",
+    "title": "Cómo romper con tu pareja",
+    "votes": 107,
+    "year": 2004
+   }
+  ],
+  "Sin escalas": [
+   {
+    "id": 225574,
+    "original_title": "Non-Stop",
+    "title": "Non-Stop (Sin escalas)",
+    "votes": 5926,
+    "year": 2014
+   },
+   {
+    "id": 240913,
+    "original_title": "Non-Stop",
+    "title": "Sin escalas",
+    "votes": 37,
+    "year": 2013
+   },
+   {
+    "id": 119940,
+    "original_title": "Alejandro Fernandez: En Directo Y Sin Escalas",
+    "title": "Alejandro Fernandez: En Directo Y Sin Escalas",
+    "votes": 2,
+    "year": 2005
+   },
+   {
+    "id": 1578779,
+    "original_title": "Alejandro Fernandez: Mexico-Madrid - En Directo Y Sin Escalas",
+    "title": "Alejandro Fernandez: Mexico-Madrid - En Directo Y Sin Escalas",
+    "votes": 0,
+    "year": 0
+   },
+   {
+    "id": 22947,
+    "original_title": "Up in the Air",
+    "title": "Up in the Air",
+    "votes": 4188,
+    "year": 2009
+   }
+  ],
+  "Star Wars Episodio V El Imperio Contraataca": [
+   {
+    "id": 1891,
+    "original_title": "The Empire Strikes Back",
+    "title": "El imperio contraataca",
+    "votes": 19040,
+    "year": 1980
+   }
+  ],
+  "Star Wars Episodio VII El despertar de la fuerza": [
+   {
+    "id": 140607,
+    "original_title": "Star Wars: The Force Awakens",
+    "title": "Star Wars: El despertar de la fuerza",
+    "votes": 21069,
+    "year": 2015
+   }
+  ],
+  "Terminator": [
+   {
+    "id": 218,
+    "original_title": "The Terminator",
+    "title": "Terminator",
+    "votes": 15339,
+    "year": 1984
+   },
+   {
+    "id": 87101,
+    "original_title": "Terminator Genisys",
+    "title": "Terminator Génesis",
+    "votes": 9260,
+    "year": 2015
+   },
+   {
+    "id": 290859,
+    "original_title": "Terminator: Dark Fate",
+    "title": "Terminator: Destino oscuro",
+    "votes": 5941,
+    "year": 2019
+   },
+   {
+    "id": 534,
+    "original_title": "Terminator Salvation",
+    "title": "Terminator Salvation",
+    "votes": 7321,
+    "year": 2009
+   },
+   {
+    "id": 280,
+    "original_title": "Terminator 2: Judgment Day",
+    "title": "Terminator 2: El juicio final",
+    "votes": 15093,
+    "year": 1991
+   },
+   {
+    "id": 296,
+    "original_title": "Terminator 3: Rise of the Machines",
+    "title": "Terminator 3: La rebelión de las máquinas",
+    "votes": 7589,
+    "year": 2003
+   },
+   {
+    "id": 40027,
+    "original_title": "Ninja Terminator",
+    "title": "Ninja terminator",
+    "votes": 69,
+    "year": 1986
+   },
+   {
+    "id": 55459,
+    "original_title": "Terminator Woman",
+    "title": "Kickboxer Terminator",
+    "votes": 8,
+    "year": 1992
+   },
+   {
+    "id": 616798,
+    "original_title": "Farewell, Terminator",
+    "title": "Farewell, Terminator",
+    "votes": 2,
+    "year": 1987
+   },
+   {
+    "id": 133360,
+    "original_title": "Alien Terminator",
+    "title": "Alien Terminator",
+    "votes": 29,
+    "year": 1996
+   }
+  ],
+  "Terminator 2": [
+   {
+    "id": 280,
+    "original_title": "Terminator 2: Judgment Day",
+    "title": "Terminator 2: El juicio final",
+    "votes": 15092,
+    "year": 1991
+   },
+   {
+    "id": 66664,
+    "original_title": "Terminator 2",
+    "title": "Terminator 2 (Shocking Dark)",
+    "votes": 78,
+    "year": 1989
+   },
+   {
+    "id": 698217,
+    "original_title": "The Making of 'Terminator 2 3D'",
+    "title": "The Making of 'Terminator 2 3D'",
+    "votes": 10,
+    "year": 2000
+   },
+   {
+    "id": 473793,
+    "original_title": "The Making of 'Terminator 2: Judgment Day'",
+    "title": "The Making of 'Terminator 2: Judgment Day'",
+    "votes": 46,
+    "year": 1991
+   },
+   {
+    "id": 1444116,
+    "original_title": "Short Cuts : Terminator 2 de James Cameron",
+    "title": "Short Cuts : Terminator 2 de James Cameron",
+    "votes": 1,
+    "year": 0
+   },
+   {
+    "id": 832113,
+    "original_title": "No Feat But What We Make: 'Terminator 2' and the Rise of Digital Effects",
+    "title": "No Feat But What We Make: 'Terminator 2' and the Rise of Digital Effects",
+    "votes": 4,
+    "year": 2003
+   },
+   {
+    "id": 503718,
+    "original_title": "T2: Reprogramming The Terminator",
+    "title": "T2: Reprogramming The Terminator",
+    "votes": 19,
+    "year": 2017
+   },
+   {
+    "id": 86223,
+    "original_title": "The Russian Ninja",
+    "title": "The Russian Ninja",
+    "votes": 16,
+    "year": 1989
+   },
+   {
+    "id": 63105,
+    "original_title": "Nemesis 2: Nebula",
+    "title": "Nemesis 2: Nebula",
+    "votes": 52,
+    "year": 1995
+   },
+   {
+    "id": 61904,
+    "original_title": "Pembalasan Ratu Laut Selatan",
+    "title": "Lady Terminator",
+    "votes": 86,
+    "year": 1988
+   }
+  ],
+  "Transformers": [
+   {
+    "id": 698687,
+    "original_title": "Transformers One",
+    "title": "Transformers One",
+    "votes": 1835,
+    "year": 2024
+   },
+   {
+    "id": 1857,
+    "original_title": "The Transformers: The Movie",
+    "title": "Transformers: La película",
+    "votes": 656,
+    "year": 1986
+   },
+   {
+    "id": 91314,
+    "original_title": "Transformers: Age of Extinction",
+    "title": "Transformers: La era de la extinción",
+    "votes": 9028,
+    "year": 2014
+   },
+   {
+    "id": 667538,
+    "original_title": "Transformers: Rise of the Beasts",
+    "title": "Transformers: El despertar de las bestias",
+    "votes": 5499,
+    "year": 2023
+   },
+   {
+    "id": 335988,
+    "original_title": "Transformers: The Last Knight",
+    "title": "Transformers: El último caballero",
+    "votes": 6953,
+    "year": 2017
+   },
+   {
+    "id": 1858,
+    "original_title": "Transformers",
+    "title": "Transformers",
+    "votes": 12674,
+    "year": 2007
+   },
+   {
+    "id": 8373,
+    "original_title": "Transformers: Revenge of the Fallen",
+    "title": "Transformers: La venganza de los caídos",
+    "votes": 9500,
+    "year": 2009
+   },
+   {
+    "id": 38356,
+    "original_title": "Transformers: Dark of the Moon",
+    "title": "Transformers: El lado oscuro de la Luna",
+    "votes": 9250,
+    "year": 2011
+   },
+   {
+    "id": 25565,
+    "original_title": "Transformers: Beginnings",
+    "title": "Transformers: Beginnings",
+    "votes": 283,
+    "year": 2007
+   },
+   {
+    "id": 1436264,
+    "original_title": "Transformers: Terminal",
+    "title": "Transformers: Terminal",
+    "votes": 0,
+    "year": 2025
+   }
+  ],
+  "Transformers 2 - La venganza de los caidos": [
+   {
+    "id": 8373,
+    "original_title": "Transformers: Revenge of the Fallen",
+    "title": "Transformers: La venganza de los caídos",
+    "votes": 9500,
+    "year": 2009
+   }
+  ],
+  "Transformers La venganza de los caidos": [
+   {
+    "id": 8373,
+    "original_title": "Transformers: Revenge of the Fallen",
+    "title": "Transformers: La venganza de los caídos",
+    "votes": 9500,
+    "year": 2009
+   }
+  ],
+  "Wonder Woman": [
+   {
+    "id": 297762,
+    "original_title": "Wonder Woman",
+    "title": "Wonder Woman",
+    "votes": 21329,
+    "year": 2017
+   },
+   {
+    "id": 464052,
+    "original_title": "Wonder Woman 1984",
+    "title": "Wonder Woman 1984",
+    "votes": 9332,
+    "year": 2020
+   },
+   {
+    "id": 537055,
+    "original_title": "Wonder Woman: Bloodlines",
+    "title": "Wonder Woman: Linaje",
+    "votes": 535,
+    "year": 2019
+   },
+   {
+    "id": 15359,
+    "original_title": "Wonder Woman",
+    "title": "Wonder Woman (La mujer maravilla)",
+    "votes": 645,
+    "year": 2009
+   },
+   {
+    "id": 161620,
+    "original_title": "Wonder Woman",
+    "title": "Wonder Woman",
+    "votes": 38,
+    "year": 1974
+   },
+   {
+    "id": 1782318,
+    "original_title": "WONDER WOMAN 1944",
+    "title": "WONDER WOMAN 1944",
+    "votes": 0,
+    "year": 0
+   },
+   {
+    "id": 1495964,
+    "original_title": "Untitled Wonder Woman Film",
+    "title": "Untitled Wonder Woman Film",
+    "votes": 0,
+    "year": 0
+   },
+   {
+    "id": 1610155,
+    "original_title": "The New Original Wonder Woman",
+    "title": "The New Original Wonder Woman",
+    "votes": 2,
+    "year": 1975
+   },
+   {
+    "id": 1469053,
+    "original_title": "The Return of Wonder Woman",
+    "title": "The Return of Wonder Woman",
+    "votes": 2,
+    "year": 1977
+   },
+   {
+    "id": 306824,
+    "original_title": "Technology/Transformation: Wonder Woman",
+    "title": "Technology/Transformation: Wonder Woman",
+    "votes": 10,
+    "year": 1978
+   }
+  ],
+  "Wonder Woman 1984": [
+   {
+    "id": 464052,
+    "original_title": "Wonder Woman 1984",
+    "title": "Wonder Woman 1984",
+    "votes": 9332,
+    "year": 2020
+   }
+  ],
+  "X-Men -Dias del pasado futuro": [
+   {
+    "id": 127585,
+    "original_title": "X-Men: Days of Future Past",
+    "title": "X-Men: Días del futuro pasado",
+    "votes": 16827,
+    "year": 2014
+   }
+  ],
+  "X-Men 7 -Dias del pasado futuro": []
+ }
+}

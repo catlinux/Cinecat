@@ -60,7 +60,7 @@ type Movie struct {
 	PosterLanguage string `json:"poster_language"`
 }
 
-// Candidate es un resultado de b?squeda que el usuario puede elegir.
+// Candidate es un resultado de búsqueda que el usuario puede elegir.
 type Candidate struct {
 	TMDBID        int     `json:"tmdb_id"`
 	Title         string  `json:"title"`
@@ -69,9 +69,10 @@ type Candidate struct {
 	Overview      string  `json:"overview"`
 	PosterURL     string  `json:"poster_url"`
 	Popularity    float64 `json:"popularity"`
+	VoteCount     int     `json:"vote_count"`
 }
 
-// Details es la ficha completa de una pel?cula o serie.
+// Details es la ficha completa de una película o serie.
 type Details struct {
 	TMDBID           int      `json:"tmdb_id"`
 	IMDbID           string   `json:"imdb_id"`
@@ -322,6 +323,7 @@ type movieSearchResponse struct {
 		Overview      string  `json:"overview"`
 		PosterPath    string  `json:"poster_path"`
 		Popularity    float64 `json:"popularity"`
+		VoteCount     int     `json:"vote_count"`
 	} `json:"results"`
 }
 
@@ -334,7 +336,27 @@ type tvSearchResponse struct {
 		Overview     string  `json:"overview"`
 		PosterPath   string  `json:"poster_path"`
 		Popularity   float64 `json:"popularity"`
+		VoteCount    int     `json:"vote_count"`
 	} `json:"results"`
+}
+
+type collectionRefResponse struct {
+	BelongsToCollection *struct {
+		ID int `json:"id"`
+	} `json:"belongs_to_collection"`
+}
+
+type collectionResponse struct {
+	Parts []struct {
+		ID            int     `json:"id"`
+		Title         string  `json:"title"`
+		OriginalTitle string  `json:"original_title"`
+		ReleaseDate   string  `json:"release_date"`
+		Overview      string  `json:"overview"`
+		PosterPath    string  `json:"poster_path"`
+		Popularity    float64 `json:"popularity"`
+		VoteCount     int     `json:"vote_count"`
+	} `json:"parts"`
 }
 
 type castMember struct {
@@ -444,6 +466,52 @@ func (c *Client) SearchMovies(ctx context.Context, query string, year int) ([]Ca
 			Overview:      result.Overview,
 			PosterURL:     c.imageURLSize(result.PosterPath, "w185"),
 			Popularity:    result.Popularity,
+			VoteCount:     result.VoteCount,
+		})
+	}
+	return candidates, nil
+}
+
+// MovieCollection devuelve las películas de la colección (saga) a la que
+// pertenece la película, ordenadas por fecha de estreno; las que no tienen
+// fecha se descartan. Si no pertenece a ninguna, devuelve una lista vacía.
+func (c *Client) MovieCollection(ctx context.Context, movieID int) ([]Candidate, error) {
+	params := url.Values{}
+	params.Set("language", defaultLanguage)
+
+	// Misma petición que MovieDetails pero sin append_to_response: la ficha
+	// básica basta y queda en caché aparte.
+	var ref collectionRefResponse
+	if err := c.getCachedJSON(ctx, "/movie/"+strconv.Itoa(movieID), params, &ref); err != nil {
+		return nil, err
+	}
+	if ref.BelongsToCollection == nil || ref.BelongsToCollection.ID == 0 {
+		return nil, nil
+	}
+
+	var collection collectionResponse
+	if err := c.getCachedJSON(ctx, "/collection/"+strconv.Itoa(ref.BelongsToCollection.ID), params, &collection); err != nil {
+		return nil, err
+	}
+	parts := collection.Parts[:0:0]
+	for _, part := range collection.Parts {
+		if part.ReleaseDate != "" {
+			parts = append(parts, part)
+		}
+	}
+	sort.SliceStable(parts, func(i, j int) bool { return parts[i].ReleaseDate < parts[j].ReleaseDate })
+
+	candidates := make([]Candidate, 0, len(parts))
+	for _, part := range parts {
+		candidates = append(candidates, Candidate{
+			TMDBID:        part.ID,
+			Title:         part.Title,
+			OriginalTitle: part.OriginalTitle,
+			Year:          releaseYear(part.ReleaseDate),
+			Overview:      part.Overview,
+			PosterURL:     c.imageURLSize(part.PosterPath, "w185"),
+			Popularity:    part.Popularity,
+			VoteCount:     part.VoteCount,
 		})
 	}
 	return candidates, nil
@@ -485,6 +553,7 @@ func (c *Client) SearchTV(ctx context.Context, query string, year int) ([]Candid
 			Overview:      result.Overview,
 			PosterURL:     c.imageURLSize(result.PosterPath, "w185"),
 			Popularity:    result.Popularity,
+			VoteCount:     result.VoteCount,
 		})
 	}
 	return candidates, nil
