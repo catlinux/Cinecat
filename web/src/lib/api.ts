@@ -49,11 +49,21 @@ export interface PlayResponse {
 	expires_at: string;
 }
 
-export interface ScanResult {
+export interface ScanStatus {
+	running: boolean;
+	started_at: string | null;
+	finished_at: string | null;
 	libraries: number;
 	files: number;
 	upserted: number;
+	identified: number;
+	unidentified: number;
 	warnings: string[];
+	error: string;
+}
+
+export interface ScanStarted {
+	started: boolean;
 }
 
 export interface CurrentUserResponse {
@@ -135,8 +145,12 @@ export class ApiClient {
 		await this.delete(`/api/v1/libraries/${id}`, token);
 	}
 
-	async scanLibraries(token: string): Promise<ScanResult> {
-		return this.post<ScanResult>('/api/v1/libraries/scan', undefined, token);
+	async startScan(token: string): Promise<ScanStarted> {
+		return this.post<ScanStarted>('/api/v1/libraries/scan', undefined, token);
+	}
+
+	async getScanStatus(token: string): Promise<ScanStatus> {
+		return this.get<ScanStatus>('/api/v1/libraries/scan', token);
 	}
 
 	async get<T>(path: string, token?: string): Promise<T> {

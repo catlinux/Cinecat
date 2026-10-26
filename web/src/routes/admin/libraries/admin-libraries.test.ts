@@ -1,8 +1,10 @@
 import { render } from 'svelte/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Library } from '$lib/api';
+import ScanProgress from '$lib/components/ScanProgress.svelte';
+import type { Library, ScanStatus } from '$lib/api';
 import AdminPage from './+page.svelte';
 import { actions, load } from './+page.server';
+import { GET as getScanStatus } from './status/+server';
 
 const create = actions.create!;
 const remove = actions.delete!;
@@ -32,14 +34,18 @@ function loadEvent(fetchImpl: typeof fetch) {
 	};
 }
 
-function actionEvent(fetchImpl: typeof fetch, fields: Record<string, string>) {
+function actionEvent(
+	fetchImpl: typeof fetch,
+	fields: Record<string, string>,
+	token: string | null = 'token-123'
+) {
 	return {
 		request: new Request('http://localhost/admin/libraries', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
 			body: new URLSearchParams(fields)
 		}),
-		locals: { sessionToken: 'token-123' },
+		locals: { sessionToken: token },
 		fetch: fetchImpl,
 		cookies: {},
 		url: new URL('http://localhost/admin/libraries'),
@@ -177,31 +183,136 @@ describe('acciones de /admin/libraries', () => {
 		expect(fetchMock.mock.calls[0][1]?.method).toBe('DELETE');
 	});
 
-	it('escanear devuelve el resultado', async () => {
-		const scanResult = { libraries: 2, files: 12, upserted: 12, warnings: [] };
-		const fetchMock = vi.fn().mockResolvedValue(jsonResponse(scanResult));
+	it('escanear inicia el trabajo y devuelve started', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ started: true }, 202));
 
 		const result = (await scan(actionEvent(fetchMock, {}) as never)) as {
 			success?: boolean;
-			scan?: typeof scanResult;
+			started?: boolean;
+			message?: string;
 		};
 
 		expect(result.success).toBe(true);
-		expect(result.scan).toEqual(scanResult);
+		expect(result.started).toBe(true);
+		expect(result.message).toBe('Escaneo iniciado.');
 		expect(fetchMock.mock.calls[0][0]).toBe('http://api.test/api/v1/libraries/scan');
 		expect(fetchMock.mock.calls[0][1]?.method).toBe('POST');
+	});
+
+	it('escanear con 409 lo trata como escaneo en curso', async () => {
+		const fetchMock = vi
+			.fn()
+			.mockResolvedValue(jsonResponse({ error: 'ya hay un escaneo en curso' }, 409));
+
+		const result = (await scan(actionEvent(fetchMock, {}) as never)) as {
+			success?: boolean;
+			started?: boolean;
+			message?: string;
+		};
+
+		expect(result.success).toBe(true);
+		expect(result.started).toBe(true);
+		expect(result.message).toBe('Ya hay un escaneo en curso.');
+	});
+
+	it('escanear con 403 devuelve forbidden', async () => {
+		const fetchMock = vi
+			.fn()
+			.mockResolvedValue(jsonResponse({ error: 'se requiere rol de administrador' }, 403));
+
+		const result = (await scan(actionEvent(fetchMock, {}) as never)) as {
+			status: number;
+			data: { message: string };
+		};
+
+		expect(result.status).toBe(403);
+		expect(result.data.message).toContain('administradores');
+	});
+
+	it('escanear con 401 redirige al login', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ error: 'sesión' }, 401));
+
+		await expect(scan(actionEvent(fetchMock, {}) as never)).rejects.toMatchObject({
+			status: 303,
+			location: '/login'
+		});
+	});
+});
+
+describe('estado del escaneo', () => {
+	const running: ScanStatus = {
+		running: true,
+		started_at: '2026-10-26T08:00:00Z',
+		finished_at: null,
+		libraries: 2,
+		files: 12,
+		upserted: 10,
+		identified: 8,
+		unidentified: 2,
+		warnings: [],
+		error: ''
+	};
+
+	it('GET devuelve el estado del escaneo', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(jsonResponse(running));
+
+		const response = await getScanStatus(actionEvent(fetchMock, {}) as never);
+
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual(running);
+		expect(fetchMock.mock.calls[0][0]).toBe('http://api.test/api/v1/libraries/scan');
+		expect(fetchMock.mock.calls[0][1]?.headers).toMatchObject({
+			Authorization: 'Bearer token-123'
+		});
+	});
+
+	it('GET propaga el 401 de la API', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ error: 'sesión' }, 401));
+
+		const response = await getScanStatus(actionEvent(fetchMock, {}) as never);
+
+		expect(response.status).toBe(401);
+	});
+
+	it('GET propaga el 403 de la API', async () => {
+		const fetchMock = vi
+			.fn()
+			.mockResolvedValue(jsonResponse({ error: 'se requiere rol de administrador' }, 403));
+
+		const response = await getScanStatus(actionEvent(fetchMock, {}) as never);
+
+		expect(response.status).toBe(403);
+	});
+
+	it('GET devuelve 502 si falla la API', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ error: 'fallo' }, 500));
+
+		const response = await getScanStatus(actionEvent(fetchMock, {}) as never);
+		const body = (await response.json()) as { message: string };
+
+		expect(response.status).toBe(502);
+		expect(body.message).not.toBe('');
+	});
+
+	it('GET sin sesión devuelve 401 sin llamar a la API', async () => {
+		const fetchMock = vi.fn();
+
+		const response = await getScanStatus(actionEvent(fetchMock, {}, null) as never);
+
+		expect(response.status).toBe(401);
+		expect(fetchMock).not.toHaveBeenCalled();
 	});
 });
 
 describe('página de administración', () => {
-	it('muestra bibliotecas, formulario y resultado del escaneo', () => {
+	it('muestra bibliotecas, formulario y controles del escaneo', () => {
 		const { body } = render(AdminPage, {
 			props: {
 				data: { libraries },
 				form: {
 					success: true,
-					message: 'Escaneo completado.',
-					scan: { libraries: 2, files: 5, upserted: 5, warnings: ['Ruta ilegible: /x'] }
+					started: true,
+					message: 'Escaneo iniciado.'
 				}
 			}
 		});
@@ -210,7 +321,86 @@ describe('página de administración', () => {
 		expect(body).toContain('/media/peliculas');
 		expect(body).toContain('Nueva biblioteca');
 		expect(body).toContain('Escanear todas las bibliotecas');
+		expect(body).toContain('Escaneo iniciado.');
+		expect(body).toContain('Escaneo en curso…');
+		expect(body).toContain('disabled');
+	});
+});
+
+describe('progreso del escaneo', () => {
+	it('muestra el aviso de escaneo en curso', () => {
+		const { body } = render(ScanProgress, {
+			props: {
+				status: {
+					running: true,
+					started_at: '2026-10-26T08:00:00Z',
+					finished_at: null,
+					libraries: 0,
+					files: 0,
+					upserted: 0,
+					identified: 0,
+					unidentified: 0,
+					warnings: [],
+					error: ''
+				}
+			}
+		});
+
+		expect(body).toContain('Escaneo en curso…');
+		expect(body).toContain('role="status"');
+	});
+
+	it('muestra cifras, avisos plegables y el error', () => {
+		const { body } = render(ScanProgress, {
+			props: {
+				status: {
+					running: false,
+					started_at: '2026-10-26T08:00:00Z',
+					finished_at: '2026-10-26T08:05:00Z',
+					libraries: 2,
+					files: 12,
+					upserted: 10,
+					identified: 8,
+					unidentified: 4,
+					warnings: ['Ruta ilegible: /x'],
+					error: 'El escaneo terminó con un error.'
+				}
+			}
+		});
+
+		expect(body).toContain('12');
 		expect(body).toContain('archivos encontrados');
+		expect(body).toContain('10');
+		expect(body).toContain('entradas actualizadas');
+		expect(body).toContain('8');
+		expect(body).toContain('identificadas');
+		expect(body).toContain('4');
+		expect(body).toContain('sin identificar');
+		expect(body).toContain('Avisos (1)');
 		expect(body).toContain('Ruta ilegible: /x');
+		expect(body).toContain('El escaneo terminó con un error.');
+		expect(body).toContain('<details');
+	});
+
+	it('indica que no hay avisos', () => {
+		const { body } = render(ScanProgress, {
+			props: {
+				status: {
+					running: false,
+					started_at: '2026-10-26T08:00:00Z',
+					finished_at: '2026-10-26T08:05:00Z',
+					libraries: 1,
+					files: 0,
+					upserted: 0,
+					identified: 0,
+					unidentified: 0,
+					warnings: [],
+					error: ''
+				}
+			}
+		});
+
+		expect(body).toContain('Avisos (0)');
+		expect(body).toContain('Sin avisos.');
 	});
 });

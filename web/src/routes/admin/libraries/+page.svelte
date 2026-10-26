@@ -1,12 +1,15 @@
 <script lang="ts">
-	import type { Library, ScanResult } from '$lib/api';
+	import { enhance } from '$app/forms';
+	import { onMount, untrack } from 'svelte';
+	import type { Library, ScanStatus } from '$lib/api';
+	import ScanProgress from '$lib/components/ScanProgress.svelte';
 
 	type FormState = {
 		message?: string;
 		success?: boolean;
 		name?: string;
 		path?: string;
-		scan?: ScanResult;
+		started?: boolean;
 	} | null;
 
 	let {
@@ -16,6 +19,93 @@
 		data: { libraries: Library[] };
 		form?: FormState;
 	} = $props();
+
+	const POLL_INTERVAL = 3000;
+
+	let status = $state<ScanStatus | null>(null);
+	let pollTimer: ReturnType<typeof setInterval> | null = null;
+	let requesting = false;
+
+	const currentStatus = $derived(status ?? (form?.started ? runningStatus() : null));
+
+	function runningStatus(): ScanStatus {
+		return {
+			running: true,
+			started_at: new Date().toISOString(),
+			finished_at: null,
+			libraries: 0,
+			files: 0,
+			upserted: 0,
+			identified: 0,
+			unidentified: 0,
+			warnings: [],
+			error: ''
+		};
+	}
+
+	async function fetchStatus() {
+		if (requesting) {
+			return;
+		}
+		requesting = true;
+		try {
+			const response = await fetch('/admin/libraries/status', {
+				headers: { Accept: 'application/json' },
+				cache: 'no-store'
+			});
+			if (!response.ok) {
+				return;
+			}
+			const next = (await response.json()) as ScanStatus;
+			status = next;
+			if (!next.running) {
+				stopPolling();
+			}
+		} catch {
+			// Se reintenta en el siguiente ciclo; un fallo no rompe la página.
+		} finally {
+			requesting = false;
+		}
+	}
+
+	function startPolling() {
+		if (pollTimer !== null) {
+			return;
+		}
+		pollTimer = setInterval(() => {
+			void fetchStatus();
+		}, POLL_INTERVAL);
+	}
+
+	function stopPolling() {
+		if (pollTimer !== null) {
+			clearInterval(pollTimer);
+			pollTimer = null;
+		}
+	}
+
+	function markRunning() {
+		if (!status?.running) {
+			status = runningStatus();
+			void fetchStatus();
+		}
+		startPolling();
+	}
+
+	onMount(() => {
+		void fetchStatus().then(() => {
+			if (status?.running) {
+				startPolling();
+			}
+		});
+		return stopPolling;
+	});
+
+	$effect(() => {
+		if (form?.started) {
+			untrack(() => markRunning());
+		}
+	});
 
 	function confirmDelete(event: SubmitEvent, name: string) {
 		if (!confirm(`¿Borrar la biblioteca «${name}»? Esta acción no se puede deshacer.`)) {
@@ -46,22 +136,8 @@
 		</p>
 	{/if}
 
-	{#if form?.scan}
-		<div class="scan-result" role="status">
-			<p>
-				<strong>{form.scan.libraries}</strong> bibliotecas · <strong>{form.scan.files}</strong>
-				archivos encontrados · <strong>{form.scan.upserted}</strong> entradas actualizadas
-			</p>
-			{#if form.scan.warnings.length > 0}
-				<ul>
-					{#each form.scan.warnings as warning}
-						<li>{warning}</li>
-					{/each}
-				</ul>
-			{:else}
-				<p class="admin-note">Sin avisos.</p>
-			{/if}
-		</div>
+	{#if currentStatus}
+		<ScanProgress status={currentStatus} />
 	{/if}
 
 	<div class="admin-grid">
@@ -93,9 +169,14 @@
 				</ul>
 			{/if}
 
-			<form method="POST" action="?/scan" class="admin-toolbar">
-				<button type="submit" class="button">Escanear todas las bibliotecas</button>
+			<form method="POST" action="?/scan" class="admin-toolbar" use:enhance>
+				<button type="submit" class="button" disabled={currentStatus?.running ?? false}>
+					Escanear todas las bibliotecas
+				</button>
 			</form>
+			<p class="admin-note">
+				El escaneo continúa en segundo plano; puedes cerrar esta página mientras termina.
+			</p>
 		</div>
 
 		<div class="admin-card">
@@ -123,3 +204,10 @@
 		</div>
 	</div>
 </section>
+
+<style>
+	.admin-toolbar .button:disabled {
+		opacity: 0.55;
+		cursor: wait;
+	}
+</style>

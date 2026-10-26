@@ -10,6 +10,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 ### Added
 - Library scans run in the background: `POST /api/v1/libraries/scan` returns 202 (or 409 if one is already running) and `GET /api/v1/libraries/scan` reports the status and the last result.
 - Automatic scan one minute after startup and then every `CINECAT_SCAN_INTERVAL` (default `6h`; `0` disables it).
+- The libraries panel starts the scan in the background and shows "Escaneo en curso…" polling every 3 s; when done, it shows files, identified, unidentified and collapsible warnings.
 - The server shuts down gracefully on SIGINT/SIGTERM, cancelling any running scan.
 
 ## [0.10.0] - 2026-10-26

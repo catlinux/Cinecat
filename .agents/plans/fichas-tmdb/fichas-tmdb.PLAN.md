@@ -1,6 +1,6 @@
 # Fichas en castellano, colecciones, series y navegación de la biblioteca
 
-Estado (2026-10-26): T1, T2, T3a y T3b hechas (en local, sin push). **Siguiente: T3c.** (T3b: `NewAPI` recibe `*ScanJob`; el panel web aún espera la respuesta antigua del POST.)
+Estado (2026-10-26): T1, T2, T3a, T3b y T3c hechas. **Siguiente: T3d** (luego ▶ desplegar).
 
 Orden: Hito 1 (T3b → T3c → T3d → ▶ → T4 → T5 → T6 → D1) → Hito 1b (A1 → A2 → A3 → ▶ → A4 → ▶) → Hito 2 (T7 → T8 → T9 → ▶) → Hito 3 (T10 → T11 → T12 → T13 → D2).
 
@@ -55,7 +55,7 @@ Convenciones para el `context` de cada tarea: Go 1.22+ (módulo `github.com/catl
 
 ▶ **Desplegar** tras T3b+T3c+T3d: el usuario ya verá carteles y sinopsis en castellano en la cartelera actual, el escaneo con progreso y la versión en el pie.
 
-### T3c — Panel de bibliotecas con el escaneo en segundo plano
+### ✅ T3c — Panel de bibliotecas con el escaneo en segundo plano
 - Archivos: `web/src/routes/admin/libraries/+page.svelte`, `+page.server.ts`, `admin-libraries.test.ts`, `web/src/lib/api.ts`.
 - El botón «Escanear» llama al POST y muestra «Escaneo en curso…» consultando `GET /api/v1/libraries/scan` cada 3 s hasta `running=false`; entonces muestra archivos, identificadas, sin identificar y avisos (los avisos en una lista plegable). Con 409, mostrar que ya hay uno en curso y seguir consultando.
 - Esfuerzo: medio.

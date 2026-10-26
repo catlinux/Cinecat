@@ -100,10 +100,13 @@ export const actions: Actions = {
 		const token = requireSessionToken(locals);
 
 		try {
-			const scan = await createApiClient(fetch).scanLibraries(token);
-			return { success: true, message: 'Escaneo completado.', scan };
+			await createApiClient(fetch).startScan(token);
+			return { success: true, started: true, message: 'Escaneo iniciado.' };
 		} catch (reason) {
-			return actionFailure(reason, 'No se pudo completar el escaneo.');
+			if (reason instanceof ApiError && reason.status === 409) {
+				return { success: true, started: true, message: 'Ya hay un escaneo en curso.' };
+			}
+			return actionFailure(reason, 'No se pudo iniciar el escaneo.');
 		}
 	}
 };
