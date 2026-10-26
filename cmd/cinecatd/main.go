@@ -115,6 +115,9 @@ func main() {
 				Preset:    settingsStore.String("playback.preset"),
 			}
 		},
+		MaxTranscodesFunc: func() int {
+			return settingsStore.Int("playback.max_transcodes")
+		},
 	})
 	if err != nil {
 		log.Fatalf("cinecatd: %v", err)

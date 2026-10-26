@@ -98,6 +98,7 @@ func TestHLSArgsSaltoYAudioEstereo(t *testing.T) {
 		"-start_number\n0",
 		"-output_ts_offset\n10",
 		"-hls_segment_filename\nsegment_%05d.ts",
+		"-threads\n" + strconv.Itoa(defaultTranscodeThreads()),
 	} {
 		if !strings.Contains(first, expected) {
 			t.Fatalf("falta %q: %v", expected, first)

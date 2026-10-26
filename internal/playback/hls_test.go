@@ -1,6 +1,7 @@
 package playback
 
 import (
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -45,6 +46,7 @@ func TestHLSTranscodeArgsConAjustes(t *testing.T) {
 				"-vf\n" + test.filter,
 				"-preset\n" + test.preset,
 				"-crf\n" + test.crf,
+				"-threads\n" + strconv.Itoa(defaultTranscodeThreads()),
 			} {
 				if !strings.Contains(joined, expected) {
 					t.Fatalf("faltan %q en los argumentos: %v", expected, args)
@@ -67,8 +69,24 @@ func TestTranscodeSettingsInvalidosUsanLosDefectos(t *testing.T) {
 	args := strings.Join(hlsTranscodeArgs("/tmp/peli.mkv", 0, settings), "\n")
 	if !strings.Contains(args, "-vf\n"+`scale=-2:trunc(min(1080\,ih)/2)*2`) ||
 		!strings.Contains(args, "-crf\n20") ||
-		!strings.Contains(args, "-preset\nveryfast") {
+		!strings.Contains(args, "-preset\nveryfast") ||
+		!strings.Contains(args, "-threads\n"+strconv.Itoa(defaultTranscodeThreads())) {
 		t.Fatalf("argumentos sin los defectos: %s", args)
+	}
+}
+
+func TestHLSTranscodeArgsLimitaHilos(t *testing.T) {
+	settings := defaultTranscodeSettings()
+	settings.Threads = 3
+	args := strings.Join(hlsTranscodeArgs("/tmp/peli.mkv", 0, settings), "\n")
+	if !strings.Contains(args, "-threads\n3") {
+		t.Fatalf("faltan los hilos configurados: %s", args)
+	}
+
+	settings.Threads = 0
+	args = strings.Join(hlsTranscodeArgs("/tmp/peli.mkv", 0, settings), "\n")
+	if !strings.Contains(args, "-threads\n"+strconv.Itoa(defaultTranscodeThreads())) {
+		t.Fatalf("faltan los hilos por defecto: %s", args)
 	}
 }
 
@@ -103,6 +121,27 @@ func TestServiceLeeAjustesEnCaliente(t *testing.T) {
 	}
 }
 
+func TestOptionsThreadsSobrescribeElDefecto(t *testing.T) {
+	svc, err := New(Options{
+		WorkDir: t.TempDir(),
+		Threads: 2,
+		Settings: func() TranscodeSettings {
+			return TranscodeSettings{MaxHeight: 720, CRF: 22, Preset: "fast"}
+		},
+	})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := svc.Close(); err != nil {
+			t.Errorf("Close: %v", err)
+		}
+	})
+	if got := svc.currentTranscodeSettings().Threads; got != 2 {
+		t.Fatalf("hilos = %d, se esperaban 2", got)
+	}
+}
+
 func TestTranscodeKeySeparaCalidades(t *testing.T) {
 	base := defaultTranscodeSettings()
 	if transcodeKey(base) != transcodeKey(base) {
@@ -122,5 +161,10 @@ func TestTranscodeKeySeparaCalidades(t *testing.T) {
 	changed.Preset = "fast"
 	if transcodeKey(base) == transcodeKey(changed) {
 		t.Fatal("cambiar el preset debe cambiar la clave de caché")
+	}
+	changed = base
+	changed.Threads++
+	if transcodeKey(base) == transcodeKey(changed) {
+		t.Fatal("cambiar los hilos debe cambiar la clave de caché")
 	}
 }

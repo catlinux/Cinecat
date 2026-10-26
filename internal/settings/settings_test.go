@@ -48,8 +48,8 @@ func raw(value string) json.RawMessage {
 
 func TestDefinitions(t *testing.T) {
 	definitions := Definitions()
-	if len(definitions) != 16 {
-		t.Fatalf("ajustes = %d, se esperaban 16", len(definitions))
+	if len(definitions) != 17 {
+		t.Fatalf("ajustes = %d, se esperaban 17", len(definitions))
 	}
 
 	seen := make(map[string]bool)
@@ -114,6 +114,8 @@ func TestValidate(t *testing.T) {
 		{"enum numérico", "ui.page_size", "24", 24},
 		{"enum numérico alto", "playback.max_height", "1080", 1080},
 		{"enum numérico mínimo", "playback.max_height", "480", 480},
+		{"transcodificaciones mínimo", "playback.max_transcodes", "1", 1},
+		{"transcodificaciones máximo", "playback.max_transcodes", "8", 8},
 	}
 
 	for _, test := range tests {
@@ -148,6 +150,9 @@ func TestValidate(t *testing.T) {
 		{"enum desconocido", "metadata.language", `"fr-FR"`},
 		{"enum numérico texto", "ui.page_size", `"24"`},
 		{"enum numérico fuera", "ui.page_size", "50"},
+		{"transcodificaciones fuera por abajo", "playback.max_transcodes", "0"},
+		{"transcodificaciones fuera por arriba", "playback.max_transcodes", "9"},
+		{"transcodificaciones decimal", "playback.max_transcodes", "2.5"},
 		{"valor null", "ui.show_series", "null"},
 		{"json inválido", "ui.show_series", "{"},
 	}

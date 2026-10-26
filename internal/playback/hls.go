@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"net/http"
 	"net/url"
@@ -49,6 +50,14 @@ const (
 	// Con el desplazamiento, el segmento N empieza siempre en el mismo instante
 	// sea cual sea el proceso que lo generó (comprobado con FFmpeg 5.1).
 	hlsTimestampOffsetSeconds = 10
+	// hlsRunIdleTimeout es el tiempo sin peticiones tras el cual se para un
+	// proceso FFmpeg abandonado.
+	hlsRunIdleTimeout = 90 * time.Second
+	// hlsMaxAheadSegments limita cuánto puede adelantarse FFmpeg al último
+	// segmento pedido: 20 × 6 s ≈ 2 minutos.
+	hlsMaxAheadSegments = 20
+	// hlsMonitorInterval es la frecuencia con la que se revisan los procesos.
+	hlsMonitorInterval = 2 * time.Second
 )
 
 // ffmpegPlaylistFile es la playlist interna de cada proceso FFmpeg. Solo lista
@@ -101,6 +110,7 @@ func hlsTranscodeArgs(inputPath string, startSegment int, transcode ...Transcode
 		"-c:v", "libx264",
 		"-preset", settings.Preset,
 		"-crf", strconv.Itoa(settings.CRF),
+		"-threads", strconv.Itoa(settings.Threads),
 		"-pix_fmt", "yuv420p",
 		"-force_key_frames", "expr:gte(t,n_forced*"+strconv.Itoa(hlsSegmentSeconds)+")",
 		"-c:a", "aac",
@@ -208,7 +218,9 @@ func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string) (
 	transcode := s.currentTranscodeSettings()
 	key := hlsEntryKey{itemID: itemID, transcode: transcodeKey(transcode)}
 	if entry, ok := s.entries[key]; ok {
-		entry.lastUsed = s.now()
+		now := s.now()
+		entry.lastUsed = now
+		entry.lastRequest = now
 		if s.playlistExists(entry) {
 			return entry, nil
 		}
@@ -227,8 +239,8 @@ func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string) (
 		}
 	}
 
-	if _, err := exec.LookPath("ffmpeg"); err != nil {
-		return nil, ErrFFmpegNotFound
+	if err := s.ffmpegAvailable(); err != nil {
+		return nil, err
 	}
 
 	absInput, err := filepath.Abs(inputPath)
@@ -244,12 +256,16 @@ func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string) (
 		return nil, fmt.Errorf("playback: crear el directorio HLS: %w", err)
 	}
 
+	now := s.now()
 	entry := &hlsEntry{
-		dir:          dir,
-		inputPath:    absInput,
-		lastUsed:     s.now(),
-		playlistFile: ffmpegPlaylistFile,
-		transcode:    transcode,
+		itemID:           itemID,
+		dir:              dir,
+		inputPath:        absInput,
+		lastUsed:         now,
+		lastRequest:      now,
+		playlistFile:     ffmpegPlaylistFile,
+		transcode:        transcode,
+		highestRequested: -1,
 	}
 
 	if durations, err := s.playlistDurations(ctx, absInput); err == nil {
@@ -285,28 +301,44 @@ func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string) (
 // calidad.
 func transcodeKey(settings TranscodeSettings) string {
 	settings = normalizeTranscodeSettings(settings)
-	return fmt.Sprintf("%d-%d-%s", settings.MaxHeight, settings.CRF, settings.Preset)
+	return fmt.Sprintf("%d-%d-%s-%d", settings.MaxHeight, settings.CRF, settings.Preset, settings.Threads)
 }
 
 // startRunLocked detiene el proceso FFmpeg actual de la entrada (si lo hay) y
 // lanza otro que genera desde el segmento start.
 func (s *Service) startRunLocked(entry *hlsEntry, start int) error {
+	if err := s.ffmpegAvailable(); err != nil {
+		return err
+	}
 	if old := entry.run; old != nil {
 		old.cancel()
 		<-old.done
+		s.recountLiveTranscodesLocked()
 		entry.run = nil
 		discardSegments(entry.dir, old.start, start)
 	}
 
-	ffmpeg, err := exec.LookPath("ffmpeg")
-	if err != nil {
-		return ErrFFmpegNotFound
-	}
+	s.reserveTranscodeSlotLocked(entry)
 
 	// El proceso vive ligado al contexto del servicio, no al de la petición
 	// HTTP que lo arranca, para que no se cancele al terminar esa petición.
 	procCtx, cancel := context.WithTimeout(s.procCtx, hlsProcessTimeout)
-	cmd := exec.CommandContext(procCtx, ffmpeg, hlsTranscodeArgs(entry.inputPath, start, entry.transcode)...)
+	args := hlsTranscodeArgs(entry.inputPath, start, entry.transcode)
+	var cmd *exec.Cmd
+	if s.command != nil {
+		cmd = s.command(procCtx, "ffmpeg", args...)
+		if cmd == nil {
+			cancel()
+			return fmt.Errorf("%w: comando de prueba vacío", ErrFFmpegFailed)
+		}
+	} else {
+		ffmpeg, err := exec.LookPath("ffmpeg")
+		if err != nil {
+			cancel()
+			return ErrFFmpegNotFound
+		}
+		cmd = ffmpegCommand(procCtx, ffmpeg, args...)
+	}
 	cmd.Dir = entry.dir
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
@@ -321,8 +353,10 @@ func (s *Service) startRunLocked(entry *hlsEntry, start int) error {
 		started: time.Now(),
 		done:    make(chan struct{}),
 		cancel:  cancel,
+		counted: true,
 	}
 	entry.run = run
+	s.liveTranscodes++
 
 	go func() {
 		err := cmd.Wait()
@@ -333,8 +367,86 @@ func (s *Service) startRunLocked(entry *hlsEntry, start int) error {
 		}
 		cancel()
 		close(run.done)
+		// El canal se cierra antes de pedir el mutex para que quien espera la
+		// salida no se bloquee con el contador.
+		s.mu.Lock()
+		if run.counted {
+			run.counted = false
+			s.liveTranscodes--
+			if s.liveTranscodes < 0 {
+				s.liveTranscodes = 0
+			}
+		}
+		s.mu.Unlock()
 	}()
 	return nil
+}
+
+// reserveTranscodeSlotLocked deja sitio para un proceso nuevo. Si se alcanzó
+// el tope, para el proceso ajeno que lleve más tiempo sin recibir peticiones;
+// la entrada que se está lanzando nunca es la víctima.
+func (s *Service) reserveTranscodeSlotLocked(entry *hlsEntry) {
+	s.recountLiveTranscodesLocked()
+	limit := s.maxTranscodeLimit()
+	for s.liveTranscodes >= limit {
+		victim := s.oldestLiveRunLocked(entry)
+		if victim == nil {
+			return
+		}
+		s.stopRunLocked(victim, "límite de concurrencia")
+	}
+}
+
+func (s *Service) oldestLiveRunLocked(except *hlsEntry) *hlsEntry {
+	var victim *hlsEntry
+	var victimTime time.Time
+	for _, candidate := range s.entries {
+		if candidate == except || candidate.run == nil || candidate.run.finished() {
+			continue
+		}
+		requested := candidate.lastRequest
+		if requested.IsZero() {
+			requested = candidate.lastUsed
+		}
+		if victim == nil || requested.Before(victimTime) {
+			victim = candidate
+			victimTime = requested
+		}
+	}
+	return victim
+}
+
+// stopRunLocked para un proceso deliberadamente y conserva sus segmentos para
+// que la próxima petición pueda reanudar por el punto que pida el cliente.
+func (s *Service) stopRunLocked(entry *hlsEntry, reason string) {
+	if entry == nil || entry.run == nil || entry.run.finished() {
+		s.recountLiveTranscodesLocked()
+		return
+	}
+	entry.run.interrupted = true
+	entry.run.cancel()
+	<-entry.run.done
+	s.recountLiveTranscodesLocked()
+	log.Printf("playback: detenido ffmpeg del ítem %d por %s", entry.itemID, reason)
+}
+
+// recountLiveTranscodesLocked reconcilia el contador con los procesos que
+// siguen vivos. Los procesos terminados dejan de sumar aunque su goroutine
+// todavía no haya podido tomar el mutex.
+func (s *Service) recountLiveTranscodesLocked() {
+	count := 0
+	for _, entry := range s.entries {
+		if entry.run == nil {
+			continue
+		}
+		if entry.run.finished() {
+			entry.run.counted = false
+			continue
+		}
+		count++
+		entry.run.counted = true
+	}
+	s.liveTranscodes = count
 }
 
 // discardSegments se llama con el proceso anterior ya terminado. Borra el
@@ -368,7 +480,12 @@ func (s *Service) waitForSegment(ctx context.Context, entry *hlsEntry, index int
 
 	for {
 		s.mu.Lock()
-		entry.lastUsed = s.now()
+		now := s.now()
+		entry.lastUsed = now
+		entry.lastRequest = now
+		if index > entry.highestRequested {
+			entry.highestRequested = index
+		}
 		ready, err := s.checkSegmentLocked(entry, index)
 		s.mu.Unlock()
 		if err != nil {
@@ -415,9 +532,11 @@ func (s *Service) checkSegmentLocked(entry *hlsEntry, index int) (bool, error) {
 			if index <= last+1+hlsRestartGap {
 				return false, nil
 			}
-		} else if run.start == index || entry.segments == 0 {
+		} else if !run.interrupted && (run.start == index || entry.segments == 0) {
 			// El proceso empezó justo aquí (o no se puede relanzar) y terminó
-			// sin generarlo: relanzarlo otra vez no lo arreglaría.
+			// sin generarlo: relanzarlo otra vez no lo arreglaría. Si lo
+			// paramos nosotros por inactividad, adelanto o concurrencia, sí
+			// hay que reanudar.
 			if run.err != nil {
 				return false, run.err
 			}
@@ -426,14 +545,16 @@ func (s *Service) checkSegmentLocked(entry *hlsEntry, index int) (bool, error) {
 	}
 
 	if entry.segments == 0 {
-		// Sin playlist VOD propia no hay forma de relanzar en un punto
-		// concreto: solo se puede esperar al proceso que va desde el principio.
+		// Sin playlist VOD propia no hay forma de calcular el final, pero si
+		// paramos el proceso podemos relanzarlo en el segmento pedido.
 		if run != nil && !run.finished() {
 			return false, nil
 		}
-		return false, fmt.Errorf("%w: segmento %d", ErrFileNotFound, index)
+		if run == nil || !run.interrupted {
+			return false, fmt.Errorf("%w: segmento %d", ErrFileNotFound, index)
+		}
 	}
-	if index >= entry.segments {
+	if entry.segments > 0 && index >= entry.segments {
 		return false, fmt.Errorf("%w: segmento %d", ErrFileNotFound, index)
 	}
 	if run != nil && !run.finished() && time.Since(run.started) < hlsRestartMinAge {
@@ -572,6 +693,7 @@ func (s *Service) removeEntryLocked(key hlsEntryKey, entry *hlsEntry) {
 	if entry.run != nil {
 		entry.run.cancel()
 		<-entry.run.done
+		s.recountLiveTranscodesLocked()
 	}
 	if s.entries[key] == entry {
 		delete(s.entries, key)
@@ -601,6 +723,51 @@ func (s *Service) cleanupLocked() {
 			s.removeEntryLocked(key, entry)
 		}
 	}
+}
+
+// monitorLocked para los procesos que ya no tienen sentido: los abandonados
+// sin peticiones y los que se han adelantado demasiado al cliente.
+func (s *Service) monitorLocked() {
+	if s.procCtx != nil && s.procCtx.Err() != nil {
+		return
+	}
+	s.recountLiveTranscodesLocked()
+	now := s.now()
+	for _, entry := range s.entries {
+		run := entry.run
+		if run == nil || run.finished() {
+			continue
+		}
+		requested := entry.lastRequest
+		if requested.IsZero() {
+			requested = entry.lastUsed
+		}
+		if s.runIdleTimeout > 0 && !requested.IsZero() && now.Sub(requested) > s.runIdleTimeout {
+			s.stopRunLocked(entry, "inactividad")
+			continue
+		}
+		if entry.highestRequested < 0 {
+			continue
+		}
+		if s.maxAheadSegments > 0 &&
+			highestGeneratedSegment(entry.dir) > entry.highestRequested+s.maxAheadSegments {
+			s.stopRunLocked(entry, "adelanto")
+		}
+	}
+}
+
+// highestGeneratedSegment devuelve el mayor segmento que FFmpeg ha empezado a
+// escribir, aunque todavía no esté listado en su playlist.
+func highestGeneratedSegment(dir string) int {
+	matches, _ := filepath.Glob(filepath.Join(dir, "segment_*.ts"))
+	highest := -1
+	for _, match := range matches {
+		index, ok := segmentIndex(filepath.Base(match))
+		if ok && index > highest {
+			highest = index
+		}
+	}
+	return highest
 }
 
 // signPlaylist añade a los segmentos (y a un posible EXT-X-MAP) los mismos

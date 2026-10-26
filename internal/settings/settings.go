@@ -257,6 +257,16 @@ var definitions = []Definition{
 		},
 	},
 	{
+		Key:         "playback.max_transcodes",
+		Section:     "playback",
+		Label:       "Transcodificaciones simultáneas",
+		Description: "Cuántas películas se pueden recodificar a la vez. Más de las que aguante el procesador provoca cortes al avanzar.",
+		Type:        TypeInt,
+		Default:     2,
+		Min:         1,
+		Max:         8,
+	},
+	{
 		Key:         "system.check_updates",
 		Section:     "system",
 		Label:       "Buscar actualizaciones",

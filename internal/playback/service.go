@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime"
 	"strconv"
 	"sync"
 	"time"
@@ -24,15 +25,37 @@ const DefaultURLTTL = 8 * time.Hour
 // hlsIdleTTL es el tiempo que se conserva un HLS ya generado sin usarse.
 const hlsIdleTTL = time.Hour
 
+// defaultMaxTranscodes es el número de procesos FFmpeg que pueden convivir si
+// no se configura otro límite.
+const defaultMaxTranscodes = 2
+
 // TranscodeSettings son los parámetros que afectan al remux HLS.
 type TranscodeSettings struct {
 	MaxHeight int
 	CRF       int
 	Preset    string
+	// Threads limita los hilos de x264. Cero significa usar el valor por
+	// defecto, calculado a partir de los núcleos disponibles.
+	Threads int
 }
 
 func defaultTranscodeSettings() TranscodeSettings {
-	return TranscodeSettings{MaxHeight: 1080, CRF: 20, Preset: "veryfast"}
+	return TranscodeSettings{
+		MaxHeight: 1080,
+		CRF:       20,
+		Preset:    "veryfast",
+		Threads:   defaultTranscodeThreads(),
+	}
+}
+
+// defaultTranscodeThreads deja la mitad de los núcleos para el servidor y el
+// resto de procesos del sistema.
+func defaultTranscodeThreads() int {
+	threads := runtime.NumCPU() / 2
+	if threads < 1 {
+		threads = 1
+	}
+	return threads
 }
 
 func normalizeTranscodeSettings(settings TranscodeSettings) TranscodeSettings {
@@ -49,6 +72,9 @@ func normalizeTranscodeSettings(settings TranscodeSettings) TranscodeSettings {
 	case "veryfast", "faster", "fast":
 	default:
 		settings.Preset = defaults.Preset
+	}
+	if settings.Threads <= 0 {
+		settings.Threads = defaults.Threads
 	}
 	return settings
 }
@@ -70,6 +96,26 @@ type Options struct {
 	// Settings devuelve los parámetros de transcodificación vigentes. Si es
 	// nil se usan 1080p, CRF 20 y veryfast.
 	Settings func() TranscodeSettings
+	// Threads sobrescribe los hilos de x264; cero usa el valor por defecto.
+	Threads int
+	// MaxTranscodes es el máximo de procesos FFmpeg vivos. Cero usa 2.
+	MaxTranscodes int
+	// MaxTranscodesFunc permite consultar el límite en caliente; tiene
+	// prioridad sobre MaxTranscodes.
+	MaxTranscodesFunc func() int
+	// RunIdleTimeout es cuánto se espera sin peticiones antes de detener un
+	// proceso. Cero usa hlsRunIdleTimeout.
+	RunIdleTimeout time.Duration
+	// MaxAheadSegments es cuántos segmentos puede adelantarse FFmpeg. Cero usa
+	// hlsMaxAheadSegments.
+	MaxAheadSegments int
+	// MonitorInterval es la frecuencia del vigilante. Cero usa
+	// hlsMonitorInterval.
+	MonitorInterval time.Duration
+	// Command sustituye la creación del proceso FFmpeg en las pruebas.
+	Command func(ctx context.Context, name string, args ...string) *exec.Cmd
+	// command es el alias que usan algunas pruebas internas.
+	command func(ctx context.Context, name string, args ...string) *exec.Cmd
 }
 
 // Service firma URLs, prepara remux HLS y sirve sus archivos.
@@ -80,15 +126,24 @@ type Service struct {
 	workDir  string
 	prober   *Prober
 	settings func() TranscodeSettings
+	threads  int
+
+	maxTranscodes     int
+	maxTranscodesFunc func() int
+	runIdleTimeout    time.Duration
+	maxAheadSegments  int
+	monitorInterval   time.Duration
+	command           func(ctx context.Context, name string, args ...string) *exec.Cmd
 
 	procCtx    context.Context
 	procCancel context.CancelFunc
 
-	mu        sync.Mutex
-	entries   map[hlsEntryKey]*hlsEntry
-	stop      chan struct{}
-	done      chan struct{}
-	closeOnce sync.Once
+	mu             sync.Mutex
+	entries        map[hlsEntryKey]*hlsEntry
+	liveTranscodes int
+	stop           chan struct{}
+	done           chan struct{}
+	closeOnce      sync.Once
 }
 
 type hlsEntryKey struct {
@@ -98,11 +153,15 @@ type hlsEntryKey struct {
 
 // hlsEntry es el HLS de un ítem. Sus campos se protegen con Service.mu.
 type hlsEntry struct {
+	itemID       int64
 	dir          string
 	inputPath    string
 	lastUsed     time.Time
+	lastRequest  time.Time
 	playlistFile string
 	transcode    TranscodeSettings
+	// highestRequested es el mayor segmento que ha pedido el cliente.
+	highestRequested int
 	// segments es el total de la playlist VOD propia; 0 si se sirve la de
 	// FFmpeg y por tanto no se puede relanzar en un segmento concreto.
 	segments int
@@ -122,6 +181,11 @@ type hlsRun struct {
 	done   chan struct{}
 	err    error
 	cancel context.CancelFunc
+	// interrupted marca las paradas deliberadas por inactividad, adelanto o
+	// concurrencia: la próxima petición puede relanzar el proceso.
+	interrupted bool
+	// counted indica que este proceso suma en Service.liveTranscodes.
+	counted bool
 }
 
 func (r *hlsRun) finished() bool {
@@ -172,26 +236,68 @@ func New(opts Options) (*Service, error) {
 		settings = defaultTranscodeSettings
 	}
 
+	runIdleTimeout := opts.RunIdleTimeout
+	if runIdleTimeout <= 0 {
+		runIdleTimeout = hlsRunIdleTimeout
+	}
+	maxAheadSegments := opts.MaxAheadSegments
+	if maxAheadSegments <= 0 {
+		maxAheadSegments = hlsMaxAheadSegments
+	}
+	monitorInterval := opts.MonitorInterval
+	if monitorInterval <= 0 {
+		monitorInterval = hlsMonitorInterval
+	}
+	maxTranscodes := opts.MaxTranscodes
+	if maxTranscodes <= 0 {
+		maxTranscodes = defaultMaxTranscodes
+	}
+	threads := opts.Threads
+	if threads < 0 {
+		threads = 0
+	}
+
+	command := opts.Command
+	if command == nil {
+		command = opts.command
+	}
+
 	procCtx, procCancel := context.WithCancel(context.Background())
 	svc := &Service{
-		key:        key,
-		ttl:        ttl,
-		now:        now,
-		workDir:    workDir,
-		prober:     prober,
-		settings:   settings,
-		procCtx:    procCtx,
-		procCancel: procCancel,
-		entries:    make(map[hlsEntryKey]*hlsEntry),
-		stop:       make(chan struct{}),
-		done:       make(chan struct{}),
+		key:               key,
+		ttl:               ttl,
+		now:               now,
+		workDir:           workDir,
+		prober:            prober,
+		settings:          settings,
+		threads:           threads,
+		maxTranscodes:     maxTranscodes,
+		maxTranscodesFunc: opts.MaxTranscodesFunc,
+		runIdleTimeout:    runIdleTimeout,
+		maxAheadSegments:  maxAheadSegments,
+		monitorInterval:   monitorInterval,
+		command:           command,
+		procCtx:           procCtx,
+		procCancel:        procCancel,
+		entries:           make(map[hlsEntryKey]*hlsEntry),
+		stop:              make(chan struct{}),
+		done:              make(chan struct{}),
 	}
 	go svc.cleanupLoop()
 	return svc, nil
 }
 
 func (s *Service) currentTranscodeSettings() TranscodeSettings {
-	return normalizeTranscodeSettings(s.settings())
+	original := s.settings()
+	settings := normalizeTranscodeSettings(original)
+	if s.threads > 0 {
+		settings.Threads = s.threads
+	} else if original.Threads <= 0 {
+		// Sin límite explícito se deja sin fijar; los argumentos aplican el
+		// valor por defecto calculado a partir de los núcleos.
+		settings.Threads = original.Threads
+	}
+	return settings
 }
 
 // Close detiene la limpieza periódica y elimina el directorio de trabajo con
@@ -209,27 +315,62 @@ func (s *Service) Close() error {
 	for key, entry := range s.entries {
 		s.removeEntryLocked(key, entry)
 	}
+	s.recountLiveTranscodesLocked()
 	s.mu.Unlock()
 	return os.RemoveAll(s.workDir)
 }
 
-// cleanupLoop borra los remux que llevan un rato sin usarse, aunque no lleguen
-// más peticiones.
+// cleanupLoop borra los remux antiguos y vigila los procesos vivos: los para
+// cuando llevan demasiado sin recibir peticiones o se adelantan al cliente.
 func (s *Service) cleanupLoop() {
 	defer close(s.done)
 
-	ticker := time.NewTicker(15 * time.Minute)
-	defer ticker.Stop()
+	cleanupTicker := time.NewTicker(15 * time.Minute)
+	defer cleanupTicker.Stop()
+	monitorInterval := s.monitorInterval
+	if monitorInterval <= 0 {
+		monitorInterval = hlsMonitorInterval
+	}
+	monitorTicker := time.NewTicker(monitorInterval)
+	defer monitorTicker.Stop()
 	for {
 		select {
 		case <-s.stop:
 			return
-		case <-ticker.C:
+		case <-cleanupTicker.C:
 			s.mu.Lock()
 			s.cleanupLocked()
 			s.mu.Unlock()
+		case <-monitorTicker.C:
+			s.mu.Lock()
+			s.monitorLocked()
+			s.mu.Unlock()
 		}
 	}
+}
+
+// ffmpegAvailable comprueba el binario real salvo que las pruebas hayan
+// sustituido el comando.
+func (s *Service) ffmpegAvailable() error {
+	if s.command != nil {
+		return nil
+	}
+	if _, err := exec.LookPath("ffmpeg"); err != nil {
+		return ErrFFmpegNotFound
+	}
+	return nil
+}
+
+func (s *Service) maxTranscodeLimit() int {
+	if s.maxTranscodesFunc != nil {
+		if limit := s.maxTranscodesFunc(); limit > 0 {
+			return limit
+		}
+	}
+	if s.maxTranscodes > 0 {
+		return s.maxTranscodes
+	}
+	return defaultMaxTranscodes
 }
 
 // Sign devuelve la firma y la caducidad de una URL de reproducción para el
@@ -278,8 +419,5 @@ func (s *Service) signatureBytes(itemID, expires int64) []byte {
 
 // CheckFFmpeg comprueba que ffmpeg existe en el PATH.
 func (s *Service) CheckFFmpeg() error {
-	if _, err := exec.LookPath("ffmpeg"); err != nil {
-		return ErrFFmpegNotFound
-	}
-	return nil
+	return s.ffmpegAvailable()
 }

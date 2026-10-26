@@ -7,6 +7,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Corregido
+- El vídeo ya no se cuelga al avanzar tras varias reproducciones: FFmpeg se detiene a los 90 s sin peticiones, no se adelanta más de 20 segmentos al punto pedido, hay un tope de transcodificaciones simultáneas (ajuste `playback.max_transcodes`, 2 por defecto) y los procesos van con prioridad baja y hilos limitados. Antes cada reproducción abandonada seguía transcodificando la película entera.
+
 ### Añadido
 - Reparto y equipo con foto y personaje (`credits` en películas y series; las fichas ya guardadas se rellenan desde la caché de TMDB) y «Más como este» calculado en local: `GET /api/v1/items/{id}/similar` y `GET /api/v1/series/{id}/similar`.
 - Panel de administración en la web con menú lateral: Resumen (versiones, último escaneo, recuentos y pendientes de identificar), Bibliotecas, y formularios de ajustes por sección (Escaneo, Metadatos, Interfaz, Reproducción, Sistema) con valores por defecto, validación por campo y «Restablecer». Comprobación opcional de actualizaciones, solo si se activa y se pulsa el botón.

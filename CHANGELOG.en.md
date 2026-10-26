@@ -7,6 +7,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+### Fixed
+- Video no longer freezes when seeking after several playbacks: FFmpeg stops after 90 s without requests, never runs more than 20 segments ahead of the requested point, there is a cap on simultaneous transcodes (`playback.max_transcodes` setting, 2 by default) and processes run at low priority with limited threads. Before, every abandoned playback kept transcoding the whole movie.
+
 ### Added
 - Cast and crew with photo and character (`credits` on movies and series; saved records are filled from the TMDB cache) and "More like this" computed locally: `GET /api/v1/items/{id}/similar` and `GET /api/v1/series/{id}/similar`.
 - Admin panel on the web with a side menu: Overview (versions, last scan, counts and items pending identification), Libraries, and settings forms per section (Scan, Metadata, Interface, Playback, System) with defaults, per-field validation and "Reset". Optional update check, only if enabled and the button is pressed.

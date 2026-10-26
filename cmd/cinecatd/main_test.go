@@ -139,6 +139,9 @@ func newTestServer(t *testing.T) *testServer {
 				Preset:    settingsStore.String("playback.preset"),
 			}
 		},
+		MaxTranscodesFunc: func() int {
+			return settingsStore.Int("playback.max_transcodes")
+		},
 	})
 	if err != nil {
 		t.Fatalf("playback.New: %v", err)
