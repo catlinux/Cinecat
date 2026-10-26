@@ -109,6 +109,25 @@ type Episode struct {
 	StillURL         string `json:"still_url"`
 }
 
+// Season agrupa los datos de una temporada y todos sus episodios.
+type Season struct {
+	Name             string          `json:"name"`
+	Overview         string          `json:"overview"`
+	OverviewLanguage string          `json:"overview_language"`
+	PosterURL        string          `json:"poster_url"`
+	AirYear          int             `json:"air_year"`
+	Episodes         []SeasonEpisode `json:"episodes"`
+}
+
+// SeasonEpisode es un episodio dentro de la ficha de su temporada.
+type SeasonEpisode struct {
+	Number   int    `json:"number"`
+	Name     string `json:"name"`
+	Overview string `json:"overview"`
+	StillURL string `json:"still_url"`
+	AirYear  int    `json:"air_year"`
+}
+
 // Options configura el cliente. Todos los campos son opcionales salvo APIKey
 // y CacheDir (si CacheDir está vacío se usa el directorio de caché del usuario).
 type Options struct {
@@ -452,6 +471,20 @@ type episodeDetailsResponse struct {
 	StillPath string `json:"still_path"`
 }
 
+type seasonDetailsResponse struct {
+	Name       string `json:"name"`
+	Overview   string `json:"overview"`
+	AirDate    string `json:"air_date"`
+	PosterPath string `json:"poster_path"`
+	Episodes   []struct {
+		EpisodeNumber int    `json:"episode_number"`
+		Name          string `json:"name"`
+		Overview      string `json:"overview"`
+		AirDate       string `json:"air_date"`
+		StillPath     string `json:"still_path"`
+	} `json:"episodes"`
+}
+
 type translationItem struct {
 	ISO6391  string `json:"iso_639_1"`
 	ISO31661 string `json:"iso_3166_1"`
@@ -746,6 +779,39 @@ func (c *Client) TVDetails(ctx context.Context, id int) (*Details, error) {
 		details.OverviewLanguage = language
 	}
 	return details, nil
+}
+
+// SeasonDetails obtiene una temporada y todos sus episodios en es-ES con una
+// sola petición.
+func (c *Client) SeasonDetails(ctx context.Context, tvID, season int) (*Season, error) {
+	params := url.Values{}
+	params.Set("language", defaultLanguage)
+
+	path := fmt.Sprintf("/tv/%d/season/%d", tvID, season)
+	var response seasonDetailsResponse
+	if err := c.getCachedJSON(ctx, path, params, &response); err != nil {
+		return nil, err
+	}
+
+	result := &Season{
+		Name:      response.Name,
+		Overview:  response.Overview,
+		PosterURL: c.imageURLSize(response.PosterPath, "w342"),
+		AirYear:   releaseYear(response.AirDate),
+	}
+	if result.Overview != "" {
+		result.OverviewLanguage = defaultLanguage
+	}
+	for _, episode := range response.Episodes {
+		result.Episodes = append(result.Episodes, SeasonEpisode{
+			Number:   episode.EpisodeNumber,
+			Name:     episode.Name,
+			Overview: episode.Overview,
+			StillURL: c.imageURLSize(episode.StillPath, "w300"),
+			AirYear:  releaseYear(episode.AirDate),
+		})
+	}
+	return result, nil
 }
 
 // EpisodeDetails obtiene la ficha de un episodio en es-ES.

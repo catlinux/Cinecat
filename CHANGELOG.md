@@ -27,6 +27,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 - API de colecciones: listado paginado y detalle, y gestión para administradores (crear, editar, borrar, añadir y quitar películas, reordenar). Las películas indican a qué colecciones pertenecen y se pueden filtrar por `collection_id`.
 - Colecciones en la web: categoría activa en el portal y la cabecera, listado paginado con búsqueda y orden, página de cada colección con sus películas y, para administradores, gestión (crear, editar, cambiar cartel y fondo, añadir y quitar películas, reordenar, borrar). La ficha de película enlaza a sus colecciones.
 - El analizador de nombres toma la serie de la carpeta de primer nivel y reconoce episodios con formatos como `ChicagoFire720p4x17` o `MR_Robot_305` dentro de una carpeta de temporada (antes se tomaban por películas).
+- Series: cada carpeta de serie se agrupa en una ficha propia, se identifica con TMDB en castellano (mismas reglas que las películas: automática, manual o «no es ninguna») y el escaneo rellena temporadas y episodios (título, sinopsis, imagen) con una petición por temporada. El estado del escaneo incluye `series_identified` y `series_unidentified`.
 - El servidor se apaga de forma ordenada ante SIGINT/SIGTERM, cancelando el escaneo en curso.
 
 ## [0.10.0] - 2026-10-26

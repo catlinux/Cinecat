@@ -350,12 +350,14 @@ func TestScanEnSegundoPlano(t *testing.T) {
 		close(started)
 		<-release
 		return Result{
-			Libraries:    1,
-			Files:        3,
-			Upserted:     2,
-			Identified:   1,
-			Unidentified: 1,
-			Warnings:     []string{"aviso de prueba"},
+			Libraries:          1,
+			Files:              3,
+			Upserted:           2,
+			Identified:         1,
+			Unidentified:       1,
+			SeriesIdentified:   2,
+			SeriesUnidentified: 3,
+			Warnings:           []string{"aviso de prueba"},
 		}, nil
 	}
 
@@ -414,7 +416,8 @@ func TestScanEnSegundoPlano(t *testing.T) {
 		t.Fatalf("estado final inesperado: %+v", final)
 	}
 	if final.Libraries != 1 || final.Files != 3 || final.Upserted != 2 ||
-		final.Identified != 1 || final.Unidentified != 1 {
+		final.Identified != 1 || final.Unidentified != 1 ||
+		final.SeriesIdentified != 2 || final.SeriesUnidentified != 3 {
 		t.Fatalf("contadores finales inesperados: %+v", final)
 	}
 	if len(final.Warnings) != 1 || final.Warnings[0] != "aviso de prueba" {

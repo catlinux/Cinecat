@@ -26,6 +26,21 @@ type fakeTMDB struct {
 	images        *metadata.ImageOptions
 	imagesCalls   int
 	lastImagesID  int
+
+	tvSearchCalls   int
+	tvSearchErr     error
+	tvSearchResults map[string][]metadata.Candidate
+	lastTVQuery     string
+	lastTVYear      int
+	tvDetailsCalls  int
+	tvDetailsErr    error
+	tvDetails       *metadata.Details
+	lastTVDetailsID int
+	seasonCalls     int
+	seasonErr       error
+	seasons         map[int]*metadata.Season
+	lastSeason      int
+	lastSeasonTV    int
 }
 
 func (f *fakeTMDB) SearchMovies(ctx context.Context, query string, year int) ([]metadata.Candidate, error) {
@@ -74,6 +89,44 @@ func (f *fakeTMDB) MovieImages(ctx context.Context, tmdbID int) (*metadata.Image
 		}, nil
 	}
 	return f.images, nil
+}
+
+func (f *fakeTMDB) SearchTV(ctx context.Context, query string, year int) ([]metadata.Candidate, error) {
+	f.tvSearchCalls++
+	f.lastTVQuery = query
+	f.lastTVYear = year
+	if f.tvSearchErr != nil {
+		return nil, f.tvSearchErr
+	}
+	if results, ok := f.tvSearchResults[query]; ok {
+		return results, nil
+	}
+	return nil, metadata.ErrNotFound
+}
+
+func (f *fakeTMDB) TVDetails(ctx context.Context, id int) (*metadata.Details, error) {
+	f.tvDetailsCalls++
+	f.lastTVDetailsID = id
+	if f.tvDetailsErr != nil {
+		return nil, f.tvDetailsErr
+	}
+	if f.tvDetails == nil {
+		return &metadata.Details{TMDBID: id}, nil
+	}
+	return f.tvDetails, nil
+}
+
+func (f *fakeTMDB) SeasonDetails(ctx context.Context, tvID, season int) (*metadata.Season, error) {
+	f.seasonCalls++
+	f.lastSeason = season
+	f.lastSeasonTV = tvID
+	if f.seasonErr != nil {
+		return nil, f.seasonErr
+	}
+	if detail, ok := f.seasons[season]; ok {
+		return detail, nil
+	}
+	return nil, metadata.ErrNotFound
 }
 
 type tmdbMetadataRow struct {

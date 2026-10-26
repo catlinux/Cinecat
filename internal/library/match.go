@@ -29,6 +29,11 @@ type MovieSearcher interface {
 	MovieCollection(ctx context.Context, movieID int) ([]metadata.Candidate, error)
 }
 
+// TVSearcher es lo que necesita la identificación de series.
+type TVSearcher interface {
+	SearchTV(ctx context.Context, query string, year int) ([]metadata.Candidate, error)
+}
+
 var (
 	reMatchCamel       = regexp.MustCompile(`([a-z])([A-Z])`)
 	reMatchSA          = regexp.MustCompile(`\bS A\b`)
@@ -71,25 +76,25 @@ var (
 	}
 )
 
-// IdentifyMovie busca en TMDB la película de un título analizado y devuelve el
-// mejor candidato con su puntuación. ok es false si nada llega al umbral. Los
-// errores de red se devuelven para que el escaneo lo reintente más adelante;
-// «sin resultados» no es un error.
-func IdentifyMovie(ctx context.Context, searcher MovieSearcher, title string, year int) (metadata.Candidate, float64, bool, error) {
+type candidateSearch func(ctx context.Context, query string, year int) ([]metadata.Candidate, error)
+
+// identifyCandidate hace la búsqueda y la puntuación comunes a películas y
+// series. El ajuste por colección solo se aplica a las películas.
+func identifyCandidate(ctx context.Context, search candidateSearch, title string, year int) (metadata.Candidate, float64, []string, bool, error) {
 	variants := matchVariants(title, year)
 	if len(variants) == 0 {
-		return metadata.Candidate{}, 0, false, nil
+		return metadata.Candidate{}, 0, nil, false, nil
 	}
 
 	var pool []metadata.Candidate
 	seen := map[int]bool{}
 	for _, query := range variants {
-		results, err := searcher.SearchMovies(ctx, query, 0)
+		results, err := search(ctx, query, 0)
 		if err != nil {
 			if errors.Is(err, metadata.ErrNotFound) {
 				continue
 			}
-			return metadata.Candidate{}, 0, false, err
+			return metadata.Candidate{}, 0, variants, false, err
 		}
 		for _, candidate := range results {
 			if !seen[candidate.TMDBID] {
@@ -99,7 +104,7 @@ func IdentifyMovie(ctx context.Context, searcher MovieSearcher, title string, ye
 		}
 	}
 	if len(pool) == 0 {
-		return metadata.Candidate{}, 0, false, nil
+		return metadata.Candidate{}, 0, variants, false, nil
 	}
 
 	weight := poolWeights(pool)
@@ -129,8 +134,30 @@ func IdentifyMovie(ctx context.Context, searcher MovieSearcher, title string, ye
 	}
 
 	best, score := ranked[0].candidate, ranked[0].score
+	return best, score, variants, true, nil
+}
+
+// IdentifyMovie busca en TMDB la película de un título analizado y devuelve el
+// mejor candidato con su puntuación. ok es false si nada llega al umbral. Los
+// errores de red se devuelven para que el escaneo lo reintente más adelante;
+// «sin resultados» no es un error.
+func IdentifyMovie(ctx context.Context, searcher MovieSearcher, title string, year int) (metadata.Candidate, float64, bool, error) {
+	best, score, variants, found, err := identifyCandidate(ctx, searcher.SearchMovies, title, year)
+	if err != nil || !found {
+		return best, score, false, err
+	}
 	if fixed, ok := byCollection(ctx, searcher, variants[0], best); ok {
 		best, score = fixed, math.Max(score, MatchThreshold)
+	}
+	return best, score, score >= MatchThreshold, nil
+}
+
+// IdentifySeries busca en TMDB la serie de un título analizado. Comparte la
+// puntuación y el umbral con las películas, pero no aplica la regla de sagas.
+func IdentifySeries(ctx context.Context, searcher TVSearcher, title string, year int) (metadata.Candidate, float64, bool, error) {
+	best, score, _, found, err := identifyCandidate(ctx, searcher.SearchTV, title, year)
+	if err != nil || !found {
+		return best, score, false, err
 	}
 	return best, score, score >= MatchThreshold, nil
 }

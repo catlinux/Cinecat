@@ -212,7 +212,7 @@ El usuario quiere un panel de administración bien estructurado para configurar 
 - Tests con estas rutas reales: `Chicago fire/Temporada 4/ChicagoFire720p4x17 [www.torrentlocura.com].mkv`, `Mr Robot/Temporada 3/MR_Robot_305_DivxTotaL.avi`, `The Big Bang theory/Temporada 3/Big Bang - 3x12.avi`, `Juego de tronos/Temporada 1/...` (las variantes de mayúsculas acaban en la misma carpeta).
 - Esfuerzo: medio.
 
-### T11 — Modelo, identificación y escaneo de series
+### ✅ T11 — Modelo, identificación y escaneo de series
 - Archivos: `internal/store/migrations/0007_series.sql`, `internal/library/series.go` (nuevo, +test), `internal/library/match.go` (solo añadir `IdentifySeries`; **no tocar** `IdentifyMovie`), `internal/library/scanner.go`.
 - Tablas: `series (id, library_id REFERENCES libraries ON DELETE CASCADE, folder TEXT NOT NULL, title TEXT NOT NULL, display_title, original_title, year, overview, overview_language, poster_url, backdrop_url, genres, rating, tmdb_id, metadata_source, match_status, match_score, UNIQUE (library_id, folder))`; `series_seasons (series_id REFERENCES series ON DELETE CASCADE, season INTEGER, name, overview, poster_url, PRIMARY KEY (series_id, season))`; en `media_items`: `series_id INTEGER REFERENCES series ON DELETE SET NULL`, `episode_title TEXT`, `still_url TEXT`.
 - `IdentifySeries(ctx, TVSearcher, title, year)`: misma puntuación que las películas, pero con `SearchTV` y sin la regla de colecciones (reutilizar `matchVariants`, `scoreCandidate`, `poolWeights`).

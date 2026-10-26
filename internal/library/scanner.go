@@ -25,10 +25,14 @@ func IsVideoFile(name string) bool {
 	return videoExtensions[strings.ToLower(filepath.Ext(name))]
 }
 
-// TMDBClient es lo que necesita el escáner para identificar y guardar fichas.
+// TMDBClient es lo que necesita el escáner para identificar y guardar fichas
+// de películas y series.
 type TMDBClient interface {
 	MovieSearcher
+	TVSearcher
 	MovieDetails(ctx context.Context, id int) (*metadata.Details, error)
+	TVDetails(ctx context.Context, id int) (*metadata.Details, error)
+	SeasonDetails(ctx context.Context, tvID, season int) (*metadata.Season, error)
 	MovieImages(ctx context.Context, tmdbID int) (*metadata.ImageOptions, error)
 }
 
@@ -52,8 +56,8 @@ func (s *Scanner) WithOMDb(client *metadata.OMDbClient) *Scanner {
 	return s
 }
 
-// WithTMDB activa la identificación y las fichas de TMDB para películas. Si se
-// llama, OMDb deja de usarse aunque también se haya configurado.
+// WithTMDB activa la identificación y las fichas de TMDB para películas y
+// series. Si se llama, OMDb deja de usarse aunque también se haya configurado.
 func (s *Scanner) WithTMDB(client TMDBClient) *Scanner {
 	s.tmdb = client
 	return s
@@ -62,12 +66,14 @@ func (s *Scanner) WithTMDB(client TMDBClient) *Scanner {
 // Result resume un escaneo. Warnings recoge rutas ilegibles o bibliotecas
 // inexistentes, que no abortan el resto del escaneo.
 type Result struct {
-	Libraries    int
-	Files        int
-	Upserted     int
-	Identified   int
-	Unidentified int
-	Warnings     []string
+	Libraries          int
+	Files              int
+	Upserted           int
+	Identified         int
+	Unidentified       int
+	SeriesIdentified   int
+	SeriesUnidentified int
+	Warnings           []string
 }
 
 // Scan recorre todas las bibliotecas de la tabla libraries.
@@ -104,10 +110,15 @@ func (s *Scanner) Scan(ctx context.Context) (Result, error) {
 			return res, err
 		}
 	}
+	if err := deleteOrphanSeries(ctx, s.db); err != nil {
+		return res, err
+	}
 	return res, nil
 }
 
 func (s *Scanner) scanLibrary(ctx context.Context, libraryID int64, root string, res *Result) error {
+	seriesIDs := map[string]int64{}
+
 	info, err := os.Stat(root)
 	if err != nil {
 		res.Warnings = append(res.Warnings, fmt.Sprintf("%s: %v", root, err))
@@ -161,7 +172,21 @@ func (s *Scanner) scanLibrary(ctx context.Context, libraryID int64, root string,
 			media.Title = strings.TrimSuffix(d.Name(), filepath.Ext(d.Name()))
 		}
 
-		if err := upsertMediaItem(ctx, s.db, libraryID, path, media); err != nil {
+		var seriesID any
+		if media.Kind == KindEpisode && media.SeriesFolder != "" {
+			key := strings.ToLower(media.SeriesFolder)
+			id, ok := seriesIDs[key]
+			if !ok {
+				id, err = ensureSeries(ctx, s.db, libraryID, media.SeriesFolder, media.Title, media.Year)
+				if err != nil {
+					return err
+				}
+				seriesIDs[key] = id
+			}
+			seriesID = id
+		}
+
+		if err := upsertMediaItem(ctx, s.db, libraryID, path, media, seriesID); err != nil {
 			return err
 		}
 		res.Files++
@@ -179,6 +204,16 @@ func (s *Scanner) scanLibrary(ctx context.Context, libraryID int64, root string,
 	})
 	if err != nil {
 		return fmt.Errorf("library: escanear %q: %w", root, err)
+	}
+
+	if s.tmdb != nil {
+		ids, err := s.seriesIDsWithEpisodes(ctx, libraryID)
+		if err != nil {
+			return err
+		}
+		for _, id := range ids {
+			s.enrichSeriesTMDB(ctx, id, res)
+		}
 	}
 	return nil
 }
@@ -427,7 +462,7 @@ func jsonArray(values []string) any {
 	return string(data)
 }
 
-func upsertMediaItem(ctx context.Context, db *sql.DB, libraryID int64, path string, media Media) error {
+func upsertMediaItem(ctx context.Context, db *sql.DB, libraryID int64, path string, media Media, seriesID any) error {
 	var year, season, episode any
 	if media.Year > 0 {
 		year = media.Year
@@ -440,17 +475,24 @@ func upsertMediaItem(ctx context.Context, db *sql.DB, libraryID int64, path stri
 	}
 
 	_, err := db.ExecContext(ctx, `
-		INSERT INTO media_items (library_id, path, title, year, kind, season, episode)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO media_items (library_id, path, title, year, kind, season, episode, series_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT (library_id, path) DO UPDATE SET
 			title = excluded.title,
 			-- El año de una ficha de TMDB es más fiable que el del nombre del
-			-- archivo, que casi nunca lo lleva.
-			year = CASE WHEN media_items.metadata_source = 'tmdb' THEN media_items.year ELSE excluded.year END,
+			-- archivo, que casi nunca lo lleva. En episodios ya enriquecidos se
+			-- conserva el año de la temporada.
+			year = CASE
+				WHEN media_items.metadata_source = 'tmdb' THEN media_items.year
+				WHEN media_items.series_id IS NOT NULL AND media_items.year IS NOT NULL
+					THEN media_items.year
+				ELSE excluded.year
+			END,
 			kind = excluded.kind,
 			season = excluded.season,
-			episode = excluded.episode`,
-		libraryID, path, media.Title, year, media.Kind, season, episode,
+			episode = excluded.episode,
+			series_id = excluded.series_id`,
+		libraryID, path, media.Title, year, media.Kind, season, episode, seriesID,
 	)
 	if err != nil {
 		return fmt.Errorf("library: guardar %q: %w", path, err)

@@ -876,6 +876,55 @@ func TestTVDetails(t *testing.T) {
 	}
 }
 
+func TestSeasonDetails(t *testing.T) {
+	api := newTestAPI(t)
+	api.route("/tv/1399/season/1", jsonRoute(map[string]any{
+		"name": "Temporada 1", "overview": "Sinopsis de la temporada",
+		"air_date": "2011-04-17", "poster_path": "/season.jpg",
+		"episodes": []map[string]any{
+			{
+				"episode_number": 1, "name": "Winter Is Coming",
+				"overview": "Sinopsis del episodio", "air_date": "2011-04-17",
+				"still_path": "/still.jpg",
+			},
+			{
+				"episode_number": 2, "name": "The Kingsroad",
+				"overview": "", "air_date": "2011-04-24",
+				"still_path": "/still2.jpg",
+			},
+		},
+	}))
+	client := newAPIClient(t, api, t.TempDir(), nil, "clave-de-prueba")
+
+	season, err := client.SeasonDetails(context.Background(), 1399, 1)
+	if err != nil {
+		t.Fatalf("SeasonDetails: %v", err)
+	}
+	if season.Name != "Temporada 1" || season.Overview != "Sinopsis de la temporada" ||
+		season.OverviewLanguage != "es-ES" || season.AirYear != 2011 ||
+		season.PosterURL != api.URL+"/img/w342/season.jpg" {
+		t.Fatalf("temporada inesperada: %+v", season)
+	}
+	if len(season.Episodes) != 2 {
+		t.Fatalf("episodios = %d", len(season.Episodes))
+	}
+	first := season.Episodes[0]
+	if first.Number != 1 || first.Name != "Winter Is Coming" ||
+		first.Overview != "Sinopsis del episodio" || first.AirYear != 2011 ||
+		first.StillURL != api.URL+"/img/w300/still.jpg" {
+		t.Fatalf("primer episodio inesperado: %+v", first)
+	}
+	if query := api.query("/tv/1399/season/1"); query.Get("language") != "es-ES" {
+		t.Fatalf("parámetros inesperados: %v", query)
+	}
+	if _, err := client.SeasonDetails(context.Background(), 1399, 1); err != nil {
+		t.Fatalf("SeasonDetails desde caché: %v", err)
+	}
+	if calls := api.pathCount("/tv/1399/season/1"); calls != 1 {
+		t.Fatalf("peticiones de temporada = %d, se esperaba 1 con caché", calls)
+	}
+}
+
 func TestEpisodeDetails(t *testing.T) {
 	api := newTestAPI(t)
 	api.route("/tv/1399/season/1/episode/1", jsonRoute(map[string]any{

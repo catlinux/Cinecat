@@ -9,16 +9,18 @@ import (
 // ScanStatus es el estado del último escaneo lanzado desde ScanJob. Las
 // advertencias se copian para que un lector no altere las del trabajo.
 type ScanStatus struct {
-	Running      bool       `json:"running"`
-	StartedAt    *time.Time `json:"started_at"`
-	FinishedAt   *time.Time `json:"finished_at"`
-	Libraries    int        `json:"libraries"`
-	Files        int        `json:"files"`
-	Upserted     int        `json:"upserted"`
-	Identified   int        `json:"identified"`
-	Unidentified int        `json:"unidentified"`
-	Warnings     []string   `json:"warnings"`
-	Error        string     `json:"error"`
+	Running            bool       `json:"running"`
+	StartedAt          *time.Time `json:"started_at"`
+	FinishedAt         *time.Time `json:"finished_at"`
+	Libraries          int        `json:"libraries"`
+	Files              int        `json:"files"`
+	Upserted           int        `json:"upserted"`
+	Identified         int        `json:"identified"`
+	Unidentified       int        `json:"unidentified"`
+	SeriesIdentified   int        `json:"series_identified"`
+	SeriesUnidentified int        `json:"series_unidentified"`
+	Warnings           []string   `json:"warnings"`
+	Error              string     `json:"error"`
 }
 
 // ScanJob ejecuta como máximo un escaneo a la vez y conserva el último estado
@@ -95,6 +97,8 @@ func (j *ScanJob) Start(ctx context.Context) bool {
 		j.status.Upserted = result.Upserted
 		j.status.Identified = result.Identified
 		j.status.Unidentified = result.Unidentified
+		j.status.SeriesIdentified = result.SeriesIdentified
+		j.status.SeriesUnidentified = result.SeriesUnidentified
 		j.status.Warnings = append([]string{}, result.Warnings...)
 		if j.status.Warnings == nil {
 			j.status.Warnings = []string{}

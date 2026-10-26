@@ -36,12 +36,14 @@ func TestScanJobUnEscaneoALaVez(t *testing.T) {
 		close(started)
 		<-release
 		return Result{
-			Libraries:    1,
-			Files:        2,
-			Upserted:     3,
-			Identified:   4,
-			Unidentified: 5,
-			Warnings:     []string{"aviso de prueba"},
+			Libraries:          1,
+			Files:              2,
+			Upserted:           3,
+			Identified:         4,
+			Unidentified:       5,
+			SeriesIdentified:   6,
+			SeriesUnidentified: 7,
+			Warnings:           []string{"aviso de prueba"},
 		}, nil
 	}
 
@@ -74,7 +76,8 @@ func TestScanJobUnEscaneoALaVez(t *testing.T) {
 		t.Fatalf("estado final inesperado: %+v", final)
 	}
 	if final.Libraries != 1 || final.Files != 2 || final.Upserted != 3 ||
-		final.Identified != 4 || final.Unidentified != 5 {
+		final.Identified != 4 || final.Unidentified != 5 ||
+		final.SeriesIdentified != 6 || final.SeriesUnidentified != 7 {
 		t.Fatalf("contadores inesperados: %+v", final)
 	}
 	if len(final.Warnings) != 1 || final.Warnings[0] != "aviso de prueba" {
