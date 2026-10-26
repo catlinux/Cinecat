@@ -34,6 +34,7 @@ type TMDBClient interface {
 	TVDetails(ctx context.Context, id int) (*metadata.Details, error)
 	SeasonDetails(ctx context.Context, tvID, season int) (*metadata.Season, error)
 	MovieImages(ctx context.Context, tmdbID int) (*metadata.ImageOptions, error)
+	TVImages(ctx context.Context, tvID int) (*metadata.ImageOptions, error)
 }
 
 // Scanner recorre las bibliotecas dadas de alta y puebla media_items.

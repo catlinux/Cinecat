@@ -45,6 +45,10 @@ type mediaItemDTO struct {
 	Watched          bool              `json:"watched"`
 	Progress         *playbackProgress `json:"progress"`
 	Collections      []itemCollection  `json:"collections"`
+	SeriesID         *int64            `json:"series_id"`
+	SeriesTitle      *string           `json:"series_title"`
+	EpisodeTitle     *string           `json:"episode_title"`
+	StillURL         *string           `json:"still_url"`
 }
 
 type itemCollection struct {
@@ -70,11 +74,14 @@ type genresResponse struct {
 
 // mediaItemColumns la comparten la lista y la ficha para no divergir.
 const mediaItemColumns = `
-	id, library_id, path, title, COALESCE(display_title, title), year,
+	id, library_id, path, title, COALESCE(episode_title, display_title, title), year,
 	kind, season, episode, tmdb_id, overview, poster_url, poster_locked,
 	original_title, imdb_id, tagline, genres, runtime_minutes, rating,
 	directors, cast_names, backdrop_url, backdrop_locked, overview_language,
-	match_status, match_score`
+	match_status, match_score, series_id,
+	(SELECT COALESCE(NULLIF(s.display_title, ''), s.title)
+	   FROM series s WHERE s.id = media_items.series_id),
+	episode_title, still_url`
 
 const watchedColumn = `, CASE WHEN ws.user_id IS NULL THEN 0 ELSE 1 END`
 
@@ -148,9 +155,10 @@ func loadItemCollections(ctx context.Context, db *sql.DB, itemIDs []int64) (map[
 
 func scanItem(scan func(dest ...any) error) (mediaItemDTO, error) {
 	item := mediaItemDTO{Collections: make([]itemCollection, 0)}
-	var year, season, episode, tmdbID, runtime sql.NullInt64
+	var year, season, episode, tmdbID, runtime, seriesID sql.NullInt64
 	var overview, posterURL, originalTitle, imdbID, tagline sql.NullString
 	var genres, directors, castNames, backdropURL, overviewLanguage, matchStatus sql.NullString
+	var seriesTitle, episodeTitle, stillURL sql.NullString
 	var rating, matchScore, progressPosition, progressDuration sql.NullFloat64
 	var progressUpdated sql.NullString
 	var posterLocked, backdropLocked, watched int
@@ -160,7 +168,8 @@ func scanItem(scan func(dest ...any) error) (mediaItemDTO, error) {
 		&year, &item.Kind, &season, &episode, &tmdbID, &overview,
 		&posterURL, &posterLocked, &originalTitle, &imdbID, &tagline,
 		&genres, &runtime, &rating, &directors, &castNames, &backdropURL,
-		&backdropLocked, &overviewLanguage, &matchStatus, &matchScore, &watched,
+		&backdropLocked, &overviewLanguage, &matchStatus, &matchScore,
+		&seriesID, &seriesTitle, &episodeTitle, &stillURL, &watched,
 		&progressPosition, &progressDuration, &progressUpdated,
 	)
 	if err != nil {
@@ -187,6 +196,10 @@ func scanItem(scan func(dest ...any) error) (mediaItemDTO, error) {
 	item.OverviewLanguage = stringPointer(overviewLanguage)
 	item.MatchStatus = stringPointer(matchStatus)
 	item.MatchScore = floatPointer(matchScore)
+	item.SeriesID = int64Pointer(seriesID)
+	item.SeriesTitle = stringPointer(seriesTitle)
+	item.EpisodeTitle = stringPointer(episodeTitle)
+	item.StillURL = stringPointer(stillURL)
 	item.Watched = watched != 0
 	if progressPosition.Valid && progressDuration.Valid && progressUpdated.Valid {
 		item.Progress = &playbackProgress{
@@ -324,6 +337,15 @@ func itemFilters(r *http.Request, userID int64) (string, []any, error) {
 		default:
 			return "", nil, errors.New("watched debe ser true o false")
 		}
+	}
+
+	if raw := strings.TrimSpace(query.Get("series_id")); raw != "" {
+		id, err := strconv.ParseInt(raw, 10, 64)
+		if err != nil || id <= 0 {
+			return "", nil, errors.New("series_id debe ser un entero positivo")
+		}
+		clauses = append(clauses, "series_id = ?")
+		args = append(args, id)
 	}
 
 	if raw := strings.TrimSpace(query.Get("collection_id")); raw != "" {

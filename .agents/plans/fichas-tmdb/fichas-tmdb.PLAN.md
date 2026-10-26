@@ -219,7 +219,7 @@ El usuario quiere un panel de administración bien estructurado para configurar 
 - Escaneo: cada episodio se asocia a su fila de `series` por (`library_id`, `SeriesFolder`). Una identificación por serie (mismas reglas de `match_status` que las películas) con `TVDetails`; por temporada, `/tv/{id}/season/{n}` en es-ES (añadir `SeasonDetails` al cliente si hace falta, en `tmdb.go`) para nombre, sinopsis y cartel; por episodio `EpisodeDetails` → `episode_title`, `overview`, `still_url`. Solo se consulta lo que falta.
 - Esfuerzo: alto.
 
-### T12 — API de series
+### ✅ T12 — API de series
 - Archivos: `internal/library/series_http.go` (nuevo, +test), `internal/library/http.go`, `api/openapi.yaml`.
 - `GET /api/v1/series?limit&offset&q&unmatched` → `{series: [{id, title, poster_url, year, season_count, episode_count, match_status}], total}`.
 - `GET /api/v1/series/{id}` → ficha de la serie + `seasons: [{season, name, overview, poster_url, episode_count}]`.

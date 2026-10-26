@@ -895,6 +895,14 @@ paths:
             type: integer
             format: int64
             minimum: 1
+        - name: series_id
+          in: query
+          description: Si se indica, solo devuelve los episodios de esa serie.
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
         - name: unmatched
           in: query
           description: |
@@ -1757,6 +1765,689 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/series:
+    get:
+      summary: Lista las series
+      description: |
+        Listado paginado de series. `q` busca en títulos, reparto y creadores;
+        `letter`, `genre` y `unmatched` funcionan como en `/api/v1/items`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 48
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [title, year, added]
+            default: title
+        - name: letter
+          in: query
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 1
+        - name: genre
+          in: query
+          schema:
+            type: string
+        - name: unmatched
+          in: query
+          schema:
+            type: string
+            enum: ['true', 'false']
+      responses:
+        '200':
+          description: Series encontradas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeriesResponse'
+        '400':
+          description: Parámetros no válidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/series/genres:
+    get:
+      summary: Géneros de las series
+      description: Devuelve los géneros presentes en las series y cuántas series los usan.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Géneros encontrados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenresResponse'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/series/{id}:
+    get:
+      summary: Ficha completa de una serie
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        '200':
+          description: Ficha de la serie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeriesDetail'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Serie no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/series/{id}/seasons/{n}:
+    get:
+      summary: Episodios de una temporada
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - name: n
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Temporada con sus episodios
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeasonDetail'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Serie o temporada no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/series/{id}/watched:
+    put:
+      summary: Marca vistos todos los episodios de la serie
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        '204':
+          description: Visionado actualizado
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Serie sin episodios
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Desmarca todos los episodios de la serie
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        '204':
+          description: Visionado actualizado
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Serie sin episodios
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/series/{id}/seasons/{n}/watched:
+    put:
+      summary: Marca vistos todos los episodios de una temporada
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - name: n
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '204':
+          description: Visionado actualizado
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Temporada sin episodios
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Desmarca todos los episodios de una temporada
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - name: n
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '204':
+          description: Visionado actualizado
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Temporada sin episodios
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/series/{id}/candidates:
+    get:
+      summary: Busca candidatos de TMDB para una serie (solo administradores)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - name: q
+          in: query
+          description: Texto a buscar; por defecto, el título de la carpeta.
+          schema:
+            type: string
+        - name: year
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        '200':
+          description: Candidatos encontrados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidatesResponse'
+        '400':
+          description: Parámetros no válidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: El usuario no tiene rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Serie no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: No se pudo consultar TMDB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: TMDB no está configurado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/series/{id}/match:
+    put:
+      summary: Corrige a mano la ficha de una serie (solo administradores)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMatchRequest'
+      responses:
+        '200':
+          description: Serie actualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeriesDetail'
+        '400':
+          description: Cuerpo no válido o tmdb_id incorrecto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: El usuario no tiene rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Serie no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: No se pudo consultar TMDB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: TMDB no está configurado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Vuelve a identificar una serie automáticamente (solo administradores)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        '200':
+          description: Serie resultante
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeriesDetail'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: El usuario no tiene rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Serie no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: No se pudo consultar TMDB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: TMDB no está configurado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/series/{id}/images:
+    get:
+      summary: Imágenes de TMDB disponibles para una serie (solo administradores)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        '200':
+          description: Imágenes disponibles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageOptions'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: El usuario no tiene rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Serie no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: La serie no está identificada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: No se pudo consultar TMDB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: TMDB no está configurado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/series/{id}/images/{kind}:
+    put:
+      summary: Fija el cartel o fondo de una serie (solo administradores)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - $ref: '#/components/parameters/ImageKind'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImageURLRequest'
+      responses:
+        '200':
+          description: Serie actualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeriesDetail'
+        '400':
+          description: URL no válida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: El usuario no tiene rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Serie o tipo de imagen no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Restaura el cartel o fondo de una serie (solo administradores)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - $ref: '#/components/parameters/ImageKind'
+      responses:
+        '200':
+          description: Serie actualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeriesDetail'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: El usuario no tiene rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Serie o tipo de imagen no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: No se pudo consultar TMDB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: TMDB no está configurado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 components:
   securitySchemes:
     bearerAuth:
@@ -2337,11 +3028,15 @@ components:
       required:
         - movies
         - episodes
+        - series
       properties:
         movies:
           type: integer
           format: int64
         episodes:
+          type: integer
+          format: int64
+        series:
           type: integer
           format: int64
       additionalProperties: false
@@ -2360,7 +3055,7 @@ components:
             $ref: '#/components/schemas/MediaItem'
         next_up:
           type: array
-          description: Reservado para series; por ahora siempre está vacío.
+          description: Siguiente episodio por ver de cada serie con actividad, sin repetir las que están en continue.
           items:
             $ref: '#/components/schemas/MediaItem'
         recent_movies:
@@ -2537,6 +3232,236 @@ components:
             format: int64
             minimum: 1
       additionalProperties: false
+    Series:
+      type: object
+      required:
+        - id
+        - title
+        - file_title
+        - year
+        - poster_url
+        - genres
+        - season_count
+        - episode_count
+        - watched_count
+        - match_status
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+          description: Título visible; usa el de TMDB si existe.
+        file_title:
+          type: string
+          description: Título analizado de la carpeta.
+        year:
+          type: integer
+          nullable: true
+        poster_url:
+          type: string
+          nullable: true
+        genres:
+          type: array
+          description: Géneros; siempre es un array, aunque esté vacío.
+          items:
+            type: string
+        season_count:
+          type: integer
+          format: int64
+        episode_count:
+          type: integer
+          format: int64
+        watched_count:
+          type: integer
+          format: int64
+        match_status:
+          type: string
+          nullable: true
+          enum: [auto, manual, none]
+      additionalProperties: false
+    SeriesResponse:
+      type: object
+      required:
+        - series
+        - total
+        - limit
+        - offset
+      properties:
+        series:
+          type: array
+          items:
+            $ref: '#/components/schemas/Series'
+        total:
+          type: integer
+          format: int64
+        limit:
+          type: integer
+        offset:
+          type: integer
+      additionalProperties: false
+    Season:
+      type: object
+      required:
+        - season
+        - name
+        - overview
+        - poster_url
+        - episode_count
+        - watched_count
+      properties:
+        season:
+          type: integer
+        name:
+          type: string
+          description: Nombre de la temporada; por defecto «Temporada N».
+        overview:
+          type: string
+          nullable: true
+        poster_url:
+          type: string
+          nullable: true
+        episode_count:
+          type: integer
+          format: int64
+        watched_count:
+          type: integer
+          format: int64
+      additionalProperties: false
+    SeriesDetail:
+      type: object
+      required:
+        - id
+        - title
+        - file_title
+        - folder
+        - original_title
+        - year
+        - tagline
+        - overview
+        - overview_language
+        - poster_url
+        - backdrop_url
+        - genres
+        - rating
+        - directors
+        - cast
+        - tmdb_id
+        - match_status
+        - match_score
+        - poster_custom
+        - backdrop_custom
+        - season_count
+        - episode_count
+        - watched_count
+        - seasons
+        - next_episode
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        file_title:
+          type: string
+        folder:
+          type: string
+        original_title:
+          type: string
+          nullable: true
+        year:
+          type: integer
+          nullable: true
+        tagline:
+          type: string
+          nullable: true
+        overview:
+          type: string
+          nullable: true
+        overview_language:
+          type: string
+          nullable: true
+        poster_url:
+          type: string
+          nullable: true
+        backdrop_url:
+          type: string
+          nullable: true
+        genres:
+          type: array
+          items:
+            type: string
+        rating:
+          type: number
+          format: double
+          nullable: true
+        directors:
+          type: array
+          description: Creadores de la serie.
+          items:
+            type: string
+        cast:
+          type: array
+          items:
+            type: string
+        tmdb_id:
+          type: integer
+          format: int64
+          nullable: true
+        match_status:
+          type: string
+          nullable: true
+          enum: [auto, manual, none]
+        match_score:
+          type: number
+          format: double
+          nullable: true
+        poster_custom:
+          type: boolean
+        backdrop_custom:
+          type: boolean
+        season_count:
+          type: integer
+          format: int64
+        episode_count:
+          type: integer
+          format: int64
+        watched_count:
+          type: integer
+          format: int64
+        seasons:
+          type: array
+          items:
+            $ref: '#/components/schemas/Season'
+        next_episode:
+          allOf:
+            - $ref: '#/components/schemas/MediaItem'
+          nullable: true
+      additionalProperties: false
+    SeasonDetail:
+      type: object
+      required:
+        - season
+        - name
+        - overview
+        - poster_url
+        - items
+      properties:
+        season:
+          type: integer
+        name:
+          type: string
+        overview:
+          type: string
+          nullable: true
+        poster_url:
+          type: string
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MediaItem'
+      additionalProperties: false
     MediaItem:
       type: object
       required:
@@ -2569,6 +3494,10 @@ components:
         - watched
         - progress
         - collections
+        - series_id
+        - series_title
+        - episode_title
+        - still_url
       properties:
         id:
           type: integer
@@ -2580,7 +3509,7 @@ components:
           type: string
         title:
           type: string
-          description: Título visible; usa el de TMDB si existe.
+          description: Título visible; en episodios usa el título del episodio si existe.
         file_title:
           type: string
           description: Título analizado del nombre del archivo.
@@ -2676,6 +3605,19 @@ components:
           description: Colecciones visibles a las que pertenece el ítem; siempre un array.
           items:
             $ref: '#/components/schemas/ItemCollection'
+        series_id:
+          type: integer
+          format: int64
+          nullable: true
+        series_title:
+          type: string
+          nullable: true
+        episode_title:
+          type: string
+          nullable: true
+        still_url:
+          type: string
+          nullable: true
       additionalProperties: false
     ItemsResponse:
       type: object

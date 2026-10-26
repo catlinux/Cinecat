@@ -47,6 +47,8 @@ type itemFixture struct {
 	originalTitle    string
 	year             int
 	kind             string
+	season           int
+	episode          int
 	tmdbID           int
 	overview         string
 	posterURL        string
@@ -62,6 +64,9 @@ type itemFixture struct {
 	metadataSource   string
 	matchStatus      string
 	matchScore       float64
+	seriesID         int64
+	episodeTitle     string
+	stillURL         string
 }
 
 func insertItemFixture(t *testing.T, db *sql.DB, item itemFixture) int64 {
@@ -73,13 +78,15 @@ func insertItemFixture(t *testing.T, db *sql.DB, item itemFixture) int64 {
 	res, err := db.Exec(`
 		INSERT INTO media_items (
 			library_id, path, title, display_title, original_title, year,
-			kind, tmdb_id, overview, poster_url, imdb_id, tagline, genres,
-			runtime_minutes, rating, directors, cast_names, backdrop_url,
-			overview_language, metadata_source, match_status, match_score
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			kind, season, episode, tmdb_id, overview, poster_url, imdb_id,
+			tagline, genres, runtime_minutes, rating, directors, cast_names,
+			backdrop_url, overview_language, metadata_source, match_status,
+			match_score, series_id, episode_title, still_url
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		item.libraryID, item.path, item.title,
 		nullableTestString(item.displayTitle), nullableTestString(item.originalTitle),
-		nullableTestInt(item.year), kind, nullableTestInt(item.tmdbID),
+		nullableTestInt(item.year), kind, nullableTestInt(item.season),
+		nullableTestInt(item.episode), nullableTestInt(item.tmdbID),
 		nullableTestString(item.overview), nullableTestString(item.posterURL),
 		nullableTestString(item.imdbID), nullableTestString(item.tagline),
 		nullableTestString(item.genres), nullableTestInt(item.runtime),
@@ -87,6 +94,8 @@ func insertItemFixture(t *testing.T, db *sql.DB, item itemFixture) int64 {
 		nullableTestString(item.cast), nullableTestString(item.backdropURL),
 		nullableTestString(item.overviewLanguage), nullableTestString(item.metadataSource),
 		nullableTestString(item.matchStatus), nullableTestFloat(item.matchScore),
+		nullableTestInt(int(item.seriesID)), nullableTestString(item.episodeTitle),
+		nullableTestString(item.stillURL),
 	)
 	if err != nil {
 		t.Fatalf("insertar ítem %q: %v", item.path, err)

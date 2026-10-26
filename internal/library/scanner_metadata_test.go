@@ -41,6 +41,11 @@ type fakeTMDB struct {
 	seasons         map[int]*metadata.Season
 	lastSeason      int
 	lastSeasonTV    int
+
+	tvImagesCalls  int
+	tvImagesErr    error
+	tvImages       *metadata.ImageOptions
+	lastTVImagesID int
 }
 
 func (f *fakeTMDB) SearchMovies(ctx context.Context, query string, year int) ([]metadata.Candidate, error) {
@@ -89,6 +94,21 @@ func (f *fakeTMDB) MovieImages(ctx context.Context, tmdbID int) (*metadata.Image
 		}, nil
 	}
 	return f.images, nil
+}
+
+func (f *fakeTMDB) TVImages(ctx context.Context, tvID int) (*metadata.ImageOptions, error) {
+	f.tvImagesCalls++
+	f.lastTVImagesID = tvID
+	if f.tvImagesErr != nil {
+		return nil, f.tvImagesErr
+	}
+	if f.tvImages == nil {
+		return &metadata.ImageOptions{
+			Posters:   []metadata.ImageOption{},
+			Backdrops: []metadata.ImageOption{},
+		}, nil
+	}
+	return f.tvImages, nil
 }
 
 func (f *fakeTMDB) SearchTV(ctx context.Context, query string, year int) ([]metadata.Candidate, error) {

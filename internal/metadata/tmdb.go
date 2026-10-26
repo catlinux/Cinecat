@@ -586,11 +586,19 @@ func (c *Client) MovieCollection(ctx context.Context, movieID int) ([]Candidate,
 
 // MovieImages devuelve los carteles y fondos disponibles de una película.
 func (c *Client) MovieImages(ctx context.Context, tmdbID int) (*ImageOptions, error) {
+	return c.images(ctx, "/movie/"+strconv.Itoa(tmdbID)+"/images")
+}
+
+// TVImages devuelve los carteles y fondos disponibles de una serie.
+func (c *Client) TVImages(ctx context.Context, tvID int) (*ImageOptions, error) {
+	return c.images(ctx, "/tv/"+strconv.Itoa(tvID)+"/images")
+}
+
+func (c *Client) images(ctx context.Context, path string) (*ImageOptions, error) {
 	params := url.Values{}
 	params.Set("include_image_language", imageLanguages)
 
 	var images imagesResponse
-	path := "/movie/" + strconv.Itoa(tmdbID) + "/images"
 	if err := c.getCachedJSON(ctx, path, params, &images); err != nil {
 		return nil, err
 	}

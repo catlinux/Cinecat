@@ -925,6 +925,39 @@ func TestSeasonDetails(t *testing.T) {
 	}
 }
 
+func TestTVImages(t *testing.T) {
+	api := newTestAPI(t)
+	api.route("/tv/1399/images", jsonRoute(map[string]any{
+		"posters": []map[string]any{
+			{"file_path": "/poster.jpg", "iso_639_1": "es", "vote_average": 8},
+		},
+		"backdrops": []map[string]any{
+			{"file_path": "/backdrop.jpg", "iso_639_1": "es-ES", "vote_average": 9},
+		},
+	}))
+	client := newAPIClient(t, api, t.TempDir(), nil, "clave-de-prueba")
+
+	options, err := client.TVImages(context.Background(), 1399)
+	if err != nil {
+		t.Fatalf("TVImages: %v", err)
+	}
+	if len(options.Posters) != 1 ||
+		options.Posters[0].URL != api.URL+"/img/w342/poster.jpg" ||
+		options.Posters[0].FullURL != api.URL+"/img/w780/poster.jpg" {
+		t.Fatalf("carteles inesperados: %+v", options.Posters)
+	}
+	if len(options.Backdrops) != 1 ||
+		options.Backdrops[0].URL != api.URL+"/img/w780/backdrop.jpg" {
+		t.Fatalf("fondos inesperados: %+v", options.Backdrops)
+	}
+	if _, err := client.TVImages(context.Background(), 1399); err != nil {
+		t.Fatalf("TVImages desde caché: %v", err)
+	}
+	if calls := api.pathCount("/tv/1399/images"); calls != 1 {
+		t.Fatalf("peticiones de imágenes = %d, se esperaba 1", calls)
+	}
+}
+
 func TestEpisodeDetails(t *testing.T) {
 	api := newTestAPI(t)
 	api.route("/tv/1399/season/1/episode/1", jsonRoute(map[string]any{

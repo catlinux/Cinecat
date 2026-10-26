@@ -63,6 +63,47 @@ func deleteOrphanSeries(ctx context.Context, db *sql.DB) error {
 	return nil
 }
 
+// BackfillSeriesSortKeys completa las claves de orden de las series insertadas
+// antes de que existiera el escaneo o directamente en la base de datos.
+func BackfillSeriesSortKeys(ctx context.Context, db *sql.DB) error {
+	rows, err := db.QueryContext(ctx, `
+		SELECT id, COALESCE(NULLIF(display_title, ''), title)
+		  FROM series
+		 WHERE sort_title IS NULL OR sort_letter IS NULL`)
+	if err != nil {
+		return fmt.Errorf("library: listar series sin normalizar: %w", err)
+	}
+	type pending struct {
+		id    int64
+		title string
+	}
+	var items []pending
+	for rows.Next() {
+		var item pending
+		if err := rows.Scan(&item.id, &item.title); err != nil {
+			rows.Close()
+			return fmt.Errorf("library: leer serie sin normalizar: %w", err)
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return fmt.Errorf("library: recorrer series sin normalizar: %w", err)
+	}
+	rows.Close()
+
+	for _, item := range items {
+		sortTitle, sortLetter := sortKeys(item.title)
+		if _, err := db.ExecContext(ctx,
+			`UPDATE series SET sort_title = ?, sort_letter = ? WHERE id = ?`,
+			sortTitle, sortLetter, item.id,
+		); err != nil {
+			return fmt.Errorf("library: guardar título normalizado de la serie %d: %w", item.id, err)
+		}
+	}
+	return nil
+}
+
 // ApplyTVDetails guarda la ficha completa de una serie. El título analizado de
 // la carpeta no se toca; el de TMDB se guarda en display_title.
 func ApplyTVDetails(ctx context.Context, db *sql.DB, seriesID int64, d *metadata.Details, status string, score float64) error {
@@ -239,32 +280,63 @@ func (s *Scanner) enrichSeriesTMDB(ctx context.Context, seriesID int64, res *Res
 	s.enrichSeriesSeasons(ctx, seriesID, int64(candidate.TMDBID), title, res)
 }
 
-func (s *Scanner) enrichSeriesSeasons(ctx context.Context, seriesID, tmdbID int64, title string, res *Result) {
-	needs, err := seriesSeasonNeeds(ctx, s.db, seriesID)
-	if err != nil {
-		res.Warnings = append(res.Warnings, fmt.Sprintf("%s: no se pudieron comprobar las temporadas: %v", title, err))
-		return
+// TVSeasonClient es lo necesario para completar las temporadas de una serie.
+type TVSeasonClient interface {
+	SeasonDetails(ctx context.Context, tvID, season int) (*metadata.Season, error)
+}
+
+// FillSeriesSeasons completa las temporadas y episodios que falten de una
+// serie ya identificada. Los avisos son temporadas que TMDB no tiene.
+func FillSeriesSeasons(ctx context.Context, db *sql.DB, tmdb TVSeasonClient, seriesID int64) ([]string, error) {
+	if tmdb == nil {
+		return nil, errors.New("library: falta el cliente de TMDB")
 	}
+	var title string
+	var tmdbID sql.NullInt64
+	if err := db.QueryRowContext(ctx,
+		`SELECT title, tmdb_id FROM series WHERE id = ?`, seriesID,
+	).Scan(&title, &tmdbID); err != nil {
+		return nil, fmt.Errorf("library: leer serie %d para sus temporadas: %w", seriesID, err)
+	}
+	if !tmdbID.Valid || tmdbID.Int64 <= 0 {
+		return nil, nil
+	}
+	return fillSeriesSeasons(ctx, db, tmdb, seriesID, tmdbID.Int64, title)
+}
+
+func fillSeriesSeasons(ctx context.Context, db *sql.DB, tmdb TVSeasonClient, seriesID, tmdbID int64, title string) ([]string, error) {
+	needs, err := seriesSeasonNeeds(ctx, db, seriesID)
+	if err != nil {
+		return nil, fmt.Errorf("no se pudieron comprobar las temporadas: %w", err)
+	}
+	warnings := make([]string, 0)
 	for _, need := range needs {
 		if !need.missingRow && need.missingTitles == 0 {
 			continue
 		}
-		season, err := s.tmdb.SeasonDetails(ctx, int(tmdbID), need.number)
+		season, err := tmdb.SeasonDetails(ctx, int(tmdbID), need.number)
 		if errors.Is(err, metadata.ErrNotFound) {
-			res.Warnings = append(res.Warnings,
+			warnings = append(warnings,
 				fmt.Sprintf("%s: TMDB no tiene la temporada %d", title, need.number))
 			continue
 		}
 		if err != nil {
-			res.Warnings = append(res.Warnings,
-				fmt.Sprintf("%s: no se pudo obtener la temporada %d: %v", title, need.number, err))
-			return
+			return warnings,
+				fmt.Errorf("no se pudo obtener la temporada %d: %w", need.number, err)
 		}
-		if err := applySeasonDetails(ctx, s.db, seriesID, need.number, season); err != nil {
-			res.Warnings = append(res.Warnings,
-				fmt.Sprintf("%s: no se pudo guardar la temporada %d: %v", title, need.number, err))
-			return
+		if err := applySeasonDetails(ctx, db, seriesID, need.number, season); err != nil {
+			return warnings,
+				fmt.Errorf("no se pudo guardar la temporada %d: %w", need.number, err)
 		}
+	}
+	return warnings, nil
+}
+
+func (s *Scanner) enrichSeriesSeasons(ctx context.Context, seriesID, tmdbID int64, title string, res *Result) {
+	warnings, err := fillSeriesSeasons(ctx, s.db, s.tmdb, seriesID, tmdbID, title)
+	res.Warnings = append(res.Warnings, warnings...)
+	if err != nil {
+		res.Warnings = append(res.Warnings, fmt.Sprintf("%s: %v", title, err))
 	}
 }
 

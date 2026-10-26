@@ -24,7 +24,7 @@ func TestHomeBaseVacia(t *testing.T) {
 	if len(home.Continue) != 0 || len(home.NextUp) != 0 || len(home.RecentMovies) != 0 {
 		t.Fatalf("home vacío con ítems: %+v", home)
 	}
-	if home.Counts.Movies != 0 || home.Counts.Episodes != 0 {
+	if home.Counts.Movies != 0 || home.Counts.Episodes != 0 || home.Counts.Series != 0 {
 		t.Fatalf("contadores inesperados: %+v", home.Counts)
 	}
 
@@ -75,7 +75,7 @@ func TestHomeContinueOrdenLimiteYMezcla(t *testing.T) {
 	if home.NextUp == nil || len(home.NextUp) != 0 {
 		t.Fatalf("next_up debe ser [] por ahora: %+v", home.NextUp)
 	}
-	if home.Counts.Movies != 11 || home.Counts.Episodes != 11 {
+	if home.Counts.Movies != 11 || home.Counts.Episodes != 11 || home.Counts.Series != 0 {
 		t.Fatalf("contadores inesperados: %+v", home.Counts)
 	}
 }
@@ -132,7 +132,7 @@ func TestHomeRecientesContadoresYAislamiento(t *testing.T) {
 	if progressMovie.Progress == nil || progressMovie.Progress.PositionSeconds != 300 {
 		t.Fatalf("la película con progreso no lo incluye: %+v", progressMovie)
 	}
-	if anaHome.Counts.Movies != 22 || anaHome.Counts.Episodes != 2 {
+	if anaHome.Counts.Movies != 22 || anaHome.Counts.Episodes != 2 || anaHome.Counts.Series != 0 {
 		t.Fatalf("contadores inesperados: %+v", anaHome.Counts)
 	}
 	if len(anaHome.Continue) != 1 || anaHome.Continue[0].ID != movieIDs[20] {

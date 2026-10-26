@@ -10,6 +10,7 @@ import (
 type homeCounts struct {
 	Movies   int64 `json:"movies"`
 	Episodes int64 `json:"episodes"`
+	Series   int64 `json:"series"`
 }
 
 type homeResponse struct {
@@ -58,23 +59,100 @@ func (a *API) handleHome(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	nextUp, err := queryHomeNextUp(r.Context(), a.db, user.ID)
+	if err != nil {
+		log.Printf("library: listar siguientes episodios: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
+
 	var counts homeCounts
 	if err := a.db.QueryRowContext(r.Context(), `
 		SELECT COALESCE(SUM(CASE WHEN kind = 'movie' THEN 1 ELSE 0 END), 0),
-		       COALESCE(SUM(CASE WHEN kind = 'episode' THEN 1 ELSE 0 END), 0)
-		  FROM media_items`).Scan(&counts.Movies, &counts.Episodes); err != nil {
+		       COALESCE(SUM(CASE WHEN kind = 'episode' THEN 1 ELSE 0 END), 0),
+		       (SELECT count(*) FROM series)
+		  FROM media_items`).Scan(&counts.Movies, &counts.Episodes, &counts.Series); err != nil {
 		log.Printf("library: contar ítems del portal: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
 		return
 	}
 
 	writeJSON(w, http.StatusOK, homeResponse{
-		Continue: continueItems,
-		// Hueco para series: next_up se rellenará cuando existan como entidad.
-		NextUp:       make([]mediaItemDTO, 0),
+		Continue:     continueItems,
+		NextUp:       nextUp,
 		RecentMovies: recentMovies,
 		Counts:       counts,
 	})
+}
+
+func queryHomeNextUp(ctx context.Context, db *sql.DB, userID int64) ([]mediaItemDTO, error) {
+	rows, err := db.QueryContext(ctx, `
+		WITH watched AS (
+			SELECT mi.series_id, MAX(ws.watched_at) AS activity
+			  FROM media_items mi
+			  JOIN watch_state ws
+			    ON ws.media_item_id = mi.id AND ws.user_id = ?
+			 WHERE mi.series_id IS NOT NULL
+			 GROUP BY mi.series_id
+		),
+		in_progress AS (
+			SELECT DISTINCT mi.series_id
+			  FROM media_items mi
+			  JOIN playback_progress pp
+			    ON pp.media_item_id = mi.id AND pp.user_id = ?
+			 WHERE mi.series_id IS NOT NULL
+		),
+		next_episode AS (
+			SELECT watched.series_id, watched.activity,
+			       (SELECT mi.id
+			          FROM media_items mi
+			         WHERE mi.series_id = watched.series_id
+			           AND NOT EXISTS (
+			               SELECT 1 FROM watch_state w2
+			                WHERE w2.media_item_id = mi.id AND w2.user_id = ?)
+			         ORDER BY mi.season IS NULL, mi.season,
+			                  mi.episode IS NULL, mi.episode, mi.id
+			         LIMIT 1) AS episode_id
+			  FROM watched
+			 WHERE NOT EXISTS (
+			     SELECT 1 FROM in_progress p WHERE p.series_id = watched.series_id)
+		)
+		SELECT series_id, episode_id, activity
+		  FROM next_episode
+		 WHERE episode_id IS NOT NULL
+		 ORDER BY activity DESC, series_id
+		 LIMIT 20`, userID, userID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	type nextSeries struct {
+		seriesID  int64
+		episodeID int64
+	}
+	next := make([]nextSeries, 0)
+	for rows.Next() {
+		var item nextSeries
+		var activity sql.NullString
+		if err := rows.Scan(&item.seriesID, &item.episodeID, &activity); err != nil {
+			return nil, err
+		}
+		next = append(next, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	items := make([]mediaItemDTO, 0, len(next))
+	for _, item := range next {
+		dto, err := queryMediaItem(ctx, db, item.episodeID, userID)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, dto)
+	}
+	return items, nil
 }
 
 func queryHomeItems(ctx context.Context, db *sql.DB, query string, args ...any) ([]mediaItemDTO, error) {
