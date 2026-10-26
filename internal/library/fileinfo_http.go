@@ -112,40 +112,15 @@ func (a *API) handleItemFileInfo(w http.ResponseWriter, r *http.Request) {
 	}
 	relative = filepath.ToSlash(relative)
 
-	key := fileInfoKey{
-		path:       safePath,
-		size:       stat.Size(),
-		modifiedAt: stat.ModTime().UnixNano(),
-	}
-	cache := a.fileInfoCache
-	if cache == nil {
-		cache = newFileInfoCache()
-		a.fileInfoCache = cache
-	}
-
-	info, cached := cache.get(key)
-	if !cached {
-		if a.fileInspector == nil {
+	info, err := a.cachedFileInfo(r.Context(), safePath)
+	if err != nil {
+		if errors.Is(err, playback.ErrFFprobeNotFound) {
 			writeJSONError(w, http.StatusServiceUnavailable, "ffprobe no está disponible en el servidor")
 			return
 		}
-		inspected, err := a.fileInspector.Inspect(r.Context(), safePath)
-		if err != nil {
-			if errors.Is(err, playback.ErrFFprobeNotFound) {
-				writeJSONError(w, http.StatusServiceUnavailable, "ffprobe no está disponible en el servidor")
-				return
-			}
-			log.Printf("library: analizar archivo del ítem %d: %v", id, err)
-			writeJSONError(w, http.StatusBadGateway, "no se pudo analizar el archivo")
-			return
-		}
-		if inspected == nil {
-			log.Printf("library: ffprobe devolvió una ficha vacía para el ítem %d", id)
-			writeJSONError(w, http.StatusBadGateway, "no se pudo analizar el archivo")
-			return
-		}
-		info = normalizedFileInfo(inspected)
-		cache.put(key, info)
+		log.Printf("library: analizar archivo del ítem %d: %v", id, err)
+		writeJSONError(w, http.StatusBadGateway, "no se pudo analizar el archivo")
+		return
 	}
 
 	if info.FileName == "" {
@@ -156,6 +131,41 @@ func (a *API) handleItemFileInfo(w http.ResponseWriter, r *http.Request) {
 		Path:     relative,
 		Playback: playbackInfo(safePath),
 	})
+}
+
+// cachedFileInfo reutiliza el análisis de ffprobe mientras el archivo no
+// cambie de tamaño ni de fecha.
+func (a *API) cachedFileInfo(ctx context.Context, safePath string) (playback.FileInfo, error) {
+	stat, err := os.Stat(safePath)
+	if err != nil || stat.IsDir() {
+		return playback.FileInfo{}, playback.ErrFileNotFound
+	}
+	key := fileInfoKey{
+		path:       safePath,
+		size:       stat.Size(),
+		modifiedAt: stat.ModTime().UnixNano(),
+	}
+	cache := a.fileInfoCache
+	if cache == nil {
+		cache = newFileInfoCache()
+		a.fileInfoCache = cache
+	}
+	if info, cached := cache.get(key); cached {
+		return info, nil
+	}
+	if a.fileInspector == nil {
+		return playback.FileInfo{}, playback.ErrFFprobeNotFound
+	}
+	inspected, err := a.fileInspector.Inspect(ctx, safePath)
+	if err != nil {
+		return playback.FileInfo{}, err
+	}
+	if inspected == nil {
+		return playback.FileInfo{}, playback.ErrProbeFailed
+	}
+	info := normalizedFileInfo(inspected)
+	cache.put(key, info)
+	return info, nil
 }
 
 func normalizedFileInfo(info *playback.FileInfo) playback.FileInfo {

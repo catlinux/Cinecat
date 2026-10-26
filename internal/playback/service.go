@@ -37,6 +37,17 @@ type TranscodeSettings struct {
 	// Threads limita los hilos de x264. Cero significa usar el valor por
 	// defecto, calculado a partir de los núcleos disponibles.
 	Threads int
+	// Audio es la posición de la pista de audio que se mapea.
+	Audio int
+}
+
+// StreamSelection son las opciones de una reproducción HLS concreta. La
+// calidad se conserva como texto para que la firma y la caché distingan
+// «auto» de una altura concreta aunque acaben en la misma resolución.
+type StreamSelection struct {
+	Audio     int
+	MaxHeight int
+	Quality   string
 }
 
 func defaultTranscodeSettings() TranscodeSettings {
@@ -75,6 +86,9 @@ func normalizeTranscodeSettings(settings TranscodeSettings) TranscodeSettings {
 	}
 	if settings.Threads <= 0 {
 		settings.Threads = defaults.Threads
+	}
+	if settings.Audio < 0 {
+		settings.Audio = 0
 	}
 	return settings
 }

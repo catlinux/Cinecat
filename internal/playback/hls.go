@@ -103,7 +103,7 @@ func hlsTranscodeArgs(inputPath string, startSegment int, transcode ...Transcode
 		"-i", inputPath,
 		// V mayúscula excluye las carátulas incrustadas como flujo de vídeo.
 		"-map", "0:V:0",
-		"-map", "0:a:0?",
+		"-map", fmt.Sprintf("0:a:%d?", settings.Audio),
 		// libx264 con yuv420p exige dimensiones pares; la altura se limita al
 		// máximo configurado y el ancho se calcula manteniendo la proporción.
 		"-vf", fmt.Sprintf(`scale=-2:trunc(min(%d\,ih)/2)*2`, settings.MaxHeight),
@@ -154,14 +154,30 @@ func ServeDirect(w http.ResponseWriter, r *http.Request, filePath string) error 
 
 // ServeHLSFile prepara la entrada HLS si hace falta y sirve la playlist (con
 // las URLs de los segmentos firmadas) o uno de sus segmentos.
-func (s *Service) ServeHLSFile(w http.ResponseWriter, r *http.Request, itemID int64, inputPath, name, exp, sig string) error {
+func (s *Service) ServeHLSFile(w http.ResponseWriter, r *http.Request, itemID int64, inputPath, name, exp, sig string, selections ...StreamSelection) error {
 	if !ValidHLSName(name) {
 		return ErrFileNotFound
 	}
 
-	entry, err := s.prepare(r.Context(), itemID, inputPath)
+	entry, err := s.prepare(r.Context(), itemID, inputPath, selections...)
 	if err != nil {
 		return err
+	}
+
+	query := signedQuery(exp, sig)
+	if len(selections) > 0 {
+		quality := selections[0].Quality
+		if quality == "" {
+			quality = "auto"
+		}
+		audio := selections[0].Audio
+		if audio < 0 {
+			audio = 0
+		}
+		query = signedQuery(exp, sig,
+			"audio", strconv.Itoa(audio),
+			"q", quality,
+		)
 	}
 
 	if name == "playlist.m3u8" {
@@ -172,7 +188,7 @@ func (s *Service) ServeHLSFile(w http.ResponseWriter, r *http.Request, itemID in
 		w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
 		w.Header().Set("Cache-Control", "no-store")
 		w.WriteHeader(http.StatusOK)
-		if _, err := w.Write(signPlaylist(data, signedQuery(exp, sig))); err != nil {
+		if _, err := w.Write(signPlaylist(data, query)); err != nil {
 			return fmt.Errorf("playback: escribir la playlist: %w", err)
 		}
 		return nil
@@ -209,14 +225,26 @@ func (s *Service) ServeHLSFile(w http.ResponseWriter, r *http.Request, itemID in
 // segmento, en el punto que pida. Si no, arranca FFmpeg desde el principio y
 // espera a su playlist, que se sirve tal cual (sin posibilidad de saltos
 // lejanos rápidos).
-func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string) (*hlsEntry, error) {
+func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string, selections ...StreamSelection) (*hlsEntry, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	s.cleanupLocked()
 
+	selection := StreamSelection{}
+	if len(selections) > 0 {
+		selection = selections[0]
+		if selection.Quality == "" {
+			selection.Quality = "auto"
+		}
+	}
 	transcode := s.currentTranscodeSettings()
-	key := hlsEntryKey{itemID: itemID, transcode: transcodeKey(transcode)}
+	if selection.MaxHeight > 0 {
+		transcode.MaxHeight = selection.MaxHeight
+	}
+	transcode.Audio = selection.Audio
+	stream := streamKey(transcode, selection.Quality)
+	key := hlsEntryKey{itemID: itemID, transcode: stream}
 	if entry, ok := s.entries[key]; ok {
 		now := s.now()
 		entry.lastUsed = now
@@ -248,7 +276,7 @@ func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string) (
 		return nil, fmt.Errorf("playback: ruta de entrada no válida: %w", err)
 	}
 
-	dir := filepath.Join(s.workDir, fmt.Sprintf("item-%d-%s", itemID, key.transcode))
+	dir := filepath.Join(s.workDir, fmt.Sprintf("item-%d-%s", itemID, stream))
 	if err := os.RemoveAll(dir); err != nil {
 		return nil, fmt.Errorf("playback: limpiar el HLS anterior: %w", err)
 	}
@@ -301,7 +329,23 @@ func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string) (
 // calidad.
 func transcodeKey(settings TranscodeSettings) string {
 	settings = normalizeTranscodeSettings(settings)
-	return fmt.Sprintf("%d-%d-%s-%d", settings.MaxHeight, settings.CRF, settings.Preset, settings.Threads)
+	return fmt.Sprintf("%d-%d-%s-%d-a%d",
+		settings.MaxHeight, settings.CRF, settings.Preset, settings.Threads, settings.Audio)
+}
+
+// streamKey añade la calidad textual a la clave de transcodificación para que
+// «auto» y una altura equivalente no compartan entrada ni directorio.
+func streamKey(settings TranscodeSettings, quality string) string {
+	return fmt.Sprintf("%s-q%s", transcodeKey(settings), qualityKey(quality))
+}
+
+func qualityKey(quality string) string {
+	switch quality {
+	case "auto", "original", "480", "720", "1080":
+		return quality
+	default:
+		return ""
+	}
 }
 
 // startRunLocked detiene el proceso FFmpeg actual de la entrada (si lo hay) y
@@ -810,10 +854,13 @@ func addQueryToURI(line, query string) string {
 	return line[:start] + rest[:end] + query + rest[end:]
 }
 
-func signedQuery(exp, sig string) string {
+func signedQuery(exp, sig string, extra ...string) string {
 	values := url.Values{}
 	values.Set("exp", exp)
 	values.Set("sig", sig)
+	for index := 0; index+1 < len(extra); index += 2 {
+		values.Set(extra[index], extra[index+1])
+	}
 	return "?" + values.Encode()
 }
 

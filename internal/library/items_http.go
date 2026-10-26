@@ -16,40 +16,41 @@ import (
 )
 
 type mediaItemDTO struct {
-	ID               int64             `json:"id"`
-	LibraryID        int64             `json:"library_id"`
-	Path             string            `json:"path"`
-	Title            string            `json:"title"`
-	FileTitle        string            `json:"file_title"`
-	Year             *int              `json:"year"`
-	Kind             string            `json:"kind"`
-	Season           *int              `json:"season"`
-	Episode          *int              `json:"episode"`
-	TMDBID           *int64            `json:"tmdb_id"`
-	Overview         *string           `json:"overview"`
-	PosterURL        *string           `json:"poster_url"`
-	PosterCustom     bool              `json:"poster_custom"`
-	OriginalTitle    *string           `json:"original_title"`
-	IMDbID           *string           `json:"imdb_id"`
-	Tagline          *string           `json:"tagline"`
-	Genres           []string          `json:"genres"`
-	RuntimeMinutes   *int              `json:"runtime_minutes"`
-	Rating           *float64          `json:"rating"`
-	Directors        []string          `json:"directors"`
-	Cast             []string          `json:"cast"`
-	Credits          creditsDTO        `json:"credits"`
-	BackdropURL      *string           `json:"backdrop_url"`
-	BackdropCustom   bool              `json:"backdrop_custom"`
-	OverviewLanguage *string           `json:"overview_language"`
-	MatchStatus      *string           `json:"match_status"`
-	MatchScore       *float64          `json:"match_score"`
-	Watched          bool              `json:"watched"`
-	Progress         *playbackProgress `json:"progress"`
-	Collections      []itemCollection  `json:"collections"`
-	SeriesID         *int64            `json:"series_id"`
-	SeriesTitle      *string           `json:"series_title"`
-	EpisodeTitle     *string           `json:"episode_title"`
-	StillURL         *string           `json:"still_url"`
+	ID               int64               `json:"id"`
+	LibraryID        int64               `json:"library_id"`
+	Path             string              `json:"path"`
+	Title            string              `json:"title"`
+	FileTitle        string              `json:"file_title"`
+	Year             *int                `json:"year"`
+	Kind             string              `json:"kind"`
+	Season           *int                `json:"season"`
+	Episode          *int                `json:"episode"`
+	TMDBID           *int64              `json:"tmdb_id"`
+	Overview         *string             `json:"overview"`
+	PosterURL        *string             `json:"poster_url"`
+	PosterCustom     bool                `json:"poster_custom"`
+	OriginalTitle    *string             `json:"original_title"`
+	IMDbID           *string             `json:"imdb_id"`
+	Tagline          *string             `json:"tagline"`
+	Genres           []string            `json:"genres"`
+	RuntimeMinutes   *int                `json:"runtime_minutes"`
+	Rating           *float64            `json:"rating"`
+	Directors        []string            `json:"directors"`
+	Cast             []string            `json:"cast"`
+	Credits          creditsDTO          `json:"credits"`
+	Preferences      *itemPreferencesDTO `json:"preferences"`
+	BackdropURL      *string             `json:"backdrop_url"`
+	BackdropCustom   bool                `json:"backdrop_custom"`
+	OverviewLanguage *string             `json:"overview_language"`
+	MatchStatus      *string             `json:"match_status"`
+	MatchScore       *float64            `json:"match_score"`
+	Watched          bool                `json:"watched"`
+	Progress         *playbackProgress   `json:"progress"`
+	Collections      []itemCollection    `json:"collections"`
+	SeriesID         *int64              `json:"series_id"`
+	SeriesTitle      *string             `json:"series_title"`
+	EpisodeTitle     *string             `json:"episode_title"`
+	StillURL         *string             `json:"still_url"`
 }
 
 type itemCollection struct {
@@ -114,6 +115,11 @@ func queryMediaItem(
 	if collections, ok := byItem[item.ID]; ok {
 		item.Collections = collections
 	}
+	preferences, err := loadItemPreferences(ctx, db, userID, item.ID)
+	if err != nil {
+		return mediaItemDTO{}, err
+	}
+	item.Preferences = preferences
 	return item, nil
 }
 

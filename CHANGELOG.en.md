@@ -7,6 +7,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+### Added
+- Playback with selectable audio track and quality (`GET /api/v1/items/{id}/play?audio=&quality=&subtitle=`): the response lists the audio tracks, the available qualities (never above the original resolution) and the subtitles. Embedded subtitles and `.srt`/`.vtt`/`.ass` files next to the video, served as WebVTT. Audio, subtitle and quality preferences saved per user and per movie (`/api/v1/items/{id}/preferences`).
+
 ## [0.12.1] - 2026-10-26
 
 ### Fixed

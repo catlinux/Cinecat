@@ -114,6 +114,9 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.Handle("GET /api/v1/items/{id}", a.requireSession(a.handleItem))
 	mux.Handle("GET /api/v1/items/{id}/similar", a.requireSession(a.handleSimilarItems))
 	mux.Handle("GET /api/v1/items/{id}/file-info", a.requireSession(a.handleItemFileInfo))
+	mux.Handle("GET /api/v1/items/{id}/preferences", a.requireSession(a.handleItemPreferencesGet))
+	mux.Handle("PUT /api/v1/items/{id}/preferences", a.requireSession(a.handleItemPreferencesPut))
+	mux.Handle("DELETE /api/v1/items/{id}/preferences", a.requireSession(a.handleItemPreferencesDelete))
 	mux.Handle("PUT /api/v1/items/{id}/progress", a.requireSession(a.handleItemProgressPut))
 	mux.Handle("DELETE /api/v1/items/{id}/progress", a.requireSession(a.handleItemProgressDelete))
 	mux.Handle("PUT /api/v1/items/{id}/watched", a.requireSession(a.handleItemWatched))
@@ -128,6 +131,7 @@ func (a *API) Register(mux *http.ServeMux) {
 		mux.Handle("GET /api/v1/items/{id}/play", a.requireSession(a.handlePlay))
 		mux.Handle("GET /api/v1/stream/{id}", http.HandlerFunc(a.handleStream))
 		mux.Handle("GET /api/v1/stream/{id}/{file}", http.HandlerFunc(a.handleStreamFile))
+		mux.Handle("GET /api/v1/stream/{id}/subtitles/{file}", http.HandlerFunc(a.handleStreamSubtitle))
 	}
 }
 
@@ -448,9 +452,15 @@ func pagination(r *http.Request) (limit, offset int, err error) {
 }
 
 type playResponse struct {
-	URL       string        `json:"url"`
-	Mode      playback.Mode `json:"mode"`
-	ExpiresAt time.Time     `json:"expires_at"`
+	URL              string          `json:"url"`
+	Mode             playback.Mode   `json:"mode"`
+	ExpiresAt        time.Time       `json:"expires_at"`
+	AudioTracks      []audioTrackDTO `json:"audio_tracks"`
+	SelectedAudio    int             `json:"selected_audio"`
+	Qualities        []qualityDTO    `json:"qualities"`
+	SelectedQuality  string          `json:"selected_quality"`
+	Subtitles        []subtitleDTO   `json:"subtitles"`
+	SelectedSubtitle *string         `json:"selected_subtitle"`
 }
 
 type mediaFile struct {
@@ -465,7 +475,7 @@ func (a *API) handlePlay(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	mode, _, ok := a.resolveMedia(w, r, id)
+	mode, safePath, ok := a.resolveMedia(w, r, id)
 	if !ok {
 		return
 	}
@@ -476,19 +486,50 @@ func (a *API) handlePlay(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	preferences, err := loadItemPreferences(r.Context(), a.db, sessionUserID(r), id)
+	if err != nil {
+		log.Printf("library: leer preferencias del ítem %d: %v", id, err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
+	info, _ := a.cachedFileInfo(r.Context(), safePath)
+	var infoPointer *playback.FileInfo
+	if info.FileName != "" || len(info.Video) > 0 || len(info.Audio) > 0 || len(info.Subtitles) > 0 {
+		infoPointer = &info
+	}
+
 	signature, expiresAt := a.playback.Sign(id)
+	expires := strconv.FormatInt(expiresAt.Unix(), 10)
+	options, optionsErr := a.playOptions(
+		id, mode, safePath, infoPointer, preferences, r.URL.Query(), expires, signature,
+	)
+	if optionsErr != nil {
+		writeJSONError(w, optionsErr.status, optionsErr.message)
+		return
+	}
+
 	target := "/api/v1/stream/" + strconv.FormatInt(id, 10)
 	if mode == playback.ModeRemux {
 		target += "/playlist.m3u8"
 	}
 	query := url.Values{}
-	query.Set("exp", strconv.FormatInt(expiresAt.Unix(), 10))
+	query.Set("exp", expires)
 	query.Set("sig", signature)
+	if mode == playback.ModeRemux {
+		query.Set("audio", strconv.Itoa(options.Audio))
+		query.Set("q", options.Quality)
+	}
 
 	writeJSON(w, http.StatusOK, playResponse{
-		URL:       target + "?" + query.Encode(),
-		Mode:      mode,
-		ExpiresAt: expiresAt,
+		URL:              target + "?" + query.Encode(),
+		Mode:             mode,
+		ExpiresAt:        expiresAt,
+		AudioTracks:      options.AudioTracks,
+		SelectedAudio:    options.SelectedAudio,
+		Qualities:        options.Qualities,
+		SelectedQuality:  options.SelectedQuality,
+		Subtitles:        options.Subtitles,
+		SelectedSubtitle: options.SelectedSubtitle,
 	})
 }
 
@@ -525,6 +566,17 @@ func (a *API) serveSigned(w http.ResponseWriter, r *http.Request, name string) {
 		return
 	}
 
+	info, _ := a.cachedFileInfo(r.Context(), safePath)
+	var infoPointer *playback.FileInfo
+	if info.FileName != "" || len(info.Video) > 0 || len(info.Audio) > 0 || len(info.Subtitles) > 0 {
+		infoPointer = &info
+	}
+	selection, selectionErr := a.streamSelection(mode, infoPointer, r.URL.Query())
+	if selectionErr != nil {
+		writeJSONError(w, selectionErr.status, selectionErr.message)
+		return
+	}
+
 	switch mode {
 	case playback.ModeDirect:
 		if name != "" {
@@ -538,10 +590,80 @@ func (a *API) serveSigned(w http.ResponseWriter, r *http.Request, name string) {
 		if name == "" {
 			name = "playlist.m3u8"
 		}
-		if err := a.playback.ServeHLSFile(w, r, id, safePath, name, exp, signature); err != nil {
+		if err := a.playback.ServeHLSFile(w, r, id, safePath, name, exp, signature, selection); err != nil {
 			a.writePlaybackError(w, err)
 		}
 	}
+}
+
+// handleStreamSubtitle sirve una pista de subtítulos convertida a WebVTT con
+// la misma firma que el vídeo.
+func (a *API) handleStreamSubtitle(w http.ResponseWriter, r *http.Request) {
+	id, ok := idFromPath(r)
+	if !ok {
+		writeJSONError(w, http.StatusNotFound, "ítem no encontrado")
+		return
+	}
+	exp := r.URL.Query().Get("exp")
+	signature := r.URL.Query().Get("sig")
+	if err := a.playback.Verify(id, exp, signature); err != nil {
+		if errors.Is(err, playback.ErrExpired) {
+			writeJSONError(w, http.StatusForbidden, "URL de reproducción caducada")
+		} else {
+			writeJSONError(w, http.StatusForbidden, "firma de reproducción no válida")
+		}
+		return
+	}
+	file := r.PathValue("file")
+	if !strings.HasSuffix(file, ".vtt") {
+		writeJSONError(w, http.StatusNotFound, "subtítulo no encontrado")
+		return
+	}
+	subtitleID := strings.TrimSuffix(file, ".vtt")
+	if !playback.ValidSubtitleID(subtitleID) {
+		writeJSONError(w, http.StatusNotFound, "subtítulo no encontrado")
+		return
+	}
+	_, safePath, ok := a.resolveMedia(w, r, id)
+	if !ok {
+		return
+	}
+	info, _ := a.cachedFileInfo(r.Context(), safePath)
+	var infoPointer *playback.FileInfo
+	if info.FileName != "" || len(info.Video) > 0 || len(info.Audio) > 0 || len(info.Subtitles) > 0 {
+		infoPointer = &info
+	}
+	var found *playback.SubtitleTrack
+	for _, track := range playback.DiscoverSubtitles(safePath, infoPointer) {
+		if track.ID == subtitleID {
+			copy := track
+			found = &copy
+			break
+		}
+	}
+	if found == nil {
+		writeJSONError(w, http.StatusNotFound, "subtítulo no encontrado")
+		return
+	}
+	data, err := a.playback.SubtitleWebVTT(r.Context(), id, safePath, *found)
+	if err != nil {
+		switch {
+		case errors.Is(err, playback.ErrSubtitleNotFound),
+			errors.Is(err, playback.ErrFileNotFound):
+			writeJSONError(w, http.StatusNotFound, "subtítulo no encontrado")
+		case errors.Is(err, playback.ErrFFmpegNotFound),
+			errors.Is(err, playback.ErrSubtitleConversion):
+			writeJSONError(w, http.StatusBadGateway, "no se pudo convertir el subtítulo")
+		default:
+			log.Printf("library: convertir subtítulo %s del ítem %d: %v", subtitleID, id, err)
+			writeJSONError(w, http.StatusInternalServerError, "error interno")
+		}
+		return
+	}
+	w.Header().Set("Content-Type", "text/vtt; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(data)
 }
 
 // resolveMedia busca el ítem, decide el modo y comprueba que el archivo sigue

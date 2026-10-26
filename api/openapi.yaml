@@ -1280,6 +1280,108 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/items/{id}/preferences:
+    get:
+      summary: Preferencias de reproducción del usuario para un ítem
+      description: Devuelve las preferencias guardadas del usuario de la sesión; los campos sin preferencia son null.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ItemId'
+      responses:
+        '200':
+          description: Preferencias del usuario
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemPreferences'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No existe un ítem con ese identificador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      summary: Guarda preferencias de reproducción
+      description: |
+        Actualización parcial: los campos ausentes no se tocan y null los
+        borra. `subtitle_id` vacío significa explícitamente «sin subtítulos».
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreferencesPatch'
+      responses:
+        '204':
+          description: Preferencias guardadas
+        '400':
+          description: Valor no válido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No existe un ítem con ese identificador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Borra las preferencias de reproducción
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ItemId'
+      responses:
+        '204':
+          description: Preferencias borradas
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No existe un ítem con ese identificador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/items/{id}/candidates:
     get:
       summary: Busca candidatos de TMDB para una película (solo administradores)
@@ -1672,17 +1774,33 @@ paths:
         Elige entre reproducción directa (el contenedor se puede servir tal
         cual) y HLS MPEG-TS (recodificado a H.264 + AAC estéreo), y devuelve
         una URL firmada válida 8 horas (los segmentos reutilizan su firma). La URL apunta a `/api/v1/stream/...` y no requiere la
-        cabecera de sesión: la autorización es la propia firma.
+        cabecera de sesión: la autorización es la propia firma. Los parámetros
+        ausentes se rellenan con las preferencias del usuario y, si no hay,
+        con los valores por defecto del archivo.
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
+        - $ref: '#/components/parameters/ItemId'
+        - name: audio
+          in: query
+          required: false
+          description: Posición de la pista de audio (0..n-1).
           schema:
             type: integer
-            format: int64
-            minimum: 1
+            minimum: 0
+        - name: quality
+          in: query
+          required: false
+          description: Calidad de reproducción.
+          schema:
+            type: string
+            enum: [auto, original, "480", "720", "1080"]
+        - name: subtitle
+          in: query
+          required: false
+          description: Identificador del subtítulo, o vacío para desactivarlo.
+          schema:
+            type: string
       responses:
         '200':
           description: URL de reproducción preparada
@@ -1690,6 +1808,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlayResponse'
+        '400':
+          description: Audio, calidad o subtítulo no válidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '401':
           description: Sesión no válida o ausente
           content:
@@ -1730,6 +1854,20 @@ paths:
       security: []
       parameters:
         - $ref: '#/components/parameters/StreamId'
+        - name: audio
+          in: query
+          required: false
+          description: Posición de la pista de audio (0..n-1).
+          schema:
+            type: integer
+            minimum: 0
+        - name: q
+          in: query
+          required: false
+          description: Calidad elegida.
+          schema:
+            type: string
+            enum: [auto, original, "480", "720", "1080"]
         - $ref: '#/components/parameters/SignatureExp'
         - $ref: '#/components/parameters/Signature'
       responses:
@@ -1745,6 +1883,12 @@ paths:
                 type: string
         '206':
           description: Parte del archivo directo (petición con Range)
+        '400':
+          description: Pista de audio o calidad no válidas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '403':
           description: Firma no válida o URL caducada
           content:
@@ -1786,6 +1930,20 @@ paths:
           required: true
           schema:
             type: string
+        - name: audio
+          in: query
+          required: false
+          description: Posición de la pista de audio (0..n-1).
+          schema:
+            type: integer
+            minimum: 0
+        - name: q
+          in: query
+          required: false
+          description: Calidad elegida.
+          schema:
+            type: string
+            enum: [auto, original, "480", "720", "1080"]
         - $ref: '#/components/parameters/SignatureExp'
         - $ref: '#/components/parameters/Signature'
       responses:
@@ -1799,6 +1957,12 @@ paths:
               schema:
                 type: string
                 format: binary
+        '400':
+          description: Pista de audio o calidad no válidas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '403':
           description: Firma no válida o URL caducada
           content:
@@ -1819,6 +1983,54 @@ paths:
                 $ref: '#/components/schemas/Error'
         '503':
           description: FFmpeg no está disponible para el remux
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/stream/{id}/subtitles/{file}:
+    get:
+      summary: Sirve un subtítulo convertido a WebVTT
+      description: |
+        Misma firma por ítem que el vídeo. `file` es `<sid>.vtt`, donde `sid`
+        es `e<N>` para pistas incrustadas o `x<N>` para archivos externos.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/StreamId'
+        - name: file
+          in: path
+          required: true
+          schema:
+            type: string
+            example: e0.vtt
+        - $ref: '#/components/parameters/SignatureExp'
+        - $ref: '#/components/parameters/Signature'
+      responses:
+        '200':
+          description: Subtítulo WebVTT
+          content:
+            text/vtt:
+              schema:
+                type: string
+        '403':
+          description: Firma no válida o URL caducada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Subtítulo no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: No se pudo convertir el subtítulo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
           content:
             application/json:
               schema:
@@ -2734,6 +2946,15 @@ components:
         enum:
           - poster
           - backdrop
+    ItemId:
+      name: id
+      in: path
+      required: true
+      description: Identificador del ítem.
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
     StreamId:
       name: id
       in: path
@@ -3827,6 +4048,7 @@ components:
         - match_score
         - watched
         - progress
+        - preferences
         - collections
         - series_id
         - series_title
@@ -3936,6 +4158,11 @@ components:
             - $ref: '#/components/schemas/PlaybackProgress'
           nullable: true
           description: Progreso del usuario de la sesión; null si no hay.
+        preferences:
+          allOf:
+            - $ref: '#/components/schemas/ItemPreferences'
+          nullable: true
+          description: Preferencias del usuario de la sesión; null si no hay.
         collections:
           type: array
           description: Colecciones visibles a las que pertenece el ítem; siempre un array.
@@ -3986,18 +4213,134 @@ components:
           items:
             $ref: '#/components/schemas/MediaItem'
       additionalProperties: false
+    ItemPreferences:
+      type: object
+      required:
+        - audio_index
+        - subtitle_id
+        - quality
+      properties:
+        audio_index:
+          type: integer
+          nullable: true
+          description: Posición de la pista de audio o null si no hay preferencia.
+        subtitle_id:
+          type: string
+          nullable: true
+          description: Identificador e<N>/x<N>, vacío para «sin subtítulos», o null sin preferencia.
+        quality:
+          type: string
+          nullable: true
+          enum: [auto, original, "480", "720", "1080"]
+      additionalProperties: false
+    PreferencesPatch:
+      type: object
+      description: Actualización parcial; los campos ausentes no se tocan y null los borra.
+      properties:
+        audio_index:
+          type: integer
+          nullable: true
+          minimum: 0
+        subtitle_id:
+          type: string
+          nullable: true
+          pattern: '^([ex][0-9]+)?$'
+        quality:
+          type: string
+          nullable: true
+          enum: [auto, original, "480", "720", "1080"]
+      additionalProperties: false
+    AudioTrack:
+      type: object
+      required:
+        - index
+        - language
+        - language_name
+        - codec
+        - channels
+        - channel_layout
+        - title
+        - default
+      properties:
+        index:
+          type: integer
+          description: Posición entre las pistas de audio (base 0).
+        language:
+          type: string
+        language_name:
+          type: string
+        codec:
+          type: string
+        channels:
+          type: integer
+        channel_layout:
+          type: string
+        title:
+          type: string
+        default:
+          type: boolean
+      additionalProperties: false
+    QualityOption:
+      type: object
+      required: [value, label]
+      properties:
+        value:
+          type: string
+        label:
+          type: string
+      additionalProperties: false
+    SubtitleOption:
+      type: object
+      required:
+        - id
+        - source
+        - language
+        - language_name
+        - title
+        - codec
+        - forced
+        - default
+        - url
+      properties:
+        id:
+          type: string
+        source:
+          type: string
+          enum: [embedded, external]
+        language:
+          type: string
+        language_name:
+          type: string
+        title:
+          type: string
+        codec:
+          type: string
+        forced:
+          type: boolean
+        default:
+          type: boolean
+        url:
+          type: string
+          description: URL relativa firmada del WebVTT.
+      additionalProperties: false
     PlayResponse:
       type: object
       required:
         - url
         - mode
         - expires_at
+        - audio_tracks
+        - selected_audio
+        - qualities
+        - selected_quality
+        - subtitles
+        - selected_subtitle
       properties:
         url:
           type: string
           description: |
             URL relativa firmada. Para modo directo apunta al archivo; para
-            remux, a la playlist HLS.
+            remux, a la playlist HLS con audio y q.
         mode:
           type: string
           enum:
@@ -4006,6 +4349,25 @@ components:
         expires_at:
           type: string
           format: date-time
+        audio_tracks:
+          type: array
+          items:
+            $ref: '#/components/schemas/AudioTrack'
+        selected_audio:
+          type: integer
+        qualities:
+          type: array
+          items:
+            $ref: '#/components/schemas/QualityOption'
+        selected_quality:
+          type: string
+        subtitles:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubtitleOption'
+        selected_subtitle:
+          type: string
+          nullable: true
       additionalProperties: false
     SettingsResponse:
       type: object

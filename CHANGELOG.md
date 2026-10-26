@@ -7,6 +7,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Añadido
+- Reproducción con pista de audio y calidad a elegir (`GET /api/v1/items/{id}/play?audio=&quality=&subtitle=`): la respuesta lista las pistas de audio, las calidades disponibles (sin subir de la resolución original) y los subtítulos. Subtítulos incrustados y archivos `.srt`/`.vtt`/`.ass` junto al vídeo, servidos como WebVTT. Preferencias de audio, subtítulos y calidad guardadas por usuario y por película (`/api/v1/items/{id}/preferences`).
+
 ## [0.12.1] - 2026-10-26
 
 ### Corregido

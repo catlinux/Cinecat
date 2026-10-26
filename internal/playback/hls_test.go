@@ -1,6 +1,7 @@
 package playback
 
 import (
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -72,6 +73,48 @@ func TestTranscodeSettingsInvalidosUsanLosDefectos(t *testing.T) {
 		!strings.Contains(args, "-preset\nveryfast") ||
 		!strings.Contains(args, "-threads\n"+strconv.Itoa(defaultTranscodeThreads())) {
 		t.Fatalf("argumentos sin los defectos: %s", args)
+	}
+}
+
+func TestHLSTranscodeArgsEligePistaDeAudio(t *testing.T) {
+	for _, audio := range []int{0, 1, 2} {
+		settings := defaultTranscodeSettings()
+		settings.Audio = audio
+		args := strings.Join(hlsTranscodeArgs("/tmp/peli.mkv", 0, settings), "\n")
+		if !strings.Contains(args, "-map\n0:a:"+strconv.Itoa(audio)+"?") {
+			t.Fatalf("audio %d no aparece en los argumentos: %v", audio, args)
+		}
+	}
+}
+
+func TestStreamKeySeparaAudioYCalidad(t *testing.T) {
+	base := defaultTranscodeSettings()
+	audioChanged := base
+	audioChanged.Audio++
+	if transcodeKey(base) == transcodeKey(audioChanged) {
+		t.Fatal("cambiar el audio debe cambiar la clave")
+	}
+	if streamKey(base, "auto") == streamKey(base, "720") {
+		t.Fatal("cambiar la calidad debe cambiar la clave")
+	}
+	if streamKey(base, "auto") != streamKey(base, "auto") {
+		t.Fatal("la misma selección debe generar la misma clave")
+	}
+}
+
+func TestSignedQueryPropagaAudioYCalidad(t *testing.T) {
+	query := signedQuery("123", "firma", "audio", "2", "q", "720")
+	values, err := url.ParseQuery(strings.TrimPrefix(query, "?"))
+	if err != nil {
+		t.Fatalf("query no válida: %v", err)
+	}
+	if values.Get("exp") != "123" || values.Get("sig") != "firma" ||
+		values.Get("audio") != "2" || values.Get("q") != "720" {
+		t.Fatalf("query inesperada: %s", query)
+	}
+	playlist := signPlaylist([]byte("#EXTM3U\nsegment_00000.ts\n"), query)
+	if !strings.Contains(string(playlist), "segment_00000.ts"+query) {
+		t.Fatalf("la playlist no propaga la selección: %s", playlist)
 	}
 }
 

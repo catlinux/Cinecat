@@ -58,7 +58,7 @@ func TestMigrateCreaTablas(t *testing.T) {
 	for _, name := range []string{
 		"schema_migrations", "users", "sessions", "libraries", "media_items", "playback_state",
 		"playback_progress", "collections", "collection_items", "series", "series_seasons",
-		"settings",
+		"settings", "item_preferences",
 	} {
 		if !got[name] {
 			t.Errorf("falta la tabla %q", name)
@@ -163,6 +163,28 @@ func columns(t *testing.T, ctx context.Context, s *Store, table string) map[stri
 		t.Fatalf("recorrer columnas de %s: %v", table, err)
 	}
 	return got
+}
+
+func TestMigracionPreferencias(t *testing.T) {
+	s, ctx := openTestStore(t, filepath.Join(t.TempDir(), "cinecat.db"))
+
+	columns := columns(t, ctx, s, "item_preferences")
+	for _, name := range []string{
+		"user_id", "media_item_id", "audio_index", "subtitle_id", "quality", "updated_at",
+	} {
+		if !columns[name] {
+			t.Errorf("item_preferences: falta la columna %q", name)
+		}
+	}
+	var script string
+	if err := s.DB().QueryRowContext(ctx,
+		`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'item_preferences'`).
+		Scan(&script); err != nil {
+		t.Fatalf("leer definición de item_preferences: %v", err)
+	}
+	if !strings.Contains(script, "STRICT") {
+		t.Fatalf("item_preferences debe ser STRICT: %s", script)
+	}
 }
 
 func TestMigracionSettings(t *testing.T) {
