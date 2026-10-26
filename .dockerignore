@@ -9,6 +9,7 @@ web/build
 web/coverage
 cinecatd
 cinecatd.exe
+run/
 *.db
 *.db-shm
 *.db-wal

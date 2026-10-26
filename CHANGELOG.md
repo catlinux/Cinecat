@@ -7,6 +7,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Añadido
+
+- Servicio actualizador para el host (`scripts/cinecat-updater.sh`, unidades de systemd de usuario e `scripts/instalar-actualizador.sh`): recoge la petición del servidor, hace copia de la base de datos, actualiza a la etiqueta pedida, comprueba que arranca y, si falla, vuelve al código y, si ya se habían reiniciado los contenedores, también a la base de datos anteriores. Documentado en `docs/es/actualizaciones.md`.
+
 ## [0.15.0] - 2026-10-27
 
 ### Cambiado

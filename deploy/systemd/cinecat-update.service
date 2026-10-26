@@ -1,0 +1,10 @@
+[Unit]
+Description=Actualiza Cinecat desde una petición del servidor
+StartLimitBurst=3
+StartLimitIntervalSec=600
+
+[Service]
+Type=oneshot
+WorkingDirectory=@REPO@
+ExecStart=@REPO@/scripts/cinecat-updater.sh
+TimeoutStartSec=1800

@@ -7,6 +7,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+### Added
+
+- Host updater service (`scripts/cinecat-updater.sh`, systemd user units and `scripts/instalar-actualizador.sh`): picks up the server's request, backs up the database, updates to the requested tag, checks it starts and, on failure, rolls back the code and, if the containers had already been restarted, the database too. Documented in `docs/en/updates.md`.
+
 ## [0.15.0] - 2026-10-27
 
 ### Changed

@@ -1,0 +1,9 @@
+[Unit]
+Description=Vigila las peticiones de actualización de Cinecat
+
+[Path]
+PathExists=@REPO@/run/update-request.json
+Unit=cinecat-update.service
+
+[Install]
+WantedBy=default.target
