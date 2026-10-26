@@ -215,7 +215,7 @@ func TestHLSArgsEnLista(t *testing.T) {
 }
 
 func TestSinShellEnElCodigo(t *testing.T) {
-	files := []string{"decision.go", "hls.go", "service.go"}
+	files := []string{"decision.go", "hls.go", "service.go", "probe.go"}
 	var all string
 	for _, name := range files {
 		data, err := os.ReadFile(name)

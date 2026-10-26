@@ -31,6 +31,9 @@ type Options struct {
 	WorkDir string
 	// Key es la clave HMAC; si está vacía se genera una aleatoria por proceso.
 	Key []byte
+	// Prober sustituye el detector de keyframes; si es nil se usa el de por
+	// defecto (ffprobe).
+	Prober *Prober
 }
 
 // Service firma URLs, prepara remux HLS y sirve sus archivos.
@@ -39,6 +42,7 @@ type Service struct {
 	ttl     time.Duration
 	now     func() time.Time
 	workDir string
+	prober  *Prober
 
 	mu        sync.Mutex
 	entries   map[int64]*hlsEntry
@@ -82,11 +86,17 @@ func New(opts Options) (*Service, error) {
 		return nil, fmt.Errorf("playback: crear directorio de trabajo: %w", err)
 	}
 
+	prober := opts.Prober
+	if prober == nil {
+		prober = NewProber()
+	}
+
 	svc := &Service{
 		key:     key,
 		ttl:     ttl,
 		now:     now,
 		workDir: workDir,
+		prober:  prober,
 		entries: make(map[int64]*hlsEntry),
 		stop:    make(chan struct{}),
 		done:    make(chan struct{}),

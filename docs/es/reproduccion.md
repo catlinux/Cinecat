@@ -27,6 +27,8 @@ Cómo obtenerlo: en Android, consultando los códecs del sistema; en el navegado
 3. **Transcodificación parcial:** el vídeo se copia y solo se convierte el audio (por ejemplo DTS a AAC/AC3).
 4. **Transcodificación completa:** el servidor recodifica el vídeo (con aceleración por hardware si existe) y adapta resolución y tasa de bits.
 
+Antes de remuxear, el servidor comprueba con `ffprobe` el intervalo entre keyframes del primer flujo de vídeo. Si supera **15 s** (habitual en AVI/DivX antiguos), no intenta el remux sin recodificar: el primer segmento HLS podría ser enorme y tardar mucho en empezar a reproducirse. En su lugar devuelve un error claro. La transcodificación real de esos archivos queda para el Paso 2 de la Fase 3.
+
 El servidor **prefiere H.265** cuando el cliente lo soporta (menos espacio y ancho de banda) y **recurre a H.264** cuando no.
 
 ## Quién descodifica

@@ -128,18 +128,23 @@ func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string) (
 		return nil, ErrFFmpegNotFound
 	}
 
+	absInput, err := filepath.Abs(inputPath)
+	if err != nil {
+		return nil, fmt.Errorf("playback: ruta de entrada no válida: %w", err)
+	}
+
+	if s.prober != nil {
+		if err := s.prober.CheckViable(ctx, absInput); err != nil {
+			return nil, err
+		}
+	}
+
 	dir := filepath.Join(s.workDir, fmt.Sprintf("item-%d", itemID))
 	if err := os.RemoveAll(dir); err != nil {
 		return nil, fmt.Errorf("playback: limpiar el remux anterior: %w", err)
 	}
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return nil, fmt.Errorf("playback: crear el directorio del remux: %w", err)
-	}
-
-	absInput, err := filepath.Abs(inputPath)
-	if err != nil {
-		_ = os.RemoveAll(dir)
-		return nil, fmt.Errorf("playback: ruta de entrada no válida: %w", err)
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Minute)

@@ -27,6 +27,8 @@ How to obtain it: on Android, by querying the system codecs; in the browser, wit
 3. **Partial transcoding:** the video is copied and only the audio is converted (for example DTS to AAC/AC3).
 4. **Full transcoding:** the server re-encodes the video (with hardware acceleration if available) and adapts resolution and bitrate.
 
+Before remuxing, the server checks the keyframe interval of the first video stream with `ffprobe`. If it exceeds **15 s** (common in old AVI/DivX files), it does not attempt the remux without re-encoding: the first HLS segment could be huge and slow to start. It returns a clear error instead. Real transcoding for those files is left for Step 2 of Phase 3.
+
 The server **prefers H.265** when the client supports it (less space and bandwidth) and **falls back to H.264** when it does not.
 
 ## Who decodes

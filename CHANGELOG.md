@@ -7,6 +7,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.7.3] - 2026-10-26
+
+### Corregido
+- El remux HLS comprueba con `ffprobe`, antes de lanzar FFmpeg, que el intervalo máximo entre keyframes sea viable (≤ 15 s). En vídeos con keyframes muy separados (típico en `.avi`/DivX antiguos) devuelve un error claro en vez de generar un único segmento gigante que el navegador no puede empezar a reproducir. **No repara la reproducción de esos archivos**: la transcodificación real queda para el siguiente paso de la Fase 3.
+
 ## [0.7.2] - 2026-10-26
 
 ### Añadido

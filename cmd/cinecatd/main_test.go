@@ -718,10 +718,10 @@ func generateLibraryVideo(t *testing.T, ext string) (libDir, file string) {
 	t.Helper()
 	ffmpeg := requireFFmpeg(t)
 
-	codec := []string{"-c:v", "mpeg4", "-q:v", "5"}
+	codec := []string{"-c:v", "mpeg4", "-q:v", "5", "-g", "5"}
 	if out, err := exec.Command(ffmpeg, "-hide_banner", "-loglevel", "error", "-encoders").Output(); err == nil &&
 		strings.Contains(string(out), "libx264") {
-		codec = []string{"-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p"}
+		codec = []string{"-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p", "-g", "5", "-keyint_min", "5", "-sc_threshold", "0"}
 	}
 
 	libDir = t.TempDir()

@@ -1,0 +1,140 @@
+package playback
+
+import (
+	"context"
+	"errors"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+func requireVideoTools(t *testing.T) {
+	t.Helper()
+	if _, err := exec.LookPath("ffmpeg"); err != nil {
+		t.Skip("ffmpeg no está disponible en PATH; se omite la prueba de keyframes")
+	}
+	if _, err := exec.LookPath("ffprobe"); err != nil {
+		t.Skip("ffprobe no está disponible en PATH; se omite la prueba de keyframes")
+	}
+	out, err := exec.Command("ffmpeg", "-hide_banner", "-encoders").Output()
+	if err != nil || !strings.Contains(string(out), "libx264") {
+		t.Skip("ffmpeg no incluye libx264; se omite la prueba de keyframes")
+	}
+}
+
+func generateKeyframeVideo(t *testing.T, target, duration string, extra ...string) string {
+	t.Helper()
+	args := []string{
+		"-hide_banner", "-loglevel", "error", "-y",
+		"-f", "lavfi", "-i", "testsrc=duration=" + duration + ":size=160x120:rate=10",
+		"-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p",
+	}
+	args = append(args, extra...)
+	args = append(args, "-an", target)
+
+	cmd := exec.Command("ffmpeg", args...)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("generar vídeo: %v: %s", err, out)
+	}
+	return target
+}
+
+func TestMaxKeyframeIntervalNormal(t *testing.T) {
+	requireVideoTools(t)
+	file := generateKeyframeVideo(t, filepath.Join(t.TempDir(), "normal.mkv"), "2",
+		"-g", "5", "-keyint_min", "5", "-sc_threshold", "0")
+
+	interval, err := NewProber().MaxKeyframeInterval(context.Background(), file)
+	if err != nil {
+		t.Fatalf("MaxKeyframeInterval: %v", err)
+	}
+	if interval > MaxViableKeyframeInterval {
+		t.Fatalf("intervalo = %s, debería ser viable (<= %s)", interval, MaxViableKeyframeInterval)
+	}
+	if err := NewProber().CheckViable(context.Background(), file); err != nil {
+		t.Fatalf("CheckViable: %v", err)
+	}
+}
+
+func TestMaxKeyframeIntervalDisperso(t *testing.T) {
+	requireVideoTools(t)
+	file := generateKeyframeVideo(t, filepath.Join(t.TempDir(), "disperso.mkv"), "40",
+		"-x264-params", "keyint=9999:min-keyint=9999:scenecut=0",
+		"-force_key_frames", "expr:gte(t,20)")
+
+	interval, err := NewProber().MaxKeyframeInterval(context.Background(), file)
+	if err != nil {
+		t.Fatalf("MaxKeyframeInterval: %v", err)
+	}
+	if interval <= MaxViableKeyframeInterval {
+		t.Fatalf("intervalo = %s, debería superar %s", interval, MaxViableKeyframeInterval)
+	}
+
+	err = NewProber().CheckViable(context.Background(), file)
+	if !errors.Is(err, ErrKeyframeIntervalTooLarge) {
+		t.Fatalf("CheckViable = %v, se esperaba ErrKeyframeIntervalTooLarge", err)
+	}
+}
+
+func TestMaxKeyframeIntervalUnSoloKeyframe(t *testing.T) {
+	requireVideoTools(t)
+	file := generateKeyframeVideo(t, filepath.Join(t.TempDir(), "unico.mkv"), "3",
+		"-x264-params", "keyint=9999:min-keyint=9999:scenecut=0")
+
+	_, err := NewProber().MaxKeyframeInterval(context.Background(), file)
+	if !errors.Is(err, ErrInsufficientKeyframes) {
+		t.Fatalf("error = %v, se esperaba ErrInsufficientKeyframes", err)
+	}
+	if err := NewProber().CheckViable(context.Background(), file); !errors.Is(err, ErrKeyframeIntervalTooLarge) {
+		t.Fatalf("CheckViable = %v, se esperaba ErrKeyframeIntervalTooLarge", err)
+	}
+}
+
+func TestProberSinFFprobe(t *testing.T) {
+	t.Setenv("PATH", t.TempDir())
+
+	if _, err := NewProber().MaxKeyframeInterval(context.Background(), "x.mkv"); !errors.Is(err, ErrFFprobeNotFound) {
+		t.Fatalf("error = %v, se esperaba ErrFFprobeNotFound", err)
+	}
+}
+
+func TestParseKeyframeTimes(t *testing.T) {
+	output := "0.000000,0.000000,K__\n0.200000,0.200000,___\n1.500000,1.500000,K__\n"
+	times := parseKeyframeTimes(output)
+	if len(times) != 2 || times[0] != 0 || times[1] != 1.5 {
+		t.Fatalf("tiempos inesperados: %v", times)
+	}
+}
+
+func TestPrepareRechazaKeyframesDispersos(t *testing.T) {
+	requireVideoTools(t)
+	sparse := generateKeyframeVideo(t, filepath.Join(t.TempDir(), "disperso.mkv"), "40",
+		"-x264-params", "keyint=9999:min-keyint=9999:scenecut=0",
+		"-force_key_frames", "expr:gte(t,20)")
+	normal := generateKeyframeVideo(t, filepath.Join(t.TempDir(), "normal.mkv"), "2",
+		"-g", "5", "-keyint_min", "5", "-sc_threshold", "0")
+
+	svc, err := New(Options{WorkDir: filepath.Join(t.TempDir(), "hls")})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := svc.Close(); err != nil {
+			t.Errorf("Close: %v", err)
+		}
+	})
+
+	if _, err := svc.prepare(context.Background(), 1, sparse); !errors.Is(err, ErrKeyframeIntervalTooLarge) {
+		t.Fatalf("prepare disperso = %v, se esperaba ErrKeyframeIntervalTooLarge", err)
+	}
+
+	entry, err := svc.prepare(context.Background(), 2, normal)
+	if err != nil {
+		t.Fatalf("prepare normal: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(entry.dir, "playlist.m3u8")); err != nil {
+		t.Fatalf("no se generó la playlist: %v", err)
+	}
+}

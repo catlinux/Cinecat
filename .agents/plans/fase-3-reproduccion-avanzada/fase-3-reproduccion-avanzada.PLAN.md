@@ -8,7 +8,7 @@ Decisiones ya fijadas: FFmpeg como herramienta externa (ya en el `Dockerfile` de
 
 Cada paso es autocontenido. Al completarlo, el ejecutor lo marca `[x]` aquí y añade su entrada en `CHANGELOG.md`/`CHANGELOG.en.md` y `VERSION`, en el mismo commit. Commits: `tipo: descripción en castellano`.
 
-## Paso 1 — Detectar intervalos de keyframe problemáticos antes de remuxear
+## Paso 1 — Detectar intervalos de keyframe problemáticos antes de remuxear [x] hecho (ejecución 20261026-023740-dc92)
 
 - **Archivos:** `internal/playback/probe.go` (nuevo), `internal/playback/hls.go`, `internal/playback/decision.go`, tests correspondientes.
 - **Qué hace:** antes de lanzar el remux, ejecuta `ffprobe` (ya viene con FFmpeg) sobre el archivo para listar los tiempos de los keyframes del flujo de vídeo (`ffprobe -select_streams v:0 -show_entries frame=pict_type,pkt_pts_time -of csv` o equivalente; investigar la invocación más fiable y barata, p. ej. limitarla a leer solo cabeceras sin decodificar todo el archivo si es posible). Si el intervalo máximo entre keyframes consecutivos supera un umbral razonable (a decidir y documentar, por ejemplo 15-20 s), el remux sin recodificar no es viable: en ese caso `Decide` (o una función nueva) debe indicar que hace falta transcodificar el vídeo en vez de copiarlo, en lugar de intentar el remux `copy` y producir un segmento gigante como ahora.
