@@ -14,8 +14,10 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -28,6 +30,9 @@ const (
 
 	maxResponseBytes = 4 << 20  // 4 MiB
 	maxImageBytes    = 20 << 20 // 20 MiB
+
+	// minRequestInterval mantiene el límite de TMDB de ~20 peticiones/s.
+	minRequestInterval = 50 * time.Millisecond
 )
 
 // DefaultCacheTTL es el tiempo que se conservan las búsquedas y las imágenes
@@ -55,6 +60,45 @@ type Movie struct {
 	PosterLanguage string `json:"poster_language"`
 }
 
+// Candidate es un resultado de b?squeda que el usuario puede elegir.
+type Candidate struct {
+	TMDBID        int     `json:"tmdb_id"`
+	Title         string  `json:"title"`
+	OriginalTitle string  `json:"original_title"`
+	Year          int     `json:"year"`
+	Overview      string  `json:"overview"`
+	PosterURL     string  `json:"poster_url"`
+	Popularity    float64 `json:"popularity"`
+}
+
+// Details es la ficha completa de una pel?cula o serie.
+type Details struct {
+	TMDBID           int      `json:"tmdb_id"`
+	IMDbID           string   `json:"imdb_id"`
+	Title            string   `json:"title"`
+	OriginalTitle    string   `json:"original_title"`
+	Year             int      `json:"year"`
+	Tagline          string   `json:"tagline"`
+	Overview         string   `json:"overview"`
+	OverviewLanguage string   `json:"overview_language"`
+	Genres           []string `json:"genres"`
+	RuntimeMinutes   int      `json:"runtime_minutes"`
+	Rating           float64  `json:"rating"`
+	Directors        []string `json:"directors"`
+	Cast             []string `json:"cast"`
+	PosterURL        string   `json:"poster_url"`
+	BackdropURL      string   `json:"backdrop_url"`
+}
+
+// Episode es la ficha de un episodio concreto.
+type Episode struct {
+	Name             string `json:"name"`
+	Overview         string `json:"overview"`
+	OverviewLanguage string `json:"overview_language"`
+	AirYear          int    `json:"air_year"`
+	StillURL         string `json:"still_url"`
+}
+
 // Options configura el cliente. Todos los campos son opcionales salvo APIKey
 // y CacheDir (si CacheDir está vacío se usa el directorio de caché del usuario).
 type Options struct {
@@ -67,6 +111,8 @@ type Options struct {
 	HTTPClient   *http.Client
 	// Now permite sustituir el reloj en las pruebas.
 	Now func() time.Time
+	// RetryDelay es la espera antes de reintentar un 429; 2 s por defecto.
+	RetryDelay time.Duration
 }
 
 // Client consulta TMDB y cachea en disco las búsquedas y las imágenes.
@@ -79,6 +125,10 @@ type Client struct {
 	posterSize string
 	httpClient *http.Client
 	now        func() time.Time
+	retryDelay time.Duration
+
+	rateMu      sync.Mutex
+	lastRequest time.Time
 }
 
 // New crea el cliente de metadatos.
@@ -135,6 +185,11 @@ func New(opts Options) (*Client, error) {
 		now = time.Now
 	}
 
+	retryDelay := opts.RetryDelay
+	if retryDelay <= 0 {
+		retryDelay = 2 * time.Second
+	}
+
 	return &Client{
 		apiKey:     apiKey,
 		baseURL:    base,
@@ -144,6 +199,7 @@ func New(opts Options) (*Client, error) {
 		posterSize: posterSize,
 		httpClient: httpClient,
 		now:        now,
+		retryDelay: retryDelay,
 	}, nil
 }
 
@@ -257,6 +313,366 @@ func (c *Client) Search(ctx context.Context, title string, year int) (*Movie, er
 	return movie, nil
 }
 
+type movieSearchResponse struct {
+	Results []struct {
+		ID            int     `json:"id"`
+		Title         string  `json:"title"`
+		OriginalTitle string  `json:"original_title"`
+		ReleaseDate   string  `json:"release_date"`
+		Overview      string  `json:"overview"`
+		PosterPath    string  `json:"poster_path"`
+		Popularity    float64 `json:"popularity"`
+	} `json:"results"`
+}
+
+type tvSearchResponse struct {
+	Results []struct {
+		ID           int     `json:"id"`
+		Name         string  `json:"name"`
+		OriginalName string  `json:"original_name"`
+		FirstAirDate string  `json:"first_air_date"`
+		Overview     string  `json:"overview"`
+		PosterPath   string  `json:"poster_path"`
+		Popularity   float64 `json:"popularity"`
+	} `json:"results"`
+}
+
+type castMember struct {
+	Name  string `json:"name"`
+	Order int    `json:"order"`
+}
+
+type creditsResponse struct {
+	Cast []castMember `json:"cast"`
+	Crew []struct {
+		Name string `json:"name"`
+		Job  string `json:"job"`
+	} `json:"crew"`
+}
+
+type genre struct {
+	Name string `json:"name"`
+}
+
+type movieDetailsResponse struct {
+	ID            int             `json:"id"`
+	IMDbID        string          `json:"imdb_id"`
+	Title         string          `json:"title"`
+	OriginalTitle string          `json:"original_title"`
+	ReleaseDate   string          `json:"release_date"`
+	Tagline       string          `json:"tagline"`
+	Overview      string          `json:"overview"`
+	Runtime       int             `json:"runtime"`
+	VoteAverage   float64         `json:"vote_average"`
+	Genres        []genre         `json:"genres"`
+	Credits       creditsResponse `json:"credits"`
+	Images        imagesResponse  `json:"images"`
+	PosterPath    string          `json:"poster_path"`
+	BackdropPath  string          `json:"backdrop_path"`
+}
+
+type tvDetailsResponse struct {
+	ID           int     `json:"id"`
+	Name         string  `json:"name"`
+	OriginalName string  `json:"original_name"`
+	FirstAirDate string  `json:"first_air_date"`
+	Tagline      string  `json:"tagline"`
+	Overview     string  `json:"overview"`
+	VoteAverage  float64 `json:"vote_average"`
+	Genres       []genre `json:"genres"`
+	CreatedBy    []struct {
+		Name string `json:"name"`
+	} `json:"created_by"`
+	Credits      creditsResponse `json:"credits"`
+	Images       imagesResponse  `json:"images"`
+	PosterPath   string          `json:"poster_path"`
+	BackdropPath string          `json:"backdrop_path"`
+}
+
+type episodeDetailsResponse struct {
+	Name      string `json:"name"`
+	Overview  string `json:"overview"`
+	AirDate   string `json:"air_date"`
+	StillPath string `json:"still_path"`
+}
+
+type translationItem struct {
+	ISO6391  string `json:"iso_639_1"`
+	ISO31661 string `json:"iso_3166_1"`
+	Data     struct {
+		Overview string `json:"overview"`
+	} `json:"data"`
+}
+
+type translationsResponse struct {
+	Translations []translationItem `json:"translations"`
+}
+
+// SearchMovies busca películas por título y año opcional, en es-ES.
+func (c *Client) SearchMovies(ctx context.Context, query string, year int) ([]Candidate, error) {
+	query = strings.TrimSpace(query)
+	if query == "" {
+		return nil, errors.New("metadata: el título no puede estar vacío")
+	}
+
+	params := url.Values{}
+	params.Set("language", defaultLanguage)
+	params.Set("query", query)
+	params.Set("include_adult", "false")
+	if year > 0 {
+		params.Set("year", strconv.Itoa(year))
+	}
+
+	var response movieSearchResponse
+	if err := c.getCachedJSON(ctx, "/search/movie", params, &response); err != nil {
+		return nil, err
+	}
+	if len(response.Results) == 0 {
+		return nil, ErrNotFound
+	}
+
+	candidates := make([]Candidate, 0, len(response.Results))
+	for _, result := range response.Results {
+		if len(candidates) == 10 {
+			break
+		}
+		candidates = append(candidates, Candidate{
+			TMDBID:        result.ID,
+			Title:         result.Title,
+			OriginalTitle: result.OriginalTitle,
+			Year:          releaseYear(result.ReleaseDate),
+			Overview:      result.Overview,
+			PosterURL:     c.imageURLSize(result.PosterPath, "w185"),
+			Popularity:    result.Popularity,
+		})
+	}
+	return candidates, nil
+}
+
+// SearchTV busca series por nombre y año opcional, en es-ES.
+func (c *Client) SearchTV(ctx context.Context, query string, year int) ([]Candidate, error) {
+	query = strings.TrimSpace(query)
+	if query == "" {
+		return nil, errors.New("metadata: el título no puede estar vacío")
+	}
+
+	params := url.Values{}
+	params.Set("language", defaultLanguage)
+	params.Set("query", query)
+	params.Set("include_adult", "false")
+	if year > 0 {
+		params.Set("first_air_date_year", strconv.Itoa(year))
+	}
+
+	var response tvSearchResponse
+	if err := c.getCachedJSON(ctx, "/search/tv", params, &response); err != nil {
+		return nil, err
+	}
+	if len(response.Results) == 0 {
+		return nil, ErrNotFound
+	}
+
+	candidates := make([]Candidate, 0, len(response.Results))
+	for _, result := range response.Results {
+		if len(candidates) == 10 {
+			break
+		}
+		candidates = append(candidates, Candidate{
+			TMDBID:        result.ID,
+			Title:         result.Name,
+			OriginalTitle: result.OriginalName,
+			Year:          releaseYear(result.FirstAirDate),
+			Overview:      result.Overview,
+			PosterURL:     c.imageURLSize(result.PosterPath, "w185"),
+			Popularity:    result.Popularity,
+		})
+	}
+	return candidates, nil
+}
+
+// MovieDetails obtiene la ficha completa de una película en es-ES.
+func (c *Client) MovieDetails(ctx context.Context, id int) (*Details, error) {
+	params := url.Values{}
+	params.Set("language", defaultLanguage)
+	params.Set("append_to_response", "credits,images")
+	params.Set("include_image_language", "es,null,en")
+
+	var response movieDetailsResponse
+	path := "/movie/" + strconv.Itoa(id)
+	if err := c.getCachedJSON(ctx, path, params, &response); err != nil {
+		return nil, err
+	}
+
+	details := &Details{
+		TMDBID:         response.ID,
+		IMDbID:         response.IMDbID,
+		Title:          response.Title,
+		OriginalTitle:  response.OriginalTitle,
+		Year:           releaseYear(response.ReleaseDate),
+		Tagline:        response.Tagline,
+		Overview:       response.Overview,
+		RuntimeMinutes: response.Runtime,
+		Rating:         response.VoteAverage,
+		Genres:         genreNames(response.Genres),
+		Directors:      directorsFromCrew(response.Credits.Crew),
+		Cast:           castNames(response.Credits.Cast),
+		PosterURL:      c.posterURL(response.Images.Posters, response.PosterPath),
+		BackdropURL:    c.imageURLSize(response.BackdropPath, "w1280"),
+	}
+	if details.Overview != "" {
+		details.OverviewLanguage = defaultLanguage
+	} else if overview, language := c.translatedOverview(ctx, path+"/translations"); overview != "" {
+		details.Overview = overview
+		details.OverviewLanguage = language
+	}
+	return details, nil
+}
+
+// TVDetails obtiene la ficha completa de una serie en es-ES.
+func (c *Client) TVDetails(ctx context.Context, id int) (*Details, error) {
+	params := url.Values{}
+	params.Set("language", defaultLanguage)
+	params.Set("append_to_response", "credits,images")
+	params.Set("include_image_language", "es,null,en")
+
+	var response tvDetailsResponse
+	path := "/tv/" + strconv.Itoa(id)
+	if err := c.getCachedJSON(ctx, path, params, &response); err != nil {
+		return nil, err
+	}
+
+	directors := make([]string, 0, len(response.CreatedBy))
+	for _, creator := range response.CreatedBy {
+		if strings.TrimSpace(creator.Name) != "" {
+			directors = append(directors, creator.Name)
+		}
+	}
+
+	details := &Details{
+		TMDBID:         response.ID,
+		Title:          response.Name,
+		OriginalTitle:  response.OriginalName,
+		Year:           releaseYear(response.FirstAirDate),
+		Tagline:        response.Tagline,
+		Overview:       response.Overview,
+		RuntimeMinutes: 0,
+		Rating:         response.VoteAverage,
+		Genres:         genreNames(response.Genres),
+		Directors:      directors,
+		Cast:           castNames(response.Credits.Cast),
+		PosterURL:      c.posterURL(response.Images.Posters, response.PosterPath),
+		BackdropURL:    c.imageURLSize(response.BackdropPath, "w1280"),
+	}
+	if details.Overview != "" {
+		details.OverviewLanguage = defaultLanguage
+	} else if overview, language := c.translatedOverview(ctx, path+"/translations"); overview != "" {
+		details.Overview = overview
+		details.OverviewLanguage = language
+	}
+	return details, nil
+}
+
+// EpisodeDetails obtiene la ficha de un episodio en es-ES.
+func (c *Client) EpisodeDetails(ctx context.Context, tvID, season, episode int) (*Episode, error) {
+	params := url.Values{}
+	params.Set("language", defaultLanguage)
+
+	path := fmt.Sprintf("/tv/%d/season/%d/episode/%d", tvID, season, episode)
+	var response episodeDetailsResponse
+	if err := c.getCachedJSON(ctx, path, params, &response); err != nil {
+		return nil, err
+	}
+
+	result := &Episode{
+		Name:     response.Name,
+		Overview: response.Overview,
+		AirYear:  releaseYear(response.AirDate),
+		StillURL: c.imageURLSize(response.StillPath, "w300"),
+	}
+	if result.Overview != "" {
+		result.OverviewLanguage = defaultLanguage
+	} else if overview, language := c.translatedOverview(ctx, path+"/translations"); overview != "" {
+		result.Overview = overview
+		result.OverviewLanguage = language
+	}
+	return result, nil
+}
+
+func genreNames(genres []genre) []string {
+	names := make([]string, 0, len(genres))
+	for _, item := range genres {
+		if strings.TrimSpace(item.Name) != "" {
+			names = append(names, item.Name)
+		}
+	}
+	return names
+}
+
+func directorsFromCrew(crew []struct {
+	Name string `json:"name"`
+	Job  string `json:"job"`
+}) []string {
+	var directors []string
+	for _, member := range crew {
+		if member.Job == "Director" && strings.TrimSpace(member.Name) != "" {
+			directors = append(directors, member.Name)
+		}
+	}
+	return directors
+}
+
+func castNames(cast []castMember) []string {
+	sorted := append([]castMember(nil), cast...)
+	sort.SliceStable(sorted, func(i, j int) bool { return sorted[i].Order < sorted[j].Order })
+
+	names := make([]string, 0, 8)
+	for _, member := range sorted {
+		if len(names) == 8 {
+			break
+		}
+		if strings.TrimSpace(member.Name) != "" {
+			names = append(names, member.Name)
+		}
+	}
+	return names
+}
+
+func (c *Client) posterURL(posters []imageInfo, fallbackPath string) string {
+	posterPath, _ := pickPoster(posters)
+	if posterPath == "" {
+		posterPath = fallbackPath
+	}
+	return c.imageURL(posterPath)
+}
+
+// translatedOverview pide las traducciones y aplica es-MX -> cualquier es ->
+// en-US. Si la petición falla, se devuelve vacío sin romper la ficha.
+func (c *Client) translatedOverview(ctx context.Context, path string) (string, string) {
+	var response translationsResponse
+	if err := c.getCachedJSON(ctx, path, nil, &response); err != nil {
+		return "", ""
+	}
+
+	for _, translation := range response.Translations {
+		if translation.ISO6391 == "es" && translation.ISO31661 == "MX" &&
+			strings.TrimSpace(translation.Data.Overview) != "" {
+			return translation.Data.Overview, "es-MX"
+		}
+	}
+	for _, translation := range response.Translations {
+		if translation.ISO6391 == "es" && strings.TrimSpace(translation.Data.Overview) != "" {
+			return translation.Data.Overview, "es"
+		}
+	}
+	for _, translation := range response.Translations {
+		if translation.ISO6391 == "en" && translation.ISO31661 == "US" &&
+			strings.TrimSpace(translation.Data.Overview) != "" {
+			return translation.Data.Overview, "en-US"
+		}
+	}
+	return "", ""
+}
+
 // posterFor pide todas las imágenes del título en varios idiomas a la vez y
 // devuelve la ruta y el idioma del cartel elegido.
 func (c *Client) posterFor(ctx context.Context, tmdbID int) (string, string, error) {
@@ -302,13 +718,17 @@ func posterLanguage(poster imageInfo) string {
 }
 
 func (c *Client) imageURL(filePath string) string {
+	return c.imageURLSize(filePath, c.posterSize)
+}
+
+func (c *Client) imageURLSize(filePath, size string) string {
 	if filePath == "" {
 		return ""
 	}
 	if strings.HasPrefix(filePath, "http://") || strings.HasPrefix(filePath, "https://") {
 		return filePath
 	}
-	return strings.TrimRight(c.imageBase.String(), "/") + "/" + c.posterSize + "/" + strings.TrimLeft(filePath, "/")
+	return strings.TrimRight(c.imageBase.String(), "/") + "/" + size + "/" + strings.TrimLeft(filePath, "/")
 }
 
 // DownloadImage descarga una imagen y la cachea en disco. La devuelve desde la
@@ -389,8 +809,9 @@ func imageExtension(path string) string {
 	}
 }
 
-// getJSON hace una petición GET a TMDB. Nunca incluye la URL completa en los
-// errores, porque lleva la clave de API.
+// getJSON hace una petición GET a TMDB con el limitador del cliente y un
+// reintento tras 429. Nunca incluye la URL completa en los errores, porque
+// lleva la clave de API.
 func (c *Client) getJSON(ctx context.Context, path string, params url.Values, dst any) error {
 	u := *c.baseURL
 	u.Path = strings.TrimRight(u.Path, "/") + path
@@ -403,34 +824,125 @@ func (c *Client) getJSON(ctx context.Context, path string, params url.Values, ds
 	query.Set("api_key", c.apiKey)
 	u.RawQuery = query.Encode()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
-	if err != nil {
-		return errors.New("metadata: no se pudo preparar la petición a TMDB")
-	}
-	req.Header.Set("Accept", "application/json")
+	for attempt := 0; attempt < 2; attempt++ {
+		if err := c.waitForRateLimit(ctx); err != nil {
+			return err
+		}
 
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("metadata: error de red al consultar %s", path)
-	}
-	defer resp.Body.Close()
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+		if err != nil {
+			return errors.New("metadata: no se pudo preparar la petición a TMDB")
+		}
+		req.Header.Set("Accept", "application/json")
 
-	switch resp.StatusCode {
-	case http.StatusUnauthorized:
-		return ErrInvalidAPIKey
-	case http.StatusNotFound:
-		return ErrNotFound
-	case http.StatusTooManyRequests:
-		return ErrRateLimited
-	}
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return fmt.Errorf("metadata: TMDB respondió %d en %s", resp.StatusCode, path)
-	}
+		resp, err := c.httpClient.Do(req)
+		if err != nil {
+			return fmt.Errorf("metadata: error de red al consultar %s", path)
+		}
 
-	if err := json.NewDecoder(io.LimitReader(resp.Body, maxResponseBytes)).Decode(dst); err != nil {
-		return fmt.Errorf("metadata: respuesta no válida de %s", path)
+		if resp.StatusCode == http.StatusTooManyRequests {
+			resp.Body.Close()
+			if attempt == 1 {
+				return ErrRateLimited
+			}
+			if err := sleepContext(ctx, c.retryDelay); err != nil {
+				return err
+			}
+			continue
+		}
+		defer resp.Body.Close()
+
+		switch resp.StatusCode {
+		case http.StatusUnauthorized:
+			return ErrInvalidAPIKey
+		case http.StatusNotFound:
+			return ErrNotFound
+		}
+		if resp.StatusCode < 200 || resp.StatusCode > 299 {
+			return fmt.Errorf("metadata: TMDB respondió %d en %s", resp.StatusCode, path)
+		}
+
+		if err := json.NewDecoder(io.LimitReader(resp.Body, maxResponseBytes)).Decode(dst); err != nil {
+			return fmt.Errorf("metadata: respuesta no válida de %s", path)
+		}
+		return nil
 	}
+	return ErrRateLimited
+}
+
+func (c *Client) waitForRateLimit(ctx context.Context) error {
+	c.rateMu.Lock()
+	defer c.rateMu.Unlock()
+
+	now := time.Now()
+	if !c.lastRequest.IsZero() {
+		if wait := minRequestInterval - now.Sub(c.lastRequest); wait > 0 {
+			if err := sleepContext(ctx, wait); err != nil {
+				return err
+			}
+		}
+	}
+	c.lastRequest = time.Now()
 	return nil
+}
+
+func sleepContext(ctx context.Context, delay time.Duration) error {
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-timer.C:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+type cachedAPIResponse struct {
+	Found bool            `json:"found"`
+	Data  json.RawMessage `json:"data,omitempty"`
+}
+
+// getCachedJSON cachea en disco cada petición nueva. La clave excluye api_key
+// para que cambiarla no invalide la caché. Los 404 también se recuerdan.
+func (c *Client) getCachedJSON(ctx context.Context, path string, params url.Values, dst any) error {
+	key := requestCacheKey(path, params)
+	var cached cachedAPIResponse
+	if c.readCache("api", key, &cached) {
+		if !cached.Found {
+			return ErrNotFound
+		}
+		if len(cached.Data) > 0 && json.Unmarshal(cached.Data, dst) == nil {
+			return nil
+		}
+	}
+
+	if err := c.getJSON(ctx, path, params, dst); err != nil {
+		if errors.Is(err, ErrNotFound) {
+			c.writeCache("api", key, cachedAPIResponse{Found: false})
+		}
+		return err
+	}
+
+	data, err := json.Marshal(dst)
+	if err != nil {
+		return nil
+	}
+	c.writeCache("api", key, cachedAPIResponse{Found: true, Data: data})
+	return nil
+}
+
+func requestCacheKey(path string, params url.Values) string {
+	filtered := url.Values{}
+	for key, values := range params {
+		if key == "api_key" {
+			continue
+		}
+		for _, value := range values {
+			filtered.Add(key, value)
+		}
+	}
+	sum := sha256.Sum256([]byte(path + "?" + filtered.Encode()))
+	return hex.EncodeToString(sum[:])
 }
 
 func cacheKey(title string, year int) string {

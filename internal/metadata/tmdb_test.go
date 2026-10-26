@@ -392,3 +392,508 @@ func TestNewSinClave(t *testing.T) {
 		t.Fatalf("error = %v, se esperaba ErrMissingAPIKey", err)
 	}
 }
+
+type testAPI struct {
+	*httptest.Server
+
+	mu        sync.Mutex
+	calls     int
+	pathCalls map[string]int
+	queries   map[string]url.Values
+	times     []time.Time
+	routes    map[string]http.HandlerFunc
+}
+
+func newTestAPI(t *testing.T) *testAPI {
+	t.Helper()
+	api := &testAPI{
+		pathCalls: make(map[string]int),
+		queries:   make(map[string]url.Values),
+		routes:    make(map[string]http.HandlerFunc),
+	}
+	api.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		api.mu.Lock()
+		api.calls++
+		api.pathCalls[r.URL.Path]++
+		api.queries[r.URL.Path] = r.URL.Query()
+		api.times = append(api.times, time.Now())
+		route := api.routes[r.URL.Path]
+		api.mu.Unlock()
+
+		if route == nil {
+			http.NotFound(w, r)
+			return
+		}
+		route(w, r)
+	}))
+	t.Cleanup(api.Close)
+	return api
+}
+
+func (a *testAPI) route(path string, handler http.HandlerFunc) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.routes[path] = handler
+}
+
+func (a *testAPI) count() int {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.calls
+}
+
+func (a *testAPI) pathCount(path string) int {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.pathCalls[path]
+}
+
+func (a *testAPI) query(path string) url.Values {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.queries[path]
+}
+
+func (a *testAPI) requestTimes() []time.Time {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return append([]time.Time(nil), a.times...)
+}
+
+func newAPIClient(t *testing.T, api *testAPI, cacheDir string, clock *fakeClock, apiKey string) *Client {
+	t.Helper()
+	if clock == nil {
+		clock = newFakeClock()
+	}
+	client, err := New(Options{
+		APIKey:       apiKey,
+		BaseURL:      api.URL,
+		ImageBaseURL: api.URL + "/img",
+		CacheDir:     cacheDir,
+		HTTPClient:   api.Client(),
+		Now:          clock.Now,
+		RetryDelay:   10 * time.Millisecond,
+	})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	return client
+}
+
+func jsonRoute(body any) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(body)
+	}
+}
+
+func TestSearchMovies(t *testing.T) {
+	api := newTestAPI(t)
+	results := make([]map[string]any, 0, 12)
+	for i := 0; i < 12; i++ {
+		results = append(results, map[string]any{
+			"id":             100 + i,
+			"title":          "Pelicula",
+			"original_title": "Movie",
+			"release_date":   "1999-03-31",
+			"overview":       "Sinopsis",
+			"poster_path":    "/poster.jpg",
+			"popularity":     10.5,
+		})
+	}
+	api.route("/search/movie", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("query") == "Nada" {
+			_ = json.NewEncoder(w).Encode(map[string]any{"results": []any{}})
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"results": results})
+	})
+	client := newAPIClient(t, api, t.TempDir(), nil, "clave-de-prueba")
+
+	candidates, err := client.SearchMovies(context.Background(), "Matrix", 1999)
+	if err != nil {
+		t.Fatalf("SearchMovies: %v", err)
+	}
+	if len(candidates) != 10 {
+		t.Fatalf("candidatos = %d, se esperaban 10", len(candidates))
+	}
+	first := candidates[0]
+	if first.TMDBID != 100 || first.Title != "Pelicula" || first.OriginalTitle != "Movie" ||
+		first.Year != 1999 || first.Overview != "Sinopsis" || first.Popularity != 10.5 {
+		t.Fatalf("candidato inesperado: %+v", first)
+	}
+	if want := api.URL + "/img/w185/poster.jpg"; first.PosterURL != want {
+		t.Fatalf("PosterURL = %q, se esperaba %q", first.PosterURL, want)
+	}
+
+	query := api.query("/search/movie")
+	if query.Get("language") != "es-ES" || query.Get("year") != "1999" ||
+		query.Get("include_adult") != "false" {
+		t.Fatalf("parámetros inesperados: %v", query)
+	}
+
+	if _, err := client.SearchMovies(context.Background(), "Nada", 0); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("sin resultados: %v, se esperaba ErrNotFound", err)
+	}
+}
+
+func TestMovieDetails(t *testing.T) {
+	api := newTestAPI(t)
+	api.route("/movie/603", jsonRoute(map[string]any{
+		"id":             603,
+		"imdb_id":        "tt0133093",
+		"title":          "Matrix",
+		"original_title": "The Matrix",
+		"release_date":   "1999-03-31",
+		"tagline":        "La realidad es una ilusión",
+		"overview":       "Sinopsis en castellano",
+		"runtime":        136,
+		"vote_average":   8.7,
+		"genres":         []map[string]any{{"name": "Acción"}, {"name": "Ciencia ficción"}},
+		"credits": map[string]any{
+			"cast": []map[string]any{
+				{"name": "Actor 5", "order": 5},
+				{"name": "Actor 0", "order": 0},
+				{"name": "Actor 2", "order": 2},
+				{"name": "Actor 1", "order": 1},
+				{"name": "Actor 3", "order": 3},
+				{"name": "Actor 4", "order": 4},
+				{"name": "Actor 6", "order": 6},
+				{"name": "Actor 7", "order": 7},
+				{"name": "Actor 8", "order": 8},
+				{"name": "Actor 9", "order": 9},
+			},
+			"crew": []map[string]any{
+				{"name": "Lana Wachowski", "job": "Director"},
+				{"name": "Productor", "job": "Producer"},
+				{"name": "Lilly Wachowski", "job": "Director"},
+			},
+		},
+		"images": map[string]any{
+			"posters": []map[string]any{
+				{"file_path": "/en.jpg", "iso_639_1": "en", "vote_average": 9},
+				{"file_path": "/es-ES.jpg", "iso_639_1": "es-ES", "vote_average": 5},
+			},
+		},
+		"poster_path":   "/fallback.jpg",
+		"backdrop_path": "/backdrop.jpg",
+	}))
+	client := newAPIClient(t, api, t.TempDir(), nil, "clave-de-prueba")
+
+	details, err := client.MovieDetails(context.Background(), 603)
+	if err != nil {
+		t.Fatalf("MovieDetails: %v", err)
+	}
+	if details.TMDBID != 603 || details.IMDbID != "tt0133093" || details.Title != "Matrix" ||
+		details.OriginalTitle != "The Matrix" || details.Year != 1999 ||
+		details.Tagline != "La realidad es una ilusión" || details.Overview != "Sinopsis en castellano" ||
+		details.OverviewLanguage != "es-ES" || details.RuntimeMinutes != 136 || details.Rating != 8.7 {
+		t.Fatalf("detalles inesperados: %+v", details)
+	}
+	if len(details.Genres) != 2 || details.Genres[0] != "Acción" {
+		t.Fatalf("géneros inesperados: %v", details.Genres)
+	}
+	if len(details.Directors) != 2 || details.Directors[0] != "Lana Wachowski" {
+		t.Fatalf("dirección inesperada: %v", details.Directors)
+	}
+	if len(details.Cast) != 8 || details.Cast[0] != "Actor 0" || details.Cast[7] != "Actor 7" {
+		t.Fatalf("reparto inesperado: %v", details.Cast)
+	}
+	if want := api.URL + "/img/w500/es-ES.jpg"; details.PosterURL != want {
+		t.Fatalf("PosterURL = %q, se esperaba %q", details.PosterURL, want)
+	}
+	if want := api.URL + "/img/w1280/backdrop.jpg"; details.BackdropURL != want {
+		t.Fatalf("BackdropURL = %q, se esperaba %q", details.BackdropURL, want)
+	}
+
+	query := api.query("/movie/603")
+	if query.Get("language") != "es-ES" ||
+		query.Get("append_to_response") != "credits,images" ||
+		query.Get("include_image_language") != "es,null,en" {
+		t.Fatalf("parámetros inesperados: %v", query)
+	}
+}
+
+func TestMovieDetailsRespaldoDeSinopsis(t *testing.T) {
+	tests := []struct {
+		name         string
+		translations []map[string]any
+		wantText     string
+		wantLang     string
+	}{
+		{
+			name: "es-MX",
+			translations: []map[string]any{
+				{"iso_639_1": "en", "iso_3166_1": "US", "data": map[string]any{"overview": "English"}},
+				{"iso_639_1": "es", "iso_3166_1": "MX", "data": map[string]any{"overview": "Sinopsis mexicana"}},
+			},
+			wantText: "Sinopsis mexicana",
+			wantLang: "es-MX",
+		},
+		{
+			name: "cualquier es",
+			translations: []map[string]any{
+				{"iso_639_1": "es", "iso_3166_1": "ES", "data": map[string]any{"overview": "Sinopsis española"}},
+				{"iso_639_1": "en", "iso_3166_1": "US", "data": map[string]any{"overview": "English"}},
+			},
+			wantText: "Sinopsis española",
+			wantLang: "es",
+		},
+		{
+			name: "en-US",
+			translations: []map[string]any{
+				{"iso_639_1": "fr", "iso_3166_1": "FR", "data": map[string]any{"overview": "Français"}},
+				{"iso_639_1": "en", "iso_3166_1": "US", "data": map[string]any{"overview": "English"}},
+			},
+			wantText: "English",
+			wantLang: "en-US",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			api := newTestAPI(t)
+			api.route("/movie/7", jsonRoute(map[string]any{
+				"id": 7, "title": "Sinopsis", "overview": "",
+			}))
+			api.route("/movie/7/translations", jsonRoute(map[string]any{
+				"translations": tt.translations,
+			}))
+			client := newAPIClient(t, api, t.TempDir(), nil, "clave-de-prueba")
+
+			details, err := client.MovieDetails(context.Background(), 7)
+			if err != nil {
+				t.Fatalf("MovieDetails: %v", err)
+			}
+			if details.Overview != tt.wantText || details.OverviewLanguage != tt.wantLang {
+				t.Fatalf("respaldo = %q/%q, se esperaba %q/%q",
+					details.Overview, details.OverviewLanguage, tt.wantText, tt.wantLang)
+			}
+		})
+	}
+}
+
+func TestSearchTV(t *testing.T) {
+	api := newTestAPI(t)
+	api.route("/search/tv", jsonRoute(map[string]any{
+		"results": []map[string]any{
+			{
+				"id": 1399, "name": "Juego de tronos", "original_name": "Game of Thrones",
+				"first_air_date": "2011-04-17", "overview": "Sinopsis",
+				"poster_path": "/got.jpg", "popularity": 42.5,
+			},
+		},
+	}))
+	client := newAPIClient(t, api, t.TempDir(), nil, "clave-de-prueba")
+
+	candidates, err := client.SearchTV(context.Background(), "Juego de tronos", 2011)
+	if err != nil {
+		t.Fatalf("SearchTV: %v", err)
+	}
+	if len(candidates) != 1 || candidates[0].TMDBID != 1399 ||
+		candidates[0].Title != "Juego de tronos" || candidates[0].OriginalTitle != "Game of Thrones" ||
+		candidates[0].Year != 2011 || candidates[0].PosterURL != api.URL+"/img/w185/got.jpg" {
+		t.Fatalf("candidato de TV inesperado: %+v", candidates)
+	}
+	query := api.query("/search/tv")
+	if query.Get("language") != "es-ES" || query.Get("first_air_date_year") != "2011" {
+		t.Fatalf("parámetros inesperados: %v", query)
+	}
+}
+
+func TestTVDetails(t *testing.T) {
+	api := newTestAPI(t)
+	api.route("/tv/1399", jsonRoute(map[string]any{
+		"id": 1399, "name": "Juego de tronos", "original_name": "Game of Thrones",
+		"first_air_date": "2011-04-17", "overview": "Sinopsis de la serie", "vote_average": 8.4,
+		"genres":     []map[string]any{{"name": "Drama"}},
+		"created_by": []map[string]any{{"name": "David Benioff"}, {"name": "D. B. Weiss"}},
+		"credits": map[string]any{
+			"cast": []map[string]any{
+				{"name": "Emilia Clarke", "order": 0},
+				{"name": "Peter Dinklage", "order": 1},
+			},
+		},
+		"images":        map[string]any{"posters": []map[string]any{}},
+		"poster_path":   "/got.jpg",
+		"backdrop_path": "/got-backdrop.jpg",
+	}))
+	client := newAPIClient(t, api, t.TempDir(), nil, "clave-de-prueba")
+
+	details, err := client.TVDetails(context.Background(), 1399)
+	if err != nil {
+		t.Fatalf("TVDetails: %v", err)
+	}
+	if details.TMDBID != 1399 || details.Title != "Juego de tronos" ||
+		details.OriginalTitle != "Game of Thrones" || details.Year != 2011 ||
+		details.Overview != "Sinopsis de la serie" || details.OverviewLanguage != "es-ES" ||
+		details.RuntimeMinutes != 0 || details.Rating != 8.4 {
+		t.Fatalf("detalles de TV inesperados: %+v", details)
+	}
+	if len(details.Directors) != 2 || details.Directors[1] != "D. B. Weiss" {
+		t.Fatalf("creadores inesperados: %v", details.Directors)
+	}
+	if len(details.Cast) != 2 || details.Cast[0] != "Emilia Clarke" {
+		t.Fatalf("reparto inesperado: %v", details.Cast)
+	}
+	if details.PosterURL != api.URL+"/img/w500/got.jpg" {
+		t.Fatalf("PosterURL = %q", details.PosterURL)
+	}
+	if details.BackdropURL != api.URL+"/img/w1280/got-backdrop.jpg" {
+		t.Fatalf("BackdropURL = %q", details.BackdropURL)
+	}
+}
+
+func TestEpisodeDetails(t *testing.T) {
+	api := newTestAPI(t)
+	api.route("/tv/1399/season/1/episode/1", jsonRoute(map[string]any{
+		"name": "Winter Is Coming", "overview": "Sinopsis del episodio",
+		"air_date": "2011-04-17", "still_path": "/still.jpg",
+	}))
+	api.route("/tv/1399/season/2/episode/1", jsonRoute(map[string]any{
+		"name": "The North Remembers", "overview": "",
+		"air_date": "2012-04-01", "still_path": "/still2.jpg",
+	}))
+	api.route("/tv/1399/season/2/episode/1/translations", jsonRoute(map[string]any{
+		"translations": []map[string]any{
+			{"iso_639_1": "es", "iso_3166_1": "MX", "data": map[string]any{"overview": "Sinopsis mexicana"}},
+		},
+	}))
+	client := newAPIClient(t, api, t.TempDir(), nil, "clave-de-prueba")
+
+	episode, err := client.EpisodeDetails(context.Background(), 1399, 1, 1)
+	if err != nil {
+		t.Fatalf("EpisodeDetails: %v", err)
+	}
+	if episode.Name != "Winter Is Coming" || episode.Overview != "Sinopsis del episodio" ||
+		episode.OverviewLanguage != "es-ES" || episode.AirYear != 2011 ||
+		episode.StillURL != api.URL+"/img/w300/still.jpg" {
+		t.Fatalf("episodio inesperado: %+v", episode)
+	}
+
+	fallback, err := client.EpisodeDetails(context.Background(), 1399, 2, 1)
+	if err != nil {
+		t.Fatalf("EpisodeDetails con respaldo: %v", err)
+	}
+	if fallback.Overview != "Sinopsis mexicana" || fallback.OverviewLanguage != "es-MX" {
+		t.Fatalf("respaldo de episodio inesperado: %+v", fallback)
+	}
+}
+
+func TestRateLimitRetry(t *testing.T) {
+	api := newTestAPI(t)
+	attempts := 0
+	api.route("/search/movie", func(w http.ResponseWriter, r *http.Request) {
+		attempts++
+		if attempts == 1 {
+			w.WriteHeader(http.StatusTooManyRequests)
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"results": []map[string]any{
+			{"id": 1, "title": "Matrix", "release_date": "1999-01-01"},
+		}})
+	})
+	client := newAPIClient(t, api, t.TempDir(), nil, "clave-de-prueba")
+
+	if _, err := client.SearchMovies(context.Background(), "Matrix", 0); err != nil {
+		t.Fatalf("el reintento tras 429 debe funcionar: %v", err)
+	}
+	if api.pathCount("/search/movie") != 2 {
+		t.Fatalf("peticiones = %d, se esperaban 2", api.pathCount("/search/movie"))
+	}
+}
+
+func TestRateLimitPersistente(t *testing.T) {
+	api := newTestAPI(t)
+	api.route("/search/movie", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusTooManyRequests)
+	})
+	client := newAPIClient(t, api, t.TempDir(), nil, "clave-de-prueba")
+
+	if _, err := client.SearchMovies(context.Background(), "Matrix", 0); !errors.Is(err, ErrRateLimited) {
+		t.Fatalf("error = %v, se esperaba ErrRateLimited", err)
+	}
+	if api.pathCount("/search/movie") != 2 {
+		t.Fatalf("peticiones = %d, se esperaban 2 antes de rendirse", api.pathCount("/search/movie"))
+	}
+}
+
+func TestCacheEvitaPeticionesNuevas(t *testing.T) {
+	api := newTestAPI(t)
+	api.route("/search/movie", jsonRoute(map[string]any{"results": []map[string]any{
+		{"id": 1, "title": "Matrix", "release_date": "1999-01-01"},
+	}}))
+	cacheDir := t.TempDir()
+	client := newAPIClient(t, api, cacheDir, nil, "clave-de-prueba")
+
+	if _, err := client.SearchMovies(context.Background(), "Matrix", 1999); err != nil {
+		t.Fatalf("primera búsqueda: %v", err)
+	}
+	if _, err := client.SearchMovies(context.Background(), "Matrix", 1999); err != nil {
+		t.Fatalf("segunda búsqueda: %v", err)
+	}
+	if api.pathCount("/search/movie") != 1 {
+		t.Fatalf("la segunda búsqueda hizo una petición: %d", api.pathCount("/search/movie"))
+	}
+}
+
+func TestCacheKeyNoIncluyeAPIKey(t *testing.T) {
+	api := newTestAPI(t)
+	api.route("/search/movie", jsonRoute(map[string]any{"results": []map[string]any{
+		{"id": 1, "title": "Matrix", "release_date": "1999-01-01"},
+	}}))
+	cacheDir := t.TempDir()
+
+	first := newAPIClient(t, api, cacheDir, nil, "clave-uno")
+	second := newAPIClient(t, api, cacheDir, nil, "clave-dos")
+
+	if _, err := first.SearchMovies(context.Background(), "Matrix", 1999); err != nil {
+		t.Fatalf("primera búsqueda: %v", err)
+	}
+	if _, err := second.SearchMovies(context.Background(), "Matrix", 1999); err != nil {
+		t.Fatalf("segunda búsqueda: %v", err)
+	}
+	if api.pathCount("/search/movie") != 1 {
+		t.Fatalf("cambiar la api_key invalidó la caché: %d peticiones", api.pathCount("/search/movie"))
+	}
+}
+
+func TestCache404Negativo(t *testing.T) {
+	api := newTestAPI(t)
+	api.route("/search/movie", func(w http.ResponseWriter, r *http.Request) {
+		http.NotFound(w, r)
+	})
+	client := newAPIClient(t, api, t.TempDir(), nil, "clave-de-prueba")
+
+	if _, err := client.SearchMovies(context.Background(), "No existe", 2020); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("primera llamada: %v", err)
+	}
+	if _, err := client.SearchMovies(context.Background(), "No existe", 2020); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("segunda llamada: %v", err)
+	}
+	if api.pathCount("/search/movie") != 1 {
+		t.Fatalf("el 404 no se cacheó: %d peticiones", api.pathCount("/search/movie"))
+	}
+}
+
+func TestLimitadorDePeticiones(t *testing.T) {
+	api := newTestAPI(t)
+	api.route("/search/movie", jsonRoute(map[string]any{"results": []map[string]any{
+		{"id": 1, "title": "Uno"}, {"id": 2, "title": "Dos"},
+	}}))
+	client := newAPIClient(t, api, t.TempDir(), nil, "clave-de-prueba")
+
+	if _, err := client.SearchMovies(context.Background(), "Uno", 0); err != nil {
+		t.Fatalf("primera: %v", err)
+	}
+	if _, err := client.SearchMovies(context.Background(), "Dos", 0); err != nil {
+		t.Fatalf("segunda: %v", err)
+	}
+	times := api.requestTimes()
+	if len(times) != 2 {
+		t.Fatalf("peticiones = %d", len(times))
+	}
+	if gap := times[1].Sub(times[0]); gap < 40*time.Millisecond {
+		t.Fatalf("las peticiones se hicieron con %s de diferencia; el limitador exige ~50 ms", gap)
+	}
+}
