@@ -55,6 +55,7 @@ func TestMigrateCreaTablas(t *testing.T) {
 	got := tables(t, ctx, s)
 	for _, name := range []string{
 		"schema_migrations", "users", "sessions", "libraries", "media_items", "playback_state",
+		"playback_progress",
 	} {
 		if !got[name] {
 			t.Errorf("falta la tabla %q", name)

@@ -380,6 +380,36 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/home:
+    get:
+      summary: Datos del portal para el usuario de la sesión
+      description: |
+        Devuelve «continuar viendo», «añadido recientemente» y contadores del
+        catálogo. `continue` incluye películas y episodios con progreso del
+        usuario, ordenados por la última actualización y limitados a 20.
+        `next_up` queda vacío hasta que existan las series como entidad.
+        `recent_movies` son las 20 últimas películas añadidas.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Datos del portal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HomeResponse'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/items:
     get:
       summary: Lista los ítems de las bibliotecas
@@ -452,6 +482,14 @@ paths:
           description: |
             Con `true`, solo ítems vistos por el usuario de la sesión; con
             `false`, solo los no vistos.
+          required: false
+          schema:
+            type: boolean
+        - name: in_progress
+          in: query
+          description: |
+            Con `true`, solo ítems con progreso de reproducción del usuario de
+            la sesión. Con `false`, solo los que no tienen progreso.
           required: false
           schema:
             type: boolean
@@ -558,12 +596,101 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/items/{id}/progress:
+    put:
+      summary: Guarda el progreso de reproducción (cualquier usuario)
+      description: |
+        Guarda la posición del usuario de la sesión. Si `position_seconds`
+        llega al 90 % de `duration_seconds` (con duración mayor que 0), el
+        ítem se marca como visto y se borra el progreso. Si la posición es
+        menor de 10 segundos, también se borra el progreso sin marcar visto.
+        En cualquier otro caso se guarda o actualiza. Requiere sesión.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProgressRequest'
+      responses:
+        '204':
+          description: Progreso guardado, actualizado o descartado
+        '400':
+          description: Cuerpo o valores no válidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No existe un ítem con ese identificador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Borra el progreso de reproducción (cualquier usuario)
+      description: |
+        Borra el progreso del usuario de la sesión para el ítem. Es idempotente:
+        siempre responde 204 aunque no hubiera progreso. Requiere sesión.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        '204':
+          description: Progreso borrado
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Identificador no válido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/items/{id}/watched:
     put:
       summary: Marca un ítem como visto (cualquier usuario)
       description: |
-        Marca el ítem como visto para el usuario de la sesión. Es idempotente:
-        repetir la petición no cambia el estado. Requiere una sesión válida.
+        Marca el ítem como visto para el usuario de la sesión y borra su
+        progreso de reproducción. Es idempotente: repetir la petición no cambia
+        el estado. Requiere una sesión válida.
       security:
         - bearerAuth: []
       parameters:
@@ -598,8 +725,8 @@ paths:
     delete:
       summary: Desmarca un ítem como visto (cualquier usuario)
       description: |
-        Quita la marca de visto del usuario de la sesión. Es idempotente.
-        Requiere una sesión válida.
+        Quita la marca de visto del usuario de la sesión y borra su progreso de
+        reproducción. Es idempotente. Requiere una sesión válida.
       security:
         - bearerAuth: []
       parameters:
@@ -1769,6 +1896,79 @@ components:
           items:
             $ref: '#/components/schemas/ImageOption'
       additionalProperties: false
+    PlaybackProgress:
+      type: object
+      required:
+        - position_seconds
+        - duration_seconds
+        - updated_at
+      properties:
+        position_seconds:
+          type: number
+          format: double
+          minimum: 0
+        duration_seconds:
+          type: number
+          format: double
+          minimum: 0
+        updated_at:
+          type: string
+          format: date-time
+      additionalProperties: false
+    ProgressRequest:
+      type: object
+      required:
+        - position_seconds
+        - duration_seconds
+      properties:
+        position_seconds:
+          type: number
+          format: double
+          minimum: 0
+        duration_seconds:
+          type: number
+          format: double
+          minimum: 0
+      additionalProperties: false
+    HomeCounts:
+      type: object
+      required:
+        - movies
+        - episodes
+      properties:
+        movies:
+          type: integer
+          format: int64
+        episodes:
+          type: integer
+          format: int64
+      additionalProperties: false
+    HomeResponse:
+      type: object
+      required:
+        - continue
+        - next_up
+        - recent_movies
+        - counts
+      properties:
+        continue:
+          type: array
+          description: Ítems con progreso, ordenados por actualización descendente.
+          items:
+            $ref: '#/components/schemas/MediaItem'
+        next_up:
+          type: array
+          description: Reservado para series; por ahora siempre está vacío.
+          items:
+            $ref: '#/components/schemas/MediaItem'
+        recent_movies:
+          type: array
+          description: Las 20 últimas películas añadidas, por id descendente.
+          items:
+            $ref: '#/components/schemas/MediaItem'
+        counts:
+          $ref: '#/components/schemas/HomeCounts'
+      additionalProperties: false
     MediaItem:
       type: object
       required:
@@ -1799,6 +1999,7 @@ components:
         - match_status
         - match_score
         - watched
+        - progress
       properties:
         id:
           type: integer
@@ -1896,6 +2097,11 @@ components:
         watched:
           type: boolean
           description: El usuario de la sesión ha marcado este ítem como visto.
+        progress:
+          allOf:
+            - $ref: '#/components/schemas/PlaybackProgress'
+          nullable: true
+          description: Progreso del usuario de la sesión; null si no hay.
       additionalProperties: false
     ItemsResponse:
       type: object

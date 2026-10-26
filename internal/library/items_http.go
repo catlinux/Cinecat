@@ -16,33 +16,34 @@ import (
 )
 
 type mediaItemDTO struct {
-	ID               int64    `json:"id"`
-	LibraryID        int64    `json:"library_id"`
-	Path             string   `json:"path"`
-	Title            string   `json:"title"`
-	FileTitle        string   `json:"file_title"`
-	Year             *int     `json:"year"`
-	Kind             string   `json:"kind"`
-	Season           *int     `json:"season"`
-	Episode          *int     `json:"episode"`
-	TMDBID           *int64   `json:"tmdb_id"`
-	Overview         *string  `json:"overview"`
-	PosterURL        *string  `json:"poster_url"`
-	PosterCustom     bool     `json:"poster_custom"`
-	OriginalTitle    *string  `json:"original_title"`
-	IMDbID           *string  `json:"imdb_id"`
-	Tagline          *string  `json:"tagline"`
-	Genres           []string `json:"genres"`
-	RuntimeMinutes   *int     `json:"runtime_minutes"`
-	Rating           *float64 `json:"rating"`
-	Directors        []string `json:"directors"`
-	Cast             []string `json:"cast"`
-	BackdropURL      *string  `json:"backdrop_url"`
-	BackdropCustom   bool     `json:"backdrop_custom"`
-	OverviewLanguage *string  `json:"overview_language"`
-	MatchStatus      *string  `json:"match_status"`
-	MatchScore       *float64 `json:"match_score"`
-	Watched          bool     `json:"watched"`
+	ID               int64             `json:"id"`
+	LibraryID        int64             `json:"library_id"`
+	Path             string            `json:"path"`
+	Title            string            `json:"title"`
+	FileTitle        string            `json:"file_title"`
+	Year             *int              `json:"year"`
+	Kind             string            `json:"kind"`
+	Season           *int              `json:"season"`
+	Episode          *int              `json:"episode"`
+	TMDBID           *int64            `json:"tmdb_id"`
+	Overview         *string           `json:"overview"`
+	PosterURL        *string           `json:"poster_url"`
+	PosterCustom     bool              `json:"poster_custom"`
+	OriginalTitle    *string           `json:"original_title"`
+	IMDbID           *string           `json:"imdb_id"`
+	Tagline          *string           `json:"tagline"`
+	Genres           []string          `json:"genres"`
+	RuntimeMinutes   *int              `json:"runtime_minutes"`
+	Rating           *float64          `json:"rating"`
+	Directors        []string          `json:"directors"`
+	Cast             []string          `json:"cast"`
+	BackdropURL      *string           `json:"backdrop_url"`
+	BackdropCustom   bool              `json:"backdrop_custom"`
+	OverviewLanguage *string           `json:"overview_language"`
+	MatchStatus      *string           `json:"match_status"`
+	MatchScore       *float64          `json:"match_score"`
+	Watched          bool              `json:"watched"`
+	Progress         *playbackProgress `json:"progress"`
 }
 
 type itemsResponse struct {
@@ -71,13 +72,17 @@ const mediaItemColumns = `
 
 const watchedColumn = `, CASE WHEN ws.user_id IS NULL THEN 0 ELSE 1 END`
 
+const progressColumn = `, pp.position_seconds, pp.duration_seconds, pp.updated_at`
+
 func queryMediaItem(ctx context.Context, db *sql.DB, id, userID int64) (mediaItemDTO, error) {
 	row := db.QueryRowContext(ctx, `
-		SELECT `+mediaItemColumns+watchedColumn+`
+		SELECT `+mediaItemColumns+watchedColumn+progressColumn+`
 		  FROM media_items
 		  LEFT JOIN watch_state ws
 		    ON ws.media_item_id = media_items.id AND ws.user_id = ?
-		 WHERE media_items.id = ?`, userID, id)
+		  LEFT JOIN playback_progress pp
+		    ON pp.media_item_id = media_items.id AND pp.user_id = ?
+		 WHERE media_items.id = ?`, userID, userID, id)
 	return scanItem(row.Scan)
 }
 
@@ -86,7 +91,8 @@ func scanItem(scan func(dest ...any) error) (mediaItemDTO, error) {
 	var year, season, episode, tmdbID, runtime sql.NullInt64
 	var overview, posterURL, originalTitle, imdbID, tagline sql.NullString
 	var genres, directors, castNames, backdropURL, overviewLanguage, matchStatus sql.NullString
-	var rating, matchScore sql.NullFloat64
+	var rating, matchScore, progressPosition, progressDuration sql.NullFloat64
+	var progressUpdated sql.NullString
 	var posterLocked, backdropLocked, watched int
 
 	err := scan(
@@ -95,6 +101,7 @@ func scanItem(scan func(dest ...any) error) (mediaItemDTO, error) {
 		&posterURL, &posterLocked, &originalTitle, &imdbID, &tagline,
 		&genres, &runtime, &rating, &directors, &castNames, &backdropURL,
 		&backdropLocked, &overviewLanguage, &matchStatus, &matchScore, &watched,
+		&progressPosition, &progressDuration, &progressUpdated,
 	)
 	if err != nil {
 		return mediaItemDTO{}, err
@@ -121,6 +128,13 @@ func scanItem(scan func(dest ...any) error) (mediaItemDTO, error) {
 	item.MatchStatus = stringPointer(matchStatus)
 	item.MatchScore = floatPointer(matchScore)
 	item.Watched = watched != 0
+	if progressPosition.Valid && progressDuration.Valid && progressUpdated.Valid {
+		item.Progress = &playbackProgress{
+			PositionSeconds: progressPosition.Float64,
+			DurationSeconds: progressDuration.Float64,
+			UpdatedAt:       progressUpdated.String,
+		}
+	}
 	return item, nil
 }
 
@@ -249,6 +263,21 @@ func itemFilters(r *http.Request, userID int64) (string, []any, error) {
 			args = append(args, userID)
 		default:
 			return "", nil, errors.New("watched debe ser true o false")
+		}
+	}
+
+	if raw := strings.TrimSpace(query.Get("in_progress")); raw != "" {
+		switch raw {
+		case "true":
+			clauses = append(clauses,
+				`EXISTS (SELECT 1 FROM playback_progress pf WHERE pf.media_item_id = media_items.id AND pf.user_id = ?)`)
+			args = append(args, userID)
+		case "false":
+			clauses = append(clauses,
+				`NOT EXISTS (SELECT 1 FROM playback_progress pf WHERE pf.media_item_id = media_items.id AND pf.user_id = ?)`)
+			args = append(args, userID)
+		default:
+			return "", nil, errors.New("in_progress debe ser true o false")
 		}
 	}
 

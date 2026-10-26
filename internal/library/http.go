@@ -61,9 +61,12 @@ func (a *API) Register(mux *http.ServeMux) {
 	}
 	mux.Handle("DELETE /api/v1/libraries/{id}", a.requireAdmin(a.handleDeleteLibrary))
 	mux.Handle("GET /api/v1/genres", a.requireSession(a.handleGenres))
+	mux.Handle("GET /api/v1/home", a.requireSession(a.handleHome))
 	mux.Handle("GET /api/v1/items", a.requireSession(a.handleItems))
 	mux.Handle("GET /api/v1/items/{id}", a.requireSession(a.handleItem))
 	mux.Handle("GET /api/v1/items/{id}/file-info", a.requireSession(a.handleItemFileInfo))
+	mux.Handle("PUT /api/v1/items/{id}/progress", a.requireSession(a.handleItemProgressPut))
+	mux.Handle("DELETE /api/v1/items/{id}/progress", a.requireSession(a.handleItemProgressDelete))
 	mux.Handle("PUT /api/v1/items/{id}/watched", a.requireSession(a.handleItemWatched))
 	mux.Handle("DELETE /api/v1/items/{id}/watched", a.requireSession(a.handleItemUnwatched))
 	mux.Handle("GET /api/v1/items/{id}/candidates", a.requireAdmin(a.handleItemCandidates))
@@ -298,13 +301,15 @@ func (a *API) handleItems(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	queryArgs := append([]any{userID}, args...)
+	queryArgs := append([]any{userID, userID}, args...)
 	queryArgs = append(queryArgs, limit, offset)
 	rows, err := a.db.QueryContext(r.Context(),
-		`SELECT `+mediaItemColumns+watchedColumn+`
+		`SELECT `+mediaItemColumns+watchedColumn+progressColumn+`
 		   FROM media_items
 		   LEFT JOIN watch_state ws
-		     ON ws.media_item_id = media_items.id AND ws.user_id = ?`+where+order+` LIMIT ? OFFSET ?`, queryArgs...)
+		     ON ws.media_item_id = media_items.id AND ws.user_id = ?
+		   LEFT JOIN playback_progress pp
+		     ON pp.media_item_id = media_items.id AND pp.user_id = ?`+where+order+` LIMIT ? OFFSET ?`, queryArgs...)
 	if err != nil {
 		log.Printf("library: listar ítems: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
