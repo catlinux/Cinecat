@@ -56,9 +56,10 @@ type Service struct {
 }
 
 type hlsEntry struct {
-	dir      string
-	lastUsed time.Time
-	mode     Mode
+	dir          string
+	lastUsed     time.Time
+	mode         Mode
+	playlistFile string
 
 	// done se cierra cuando termina el proceso FFmpeg. err se escribe antes de
 	// cerrar done, así que leerlo después de recibir del canal es seguro.

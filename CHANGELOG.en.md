@@ -7,6 +7,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-10-26
+
+### Fixed
+- The served HLS playlist is now a complete VOD, not a live event: Cinecat obtains the duration with `ffprobe` and writes `playlist.m3u8` itself before starting FFmpeg, listing every expected segment with `EXT-X-PLAYLIST-TYPE:VOD` and `EXT-X-ENDLIST` from the first request. This lets hls.js know the total duration and seek normally. FFmpeg writes its own playlist separately (`ffmpeg.m3u8`) so it cannot overwrite it, and segments are still served as soon as they exist. If the duration cannot be read (some old AVI files), the fallback to FFmpeg's `event` playlist remains.
+
 ## [0.9.0] - 2026-10-26
 
 ### Fixed

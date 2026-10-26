@@ -33,6 +33,7 @@ var (
 	ErrKeyframeIntervalTooLarge = errors.New(
 		"playback: el intervalo entre keyframes es demasiado grande para segmentar sin recodificar",
 	)
+	ErrDurationUnknown = errors.New("playback: no se pudo determinar la duración del vídeo")
 )
 
 // Prober analiza los keyframes de un vídeo con ffprobe.
@@ -66,46 +67,15 @@ func (p *Prober) CheckViable(ctx context.Context, path string) error {
 // del primer flujo de vídeo. Devuelve ErrInsufficientKeyframes si hay menos de
 // dos keyframes utilizables.
 func (p *Prober) MaxKeyframeInterval(ctx context.Context, path string) (time.Duration, error) {
-	ffprobe, err := exec.LookPath("ffprobe")
+	times, err := p.KeyframeTimes(ctx, path)
 	if err != nil {
-		return 0, ErrFFprobeNotFound
+		return 0, err
 	}
-
-	absPath, err := filepath.Abs(path)
-	if err != nil {
-		return 0, fmt.Errorf("playback: ruta de vídeo no válida: %w", err)
-	}
-
-	ctx, cancel := context.WithTimeout(ctx, probeTimeout)
-	defer cancel()
-
-	// Se leen solo los paquetes y su flag de keyframe: no hace falta decodificar
-	// el vídeo, así que es mucho más barato que recorrer frames.
-	cmd := exec.CommandContext(ctx, ffprobe,
-		"-v", "error",
-		"-select_streams", "v:0",
-		"-show_entries", "packet=pts_time,dts_time,flags",
-		"-of", "csv=p=0",
-		absPath,
-	)
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		if ctx.Err() != nil {
-			return 0, fmt.Errorf("%w: %v", ErrProbeFailed, ctx.Err())
-		}
-		return 0, fmt.Errorf("%w: %v: %s", ErrProbeFailed, err, tailString(stderr.String(), 300))
-	}
-
-	times := parseKeyframeTimes(stdout.String())
 	if len(times) < 2 {
 		return 0, ErrInsufficientKeyframes
 	}
-	sort.Float64s(times)
 
-	var maxInterval float64
+	var maxInterval time.Duration
 	for i := 1; i < len(times); i++ {
 		if diff := times[i] - times[i-1]; diff > maxInterval {
 			maxInterval = diff
@@ -114,8 +84,88 @@ func (p *Prober) MaxKeyframeInterval(ctx context.Context, path string) (time.Dur
 	if maxInterval <= 0 {
 		return 0, ErrInsufficientKeyframes
 	}
+	return maxInterval, nil
+}
 
-	return time.Duration(maxInterval * float64(time.Second)), nil
+// KeyframeTimes devuelve los tiempos de los keyframes del primer flujo de vídeo,
+// ordenados de menor a mayor.
+func (p *Prober) KeyframeTimes(ctx context.Context, path string) ([]time.Duration, error) {
+	output, err := p.runFFprobe(ctx, path,
+		"-select_streams", "v:0",
+		"-show_entries", "packet=pts_time,dts_time,flags",
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	seconds := parseKeyframeTimes(output)
+	sort.Float64s(seconds)
+	times := make([]time.Duration, 0, len(seconds))
+	for _, value := range seconds {
+		times = append(times, time.Duration(value*float64(time.Second)))
+	}
+	if len(times) == 0 {
+		return nil, ErrInsufficientKeyframes
+	}
+	return times, nil
+}
+
+// VideoDuration lee la duración del contenedor con ffprobe. Es una consulta de
+// metadatos, no decodifica el vídeo. Devuelve ErrDurationUnknown si el
+// contenedor no la trae (por ejemplo, algunos AVI antiguos).
+func (p *Prober) VideoDuration(ctx context.Context, path string) (time.Duration, error) {
+	output, err := p.runFFprobe(ctx, path, "-show_entries", "format=duration")
+	if err != nil {
+		return 0, err
+	}
+
+	for _, line := range strings.Split(output, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		if strings.EqualFold(line, "N/A") {
+			return 0, ErrDurationUnknown
+		}
+		seconds, err := strconv.ParseFloat(line, 64)
+		if err != nil || seconds <= 0 {
+			return 0, fmt.Errorf("%w: %q", ErrDurationUnknown, line)
+		}
+		return time.Duration(seconds * float64(time.Second)), nil
+	}
+	return 0, ErrDurationUnknown
+}
+
+func (p *Prober) runFFprobe(ctx context.Context, path string, args ...string) (string, error) {
+	ffprobe, err := exec.LookPath("ffprobe")
+	if err != nil {
+		return "", ErrFFprobeNotFound
+	}
+
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return "", fmt.Errorf("playback: ruta de vídeo no válida: %w", err)
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, probeTimeout)
+	defer cancel()
+
+	commandArgs := []string{"-v", "error"}
+	commandArgs = append(commandArgs, args...)
+	commandArgs = append(commandArgs, "-of", "csv=p=0", absPath)
+
+	cmd := exec.CommandContext(ctx, ffprobe, commandArgs...)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		if ctx.Err() != nil {
+			return "", fmt.Errorf("%w: %v", ErrProbeFailed, ctx.Err())
+		}
+		return "", fmt.Errorf("%w: %v: %s", ErrProbeFailed, err, tailString(stderr.String(), 300))
+	}
+	return stdout.String(), nil
 }
 
 // parseKeyframeTimes interpreta las líneas csv de packet=pts_time,dts_time,flags.

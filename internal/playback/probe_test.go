@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func requireVideoTools(t *testing.T) {
@@ -104,5 +105,42 @@ func TestParseKeyframeTimes(t *testing.T) {
 	times := parseKeyframeTimes(output)
 	if len(times) != 2 || times[0] != 0 || times[1] != 1.5 {
 		t.Fatalf("tiempos inesperados: %v", times)
+	}
+}
+
+func generateRawH264(t *testing.T, target string) string {
+	t.Helper()
+	args := []string{
+		"-hide_banner", "-loglevel", "error", "-y",
+		"-f", "lavfi", "-i", "testsrc=duration=1:size=160x120:rate=10",
+		"-c:v", "libx264", "-preset", "ultrafast", "-f", "h264",
+		target,
+	}
+	if out, err := exec.Command("ffmpeg", args...).CombinedOutput(); err != nil {
+		t.Fatalf("generar h264: %v: %s", err, out)
+	}
+	return target
+}
+
+func TestVideoDuration(t *testing.T) {
+	requireVideoTools(t)
+	file := generateKeyframeVideo(t, filepath.Join(t.TempDir(), "duracion.mkv"), "2",
+		"-g", "5", "-keyint_min", "5", "-sc_threshold", "0")
+
+	duration, err := NewProber().VideoDuration(context.Background(), file)
+	if err != nil {
+		t.Fatalf("VideoDuration: %v", err)
+	}
+	if duration < 1900*time.Millisecond || duration > 2100*time.Millisecond {
+		t.Fatalf("duración = %s, se esperaban ~2 s", duration)
+	}
+}
+
+func TestVideoDurationDesconocida(t *testing.T) {
+	requireVideoTools(t)
+	raw := generateRawH264(t, filepath.Join(t.TempDir(), "raw.h264"))
+
+	if _, err := NewProber().VideoDuration(context.Background(), raw); !errors.Is(err, ErrDurationUnknown) {
+		t.Fatalf("error = %v, se esperaba ErrDurationUnknown", err)
 	}
 }

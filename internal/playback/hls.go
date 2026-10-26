@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -26,6 +27,9 @@ const (
 	// hlsSegmentWaitTimeout limita la espera de un segmento concreto; cinco
 	// minutos cubren con holgura el avance normal de una transcodificación.
 	hlsSegmentWaitTimeout = 5 * time.Minute
+	// hlsSegmentSeconds es el hls_time que se pide a FFmpeg y el tamaño de los
+	// segmentos que Cinecat lista en su playlist VOD.
+	hlsSegmentSeconds = 6
 	// hlsProcessTimeout es el límite total del proceso FFmpeg en segundo plano.
 	// Antes eran 30 min, pero una película larga transcodificada por software en
 	// un servidor modesto puede superarlos; como ya no bloquea peticiones, se
@@ -33,11 +37,16 @@ const (
 	hlsProcessTimeout = 2 * time.Hour
 )
 
-// hlsPlaylistType es event, no vod: con vod FFmpeg escribe la playlist solo al
-// terminar todo el vídeo, lo que impediría servir el primer segmento mientras
-// se genera. Con event la playlist crece con cada segmento y recibe ENDLIST al
-// final, así que sigue siendo un VOD completo una vez terminado.
+// hlsPlaylistType es event para la playlist interna que escribe FFmpeg.
+// Cinecat sirve normalmente su propia playlist VOD completa (con todos los
+// segmentos y ENDLIST desde el principio); la de FFmpeg solo se sirve como
+// fallback si no se pudo calcular la duración. Event es necesario en ese
+// fallback para que la playlist exista antes de que termine el proceso.
 const hlsPlaylistType = "event"
+
+// ffmpegPlaylistFile es la playlist interna de FFmpeg. No se sirve al cliente
+// cuando Cinecat genera la suya (playlist.m3u8), así FFmpeg no la pisa.
+const ffmpegPlaylistFile = "ffmpeg.m3u8"
 
 // Errores del flujo progresivo.
 var (
@@ -61,12 +70,12 @@ func hlsArgs(inputPath string) []string {
 		"-c:v", "copy",
 		"-c:a", "copy",
 		"-f", "hls",
-		"-hls_time", "6",
+		"-hls_time", strconv.Itoa(hlsSegmentSeconds),
 		"-hls_playlist_type", hlsPlaylistType,
 		"-hls_segment_type", "fmp4",
 		"-hls_fmp4_init_filename", "init.mp4",
 		"-hls_segment_filename", "segment_%05d.m4s",
-		"playlist.m3u8",
+		ffmpegPlaylistFile,
 	}
 }
 
@@ -95,12 +104,12 @@ func hlsTranscodeArgs(inputPath string) []string {
 		"-c:a", "aac",
 		"-b:a", "160k",
 		"-f", "hls",
-		"-hls_time", "6",
+		"-hls_time", strconv.Itoa(hlsSegmentSeconds),
 		"-hls_playlist_type", hlsPlaylistType,
 		"-hls_segment_type", "fmp4",
 		"-hls_fmp4_init_filename", "init.mp4",
 		"-hls_segment_filename", "segment_%05d.m4s",
-		"playlist.m3u8",
+		ffmpegPlaylistFile,
 	}
 }
 
@@ -165,7 +174,7 @@ func (s *Service) ServeHLSFile(w http.ResponseWriter, r *http.Request, itemID in
 
 	filePath := filepath.Join(entry.dir, name)
 	if name == "playlist.m3u8" {
-		data, err := os.ReadFile(filePath)
+		data, err := os.ReadFile(filepath.Join(entry.dir, entry.playlistFile))
 		if err != nil {
 			return fmt.Errorf("%w: %v", ErrFileNotFound, err)
 		}
@@ -258,6 +267,21 @@ func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string) (
 		return nil, fmt.Errorf("playback: crear el directorio del remux: %w", err)
 	}
 
+	// Si se conoce la duración, Cinecat escribe una playlist VOD completa con
+	// todos los segmentos; FFmpeg escribe la suya aparte (ffmpeg.m3u8). Si no,
+	// se cae al comportamiento anterior y se sirve la playlist event de FFmpeg
+	// cuando aparezca.
+	playlistFile := ffmpegPlaylistFile
+	generatedPlaylist := false
+	if durations, playlistErr := s.playlistDurations(ctx, absInput, mode); playlistErr == nil {
+		if err := writeVODPlaylist(filepath.Join(dir, "playlist.m3u8"), durations); err != nil {
+			_ = os.RemoveAll(dir)
+			return nil, fmt.Errorf("playback: escribir la playlist VOD: %w", err)
+		}
+		playlistFile = "playlist.m3u8"
+		generatedPlaylist = true
+	}
+
 	// El proceso vive ligado al contexto del servicio, no al de la petición
 	// HTTP que lo arranca, para que no se cancele al terminar esa petición.
 	procCtx, cancel := context.WithTimeout(s.procCtx, hlsProcessTimeout)
@@ -273,11 +297,12 @@ func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string) (
 	}
 
 	entry := &hlsEntry{
-		dir:      dir,
-		lastUsed: s.now(),
-		mode:     mode,
-		done:     make(chan struct{}),
-		cancel:   cancel,
+		dir:          dir,
+		lastUsed:     s.now(),
+		mode:         mode,
+		playlistFile: playlistFile,
+		done:         make(chan struct{}),
+		cancel:       cancel,
 	}
 	s.entries[itemID] = entry
 
@@ -292,20 +317,112 @@ func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string) (
 		close(entry.done)
 	}()
 
-	if err := s.waitForPlaylist(ctx, entry); err != nil {
-		if ctx.Err() != nil {
-			// El cliente se fue, pero el proceso sigue en segundo plano y otra
-			// petición podrá reutilizarlo.
-			return nil, ctx.Err()
+	if !generatedPlaylist {
+		if err := s.waitForPlaylist(ctx, entry); err != nil {
+			if ctx.Err() != nil {
+				// El cliente se fue, pero el proceso sigue en segundo plano y otra
+				// petición podrá reutilizarlo.
+				return nil, ctx.Err()
+			}
+			s.stopEntryLocked(itemID, entry)
+			return nil, err
 		}
-		s.stopEntryLocked(itemID, entry)
-		return nil, err
 	}
 	return entry, nil
 }
 
+// playlistDurations calcula los segmentos esperados. En transcodificación son
+// bloques de hlsSegmentSeconds. En remux sin recodificar FFmpeg solo puede
+// cortar en keyframes, así que se usan esos tiempos para que la playlist
+// generada coincida con los segmentos reales.
+func (s *Service) playlistDurations(ctx context.Context, path string, mode Mode) ([]time.Duration, error) {
+	if s.prober == nil {
+		return nil, ErrDurationUnknown
+	}
+
+	duration, err := s.prober.VideoDuration(ctx, path)
+	if err != nil || duration <= 0 {
+		return nil, ErrDurationUnknown
+	}
+
+	if mode == ModeTranscode {
+		return uniformSegmentDurations(duration), nil
+	}
+
+	keyframes, err := s.prober.KeyframeTimes(ctx, path)
+	if err != nil || len(keyframes) == 0 || keyframes[0] > time.Second {
+		return nil, ErrDurationUnknown
+	}
+	return keyframeSegmentDurations(duration, keyframes), nil
+}
+
+func uniformSegmentDurations(duration time.Duration) []time.Duration {
+	segment := time.Duration(hlsSegmentSeconds) * time.Second
+	var durations []time.Duration
+	for remaining := duration; remaining > 0; {
+		take := segment
+		if remaining < take {
+			take = remaining
+		}
+		durations = append(durations, take)
+		remaining -= take
+	}
+	return durations
+}
+
+func keyframeSegmentDurations(duration time.Duration, keyframes []time.Duration) []time.Duration {
+	segment := time.Duration(hlsSegmentSeconds) * time.Second
+	var durations []time.Duration
+	start := time.Duration(0)
+	for _, keyframe := range keyframes {
+		if keyframe <= start {
+			continue
+		}
+		if keyframe >= duration {
+			break
+		}
+		if keyframe-start >= segment {
+			durations = append(durations, keyframe-start)
+			start = keyframe
+		}
+	}
+	if duration > start {
+		durations = append(durations, duration-start)
+	}
+	if len(durations) == 0 {
+		durations = append(durations, duration)
+	}
+	return durations
+}
+
+// writeVODPlaylist escribe una playlist VOD completa antes de arrancar FFmpeg.
+func writeVODPlaylist(path string, durations []time.Duration) error {
+	var maxDuration time.Duration
+	var b strings.Builder
+	b.WriteString("#EXTM3U\n")
+	b.WriteString("#EXT-X-VERSION:7\n")
+	for _, duration := range durations {
+		if duration > maxDuration {
+			maxDuration = duration
+		}
+	}
+	target := int(math.Ceil(maxDuration.Seconds()))
+	if target < 1 {
+		target = 1
+	}
+	fmt.Fprintf(&b, "#EXT-X-TARGETDURATION:%d\n", target)
+	b.WriteString("#EXT-X-MEDIA-SEQUENCE:0\n")
+	b.WriteString("#EXT-X-PLAYLIST-TYPE:VOD\n")
+	b.WriteString("#EXT-X-MAP:URI=\"init.mp4\"\n")
+	for index, duration := range durations {
+		fmt.Fprintf(&b, "#EXTINF:%.6f,\nsegment_%05d.m4s\n", duration.Seconds(), index)
+	}
+	b.WriteString("#EXT-X-ENDLIST\n")
+	return os.WriteFile(path, []byte(b.String()), 0o644)
+}
+
 func (s *Service) playlistExists(entry *hlsEntry) bool {
-	_, err := os.Stat(filepath.Join(entry.dir, "playlist.m3u8"))
+	_, err := os.Stat(filepath.Join(entry.dir, entry.playlistFile))
 	return err == nil
 }
 
@@ -321,7 +438,7 @@ func (s *Service) entryFinished(entry *hlsEntry) bool {
 // waitForPlaylist espera a que FFmpeg escriba la playlist inicial. Con
 // hls_playlist_type event aparece tras el primer segmento, no al final.
 func (s *Service) waitForPlaylist(ctx context.Context, entry *hlsEntry) error {
-	playlist := filepath.Join(entry.dir, "playlist.m3u8")
+	playlist := filepath.Join(entry.dir, entry.playlistFile)
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
 	deadline := time.NewTimer(hlsStartupTimeout)
