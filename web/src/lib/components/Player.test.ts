@@ -23,6 +23,69 @@ describe('Player', () => {
 		expect(body).toContain('<video');
 		expect(body).not.toContain('src="http://api.test/playlist.m3u8"');
 	});
+
+	it('pinta los controles propios, las pistas y los subtítulos', () => {
+		const { body } = render(Player, {
+			props: {
+				src: 'http://api.test/api/v1/stream/7?exp=1&sig=abc',
+				mode: 'remux',
+				title: 'El Padrino',
+				itemId: 7,
+				startAt: 0,
+				nextEpisodeUrl: '/items/8/play',
+				options: {
+					url: '/api/v1/stream/7?exp=1&sig=abc',
+					mode: 'remux',
+					expires_at: '2026-10-26T12:00:00Z',
+					audio_tracks: [
+						{
+							index: 0,
+							language: 'spa',
+							language_name: 'Español',
+							codec: 'ac3',
+							channels: 6,
+							channel_layout: '5.1',
+							title: '',
+							default: true
+						}
+					],
+					selected_audio: 0,
+					qualities: [
+						{ value: 'auto', label: 'Auto (hasta 1080p)' },
+						{ value: 'original', label: 'Original' }
+					],
+					selected_quality: 'auto',
+					subtitles: [
+						{
+							id: 'e0',
+							source: 'embedded',
+							language: 'spa',
+							language_name: 'Español',
+							title: '',
+							codec: 'subrip',
+							forced: false,
+							default: false,
+							url: '/api/v1/stream/7/subtitles/e0.vtt?exp=1&sig=abc'
+						}
+					],
+					selected_subtitle: 'e0'
+				}
+			}
+		});
+
+		expect(body).toContain('aria-label="Reproducir"');
+		expect(body).toContain('aria-label="Retroceder 10 segundos"');
+		expect(body).toContain('Audio · Español');
+		expect(body).toContain('Subtítulos');
+		expect(body).toContain('Siguiente episodio');
+		expect(body).toContain('<track');
+		expect(body).toContain('kind="subtitles"');
+		expect(body).toContain('src="http://api.test/api/v1/stream/7/subtitles/e0.vtt');
+		expect(body).toContain('data-subtitle-id="e0"');
+		expect(body).toContain('role="menuitemradio"');
+		expect(body).toContain('aria-checked="true"');
+		expect(body).toContain('Recodificado');
+	});
 });
 
 describe('lógica de reanudación y guardado', () => {

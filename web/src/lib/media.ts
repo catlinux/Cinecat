@@ -1,4 +1,4 @@
-import type { MediaItem, SeriesSeason } from './api';
+import type { MediaItem, PlaybackAudioTrack, PlaybackSubtitle, SeriesSeason } from './api';
 
 export function kindLabel(kind: MediaItem['kind']): string {
 	switch (kind) {
@@ -121,6 +121,47 @@ export function formatAudioChannels(channels: number, layout: string | null): st
 		return clean;
 	}
 	return channels > 0 ? `${channels} canales` : '';
+}
+
+export function formatAudioCodec(codec: string): string {
+	switch (codec.toLowerCase()) {
+		case 'ac3':
+			return 'AC-3';
+		case 'eac3':
+			return 'E-AC-3';
+		case 'truehd':
+			return 'TrueHD';
+		case 'dts':
+			return 'DTS';
+		case 'aac':
+			return 'AAC';
+		default:
+			return codec.toUpperCase();
+	}
+}
+
+export function formatAudioTrack(track: PlaybackAudioTrack): string {
+	const parts = [track.language_name || 'Desconocido', formatAudioCodec(track.codec)];
+	if (track.channel_layout) {
+		parts.push(track.channel_layout);
+	} else if (track.channels > 0) {
+		parts.push(`${track.channels} canales`);
+	}
+	if (track.title) {
+		parts.push(track.title);
+	}
+	return parts.join(' · ');
+}
+
+export function formatSubtitleTrack(track: PlaybackSubtitle): string {
+	const parts = [track.language_name || 'Desconocido'];
+	if (track.title) {
+		parts.push(track.title);
+	}
+	if (track.forced) {
+		parts.push('Forzados');
+	}
+	return parts.join(' · ');
 }
 
 export function formatLanguage(code: string | null): string {

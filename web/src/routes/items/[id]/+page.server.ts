@@ -8,6 +8,7 @@ import type {
 	ImageKind,
 	ImageOptions,
 	MediaItem,
+	PlayResponse,
 	SeriesDetail
 } from '$lib/api';
 import { ConfigurationError, createApiClient } from '$lib/api-factory';
@@ -38,6 +39,9 @@ export const load: PageServerLoad = async ({ params, locals, fetch, url, parent 
 			(data) => ({ data }),
 			(cause) => ({ error: fileInfoError(cause) })
 		);
+		const playbackOptions: Promise<PlayResponse | null> = api
+			.getPlay(id, {}, token)
+			.catch(() => null);
 		const episodeNavigation = await loadEpisodeNavigation(api, item, token);
 		return {
 			item,
@@ -45,6 +49,7 @@ export const load: PageServerLoad = async ({ params, locals, fetch, url, parent 
 			corregir: isAdmin && url.searchParams.get('corregir') === '1',
 			imagenes: isAdmin && url.searchParams.get('imagenes') === '1',
 			fileInfo,
+			playbackOptions,
 			episodeNavigation
 		};
 	} catch (err) {
@@ -75,7 +80,7 @@ function fileInfoError(cause: unknown): FileInfoError {
 	return 'failed';
 }
 
-async function loadEpisodeNavigation(
+export async function loadEpisodeNavigation(
 	api: ApiClient,
 	item: MediaItem,
 	token: string
@@ -220,6 +225,64 @@ function imageFailure(cause: unknown) {
 }
 
 export const actions: Actions = {
+	preferences: async ({ request, locals, fetch, params }) => {
+		const token = requireSessionToken(locals);
+		const id = itemID(params);
+		if (id === null) {
+			return fail(404, { preferencesPanel: true, message: 'Ítem no encontrado.' });
+		}
+		const form = await request.formData();
+		const api = createApiClient(fetch);
+		try {
+			if (String(form.get('reset') ?? '') === '1') {
+				await api.deletePreferences(id, token);
+				return { success: true, preferencesPanel: true, message: 'Opciones restablecidas.' };
+			}
+			const changes: {
+				audio_index?: number;
+				subtitle_id?: string;
+				quality?: string;
+			} = {};
+			const audioRaw = form.get('audio_index');
+			if (audioRaw !== null && String(audioRaw).trim() !== '') {
+				const audio = Number(audioRaw);
+				if (!Number.isInteger(audio) || audio < 0) {
+					return fail(400, { preferencesPanel: true, message: 'Pista de audio no válida.' });
+				}
+				changes.audio_index = audio;
+			}
+			const subtitle = form.get('subtitle_id');
+			if (subtitle !== null) {
+				const value = String(subtitle);
+				if (value !== '' && !/^[ex]\d+$/.test(value)) {
+					return fail(400, { preferencesPanel: true, message: 'Subtítulo no válido.' });
+				}
+				changes.subtitle_id = value;
+			}
+			const quality = form.get('quality');
+			if (quality !== null) {
+				const value = String(quality);
+				if (!['auto', 'original', '480', '720', '1080'].includes(value)) {
+					return fail(400, { preferencesPanel: true, message: 'Calidad no válida.' });
+				}
+				changes.quality = value;
+			}
+			await api.putPreferences(id, changes, token);
+		} catch (err) {
+			if (err instanceof ApiError && err.status === 401) {
+				redirect(303, '/login');
+			}
+			if (err instanceof ApiError && err.status === 404) {
+				return fail(404, { preferencesPanel: true, message: 'Ítem no encontrado.' });
+			}
+			return fail(502, {
+				preferencesPanel: true,
+				message: 'No se pudieron guardar las opciones de reproducción.'
+			});
+		}
+		return { success: true, preferencesPanel: true, message: 'Opciones guardadas.' };
+	},
+
 	watched: async ({ request, locals, fetch, params }) => {
 		const token = requireSessionToken(locals);
 		const id = itemID(params);

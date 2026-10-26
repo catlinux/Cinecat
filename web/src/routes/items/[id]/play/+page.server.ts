@@ -1,11 +1,31 @@
 import { error, redirect } from '@sveltejs/kit';
 import { ApiError } from '$lib/api';
-import type { MediaItem, PlayResponse } from '$lib/api';
+import type { MediaItem, PlayQuery, PlayResponse } from '$lib/api';
 import { ConfigurationError, createApiClient } from '$lib/api-factory';
 import { apiBaseUrl } from '$lib/config';
 import { resolveStartAt } from '$lib/progress';
 import { requireSessionToken } from '$lib/session';
+import { loadEpisodeNavigation } from '../+page.server';
 import type { PageServerLoad } from './$types';
+
+const QUALITY_VALUES = new Set(['auto', 'original', '480', '720', '1080']);
+
+function queryOptions(url: URL): PlayQuery {
+	const query: PlayQuery = {};
+	const audio = url.searchParams.get('audio');
+	if (audio !== null && /^\d+$/.test(audio)) {
+		query.audio = Number(audio);
+	}
+	const quality = url.searchParams.get('quality');
+	if (quality !== null && QUALITY_VALUES.has(quality)) {
+		query.quality = quality;
+	}
+	const subtitle = url.searchParams.get('subtitle');
+	if (subtitle !== null && (subtitle === '' || /^[ex]\d+$/.test(subtitle))) {
+		query.subtitle = subtitle;
+	}
+	return query;
+}
 
 export const load: PageServerLoad = async ({ params, locals, fetch, url }) => {
 	const token = requireSessionToken(locals);
@@ -18,7 +38,7 @@ export const load: PageServerLoad = async ({ params, locals, fetch, url }) => {
 
 	let item: MediaItem;
 	try {
-		item = await api.get<MediaItem>(`/api/v1/items/${id}`, token);
+		item = await api.getItem(id, token);
 	} catch (err) {
 		if (err instanceof ApiError && err.status === 404) {
 			error(404, 'Ítem no encontrado');
@@ -34,8 +54,19 @@ export const load: PageServerLoad = async ({ params, locals, fetch, url }) => {
 
 	let play: PlayResponse | null = null;
 	let playError: string | null = null;
+	const options = queryOptions(url);
 	try {
-		play = await api.get<PlayResponse>(`/api/v1/items/${id}/play`, token);
+		try {
+			play = await api.getPlay(id, options, token);
+		} catch (err) {
+			// Una opción guardada obsoleta puede provocar un 400. Se reintenta
+			// sin ella para no impedir la reproducción.
+			if (err instanceof ApiError && err.status === 400) {
+				play = await api.getPlay(id, {}, token);
+			} else {
+				throw err;
+			}
+		}
 	} catch (err) {
 		if (err instanceof ApiError) {
 			if (err.status === 401) {
@@ -55,10 +86,18 @@ export const load: PageServerLoad = async ({ params, locals, fetch, url }) => {
 		}
 	}
 
+	let nextEpisodeUrl: string | null = null;
+	const navigation = await loadEpisodeNavigation(api, item, token);
+	if (navigation?.next) {
+		nextEpisodeUrl = `/items/${navigation.next.id}/play`;
+	}
+
 	const base = apiBaseUrl.replace(/\/+$/, '');
 	return {
 		item,
 		play,
+		options: play,
+		nextEpisodeUrl,
 		playUrl: play ? `${base}${play.url}` : null,
 		playError,
 		startAt: resolveStartAt(item.progress, url.searchParams.get('t'))

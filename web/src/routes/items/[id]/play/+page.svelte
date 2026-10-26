@@ -36,6 +36,8 @@
 				title={data.item.title}
 				itemId={data.item.id}
 				startAt={data.startAt}
+				options={data.play}
+				nextEpisodeUrl={data.nextEpisodeUrl}
 			/>
 		</div>
 	{:else}

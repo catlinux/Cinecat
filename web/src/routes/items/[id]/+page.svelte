@@ -4,13 +4,15 @@
 		Candidate,
 		FileInfoResult,
 		ImageKind,
-		ImageOptions
+		ImageOptions,
+		PlayResponse
 	} from '$lib/api';
 	import EpisodeNav from '$lib/components/EpisodeNav.svelte';
 	import ItemFacts from '$lib/components/ItemFacts.svelte';
 	import FilePanel from '$lib/components/FilePanel.svelte';
 	import ImagePanel from '$lib/components/ImagePanel.svelte';
 	import MatchDialog from '$lib/components/MatchDialog.svelte';
+	import PlaybackOptions from '$lib/components/PlaybackOptions.svelte';
 	import {
 		formatDurationSeconds,
 		formatMovieMeta,
@@ -76,6 +78,13 @@
 	const imagePanelOpen = $derived(Boolean(data.imagenes || actionForm?.imagePanel));
 	const fileInfo = $derived(
 		(data.fileInfo ?? { error: 'failed' }) as FileInfoResult | Promise<FileInfoResult>
+	);
+	const playbackOptions = $derived(
+		data.playbackOptions as
+			| Promise<PlayResponse | null>
+			| PlayResponse
+			| null
+			| undefined
 	);
 	const episodeNavigation = $derived(data.episodeNavigation ?? null);
 	const seriesHref = $derived(item.series_id !== null ? `/series/${item.series_id}` : null);
@@ -171,6 +180,16 @@
 					</button>
 				</form>
 			</div>
+
+			{#if playbackOptions}
+				{#if playbackOptions instanceof Promise}
+					{#await playbackOptions then playback}
+						{#if playback}<PlaybackOptions options={playback} />{/if}
+					{/await}
+				{:else}
+					<PlaybackOptions options={playbackOptions} />
+				{/if}
+			{/if}
 
 			{#if hasProgress}
 				<div
@@ -283,6 +302,16 @@
 					</button>
 				</form>
 			</div>
+
+			{#if playbackOptions}
+				{#if playbackOptions instanceof Promise}
+					{#await playbackOptions then playback}
+						{#if playback}<PlaybackOptions options={playback} />{/if}
+					{/await}
+				{:else}
+					<PlaybackOptions options={playbackOptions} />
+				{/if}
+			{/if}
 
 			{#if hasProgress}
 				<div

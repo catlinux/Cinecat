@@ -33,6 +33,12 @@ export interface ItemCollection {
 	name: string;
 }
 
+export interface ItemPreferences {
+	audio_index: number | null;
+	subtitle_id: string | null;
+	quality: string | null;
+}
+
 export interface MediaItem {
 	id: number;
 	library_id: number;
@@ -62,6 +68,7 @@ export interface MediaItem {
 	match_score: number | null;
 	watched: boolean;
 	progress: PlaybackProgress | null;
+	preferences?: ItemPreferences | null;
 	collections: ItemCollection[];
 	series_id: number | null;
 	series_title: string | null;
@@ -325,10 +332,50 @@ export interface SeriesSeasonDetail {
 	items: MediaItem[];
 }
 
+export interface PlaybackAudioTrack {
+	index: number;
+	language: string;
+	language_name: string;
+	codec: string;
+	channels: number;
+	channel_layout: string;
+	title: string;
+	default: boolean;
+}
+
+export interface PlaybackQuality {
+	value: string;
+	label: string;
+}
+
+export interface PlaybackSubtitle {
+	id: string;
+	source: 'embedded' | 'external';
+	language: string;
+	language_name: string;
+	title: string;
+	codec: string;
+	forced: boolean;
+	default: boolean;
+	url: string;
+}
+
 export interface PlayResponse {
 	url: string;
 	mode: 'direct' | 'remux';
 	expires_at: string;
+	audio_tracks?: PlaybackAudioTrack[];
+	selected_audio?: number;
+	qualities?: PlaybackQuality[];
+	selected_quality?: string;
+	subtitles?: PlaybackSubtitle[];
+	selected_subtitle?: string | null;
+}
+
+export interface PlayQuery {
+	audio?: number;
+	quality?: string;
+	subtitle?: string;
 }
 
 export interface ScanStatus {
@@ -701,6 +748,33 @@ export class ApiClient {
 
 	async deleteProgress(id: number, token: string): Promise<void> {
 		await this.delete(`/api/v1/items/${id}/progress`, token);
+	}
+
+	async getPlay(id: number, query: PlayQuery, token: string): Promise<PlayResponse> {
+		const params = new URLSearchParams();
+		if (query.audio !== undefined) {
+			params.set('audio', String(query.audio));
+		}
+		if (query.quality) {
+			params.set('quality', query.quality);
+		}
+		if (query.subtitle !== undefined) {
+			params.set('subtitle', query.subtitle);
+		}
+		const suffix = params.toString() ? `?${params}` : '';
+		return this.get<PlayResponse>(`/api/v1/items/${id}/play${suffix}`, token);
+	}
+
+	async getPreferences(id: number, token: string): Promise<ItemPreferences> {
+		return this.get<ItemPreferences>(`/api/v1/items/${id}/preferences`, token);
+	}
+
+	async putPreferences(id: number, changes: Partial<ItemPreferences>, token: string): Promise<void> {
+		await this.put<void>(`/api/v1/items/${id}/preferences`, changes, token);
+	}
+
+	async deletePreferences(id: number, token: string): Promise<void> {
+		await this.delete(`/api/v1/items/${id}/preferences`, token);
 	}
 
 	async getFileInfo(id: number, token: string): Promise<FileInfo> {

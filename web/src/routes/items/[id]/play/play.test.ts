@@ -121,6 +121,110 @@ describe('carga de reproducción', () => {
 	});
 });
 
+describe('opciones de reproducción en la carga', () => {
+	it('pasa a la API los parámetros válidos de audio, calidad y subtítulo', async () => {
+		let playURL = '';
+		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+			const url = new URL(String(input));
+			if (url.pathname === '/api/v1/items/7') {
+				return jsonResponse(item);
+			}
+			playURL = url.toString();
+			return jsonResponse(play);
+		});
+		const result = (await load(
+			loadEvent(fetchMock, '/items/7/play?audio=1&quality=720&subtitle=e0&t=30') as never
+		)) as { startAt: number; options: PlayResponse };
+		expect(result.startAt).toBe(30);
+		const parsed = new URL(playURL);
+		expect(parsed.searchParams.get('audio')).toBe('1');
+		expect(parsed.searchParams.get('quality')).toBe('720');
+		expect(parsed.searchParams.get('subtitle')).toBe('e0');
+		expect(result.options).toEqual(play);
+	});
+
+	it('ignora los parámetros no válidos y reintenta sin opciones tras un 400', async () => {
+		const calls: string[] = [];
+		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+			const url = new URL(String(input));
+			if (url.pathname === '/api/v1/items/7') {
+				return jsonResponse(item);
+			}
+			calls.push(url.toString());
+			if (url.searchParams.get('audio') === '1') {
+				return jsonResponse({ error: 'pista no válida' }, 400);
+			}
+			return jsonResponse(play);
+		});
+		const result = (await load(
+			loadEvent(fetchMock, '/items/7/play?audio=1&quality=4k&subtitle=bad') as never
+		)) as { play: PlayResponse | null };
+		expect(result.play).toEqual(play);
+		expect(calls).toHaveLength(2);
+		expect(new URL(calls[0]).searchParams.get('audio')).toBe('1');
+		expect(new URL(calls[1]).searchParams.has('audio')).toBe(false);
+	});
+
+	it('calcula el siguiente episodio', async () => {
+		const episode = {
+			...item,
+			id: 7,
+			kind: 'episode' as const,
+			series_id: 5,
+			season: 1,
+			episode: 1
+		};
+		const next = { ...episode, id: 8, episode: 2 };
+		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+			const url = new URL(String(input));
+			if (url.pathname === '/api/v1/items/7') {
+				return jsonResponse(episode);
+			}
+			if (url.pathname === '/api/v1/items/7/play') {
+				return jsonResponse(play);
+			}
+			if (url.pathname === '/api/v1/series/5') {
+				return jsonResponse({ seasons: [{ season: 1 }] });
+			}
+			if (url.pathname === '/api/v1/series/5/seasons/1') {
+				return jsonResponse({ items: [episode, next] });
+			}
+			throw new Error(`URL inesperada: ${url}`);
+		});
+		const result = (await load(loadEvent(fetchMock) as never)) as {
+			nextEpisodeUrl: string | null;
+		};
+		expect(result.nextEpisodeUrl).toBe('/items/8/play');
+	});
+
+	it('sigue sin botón si falla la serie', async () => {
+		const episode = {
+			...item,
+			id: 7,
+			kind: 'episode' as const,
+			series_id: 5,
+			season: 1,
+			episode: 1
+		};
+		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+			const url = new URL(String(input));
+			if (url.pathname === '/api/v1/items/7') {
+				return jsonResponse(episode);
+			}
+			if (url.pathname === '/api/v1/items/7/play') {
+				return jsonResponse(play);
+			}
+			return jsonResponse({ error: 'fallo' }, 502);
+		});
+		const result = (await load(loadEvent(fetchMock) as never)) as {
+			nextEpisodeUrl: string | null;
+			play: PlayResponse | null;
+		};
+		expect(result.play).toEqual(play);
+		expect(result.nextEpisodeUrl).toBeNull();
+	});
+});
+
 describe('página de reproducción', () => {
 	it('muestra Continúas por y el enlace al principio con progreso', () => {
 		const body = renderPlay(4320);

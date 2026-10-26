@@ -7,7 +7,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-10-26
+
 ### Added
+- Player with its own controls: play/pause, ±10 s, progress bar with time on hover, volume and mute, speed from 0.5× to 2×, picture-in-picture, fullscreen and "Next episode" with a countdown. Keyboard shortcuts (Space/K, J/L, arrows, M, F, C, 0-9). Without JavaScript it keeps the native controls.
+- Audio track, subtitle and quality menus in the player (changing audio or quality reloads at the current second) and Audio, Subtitles and Quality selectors on the movie page, with the preference saved per user and per movie.
 - Playback with selectable audio track and quality (`GET /api/v1/items/{id}/play?audio=&quality=&subtitle=`): the response lists the audio tracks, the available qualities (never above the original resolution) and the subtitles. Embedded subtitles and `.srt`/`.vtt`/`.ass` files next to the video, served as WebVTT. Audio, subtitle and quality preferences saved per user and per movie (`/api/v1/items/{id}/preferences`).
 
 ## [0.12.1] - 2026-10-26
