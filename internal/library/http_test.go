@@ -22,6 +22,7 @@ type libraryTestServer struct {
 	auth  *auth.Service
 	token string
 	job   *ScanJob
+	api   *API
 }
 
 func newLibraryHTTPTestServer(t *testing.T, tmdb ...TMDBClient) *libraryTestServer {
@@ -71,7 +72,7 @@ func newLibraryHTTPTestServer(t *testing.T, tmdb ...TMDBClient) *libraryTestServ
 	server := httptest.NewServer(mux)
 	t.Cleanup(server.Close)
 
-	return &libraryTestServer{Server: server, db: db, auth: authSvc, token: token, job: job}
+	return &libraryTestServer{Server: server, db: db, auth: authSvc, token: token, job: job, api: api}
 }
 
 func libraryHTTPGet(t *testing.T, url, token string) (int, []byte) {

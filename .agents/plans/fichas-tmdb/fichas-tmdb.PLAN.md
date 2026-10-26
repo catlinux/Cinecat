@@ -124,7 +124,7 @@ Cubiertas por el plan tal cual: corregir/identificar desde la ficha (T6), repart
 1. ✅ **T4b** (API: búsqueda ampliada, letra, género, visionado).
 2. ✅ **T5** (portal `/`, `/movies` paginada con búsqueda, letra y género; el portal empieza con las tres categorías y «Añadido recientemente» usando `sort=added`) → ▶ **desplegar**.
 3. **T6** (ficha completa: reparto, dirección, corregir ficha, visto/no visto; con huecos para «Archivo» y «Póster») → cierra 0.11.0 → ▶ **desplegar** + D1.
-4. **T4c** (info del archivo con ffprobe) + **T6b** (panel «Archivo» en la ficha) → ▶ desplegar.
+4. ✅ **T4c** (info del archivo con ffprobe) + **T6b** (panel «Archivo» en la ficha) → ▶ desplegar.
 5. **T4d** (editar póster) + **T6c** (selector de póster en la ficha).
 6. **T4e** (progreso de reproducción y `/api/v1/home`) + **T5b** (filas «Continuar viendo», «Siguiente episodio» y «Recientes» en el portal, y reanudar en el reproductor) → ▶ desplegar.
 7. **A1 → A2 → A3 → A4** (ajustes y panel de administración) → ▶ desplegar; **U1 → U2** (panel de usuario y personalización del portal) → ▶; **A5 → A6 → A7 → A8**.

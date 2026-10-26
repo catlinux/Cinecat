@@ -631,6 +631,60 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/items/{id}/file-info:
+    get:
+      summary: Ficha técnica del archivo de vídeo
+      description: |
+        Analiza el archivo con ffprobe y devuelve el contenedor, tamaño, fecha
+        de modificación, duración, pistas de vídeo, audio y subtítulos, y cómo
+        se reproducirá en el reproductor web. Requiere una sesión válida.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        '200':
+          description: Ficha técnica del archivo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileInfoResponse'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No existe el ítem o el archivo no está en disco
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: ffprobe no pudo analizar el archivo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: ffprobe no está disponible en el servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/items/{id}/candidates:
     get:
       summary: Busca candidatos de TMDB para una película (solo administradores)
@@ -1270,6 +1324,205 @@ components:
           items:
             $ref: '#/components/schemas/GenreCount'
       additionalProperties: false
+    PlaybackInfo:
+      type: object
+      required:
+        - mode
+        - description
+        - supported
+      properties:
+        mode:
+          type: string
+          enum:
+            - direct
+            - hls
+            - ''
+          description: Modo de reproducción; vacío si el contenedor no está soportado.
+        description:
+          type: string
+        supported:
+          type: boolean
+      additionalProperties: false
+    VideoStream:
+      type: object
+      required:
+        - index
+        - codec
+        - codec_long_name
+        - profile
+        - width
+        - height
+        - display_aspect_ratio
+        - frame_rate
+        - bit_rate
+        - pixel_format
+        - bit_depth
+        - hdr
+        - language
+        - title
+        - default
+      properties:
+        index:
+          type: integer
+        codec:
+          type: string
+        codec_long_name:
+          type: string
+        profile:
+          type: string
+        width:
+          type: integer
+        height:
+          type: integer
+        display_aspect_ratio:
+          type: string
+        frame_rate:
+          type: number
+          format: double
+        bit_rate:
+          type: integer
+          format: int64
+        pixel_format:
+          type: string
+        bit_depth:
+          type: integer
+        hdr:
+          type: string
+        language:
+          type: string
+        title:
+          type: string
+        default:
+          type: boolean
+      additionalProperties: false
+    AudioStream:
+      type: object
+      required:
+        - index
+        - codec
+        - codec_long_name
+        - profile
+        - channels
+        - channel_layout
+        - sample_rate
+        - bit_rate
+        - language
+        - title
+        - default
+      properties:
+        index:
+          type: integer
+        codec:
+          type: string
+        codec_long_name:
+          type: string
+        profile:
+          type: string
+        channels:
+          type: integer
+        channel_layout:
+          type: string
+        sample_rate:
+          type: integer
+        bit_rate:
+          type: integer
+          format: int64
+        language:
+          type: string
+        title:
+          type: string
+        default:
+          type: boolean
+      additionalProperties: false
+    SubtitleStream:
+      type: object
+      required:
+        - index
+        - codec
+        - language
+        - title
+        - forced
+        - default
+        - text
+      properties:
+        index:
+          type: integer
+        codec:
+          type: string
+        language:
+          type: string
+        title:
+          type: string
+        forced:
+          type: boolean
+        default:
+          type: boolean
+        text:
+          type: boolean
+      additionalProperties: false
+    FileInfo:
+      type: object
+      required:
+        - container
+        - container_long_name
+        - size_bytes
+        - duration_seconds
+        - bit_rate
+        - modified_at
+        - file_name
+        - video
+        - audio
+        - subtitles
+        - chapters
+        - quality
+      properties:
+        container:
+          type: string
+        container_long_name:
+          type: string
+        size_bytes:
+          type: integer
+          format: int64
+        duration_seconds:
+          type: number
+          format: double
+        bit_rate:
+          type: integer
+          format: int64
+        modified_at:
+          type: string
+          format: date-time
+        file_name:
+          type: string
+        video:
+          type: array
+          items:
+            $ref: '#/components/schemas/VideoStream'
+        audio:
+          type: array
+          items:
+            $ref: '#/components/schemas/AudioStream'
+        subtitles:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubtitleStream'
+        chapters:
+          type: integer
+        quality:
+          type: string
+    FileInfoResponse:
+      allOf:
+        - $ref: '#/components/schemas/FileInfo'
+        - type: object
+          required:
+            - path
+            - playback
+          properties:
+            path:
+              type: string
+              description: Ruta del archivo relativa a la raíz de su biblioteca, con separadores `/`.
+            playback:
+              $ref: '#/components/schemas/PlaybackInfo'
     MediaItem:
       type: object
       required:

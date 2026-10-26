@@ -123,6 +123,7 @@ func main() {
 	go scheduleScans(ctx, scanJob, time.Minute, cfg.ScanInterval)
 
 	api := library.NewAPI(st.DB(), authSvc, playSvc, scanJob, tmdbClient)
+	api = api.WithFileInspector(playSvc)
 
 	srv := &http.Server{
 		Addr:              cfg.ListenAddr,

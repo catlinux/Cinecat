@@ -25,16 +25,30 @@ const (
 
 // API expone por HTTP las bibliotecas y los ítems de la base de datos.
 type API struct {
-	db       *sql.DB
-	auth     *auth.Service
-	playback *playback.Service
-	scanJob  *ScanJob
-	tmdb     TMDBClient
+	db            *sql.DB
+	auth          *auth.Service
+	playback      *playback.Service
+	scanJob       *ScanJob
+	tmdb          TMDBClient
+	fileInspector FileInspector
+	fileInfoCache *fileInfoCache
 }
 
 // NewAPI crea los handlers de la API de biblioteca.
 func NewAPI(db *sql.DB, authSvc *auth.Service, playSvc *playback.Service, scanJob *ScanJob, tmdb TMDBClient) *API {
-	return &API{db: db, auth: authSvc, playback: playSvc, scanJob: scanJob, tmdb: tmdb}
+	var inspector FileInspector
+	if playSvc != nil {
+		inspector = playSvc
+	}
+	return &API{
+		db:            db,
+		auth:          authSvc,
+		playback:      playSvc,
+		scanJob:       scanJob,
+		tmdb:          tmdb,
+		fileInspector: inspector,
+		fileInfoCache: newFileInfoCache(),
+	}
 }
 
 // Register monta los endpoints versionados en el mux indicado.
@@ -49,6 +63,7 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.Handle("GET /api/v1/genres", a.requireSession(a.handleGenres))
 	mux.Handle("GET /api/v1/items", a.requireSession(a.handleItems))
 	mux.Handle("GET /api/v1/items/{id}", a.requireSession(a.handleItem))
+	mux.Handle("GET /api/v1/items/{id}/file-info", a.requireSession(a.handleItemFileInfo))
 	mux.Handle("PUT /api/v1/items/{id}/watched", a.requireSession(a.handleItemWatched))
 	mux.Handle("DELETE /api/v1/items/{id}/watched", a.requireSession(a.handleItemUnwatched))
 	mux.Handle("GET /api/v1/items/{id}/candidates", a.requireAdmin(a.handleItemCandidates))

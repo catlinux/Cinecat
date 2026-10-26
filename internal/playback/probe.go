@@ -137,6 +137,10 @@ func (p *Prober) VideoDuration(ctx context.Context, path string) (time.Duration,
 }
 
 func (p *Prober) runFFprobe(ctx context.Context, path string, args ...string) (string, error) {
+	return p.runFFprobeOutput(ctx, path, "csv=p=0", args...)
+}
+
+func (p *Prober) runFFprobeOutput(ctx context.Context, path, format string, args ...string) (string, error) {
 	ffprobe, err := exec.LookPath("ffprobe")
 	if err != nil {
 		return "", ErrFFprobeNotFound
@@ -152,7 +156,7 @@ func (p *Prober) runFFprobe(ctx context.Context, path string, args ...string) (s
 
 	commandArgs := []string{"-v", "error"}
 	commandArgs = append(commandArgs, args...)
-	commandArgs = append(commandArgs, "-of", "csv=p=0", absPath)
+	commandArgs = append(commandArgs, "-of", format, absPath)
 
 	cmd := exec.CommandContext(ctx, ffprobe, commandArgs...)
 	var stdout, stderr bytes.Buffer

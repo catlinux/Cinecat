@@ -436,9 +436,10 @@ func TestCorreccionDeleteMatch(t *testing.T) {
 		Overview: "Sinopsis", Genres: []string{"Drama"},
 	}}
 	ts := newLibraryHTTPTestServer(t, fake)
-	libraryID := createLibrary(t, ts.db, t.TempDir())
+	root := t.TempDir()
+	libraryID := createLibrary(t, ts.db, root)
 	id := insertItemFixture(t, ts.db, itemFixture{
-		libraryID: libraryID, path: filepath.Join(t.TempDir(), "Pelicula (2019).mkv"),
+		libraryID: libraryID, path: filepath.Join(root, "Pelicula (2019).mkv"),
 		title: "Pelicula", displayTitle: "Ficha anterior", year: 2025,
 		tmdbID: 9, metadataSource: "tmdb", matchStatus: "manual", matchScore: 1,
 		genres: `["Antiguo"]`,
@@ -462,10 +463,11 @@ func TestCorreccionDeleteMatch(t *testing.T) {
 	// Sin coincidencia se restaura el año del archivo, no el de TMDB.
 	noMatch := &fakeTMDB{searchErr: metadata.ErrNotFound}
 	ts2 := newLibraryHTTPTestServer(t, noMatch)
-	libraryID2 := createLibrary(t, ts2.db, t.TempDir())
+	root2 := filepath.Join(t.TempDir(), "Pelicula (1999)")
+	libraryID2 := createLibrary(t, ts2.db, root2)
 	id2 := insertItemFixture(t, ts2.db, itemFixture{
-		libraryID: libraryID2, path: filepath.Join(t.TempDir(), "Pelicula (1999).mkv"),
-		title: "Pelicula", displayTitle: "Ficha anterior", year: 2025,
+		libraryID: libraryID2, path: filepath.Join(root2, "Foo (2010)", "foo.mkv"),
+		title: "foo", displayTitle: "Ficha anterior", year: 2025,
 		tmdbID: 9, metadataSource: "tmdb", matchStatus: "manual", matchScore: 1,
 	})
 	base2 := ts2.URL + "/api/v1/items/" + strconv.FormatInt(id2, 10) + "/match"
@@ -477,12 +479,37 @@ func TestCorreccionDeleteMatch(t *testing.T) {
 	if err := json.Unmarshal(body, &item); err != nil {
 		t.Fatalf("respuesta sin coincidencia: %v", err)
 	}
-	if item.Year == nil || *item.Year != 1999 {
+	if item.Year == nil || *item.Year != 2010 {
 		t.Fatalf("año restaurado = %+v", item.Year)
 	}
-	if item.MatchStatus != nil || item.TMDBID != nil || item.Title != "Pelicula" ||
+	if item.MatchStatus != nil || item.TMDBID != nil || item.Title != "foo" ||
 		item.Genres == nil || len(item.Genres) != 0 {
 		t.Fatalf("ítem sin identificar inesperado: %+v", item)
+	}
+}
+
+func TestCorreccionDeleteUsaRutaRelativa(t *testing.T) {
+	noMatch := &fakeTMDB{searchErr: metadata.ErrNotFound}
+	ts := newLibraryHTTPTestServer(t, noMatch)
+	root := filepath.Join(t.TempDir(), "foo (1999)")
+	libraryID := createLibrary(t, ts.db, root)
+	id := insertItemFixture(t, ts.db, itemFixture{
+		libraryID: libraryID, path: filepath.Join(root, "foo.mkv"),
+		title: "foo", displayTitle: "Ficha anterior", year: 2025,
+		tmdbID: 9, metadataSource: "tmdb", matchStatus: "manual", matchScore: 1,
+	})
+	base := ts.URL + "/api/v1/items/" + strconv.FormatInt(id, 10) + "/match"
+
+	status, body := libraryHTTPDo(t, http.MethodDelete, base, ts.token, nil)
+	if status != http.StatusOK {
+		t.Fatalf("DELETE match: código = %d, cuerpo = %s", status, body)
+	}
+	var item mediaItemDTO
+	if err := json.Unmarshal(body, &item); err != nil {
+		t.Fatalf("respuesta: %v", err)
+	}
+	if item.Year != nil {
+		t.Fatalf("no debe tomar el año de la raíz de la biblioteca: %+v", item.Year)
 	}
 }
 

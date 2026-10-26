@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -452,7 +453,25 @@ func (a *API) handleItemMatchDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	analyzed := ParsePath(item.Path)
+	media, err := a.mediaFile(r, item.ID)
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+		writeJSONError(w, http.StatusNotFound, "ítem no encontrado")
+		return
+	case err != nil:
+		log.Printf("library: leer archivo del ítem %d: %v", item.ID, err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
+	libraryRoot, rootErr := filepath.Abs(media.libraryPath)
+	mediaPath, pathErr := filepath.Abs(media.path)
+	relative, err := filepath.Rel(libraryRoot, mediaPath)
+	if rootErr != nil || pathErr != nil || err != nil || relative == "." || relative == ".." ||
+		strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+		relative = filepath.Base(media.path)
+	}
+
+	analyzed := ParsePath(relative)
 	title := analyzed.Title
 	if title == "" {
 		title = item.FileTitle

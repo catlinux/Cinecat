@@ -1,0 +1,207 @@
+package library
+
+import (
+	"context"
+	"database/sql"
+	"errors"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+
+	"github.com/catlinux/cinecat/internal/playback"
+)
+
+const fileInfoCacheMax = 256
+
+// FileInspector obtiene la ficha técnica de un archivo. Lo implementan el
+// Prober y el Service de playback; en las pruebas se sustituye por un falso.
+type FileInspector interface {
+	Inspect(ctx context.Context, path string) (*playback.FileInfo, error)
+}
+
+type PlaybackInfo struct {
+	Mode        string `json:"mode"`
+	Description string `json:"description"`
+	Supported   bool   `json:"supported"`
+}
+
+type fileInfoResponse struct {
+	*playback.FileInfo
+	Path     string       `json:"path"`
+	Playback PlaybackInfo `json:"playback"`
+}
+
+// WithFileInspector permite usar el analizador del servicio de playback.
+func (a *API) WithFileInspector(inspector FileInspector) *API {
+	a.fileInspector = inspector
+	return a
+}
+
+type fileInfoKey struct {
+	path       string
+	size       int64
+	modifiedAt int64
+}
+
+type fileInfoCache struct {
+	mu      sync.Mutex
+	entries map[fileInfoKey]playback.FileInfo
+}
+
+func newFileInfoCache() *fileInfoCache {
+	return &fileInfoCache{entries: make(map[fileInfoKey]playback.FileInfo)}
+}
+
+func (c *fileInfoCache) get(key fileInfoKey) (playback.FileInfo, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	info, ok := c.entries[key]
+	return info, ok
+}
+
+func (c *fileInfoCache) put(key fileInfoKey, info playback.FileInfo) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if len(c.entries) >= fileInfoCacheMax {
+		for existing := range c.entries {
+			delete(c.entries, existing)
+			break
+		}
+	}
+	c.entries[key] = info
+}
+
+func (a *API) handleItemFileInfo(w http.ResponseWriter, r *http.Request) {
+	id, ok := idFromPath(r)
+	if !ok {
+		writeJSONError(w, http.StatusNotFound, "ítem no encontrado")
+		return
+	}
+
+	media, err := a.mediaFile(r, id)
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+		writeJSONError(w, http.StatusNotFound, "ítem no encontrado")
+		return
+	case err != nil:
+		log.Printf("library: leer archivo del ítem %d: %v", id, err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
+
+	safePath, err := playback.SafePath(media.libraryPath, media.path)
+	if err != nil {
+		writeJSONError(w, http.StatusNotFound, "archivo no encontrado")
+		return
+	}
+	stat, err := os.Stat(safePath)
+	if err != nil || stat.IsDir() {
+		writeJSONError(w, http.StatusNotFound, "archivo no encontrado")
+		return
+	}
+
+	libraryRoot, rootErr := filepath.Abs(media.libraryPath)
+	relative, err := filepath.Rel(libraryRoot, safePath)
+	if rootErr != nil || err != nil || relative == "." || relative == ".." ||
+		strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+		relative = filepath.Base(safePath)
+	}
+	relative = filepath.ToSlash(relative)
+
+	key := fileInfoKey{
+		path:       safePath,
+		size:       stat.Size(),
+		modifiedAt: stat.ModTime().UnixNano(),
+	}
+	cache := a.fileInfoCache
+	if cache == nil {
+		cache = newFileInfoCache()
+		a.fileInfoCache = cache
+	}
+
+	info, cached := cache.get(key)
+	if !cached {
+		if a.fileInspector == nil {
+			writeJSONError(w, http.StatusServiceUnavailable, "ffprobe no está disponible en el servidor")
+			return
+		}
+		inspected, err := a.fileInspector.Inspect(r.Context(), safePath)
+		if err != nil {
+			if errors.Is(err, playback.ErrFFprobeNotFound) {
+				writeJSONError(w, http.StatusServiceUnavailable, "ffprobe no está disponible en el servidor")
+				return
+			}
+			log.Printf("library: analizar archivo del ítem %d: %v", id, err)
+			writeJSONError(w, http.StatusBadGateway, "no se pudo analizar el archivo")
+			return
+		}
+		if inspected == nil {
+			log.Printf("library: ffprobe devolvió una ficha vacía para el ítem %d", id)
+			writeJSONError(w, http.StatusBadGateway, "no se pudo analizar el archivo")
+			return
+		}
+		info = normalizedFileInfo(inspected)
+		cache.put(key, info)
+	}
+
+	if info.FileName == "" {
+		info.FileName = filepath.Base(safePath)
+	}
+	writeJSON(w, http.StatusOK, fileInfoResponse{
+		FileInfo: &info,
+		Path:     relative,
+		Playback: playbackInfo(safePath),
+	})
+}
+
+func normalizedFileInfo(info *playback.FileInfo) playback.FileInfo {
+	result := *info
+	if result.Video == nil {
+		result.Video = []playback.VideoStream{}
+	}
+	if result.Audio == nil {
+		result.Audio = []playback.AudioStream{}
+	}
+	if result.Subtitles == nil {
+		result.Subtitles = []playback.SubtitleStream{}
+	}
+	return result
+}
+
+func playbackInfo(path string) PlaybackInfo {
+	mode, err := playback.Decide(path)
+	if errors.Is(err, playback.ErrUnsupportedContainer) {
+		return PlaybackInfo{
+			Description: "Contenedor no soportado para reproducción",
+			Supported:   false,
+		}
+	}
+	if err != nil {
+		return PlaybackInfo{
+			Description: "No se pudo determinar el modo de reproducción",
+			Supported:   false,
+		}
+	}
+
+	switch mode {
+	case playback.ModeDirect:
+		extension := strings.ToUpper(strings.TrimPrefix(filepath.Ext(path), "."))
+		description := "Reproducción directa"
+		if extension != "" {
+			description = fmt.Sprintf("Reproducción directa (%s)", extension)
+		}
+		return PlaybackInfo{Mode: "direct", Description: description, Supported: true}
+	case playback.ModeRemux:
+		return PlaybackInfo{
+			Mode:        "hls",
+			Description: "Se recodifica a H.264 + AAC estéreo por HLS",
+			Supported:   true,
+		}
+	default:
+		return PlaybackInfo{Description: "No se pudo determinar el modo de reproducción"}
+	}
+}
