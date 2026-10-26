@@ -105,6 +105,20 @@ describe('carga de la versión del servidor', () => {
 
 		expect(result.activeCategory).toBe('movies');
 	});
+
+	it('marca Colecciones como categoría activa en sus rutas', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(
+			jsonResponse({ server: '0.11.0', commit: '', built_at: '' })
+		);
+
+		const result = (await load({
+			locals: { sessionToken: null },
+			fetch: fetchMock,
+			url: new URL('http://localhost/collections/5')
+		} as never)) as { activeCategory: string | null };
+
+		expect(result.activeCategory).toBe('collections');
+	});
 });
 
 describe('pie de página', () => {
@@ -146,5 +160,17 @@ describe('pie de página', () => {
 		expect(body).toContain('Colecciones');
 		expect(body).toContain('Series');
 		expect(body).toContain('Próximamente');
+	});
+
+	it('marca el enlace de Colecciones como activo', () => {
+		const { body } = render(Layout, {
+			props: {
+				data: { ...layoutData(null), activeCategory: 'collections' },
+				children
+			}
+		});
+
+		expect(body).toContain('href="/collections"');
+		expect(body).toContain('aria-current="page"');
 	});
 });

@@ -41,7 +41,8 @@ const item: MediaItem = {
 	match_status: 'auto',
 	match_score: 1,
 	watched: false,
-	progress: null
+	progress: null,
+	collections: []
 };
 
 const filters: MovieFilters = {

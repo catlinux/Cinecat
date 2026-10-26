@@ -25,6 +25,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 - El reproductor guarda el progreso cada 15 s y al salir, y permite continuar donde se dejó («Continuar · 1 h 12 min» en la ficha, «Empezar desde el principio»). El portal muestra «Continuar viendo» y «Añadido recientemente».
 - Colecciones automáticas: las películas que pertenecen a una saga de TMDB se agrupan solas en una colección; una colección borrada o una película quitada por el usuario no reaparecen en los escaneos siguientes. Las películas ya identificadas se añaden a su colección en el primer escaneo.
 - API de colecciones: listado paginado y detalle, y gestión para administradores (crear, editar, borrar, añadir y quitar películas, reordenar). Las películas indican a qué colecciones pertenecen y se pueden filtrar por `collection_id`.
+- Colecciones en la web: categoría activa en el portal y la cabecera, listado paginado con búsqueda y orden, página de cada colección con sus películas y, para administradores, gestión (crear, editar, cambiar cartel y fondo, añadir y quitar películas, reordenar, borrar). La ficha de película enlaza a sus colecciones.
 - El servidor se apaga de forma ordenada ante SIGINT/SIGTERM, cancelando el escaneo en curso.
 
 ## [0.10.0] - 2026-10-26

@@ -40,7 +40,8 @@ const recentItem: MediaItem = {
 	match_status: 'auto',
 	match_score: 1,
 	watched: false,
-	progress: null
+	progress: null,
+	collections: []
 };
 
 const continueItem: MediaItem = {
@@ -97,6 +98,7 @@ function portalData(overrides: Record<string, unknown> = {}) {
 		serverCommit: null,
 		webVersion,
 		moviesTotal: 42,
+		collectionsTotal: 7,
 		continueWatching: [continueItem],
 		nextUp: [],
 		recent: [recentItem],
@@ -105,12 +107,26 @@ function portalData(overrides: Record<string, unknown> = {}) {
 	};
 }
 
+function collectionsResponse(total = 7): Response {
+	return jsonResponse({ collections: [], total, limit: 1, offset: 0 });
+}
+
 describe('carga del portal', () => {
-	it('carga el resumen del home con una sola llamada', async () => {
-		const fetchMock = vi.fn().mockResolvedValue(jsonResponse(homeResponse()));
+	it('carga el resumen del home y el total de colecciones', async () => {
+		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+			const url = new URL(String(input));
+			if (url.pathname === '/api/v1/collections') {
+				return collectionsResponse();
+			}
+			if (url.pathname === '/api/v1/home') {
+				return jsonResponse(homeResponse());
+			}
+			throw new Error(`URL inesperada: ${url}`);
+		});
 
 		const result = (await load(loadEvent(fetchMock) as never)) as {
 			moviesTotal: number;
+			collectionsTotal: number | null;
 			continueWatching: MediaItem[];
 			nextUp: MediaItem[];
 			recent: MediaItem[];
@@ -118,12 +134,33 @@ describe('carga del portal', () => {
 		};
 
 		expect(result.moviesTotal).toBe(42);
+		expect(result.collectionsTotal).toBe(7);
 		expect(result.continueWatching).toHaveLength(1);
 		expect(result.nextUp).toEqual([]);
 		expect(result.recent).toHaveLength(1);
 		expect(result.errorMessage).toBeNull();
-		expect(fetchMock).toHaveBeenCalledTimes(1);
-		expect(String(fetchMock.mock.calls[0][0])).toBe('http://api.test/api/v1/home');
+		expect(fetchMock).toHaveBeenCalledTimes(2);
+	});
+
+	it('mantiene el enlace de colecciones sin recuento si su API falla', async () => {
+		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+			const url = new URL(String(input));
+			if (url.pathname === '/api/v1/collections') {
+				return jsonResponse({ error: 'sin colecciones' }, 502);
+			}
+			if (url.pathname === '/api/v1/home') {
+				return jsonResponse(homeResponse());
+			}
+			throw new Error(`URL inesperada: ${url}`);
+		});
+
+		const result = (await load(loadEvent(fetchMock) as never)) as {
+			collectionsTotal: number | null;
+			errorMessage: string | null;
+		};
+
+		expect(result.collectionsTotal).toBeNull();
+		expect(result.errorMessage).toBeNull();
 	});
 
 	it('redirige la antigua cartelera conservando la consulta', async () => {
@@ -144,6 +181,7 @@ describe('carga del portal', () => {
 
 		const result = (await load(loadEvent(fetchMock) as never)) as {
 			moviesTotal: number;
+			collectionsTotal: number | null;
 			continueWatching: MediaItem[];
 			nextUp: MediaItem[];
 			recent: MediaItem[];
@@ -151,6 +189,7 @@ describe('carga del portal', () => {
 		};
 
 		expect(result.moviesTotal).toBe(0);
+		expect(result.collectionsTotal).toBeNull();
 		expect(result.continueWatching).toEqual([]);
 		expect(result.nextUp).toEqual([]);
 		expect(result.recent).toEqual([]);
@@ -176,6 +215,8 @@ describe('portal', () => {
 		expect(body).toContain('Películas');
 		expect(body).toContain('42 películas');
 		expect(body).toContain('Colecciones');
+		expect(body).toContain('href="/collections"');
+		expect(body).toContain('7 colecciones');
 		expect(body).toContain('Series');
 		expect(body).toContain('Próximamente');
 		expect(body).toContain('Continuar viendo');
@@ -185,6 +226,16 @@ describe('portal', () => {
 		expect(body).toContain('Ver todas');
 		expect(body.indexOf('Continuar viendo')).toBeLessThan(body.indexOf('Añadido recientemente'));
 		expect(body).not.toContain('Siguiente episodio');
+	});
+
+	it('mantiene Colecciones activa aunque no haya recuento', () => {
+		const { body } = render(PortalPage, {
+			props: { data: portalData({ collectionsTotal: null }) }
+		});
+
+		expect(body).toContain('href="/collections"');
+		expect(body).toContain('Colecciones');
+		expect(body).toContain('Entrar');
 	});
 
 	it('no muestra Continuar viendo si no hay elementos', () => {

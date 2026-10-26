@@ -31,10 +31,10 @@
 			id: 'collections',
 			title: 'Colecciones',
 			description: 'Sagas y ciclos reunidos en un mismo estante.',
-			kicker: 'En preparación',
-			href: null,
+			kicker: 'Sagas',
+			href: '/collections',
 			art: 'collections',
-			count: null
+			count: data.collectionsTotal
 		},
 		{
 			id: 'series',
@@ -52,6 +52,21 @@
 			? 'Abrir cartelera'
 			: `${data.moviesTotal} ${data.moviesTotal === 1 ? 'película' : 'películas'}`
 	);
+	const collectionCount = $derived(
+		data.collectionsTotal === null
+			? 'Entrar'
+			: `${data.collectionsTotal} ${data.collectionsTotal === 1 ? 'colección' : 'colecciones'}`
+	);
+
+	function categoryMeta(category: PortalCategory): string {
+		if (category.id === 'movies') {
+			return movieCount;
+		}
+		if (category.id === 'collections') {
+			return collectionCount;
+		}
+		return 'Entrar';
+	}
 </script>
 
 <svelte:head>
@@ -82,7 +97,7 @@
 						<h2>{category.title}</h2>
 						<p>{category.description}</p>
 						<span class="portal-category-meta">
-							{category.id === 'movies' ? movieCount : 'Entrar'}
+							{categoryMeta(category)}
 							<span aria-hidden="true">→</span>
 						</span>
 					</div>

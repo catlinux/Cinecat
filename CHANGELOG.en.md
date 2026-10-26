@@ -25,6 +25,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 - The player saves progress every 15 s and on exit, and resumes where you left off ("Continue · 1 h 12 min" on the movie page, "Start from the beginning"). The portal shows "Continue watching" and "Recently added".
 - Automatic collections: movies that belong to a TMDB saga are grouped into a collection automatically; a collection deleted or a movie removed by the user does not reappear in later scans. Already identified movies join their collection on the first scan.
 - Collections API: paginated list and detail, and admin management (create, edit, delete, add and remove movies, reorder). Movies list the collections they belong to and can be filtered by `collection_id`.
+- Collections on the web: active category in the portal and header, paginated list with search and sorting, a page per collection with its movies and, for admins, management (create, edit, change poster and backdrop, add and remove movies, reorder, delete). The movie page links to its collections.
 - The server shuts down gracefully on SIGINT/SIGTERM, cancelling any running scan.
 
 ## [0.10.0] - 2026-10-26

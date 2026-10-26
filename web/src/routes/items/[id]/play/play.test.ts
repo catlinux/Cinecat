@@ -43,7 +43,8 @@ const item: MediaItem = {
 		position_seconds: 4320,
 		duration_seconds: 7200,
 		updated_at: '2026-10-26T10:00:00Z'
-	}
+	},
+	collections: []
 };
 
 const play: PlayResponse = {

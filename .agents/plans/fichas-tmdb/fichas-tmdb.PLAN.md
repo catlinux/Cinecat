@@ -193,7 +193,7 @@ El usuario quiere un panel de administración bien estructurado para configurar 
 - `GET /api/v1/items/{id}` incluye `collections: [{id, name}]`.
 - Esfuerzo: medio.
 
-### T9 — Web de colecciones
+### ✅ T9 — Web de colecciones
 - Archivos: `web/src/routes/collections/+page.svelte|.server.ts`, `web/src/routes/collections/[id]/+page.svelte|.server.ts`, componentes que hagan falta, `web/src/lib/api.ts`, tests.
 - `/collections`: rejilla de carteles paginada (48) con nombre y número de películas; buscador. Admin: «Nueva colección».
 - `/collections/[id]`: cabecera (fondo, nombre, descripción) y películas en orden. Admin: editar nombre, descripción y cartel (elegir entre los carteles de sus películas o pegar una URL), añadir película (buscador sobre `GET /api/v1/items?kind=movie&q=`), quitar, subir o bajar en el orden, y borrar la colección con confirmación.

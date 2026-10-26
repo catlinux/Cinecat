@@ -42,6 +42,7 @@ function makeItem(overrides: Partial<MediaItem> = {}): MediaItem {
 		match_score: 1,
 		watched: false,
 		progress: null,
+		collections: [],
 		...overrides
 	};
 }

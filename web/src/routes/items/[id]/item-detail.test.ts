@@ -41,6 +41,7 @@ function makeItem(overrides: Partial<MediaItem> = {}): MediaItem {
 		match_score: 0.92,
 		watched: false,
 		progress: null,
+		collections: [],
 		...overrides
 	};
 }
@@ -196,6 +197,16 @@ describe('ficha de película', () => {
 		const body = renderPage(makeItem());
 		expect(body).toContain('Reproducir');
 		expect(body).not.toContain('Continuar ·');
+	});
+
+	it('enlaza las colecciones a las que pertenece la película', () => {
+		const body = renderPage(
+			makeItem({ collections: [{ id: 5, name: 'La saga' }] })
+		);
+
+		expect(body).toContain('Forma parte de');
+		expect(body).toContain('/collections/5');
+		expect(body).toContain('La saga');
 	});
 
 	it('muestra el botón de visto en sus dos estados', () => {

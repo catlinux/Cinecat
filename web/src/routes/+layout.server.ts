@@ -11,7 +11,9 @@ export const load: LayoutServerLoad = async ({ locals, fetch, url }) => {
 	const activeCategory =
 		pathname === '/movies' || pathname.startsWith('/movies/') || pathname.startsWith('/items/')
 			? 'movies'
-			: null;
+			: pathname === '/collections' || pathname.startsWith('/collections/')
+				? 'collections'
+				: null;
 	let serverVersion: string | null = null;
 	let serverCommit: string | null = null;
 	try {

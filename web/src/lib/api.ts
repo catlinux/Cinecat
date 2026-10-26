@@ -28,6 +28,11 @@ export interface PlaybackProgress {
 	updated_at: string;
 }
 
+export interface ItemCollection {
+	id: number;
+	name: string;
+}
+
 export interface MediaItem {
 	id: number;
 	library_id: number;
@@ -57,6 +62,47 @@ export interface MediaItem {
 	match_score: number | null;
 	watched: boolean;
 	progress: PlaybackProgress | null;
+	collections: ItemCollection[];
+}
+
+export type CollectionSource = 'tmdb' | 'manual';
+
+export interface Collection {
+	id: number;
+	name: string;
+	overview: string | null;
+	poster_url: string | null;
+	backdrop_url: string | null;
+	item_count: number;
+	source: CollectionSource;
+	edited: boolean;
+}
+
+export interface CollectionsResponse {
+	collections: Collection[];
+	total: number;
+	limit: number;
+	offset: number;
+}
+
+export interface CollectionDetail extends Collection {
+	items: MediaItem[];
+}
+
+export type CollectionSort = 'name' | 'added' | 'size';
+
+export interface CollectionsQuery {
+	limit?: number;
+	offset?: number;
+	q?: string;
+	sort?: CollectionSort;
+}
+
+export interface CollectionUpdate {
+	name?: string;
+	overview?: string;
+	poster_url?: string;
+	backdrop_url?: string;
 }
 
 export interface HomeCounts {
@@ -240,7 +286,7 @@ export interface ApiClientOptions {
 }
 
 interface RequestOptions {
-	method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+	method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 	body?: unknown;
 	token?: string;
 	empty?: boolean;
@@ -396,6 +442,69 @@ export class ApiClient {
 			method: 'DELETE',
 			token
 		});
+	}
+
+	async getCollections(query: CollectionsQuery, token: string): Promise<CollectionsResponse> {
+		const params = new URLSearchParams();
+		if (query.limit !== undefined) {
+			params.set('limit', String(query.limit));
+		}
+		if (query.offset !== undefined) {
+			params.set('offset', String(query.offset));
+		}
+		if (query.q) {
+			params.set('q', query.q);
+		}
+		if (query.sort) {
+			params.set('sort', query.sort);
+		}
+		const queryString = params.toString();
+		const suffix = queryString ? `?${queryString}` : '';
+		return this.get<CollectionsResponse>(`/api/v1/collections${suffix}`, token);
+	}
+
+	async getCollection(id: number, token: string): Promise<CollectionDetail> {
+		return this.get<CollectionDetail>(`/api/v1/collections/${id}`, token);
+	}
+
+	async createCollection(name: string, overview: string, token: string): Promise<Collection> {
+		return this.post<Collection>('/api/v1/collections', { name, overview }, token);
+	}
+
+	async updateCollection(
+		id: number,
+		changes: CollectionUpdate,
+		token: string
+	): Promise<Collection> {
+		return this.request<Collection>(`/api/v1/collections/${id}`, {
+			method: 'PATCH',
+			body: changes,
+			token
+		});
+	}
+
+	async deleteCollection(id: number, token: string): Promise<void> {
+		await this.delete(`/api/v1/collections/${id}`, token);
+	}
+
+	async addCollectionItem(id: number, mediaItemID: number, token: string): Promise<void> {
+		await this.post<void>(
+			`/api/v1/collections/${id}/items`,
+			{ media_item_id: mediaItemID },
+			token
+		);
+	}
+
+	async removeCollectionItem(id: number, mediaItemID: number, token: string): Promise<void> {
+		await this.delete(`/api/v1/collections/${id}/items/${mediaItemID}`, token);
+	}
+
+	async reorderCollection(id: number, mediaItemIDs: number[], token: string): Promise<void> {
+		await this.put<void>(
+			`/api/v1/collections/${id}/order`,
+			{ media_item_ids: mediaItemIDs },
+			token
+		);
 	}
 
 	async get<T>(path: string, token?: string): Promise<T> {

@@ -30,9 +30,11 @@
 					class:category-active={data.activeCategory === 'movies'}
 					aria-current={data.activeCategory === 'movies' ? 'page' : undefined}>Películas</a
 				>
-				<span class="category-soon" aria-disabled="true">
-					Colecciones <span class="category-soon-tag">Próximamente</span>
-				</span>
+				<a
+					href="/collections"
+					class:category-active={data.activeCategory === 'collections'}
+					aria-current={data.activeCategory === 'collections' ? 'page' : undefined}>Colecciones</a
+				>
 				<span class="category-soon" aria-disabled="true">
 					Series <span class="category-soon-tag">Próximamente</span>
 				</span>

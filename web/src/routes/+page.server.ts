@@ -12,11 +12,23 @@ export const load: PageServerLoad = async ({ locals, fetch, url }) => {
 	}
 
 	const token = requireSessionToken(locals);
+	const api = createApiClient(fetch);
+
+	let collectionsTotal: number | null = null;
+	try {
+		const collections = await api.getCollections({ limit: 1 }, token);
+		collectionsTotal = collections.total;
+	} catch (error) {
+		if (error instanceof ApiError && error.status === 401) {
+			redirect(303, '/login');
+		}
+	}
 
 	try {
-		const home = await createApiClient(fetch).getHome(token);
+		const home = await api.getHome(token);
 		return {
 			moviesTotal: home.counts.movies,
+			collectionsTotal,
 			continueWatching: home.continue ?? [],
 			nextUp: home.next_up ?? [],
 			recent: home.recent_movies ?? [],
@@ -28,6 +40,7 @@ export const load: PageServerLoad = async ({ locals, fetch, url }) => {
 		}
 		return {
 			moviesTotal: 0,
+			collectionsTotal,
 			continueWatching: [],
 			nextUp: [],
 			recent: [],

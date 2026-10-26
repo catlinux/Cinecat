@@ -186,6 +186,17 @@
 			<ItemFacts {item} />
 		{/if}
 
+		{#if item.collections.length > 0}
+			<section class="item-collections">
+				<p class="kicker">Forma parte de</p>
+				<ul>
+					{#each item.collections as collection (collection.id)}
+						<li><a href={`/collections/${collection.id}`}>{collection.name}</a></li>
+					{/each}
+				</ul>
+			</section>
+		{/if}
+
 		<FilePanel result={fileInfo} />
 
 		{#if isMovie && data.isAdmin}
