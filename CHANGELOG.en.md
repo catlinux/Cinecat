@@ -7,6 +7,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-10-26
+
 ### Fixed
 - Video no longer freezes when seeking after several playbacks: FFmpeg stops after 90 s without requests, never runs more than 20 segments ahead of the requested point, there is a cap on simultaneous transcodes (`playback.max_transcodes` setting, 2 by default) and processes run at low priority with limited threads. Before, every abandoned playback kept transcoding the whole movie.
 

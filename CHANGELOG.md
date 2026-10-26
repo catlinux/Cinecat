@@ -7,6 +7,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.12.0] - 2026-10-26
+
 ### Corregido
 - El vídeo ya no se cuelga al avanzar tras varias reproducciones: FFmpeg se detiene a los 90 s sin peticiones, no se adelanta más de 20 segmentos al punto pedido, hay un tope de transcodificaciones simultáneas (ajuste `playback.max_transcodes`, 2 por defecto) y los procesos van con prioridad baja y hilos limitados. Antes cada reproducción abandonada seguía transcodificando la película entera.
 
