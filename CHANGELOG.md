@@ -30,6 +30,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 - Series: cada carpeta de serie se agrupa en una ficha propia, se identifica con TMDB en castellano (mismas reglas que las películas: automática, manual o «no es ninguna») y el escaneo rellena temporadas y episodios (título, sinopsis, imagen) con una petición por temporada. El estado del escaneo incluye `series_identified` y `series_unidentified`.
 - API de series: listado paginado con búsqueda, letra y género, ficha con temporadas y siguiente episodio, episodios por temporada, marcar serie o temporada como vista, corrección de la identificación e imágenes para administradores. `GET /api/v1/home` rellena «siguiente episodio».
 - Series en la web: categoría activa en el portal y la cabecera, listado paginado con búsqueda, letra y género, y ficha de serie con selector de temporadas, episodios con título, sinopsis e imagen, «Continuar» y marcar episodio, temporada o serie como vistos. El portal muestra «Siguiente episodio».
+- Corregir la ficha de una serie (administradores): buscar candidatos en TMDB, «Es esta», «No es ninguna» y «Volver a automático», y cambiar su cartel y fondo.
+- Ficha de episodio con migas de pan (serie › temporada › episodio), imagen y sinopsis del episodio y navegación al anterior y al siguiente.
 - El servidor se apaga de forma ordenada ante SIGINT/SIGTERM, cancelando el escaneo en curso.
 
 ## [0.10.0] - 2026-10-26

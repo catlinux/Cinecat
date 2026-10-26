@@ -30,6 +30,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 - Series: each series folder is grouped into its own record, identified with TMDB in Spanish (same rules as movies: automatic, manual or "none of these") and the scan fills in seasons and episodes (title, overview, still) with one request per season. Scan status includes `series_identified` and `series_unidentified`.
 - Series API: paginated list with search, letter and genre filters, record with seasons and next episode, episodes per season, mark series or season as watched, identification correction and images for admins. `GET /api/v1/home` fills in "next episode".
 - Series on the web: active category in the portal and header, paginated list with search, letter and genre filters, and a series page with season selector, episodes with title, overview and still, "Continue" and marking an episode, season or series as watched. The portal shows "Next episode".
+- Fix a series record (admins): search TMDB candidates, "This one", "None of these" and "Back to automatic", and change its poster and backdrop.
+- Episode page with breadcrumbs (series › season › episode), episode still and overview, and previous/next navigation.
 - The server shuts down gracefully on SIGINT/SIGTERM, cancelling any running scan.
 
 ## [0.10.0] - 2026-10-26

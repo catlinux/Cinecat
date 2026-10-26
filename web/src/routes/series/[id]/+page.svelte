@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import type { Candidate, ImageKind, ImageOptions } from '$lib/api';
 	import EpisodeRow from '$lib/components/EpisodeRow.svelte';
+	import ImagePanel from '$lib/components/ImagePanel.svelte';
+	import MatchDialog from '$lib/components/MatchDialog.svelte';
 	import { formatGenres, formatRating, overviewInSpanish, splitCast } from '$lib/media';
 	import { posterColors } from '$lib/poster-color';
 	import {
@@ -11,9 +14,20 @@
 	} from '$lib/series';
 	import type { PageData } from './$types';
 
+	interface MatchSearch {
+		q: string;
+		year: number | null;
+	}
+
 	interface ActionForm {
 		success?: boolean;
+		panel?: boolean;
+		imagePanel?: boolean;
+		imageKind?: ImageKind;
+		imageOptions?: ImageOptions;
 		message?: string;
+		candidates?: Candidate[];
+		search?: MatchSearch;
 	}
 
 	let { data, form }: { data: PageData; form?: ActionForm | null } = $props();
@@ -24,6 +38,12 @@
 	const playChoice = $derived(seriesPlayChoice(series, series.next_episode, firstAvailable));
 	const allWatched = $derived(seriesWatched(series));
 	const actionForm = $derived((form ?? null) as ActionForm | null);
+	const candidates = $derived(actionForm?.candidates ?? []);
+	const search = $derived(actionForm?.search ?? null);
+	const panelOpen = $derived(Boolean(data.corregir || actionForm?.panel));
+	const imageOptions = $derived(actionForm?.imageOptions ?? null);
+	const imageListKind = $derived(actionForm?.imageKind ?? null);
+	const imagePanelOpen = $derived(Boolean(data.imagenes || actionForm?.imagePanel));
 	const originalTitle = $derived(
 		series.original_title &&
 			series.original_title.trim() !== '' &&
@@ -170,7 +190,23 @@
 			</section>
 		{/if}
 
-		<!-- Aquí irá «Corregir ficha» de la serie -->
+		{#if data.isAdmin}
+			<ImagePanel
+				item={series}
+				kind="series"
+				open={imagePanelOpen}
+				{imageOptions}
+				{imageListKind}
+			/>
+			<MatchDialog
+				item={series}
+				kind="series"
+				defaultQuery={series.folder}
+				{candidates}
+				{search}
+				open={panelOpen}
+			/>
+		{/if}
 	</div>
 </section>
 

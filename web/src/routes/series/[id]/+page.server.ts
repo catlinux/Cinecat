@@ -1,6 +1,13 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { ApiError } from '$lib/api';
-import type { MediaItem, SeriesDetail, SeriesSeasonDetail } from '$lib/api';
+import type {
+	Candidate,
+	ImageKind,
+	ImageOptions,
+	MediaItem,
+	SeriesDetail,
+	SeriesSeasonDetail
+} from '$lib/api';
 import { ConfigurationError, createApiClient } from '$lib/api-factory';
 import { selectSeriesSeason } from '$lib/series';
 import { requireSessionToken } from '$lib/session';
@@ -39,12 +46,80 @@ function watchedFailure(cause: unknown) {
 	});
 }
 
-export const load: PageServerLoad = async ({ params, locals, fetch, url }) => {
+function correctionFailure(cause: unknown) {
+	if (cause instanceof ApiError) {
+		if (cause.status === 401) {
+			redirect(303, '/login');
+		}
+		if (cause.status === 400) {
+			return fail(400, { panel: true, message: 'Datos no válidos.' });
+		}
+		if (cause.status === 403) {
+			return fail(403, {
+				panel: true,
+				message: 'Solo los administradores pueden corregir fichas.'
+			});
+		}
+		if (cause.status === 404) {
+			return fail(404, { panel: true, message: 'Serie no encontrada.' });
+		}
+		if (cause.status === 503) {
+			return fail(503, {
+				panel: true,
+				message: 'TMDB no está configurado en el servidor'
+			});
+		}
+	}
+	return fail(502, { panel: true, message: 'No se pudo consultar TMDB' });
+}
+
+function imageKind(value: FormDataEntryValue | null): ImageKind | null {
+	const kind = String(value ?? '');
+	return kind === 'poster' || kind === 'backdrop' ? kind : null;
+}
+
+function imageFailure(cause: unknown) {
+	if (cause instanceof ApiError) {
+		if (cause.status === 401) {
+			redirect(303, '/login');
+		}
+		if (cause.status === 400) {
+			return fail(400, { imagePanel: true, message: 'URL no válida' });
+		}
+		if (cause.status === 403) {
+			return fail(403, {
+				imagePanel: true,
+				message: 'Solo los administradores pueden cambiar las imágenes.'
+			});
+		}
+		if (cause.status === 404) {
+			return fail(404, { imagePanel: true, message: 'Serie no encontrada.' });
+		}
+		if (cause.status === 409) {
+			return fail(409, {
+				imagePanel: true,
+				message: 'Identifica primero la serie para ver las imágenes de TMDB'
+			});
+		}
+		if (cause.status === 503) {
+			return fail(503, {
+				imagePanel: true,
+				message: 'TMDB no está configurado en el servidor'
+			});
+		}
+	}
+	return fail(502, { imagePanel: true, message: 'No se pudo consultar TMDB' });
+}
+
+export const load: PageServerLoad = async ({ params, locals, fetch, url, parent }) => {
 	const token = requireSessionToken(locals);
 	const id = seriesID(params);
 	if (id === null) {
 		error(404, 'Serie no encontrada');
 	}
+
+	const layout = typeof parent === 'function' ? await parent() : { isAdmin: false };
+	const isAdmin = Boolean(layout?.isAdmin);
 
 	const api = createApiClient(fetch);
 	let series: SeriesDetail;
@@ -114,7 +189,10 @@ export const load: PageServerLoad = async ({ params, locals, fetch, url }) => {
 		series,
 		season,
 		selectedSeason,
-		firstEpisode
+		firstEpisode,
+		isAdmin,
+		corregir: isAdmin && url.searchParams.get('corregir') === '1',
+		imagenes: isAdmin && url.searchParams.get('imagenes') === '1'
 	};
 };
 
@@ -187,6 +265,183 @@ export const actions: Actions = {
 		return {
 			success: true,
 			message: watched ? 'Episodio marcado como visto.' : 'Episodio desmarcado.'
+		};
+	},
+
+	candidates: async ({ request, locals, fetch, params }) => {
+		const token = requireSessionToken(locals);
+		const id = seriesID(params);
+		if (id === null) {
+			return fail(404, { panel: true, message: 'Serie no encontrada.' });
+		}
+
+		const form = await request.formData();
+		const query = String(form.get('q') ?? '').trim();
+		if (!query) {
+			return fail(400, { panel: true, message: 'Escribe un título para buscar.' });
+		}
+
+		const yearRaw = String(form.get('year') ?? '').trim();
+		let year = 0;
+		if (yearRaw) {
+			year = Number(yearRaw);
+			if (!Number.isInteger(year) || year < 0) {
+				return fail(400, { panel: true, message: 'El año debe ser un número entero.' });
+			}
+		}
+
+		try {
+			const response = await createApiClient(fetch).getSeriesCandidates(
+				id,
+				query,
+				year,
+				token
+			);
+			return {
+				panel: true,
+				candidates: (response.candidates ?? []) as Candidate[],
+				search: { q: query, year: year > 0 ? year : null }
+			};
+		} catch (cause) {
+			return correctionFailure(cause);
+		}
+	},
+
+	match: async ({ request, locals, fetch, params }) => {
+		const token = requireSessionToken(locals);
+		const id = seriesID(params);
+		if (id === null) {
+			return fail(404, { panel: true, message: 'Serie no encontrada.' });
+		}
+
+		const form = await request.formData();
+		const tmdbID = Number(String(form.get('tmdb_id') ?? ''));
+		if (!Number.isInteger(tmdbID) || tmdbID <= 0) {
+			return fail(400, { panel: true, message: 'Candidato no válido.' });
+		}
+
+		try {
+			await createApiClient(fetch).matchSeries(id, tmdbID, token);
+		} catch (cause) {
+			return correctionFailure(cause);
+		}
+
+		return { success: true, panel: true, message: 'Ficha corregida.' };
+	},
+
+	nomatch: async ({ locals, fetch, params }) => {
+		const token = requireSessionToken(locals);
+		const id = seriesID(params);
+		if (id === null) {
+			return fail(404, { panel: true, message: 'Serie no encontrada.' });
+		}
+
+		try {
+			await createApiClient(fetch).matchSeries(id, null, token);
+		} catch (cause) {
+			return correctionFailure(cause);
+		}
+
+		return { success: true, panel: true, message: 'Marcada como «no es ninguna».' };
+	},
+
+	automatic: async ({ locals, fetch, params }) => {
+		const token = requireSessionToken(locals);
+		const id = seriesID(params);
+		if (id === null) {
+			return fail(404, { panel: true, message: 'Serie no encontrada.' });
+		}
+
+		try {
+			await createApiClient(fetch).resetSeriesMatch(id, token);
+		} catch (cause) {
+			return correctionFailure(cause);
+		}
+
+		return {
+			success: true,
+			panel: true,
+			message: 'Vuelta a la identificación automática.'
+		};
+	},
+
+	imageList: async ({ request, locals, fetch, params }) => {
+		const token = requireSessionToken(locals);
+		const id = seriesID(params);
+		if (id === null) {
+			return fail(404, { imagePanel: true, message: 'Serie no encontrada.' });
+		}
+
+		const form = await request.formData();
+		const kind = imageKind(form.get('kind'));
+		if (kind === null) {
+			return fail(400, { imagePanel: true, message: 'Tipo de imagen no válido.' });
+		}
+
+		try {
+			const imageOptions: ImageOptions = await createApiClient(fetch).getSeriesImageOptions(
+				id,
+				token
+			);
+			return { imagePanel: true, imageKind: kind, imageOptions };
+		} catch (cause) {
+			return imageFailure(cause);
+		}
+	},
+
+	imageSet: async ({ request, locals, fetch, params }) => {
+		const token = requireSessionToken(locals);
+		const id = seriesID(params);
+		if (id === null) {
+			return fail(404, { imagePanel: true, message: 'Serie no encontrada.' });
+		}
+
+		const form = await request.formData();
+		const kind = imageKind(form.get('kind'));
+		if (kind === null) {
+			return fail(400, { imagePanel: true, message: 'Tipo de imagen no válido.' });
+		}
+		const url = String(form.get('url') ?? '').trim();
+		if (!url.startsWith('http://') && !url.startsWith('https://')) {
+			return fail(400, { imagePanel: true, message: 'URL no válida' });
+		}
+
+		try {
+			await createApiClient(fetch).setSeriesImage(id, kind, url, token);
+		} catch (cause) {
+			return imageFailure(cause);
+		}
+
+		return {
+			success: true,
+			imagePanel: true,
+			message: kind === 'poster' ? 'Cartel actualizado.' : 'Fondo actualizado.'
+		};
+	},
+
+	imageReset: async ({ request, locals, fetch, params }) => {
+		const token = requireSessionToken(locals);
+		const id = seriesID(params);
+		if (id === null) {
+			return fail(404, { imagePanel: true, message: 'Serie no encontrada.' });
+		}
+
+		const form = await request.formData();
+		const kind = imageKind(form.get('kind'));
+		if (kind === null) {
+			return fail(400, { imagePanel: true, message: 'Tipo de imagen no válido.' });
+		}
+
+		try {
+			await createApiClient(fetch).resetSeriesImage(id, kind, token);
+		} catch (cause) {
+			return imageFailure(cause);
+		}
+
+		return {
+			success: true,
+			imagePanel: true,
+			message: kind === 'poster' ? 'Cartel restaurado.' : 'Fondo restaurado.'
 		};
 	}
 };

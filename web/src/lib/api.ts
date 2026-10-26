@@ -522,6 +522,58 @@ export class ApiClient {
 		return this.get<SeriesSeasonDetail>(`/api/v1/series/${id}/seasons/${season}`, token);
 	}
 
+	async getSeriesCandidates(
+		id: number,
+		query: string,
+		year: number,
+		token: string
+	): Promise<CandidatesResponse> {
+		const params = new URLSearchParams({ q: query });
+		if (year > 0) {
+			params.set('year', String(year));
+		}
+		return this.get<CandidatesResponse>(`/api/v1/series/${id}/candidates?${params}`, token);
+	}
+
+	async matchSeries(
+		id: number,
+		tmdbID: number | null,
+		token: string
+	): Promise<SeriesDetail> {
+		return this.put<SeriesDetail>(
+			`/api/v1/series/${id}/match`,
+			{ tmdb_id: tmdbID },
+			token
+		);
+	}
+
+	async resetSeriesMatch(id: number, token: string): Promise<SeriesDetail> {
+		return this.request<SeriesDetail>(`/api/v1/series/${id}/match`, {
+			method: 'DELETE',
+			token
+		});
+	}
+
+	async getSeriesImageOptions(id: number, token: string): Promise<ImageOptions> {
+		return this.get<ImageOptions>(`/api/v1/series/${id}/images`, token);
+	}
+
+	async setSeriesImage(
+		id: number,
+		kind: ImageKind,
+		url: string,
+		token: string
+	): Promise<SeriesDetail> {
+		return this.put<SeriesDetail>(`/api/v1/series/${id}/images/${kind}`, { url }, token);
+	}
+
+	async resetSeriesImage(id: number, kind: ImageKind, token: string): Promise<SeriesDetail> {
+		return this.request<SeriesDetail>(`/api/v1/series/${id}/images/${kind}`, {
+			method: 'DELETE',
+			token
+		});
+	}
+
 	async setSeriesWatched(id: number, watched: boolean, token: string): Promise<void> {
 		const path = `/api/v1/series/${id}/watched`;
 		if (watched) {

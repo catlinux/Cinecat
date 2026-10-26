@@ -1,4 +1,4 @@
-import type { MediaItem } from './api';
+import type { MediaItem, SeriesSeason } from './api';
 
 export function kindLabel(kind: MediaItem['kind']): string {
 	switch (kind) {
@@ -272,6 +272,64 @@ export function truncateSynopsis(text: string, maxLength = 140): string {
 	const lastSpace = cut.lastIndexOf(' ');
 	const base = lastSpace > maxLength / 2 ? cut.slice(0, lastSpace) : cut;
 	return `${base.trimEnd()}…`;
+}
+
+export interface EpisodeNeighbors {
+	previous: MediaItem | null;
+	next: MediaItem | null;
+}
+
+function sortEpisodes(items: MediaItem[]): MediaItem[] {
+	return [...items].sort((a, b) => {
+		const left = a.episode ?? Number.MAX_SAFE_INTEGER;
+		const right = b.episode ?? Number.MAX_SAFE_INTEGER;
+		return left - right || a.id - b.id;
+	});
+}
+
+// La temporada pedida puede no ser la anterior numérica: la lista de temporadas
+// manda para saltar huecos sin inventarse una temporada que no existe.
+export function episodeNeighbors(
+	current: Pick<MediaItem, 'id' | 'season' | 'episode'>,
+	seasons: Array<Pick<SeriesSeason, 'season'>>,
+	itemsBySeason: Map<number, MediaItem[]>
+): EpisodeNeighbors {
+	if (current.season === null) {
+		return { previous: null, next: null };
+	}
+
+	const seasonNumbers = [...new Set(seasons.map((season) => season.season))].sort(
+		(left, right) => left - right
+	);
+	const seasonIndex = seasonNumbers.indexOf(current.season);
+	if (seasonIndex === -1) {
+		return { previous: null, next: null };
+	}
+
+	const currentItems = sortEpisodes(itemsBySeason.get(current.season) ?? []);
+	const currentIndex = currentItems.findIndex((item) => item.id === current.id);
+	if (currentIndex === -1) {
+		return { previous: null, next: null };
+	}
+
+	let previous: MediaItem | null = currentIndex > 0 ? currentItems[currentIndex - 1] : null;
+	for (let index = seasonIndex - 1; previous === null && index >= 0; index -= 1) {
+		const items = sortEpisodes(itemsBySeason.get(seasonNumbers[index]) ?? []);
+		if (items.length > 0) {
+			previous = items[items.length - 1];
+		}
+	}
+
+	let next: MediaItem | null =
+		currentIndex < currentItems.length - 1 ? currentItems[currentIndex + 1] : null;
+	for (let index = seasonIndex + 1; next === null && index < seasonNumbers.length; index += 1) {
+		const items = sortEpisodes(itemsBySeason.get(seasonNumbers[index]) ?? []);
+		if (items.length > 0) {
+			next = items[0];
+		}
+	}
+
+	return { previous, next };
 }
 
 export function formatExpiry(value: string): string {

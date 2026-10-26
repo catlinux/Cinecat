@@ -3121,6 +3121,136 @@ footer {
 	font-size: 0.66rem;
 }
 
+.breadcrumbs {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.4rem;
+	margin: 0 0 1.2rem;
+	color: var(--texto-apagado);
+	font-size: 0.72rem;
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.breadcrumbs a {
+	color: var(--naranja);
+	text-decoration: none;
+}
+
+.breadcrumbs a:hover {
+	text-decoration: underline;
+}
+
+.breadcrumbs [aria-current='page'] {
+	color: var(--texto-tenue);
+}
+
+.breadcrumb-separator {
+	color: var(--texto-apagado);
+}
+
+.episode-detail {
+	position: relative;
+	isolation: isolate;
+	overflow: hidden;
+	padding: clamp(1.2rem, 4vw, 2.4rem) 0;
+	border-top: 1px solid var(--borde-suave);
+	border-bottom: 1px solid var(--borde-suave);
+}
+
+.episode-hero {
+	position: absolute;
+	z-index: 0;
+	inset: 0 0 auto;
+	height: min(26rem, 62vh);
+	opacity: 0.24;
+	pointer-events: none;
+}
+
+.episode-hero img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	filter: saturate(0.8);
+}
+
+.episode-hero::after {
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(
+		180deg,
+		color-mix(in srgb, var(--crema) 38%, transparent) 0%,
+		var(--crema) 94%
+	);
+	content: '';
+}
+
+.episode-detail-body {
+	position: relative;
+	z-index: 1;
+	width: min(52rem, 100%);
+	padding: clamp(1rem, 4vw, 2.2rem) 0;
+}
+
+.episode-detail-body h1 {
+	margin: 0.3rem 0 0.6rem;
+	font-family: 'Fraunces', Georgia, serif;
+	font-size: clamp(2.2rem, 6vw, 3.6rem);
+	font-weight: 700;
+	line-height: 0.98;
+	color: var(--granate);
+}
+
+.episode-duration {
+	color: var(--texto-apagado);
+}
+
+.episode-nav {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1rem;
+	margin-top: 2rem;
+	padding-top: 1rem;
+	border-top: 1px solid var(--borde-suave);
+}
+
+.episode-nav-link {
+	display: flex;
+	flex-direction: column;
+	gap: 0.2rem;
+	max-width: 22rem;
+	color: inherit;
+	text-decoration: none;
+}
+
+.episode-nav-link--next {
+	align-items: flex-end;
+	margin-left: auto;
+	text-align: right;
+}
+
+.episode-nav-label {
+	color: var(--naranja);
+	font-size: 0.68rem;
+	font-weight: 600;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+}
+
+.episode-nav-title {
+	font-family: 'Fraunces', Georgia, serif;
+	font-size: 1rem;
+	font-weight: 600;
+	line-height: 1.3;
+	color: var(--granate);
+}
+
+.episode-admin {
+	margin: 1.2rem 0 0;
+}
+
 @media (max-width: 900px) {
 	.filters-form--compact {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3147,6 +3277,16 @@ footer {
 
 	.episode-still {
 		max-width: none;
+	}
+
+	.episode-nav {
+		flex-direction: column;
+	}
+
+	.episode-nav-link--next {
+		align-items: flex-start;
+		margin-left: 0;
+		text-align: left;
 	}
 }
 

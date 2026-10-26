@@ -1,19 +1,47 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import type { ImageKind, ImageOptions, MediaItem } from '$lib/api';
+	import type { ImageKind, ImageOptions } from '$lib/api';
 	import { formatLanguage, formatRating, formatResolution } from '$lib/media';
+
+	type ImagePanelKind = 'movie' | 'series';
+
+	interface ImagePanelItem {
+		title: string;
+		poster_url: string | null;
+		poster_custom: boolean;
+		backdrop_url: string | null;
+		backdrop_custom: boolean;
+	}
+
+	interface ImagePanelActions {
+		imageList: string;
+		imageSet: string;
+		imageReset: string;
+	}
+
+	const movieActions: ImagePanelActions = {
+		imageList: 'imageList',
+		imageSet: 'imageSet',
+		imageReset: 'imageReset'
+	};
 
 	let {
 		item,
 		open,
 		imageOptions,
-		imageListKind
+		imageListKind,
+		kind = 'movie',
+		actions = movieActions
 	}: {
-		item: MediaItem;
+		item: ImagePanelItem;
 		open: boolean;
 		imageOptions: ImageOptions | null;
 		imageListKind: ImageKind | null;
+		kind?: ImagePanelKind;
+		actions?: ImagePanelActions;
 	} = $props();
+
+	const targetLabel = $derived(kind === 'series' ? 'serie' : 'película');
 </script>
 
 {#snippet imageSection(
@@ -41,7 +69,7 @@
 			<div class="image-current-info">
 				{#if custom}
 					<span class="file-tag">personalizada</span>
-					<form method="POST" action="?/imageReset" use:enhance>
+					<form method="POST" action={`?/${actions.imageReset}`} use:enhance>
 						<input type="hidden" name="kind" value={kind} />
 						<button class="button-danger" type="submit">Restaurar la de TMDB</button>
 					</form>
@@ -49,7 +77,7 @@
 			</div>
 		</div>
 
-		<form class="image-url-form" method="POST" action="?/imageSet" use:enhance>
+		<form class="image-url-form" method="POST" action={`?/${actions.imageSet}`} use:enhance>
 			<input type="hidden" name="kind" value={kind} />
 			<label for={`${kind}-url`}>Usar esta URL</label>
 			<input
@@ -65,7 +93,7 @@
 			<button class="button" type="submit">Usar esta URL</button>
 		</form>
 
-		<form method="POST" action="?/imageList" use:enhance>
+		<form method="POST" action={`?/${actions.imageList}`} use:enhance>
 			<input type="hidden" name="kind" value={kind} />
 			<button class="button button-secondary" type="submit">Ver las que ofrece TMDB</button>
 		</form>
@@ -86,7 +114,7 @@
 							<p class="image-option-meta">
 								{formatResolution(option.width, option.height, '')} · {formatRating(option.vote_average)}
 							</p>
-							<form method="POST" action="?/imageSet" use:enhance>
+							<form method="POST" action={`?/${actions.imageSet}`} use:enhance>
 								<input type="hidden" name="kind" value={kind} />
 								<input type="hidden" name="url" value={option.full_url} />
 								<button class="button" type="submit">Usar esta</button>
@@ -101,7 +129,13 @@
 	</section>
 {/snippet}
 
-<details class="admin-card image-panel" id="imagenes" open={open}>
+<details
+	class="admin-card image-panel"
+	class:image-panel--series={kind === 'series'}
+	id="imagenes"
+	open={open}
+	aria-label={`Cambiar imagen de la ${targetLabel}`}
+>
 	<summary class="image-panel-summary">Cambiar imagen</summary>
 
 	<div class="image-panel-body">

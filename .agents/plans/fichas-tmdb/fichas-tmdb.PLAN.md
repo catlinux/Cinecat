@@ -227,7 +227,7 @@ El usuario quiere un panel de administración bien estructurado para configurar 
 - Corrección (admin): `GET /api/v1/series/{id}/candidates`, `PUT /api/v1/series/{id}/match`, `DELETE /api/v1/series/{id}/match`, con la misma semántica que las películas.
 - Esfuerzo: medio.
 
-### ✅ T13a (listado y ficha de serie; T13b: corrección, imágenes y episodio) —  Web de series
+### ✅ T13a y T13b (listado, ficha de serie, corrección, imágenes y episodio) —  Web de series
 - Archivos: `web/src/routes/series/+page.svelte|.server.ts`, `web/src/routes/series/[id]/+page.svelte|.server.ts`, ficha de episodio en `web/src/routes/items/[id]/+page.svelte`, `MatchDialog` reutilizado, tests.
 - `/series`: rejilla paginada (48) con buscador y, para admin, «Sin identificar».
 - `/series/[id]`: cabecera de la serie (fondo, título, años, géneros, sinopsis), pestañas o selector de temporada (`?season=N`), y la lista de episodios de la temporada (número, título del episodio, imagen, sinopsis corta, botón reproducir). Admin: «Corregir ficha» a nivel de serie.

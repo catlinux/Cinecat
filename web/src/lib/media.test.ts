@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import type { MediaItem } from './api';
 import {
+	episodeNeighbors,
 	formatAudioChannels,
 	formatBitrate,
 	formatBytes,
@@ -18,6 +20,49 @@ import {
 	splitCast,
 	truncateSynopsis
 } from './media';
+
+function episodeItem(
+	id: number,
+	season: number,
+	episode: number,
+	title = `Episodio ${episode}`
+): MediaItem {
+	return {
+		id,
+		library_id: 1,
+		path: `/media/series/${id}.mkv`,
+		title,
+		file_title: `file-${id}`,
+		year: 2010,
+		kind: 'episode',
+		season,
+		episode,
+		tmdb_id: null,
+		overview: null,
+		poster_url: null,
+		poster_custom: false,
+		original_title: null,
+		imdb_id: null,
+		tagline: null,
+		genres: [],
+		runtime_minutes: 42,
+		rating: null,
+		directors: [],
+		cast: [],
+		backdrop_url: null,
+		backdrop_custom: false,
+		overview_language: null,
+		match_status: null,
+		match_score: null,
+		watched: false,
+		progress: null,
+		collections: [],
+		series_id: 5,
+		series_title: 'Una serie',
+		episode_title: title,
+		still_url: null
+	};
+}
 
 describe('formato de la ficha', () => {
 	it('formatea la duración en horas y minutos', () => {
@@ -90,6 +135,89 @@ describe('estado de identificación y sinopsis', () => {
 		expect(result.length).toBeLessThanOrEqual(140);
 		expect(result.endsWith('…')).toBe(true);
 		expect(result).not.toContain('  ');
+	});
+});
+
+describe('navegación entre episodios', () => {
+	const season1 = [episodeItem(11, 1, 1), episodeItem(12, 1, 2)];
+	const season2 = [episodeItem(21, 2, 1), episodeItem(22, 2, 2)];
+	const seasons = [{ season: 1 }, { season: 2 }];
+
+	it('encuentra el anterior y el siguiente dentro de la temporada', () => {
+		const middle = episodeItem(13, 1, 2);
+		const result = episodeNeighbors(
+			middle,
+			seasons,
+			new Map([
+				[1, [episodeItem(11, 1, 1), middle, episodeItem(14, 1, 3)]]
+			])
+		);
+
+		expect(result.previous?.id).toBe(11);
+		expect(result.next?.id).toBe(14);
+	});
+
+	it('salta a la temporada anterior en el primer episodio', () => {
+		const first = episodeItem(21, 2, 1);
+		const result = episodeNeighbors(first, seasons, new Map([
+			[1, season1],
+			[2, season2]
+		]));
+
+		expect(result.previous?.id).toBe(12);
+		expect(result.next?.id).toBe(22);
+	});
+
+	it('salta a la temporada siguiente en el último episodio', () => {
+		const last = episodeItem(12, 1, 2);
+		const result = episodeNeighbors(last, seasons, new Map([
+			[1, season1],
+			[2, season2]
+		]));
+
+		expect(result.previous?.id).toBe(11);
+		expect(result.next?.id).toBe(21);
+	});
+
+	it('no cruza los extremos de la serie', () => {
+		const first = episodeNeighbors(
+			episodeItem(11, 1, 1),
+			seasons,
+			new Map([[1, season1]])
+		);
+		const last = episodeNeighbors(
+			episodeItem(22, 2, 2),
+			seasons,
+			new Map([[2, season2]])
+		);
+
+		expect(first.previous).toBeNull();
+		expect(first.next?.id).toBe(12);
+		expect(last.previous?.id).toBe(21);
+		expect(last.next).toBeNull();
+	});
+
+	it('respeta los huecos entre temporadas', () => {
+		const season3 = [episodeItem(31, 3, 1), episodeItem(32, 3, 2)];
+		const firstOfSeason3 = episodeNeighbors(
+			episodeItem(31, 3, 1),
+			[{ season: 1 }, { season: 3 }],
+			new Map([
+				[1, season1],
+				[3, season3]
+			])
+		);
+
+		expect(firstOfSeason3.previous?.id).toBe(12);
+		expect(firstOfSeason3.next?.id).toBe(32);
+	});
+
+	it('no inventa vecinos si la temporada solo tiene un episodio', () => {
+		const only = episodeItem(41, 1, 1);
+		const result = episodeNeighbors(only, [{ season: 1 }], new Map([[1, [only]]]));
+
+		expect(result.previous).toBeNull();
+		expect(result.next).toBeNull();
 	});
 });
 
