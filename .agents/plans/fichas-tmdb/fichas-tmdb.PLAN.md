@@ -117,7 +117,21 @@ Cubiertas por el plan tal cual: corregir/identificar desde la ficha (T6), repart
 | Complementos que podamos añadir | **Diseño pendiente (Opus), tarea P0**: decidir el modelo antes de escribir código. Opciones a evaluar: (a) proveedores de metadatos intercambiables (TMDB, OMDb, TVDB, locales…) tras una interfaz Go común; (b) complementos externos como procesos/contenedores que hablan con el servidor por HTTP+JSON (webhooks de eventos, API con token); (c) scripts. Recomendación inicial: (a) interna + (b) webhooks y tokens de API; sin cargar código de terceros dentro del servidor. Debe respetar la regla del proyecto de no hacer conexiones salientes salvo a fuentes de metadatos configuradas. |
 | Reproductor DLNA/UPnP | **Diseño pendiente (Opus), tarea P1**: dos cosas distintas: (1) Cinecat como **servidor de medios DLNA** (el televisor o un reproductor de la red lo ve sin app: SSDP + ContentDirectory + streaming directo/transcodificado; red local, desactivado por defecto) y (2) Cinecat como **controlador** que envía la reproducción a un dispositivo (Chromecast/DLNA renderer). Plataformas fuera de alcance hoy (README): confirmar con el usuario antes de empezar. Ambas requieren acceso multicast desde el contenedor (`network_mode: host` en el Debian) y entran en conflicto con el proxy actual: evaluar. |
 
-**Orden completo (hito 1 revisado):** T4b → T4c → T4d → **T4e** → T5 → T6 → D1; después **A1 → A2 → A3 → A4 → U1 → U2 → A5 → A6 → A7 → A8** (panel de admin y de usuario, con ▶ desplegar tras A3, U2 y A8), y los diseños **P0/P1/T6s** con Opus en paralelo, antes de sus implementaciones. Hito 2 (colecciones) y 3 (series) como estaban; el portal y «continuar» ya contemplan colecciones y series.
+**Orden anterior (sustituido por el «Orden definitivo» de abajo):** T4b → T4c → T4d → **T4e** → T5 → T6 → D1; después **A1 → A2 → A3 → A4 → U1 → U2 → A5 → A6 → A7 → A8** (panel de admin y de usuario, con ▶ desplegar tras A3, U2 y A8), y los diseños **P0/P1/T6s** con Opus en paralelo, antes de sus implementaciones. Hito 2 (colecciones) y 3 (series) como estaban; el portal y «continuar» ya contemplan colecciones y series.
+
+**Orden definitivo (decidido por el orquestador por facilidad y para desplegar pronto):**
+
+1. **T4b** (API: búsqueda ampliada, letra, género, visionado) — en curso.
+2. **T5** (portal `/`, `/movies` paginada con búsqueda, letra y género; el portal empieza con las tres categorías y «Añadido recientemente» usando `sort=added`) → ▶ **desplegar**.
+3. **T6** (ficha completa: reparto, dirección, corregir ficha, visto/no visto; con huecos para «Archivo» y «Póster») → cierra 0.11.0 → ▶ **desplegar** + D1.
+4. **T4c** (info del archivo con ffprobe) + **T6b** (panel «Archivo» en la ficha) → ▶ desplegar.
+5. **T4d** (editar póster) + **T6c** (selector de póster en la ficha).
+6. **T4e** (progreso de reproducción y `/api/v1/home`) + **T5b** (filas «Continuar viendo», «Siguiente episodio» y «Recientes» en el portal, y reanudar en el reproductor) → ▶ desplegar.
+7. **A1 → A2 → A3 → A4** (ajustes y panel de administración) → ▶ desplegar; **U1 → U2** (panel de usuario y personalización del portal) → ▶; **A5 → A6 → A7 → A8**.
+8. Hito 2 (colecciones T7–T9) y hito 3 (series T10–T13) pueden adelantarse a 7 si el usuario lo prefiere, porque el portal ya los espera.
+9. Diseños con Opus (**T6s** subtítulos, **P0** complementos, **P1** DLNA) cuando el usuario los priorice.
+
+Versiones: 0.11.0 al cerrar T6; los pasos 4–6 son 0.12.0 salvo que cierren antes un hito del plan (ajustar el número al cerrar).
 
 ## Hito 1b — Panel de administración (→ 0.11.x/0.12.0 según encaje)
 
