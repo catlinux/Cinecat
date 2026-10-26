@@ -10,6 +10,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 ### Añadido
 
 - Comprobación de actualizaciones: el servidor consulta las etiquetas `vX.Y.Z` de GitHub (opt-in con `system.check_updates`, o a petición) y ofrece a los administradores `GET /api/v1/system/update`, `POST …/check` y `POST …/apply`; esta última deja la orden en un directorio compartido con el host (`CINECAT_RUN_DIR`). El servicio del host que la ejecuta llega en una versión posterior.
+- Filas con flechas ‹ › sin barra de desplazamiento; el portal ya no desborda horizontalmente (categorías en rejilla adaptable).
+- Reparto y equipo con fotos (retrato de respaldo con iniciales) y fila «Más como este» en las fichas de película y de serie.
+
 ## [0.13.1] - 2026-10-26
 
 ### Corregido

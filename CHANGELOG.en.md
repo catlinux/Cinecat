@@ -10,6 +10,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 ### Added
 
 - Update check: the server queries GitHub `vX.Y.Z` tags (opt-in via `system.check_updates`, or on demand) and gives administrators `GET /api/v1/system/update`, `POST …/check` and `POST …/apply`; the latter drops the order in a directory shared with the host (`CINECAT_RUN_DIR`). The host service that carries it out ships in a later version.
+- Rows with ‹ › arrows and no scrollbar; the portal no longer overflows horizontally (responsive category grid).
+- Cast and crew with photos (initials fallback portrait) and a "More like this" row on movie and series pages.
+
 ## [0.13.1] - 2026-10-26
 
 ### Fixed
