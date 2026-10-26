@@ -15,11 +15,10 @@ type Mode string
 const (
 	// ModeDirect sirve el archivo tal cual, con soporte de rangos HTTP.
 	ModeDirect Mode = "direct"
-	// ModeRemux reempaqueta a HLS fMP4 sin recodificar.
+	// ModeRemux sirve el vídeo por HLS. El nombre se conserva por
+	// compatibilidad con los clientes; hoy el servidor siempre recodifica a
+	// H.264 + AAC estéreo (ver hlsTranscodeArgs).
 	ModeRemux Mode = "remux"
-	// ModeTranscode reempaqueta a HLS fMP4 recodificando solo el vídeo cuando
-	// los keyframes del original no permiten segmentar sin tocar el códec.
-	ModeTranscode Mode = "transcode"
 )
 
 // Errores del paquete.
@@ -68,18 +67,15 @@ func SafePath(libraryRoot, mediaPath string) (string, error) {
 	return clean, nil
 }
 
-// ValidHLSName indica si el nombre corresponde a un archivo que genera el
-// remux: la playlist, el init de fMP4 o un segmento.
+// ValidHLSName indica si el nombre corresponde a un archivo HLS que se sirve:
+// la playlist o un segmento MPEG-TS.
 func ValidHLSName(name string) bool {
 	if name != filepath.Base(name) || strings.ContainsAny(name, `/\`) {
 		return false
 	}
-	switch {
-	case name == "playlist.m3u8", name == "init.mp4":
+	if name == "playlist.m3u8" {
 		return true
-	case strings.HasPrefix(name, "segment_") && strings.HasSuffix(name, ".m4s"):
-		return true
-	default:
-		return false
 	}
+	_, ok := segmentIndex(name)
+	return ok
 }

@@ -15,10 +15,13 @@ import (
 	"time"
 )
 
-// DefaultURLTTL es la vida por defecto de una URL de reproducción firmada.
-const DefaultURLTTL = 15 * time.Minute
+// DefaultURLTTL es la vida por defecto de una URL de reproducción firmada. Los
+// segmentos HLS y los saltos en reproducción directa reutilizan la firma de la
+// URL inicial, así que debe cubrir una película entera con pausas: con 15
+// minutos la reproducción se cortaba a mitad.
+const DefaultURLTTL = 8 * time.Hour
 
-// hlsIdleTTL es el tiempo que se conserva un remux ya generado sin usarse.
+// hlsIdleTTL es el tiempo que se conserva un HLS ya generado sin usarse.
 const hlsIdleTTL = time.Hour
 
 // Options configura el servicio de reproducción.
@@ -55,17 +58,40 @@ type Service struct {
 	closeOnce sync.Once
 }
 
+// hlsEntry es el HLS de un ítem. Sus campos se protegen con Service.mu.
 type hlsEntry struct {
 	dir          string
+	inputPath    string
 	lastUsed     time.Time
-	mode         Mode
 	playlistFile string
+	// segments es el total de la playlist VOD propia; 0 si se sirve la de
+	// FFmpeg y por tanto no se puede relanzar en un segmento concreto.
+	segments int
+	// run es el proceso FFmpeg actual; nil hasta la primera petición de
+	// segmento. Un salto lo sustituye por otro que empieza más adelante.
+	run *hlsRun
+	// removed indica que la entrada ya se borró y no debe relanzar procesos.
+	removed bool
+}
 
-	// done se cierra cuando termina el proceso FFmpeg. err se escribe antes de
+// hlsRun es un proceso FFmpeg que genera segmentos desde start.
+type hlsRun struct {
+	start   int
+	started time.Time
+	// done se cierra cuando termina el proceso. err se escribe antes de
 	// cerrar done, así que leerlo después de recibir del canal es seguro.
 	done   chan struct{}
 	err    error
 	cancel context.CancelFunc
+}
+
+func (r *hlsRun) finished() bool {
+	select {
+	case <-r.done:
+		return true
+	default:
+		return false
+	}
 }
 
 // New crea el servicio de reproducción.
@@ -129,19 +155,13 @@ func (s *Service) Close() error {
 	})
 	<-s.done
 
+	// Los procesos ya se cancelaron con procCtx; removeEntryLocked espera a
+	// que terminen antes de borrar sus archivos.
 	s.mu.Lock()
-	entries := make([]*hlsEntry, 0, len(s.entries))
-	for _, entry := range s.entries {
-		entries = append(entries, entry)
+	for itemID, entry := range s.entries {
+		s.removeEntryLocked(itemID, entry)
 	}
-	s.entries = make(map[int64]*hlsEntry)
 	s.mu.Unlock()
-
-	// Los procesos se cancelan con procCtx; se espera a que Wait termine antes
-	// de borrar el directorio de trabajo.
-	for _, entry := range entries {
-		<-entry.done
-	}
 	return os.RemoveAll(s.workDir)
 }
 

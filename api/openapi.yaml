@@ -396,8 +396,8 @@ paths:
       summary: Prepara la reproducción de un ítem
       description: |
         Elige entre reproducción directa (el contenedor se puede servir tal
-        cual) y remux a HLS fMP4 (sin recodificar), y devuelve una URL firmada
-        de vida corta. La URL apunta a `/api/v1/stream/...` y no requiere la
+        cual) y HLS MPEG-TS (recodificado a H.264 + AAC estéreo), y devuelve
+        una URL firmada válida 8 horas (los segmentos reutilizan su firma). La URL apunta a `/api/v1/stream/...` y no requiere la
         cabecera de sesión: la autorización es la propia firma.
       security:
         - bearerAuth: []
@@ -497,11 +497,13 @@ paths:
                 $ref: '#/components/schemas/Error'
   /api/v1/stream/{id}/{file}:
     get:
-      summary: Sirve la playlist, el init o un segmento del remux
+      summary: Sirve la playlist o un segmento HLS
       description: |
-        Archivos del remux HLS fMP4: `playlist.m3u8`, `init.mp4` o
-        `segment_XXXXX.m4s`. La playlist que se entrega lleva la firma en las
-        URLs de sus segmentos.
+        Archivos HLS: `playlist.m3u8` (VOD completa desde la primera petición)
+        o `segment_XXXXX.ts` (MPEG-TS, `video/mp2t`). La playlist que se
+        entrega lleva la firma en las URLs de sus segmentos. Un segmento que
+        aún no existe se genera bajo demanda: si queda lejos de lo ya
+        generado, el servidor relanza FFmpeg en él.
       security: []
       parameters:
         - $ref: '#/components/parameters/StreamId'

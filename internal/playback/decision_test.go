@@ -162,14 +162,11 @@ func TestFirmaManipulada(t *testing.T) {
 }
 
 func TestPlaylistFirmada(t *testing.T) {
-	playlist := "#EXTM3U\n#EXT-X-VERSION:7\n#EXT-X-MAP:URI=\"init.mp4\"\n#EXTINF:6.0,\nsegment_00000.m4s\n#EXT-X-ENDLIST\n"
+	playlist := "#EXTM3U\n#EXT-X-VERSION:3\n#EXTINF:6.0,\nsegment_00000.ts\n#EXT-X-ENDLIST\n"
 	query := signedQuery("123", "firma")
 
 	got := string(signPlaylist([]byte(playlist), query))
-	if !strings.Contains(got, `#EXT-X-MAP:URI="init.mp4`+query+`"`) {
-		t.Fatalf("el init no lleva la firma: %q", got)
-	}
-	if !strings.Contains(got, "segment_00000.m4s"+query) {
+	if !strings.Contains(got, "segment_00000.ts"+query) {
 		t.Fatalf("el segmento no lleva la firma: %q", got)
 	}
 	if !strings.HasPrefix(got, "#EXTM3U\n") {
@@ -179,12 +176,7 @@ func TestPlaylistFirmada(t *testing.T) {
 
 func TestHLSArgsEnLista(t *testing.T) {
 	input := "/media/Biblioteca/Película; con espacios & comillas \"raras\".mkv"
-	args := hlsArgs(input)
-
-	joined := strings.Join(args, " ")
-	if !strings.Contains(joined, "-c:v copy") || !strings.Contains(joined, "-c:a copy") {
-		t.Fatalf("faltan los argumentos de copia de códecs: %v", args)
-	}
+	args := hlsTranscodeArgs(input, 0)
 
 	foundInput := false
 	for _, arg := range args {
@@ -209,8 +201,25 @@ func TestHLSArgsEnLista(t *testing.T) {
 		}
 	}
 
-	if !strings.Contains(strings.Join(args, "\n"), "-hls_segment_type\nfmp4") {
-		t.Fatalf("faltan segmentos fMP4: %v", args)
+	if !strings.Contains(strings.Join(args, "\n"), "-hls_segment_type\nmpegts") {
+		t.Fatalf("faltan segmentos MPEG-TS: %v", args)
+	}
+}
+
+func TestValidHLSName(t *testing.T) {
+	for name, want := range map[string]bool{
+		"playlist.m3u8":       true,
+		"segment_00000.ts":    true,
+		"segment_01514.ts":    true,
+		"segment_00000.m4s":   false,
+		"init.mp4":            false,
+		"ffmpeg.m3u8":         false,
+		"../segment_00000.ts": false,
+		"segment_-1.ts":       false,
+	} {
+		if got := ValidHLSName(name); got != want {
+			t.Errorf("ValidHLSName(%q) = %v, se esperaba %v", name, got, want)
+		}
 	}
 }
 

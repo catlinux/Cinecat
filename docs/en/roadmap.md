@@ -15,7 +15,7 @@
 - Library scanning and filename parsing.
 - `es-ES` metadata (TMDB) and image cache.
 - Users, sessions and a versioned API with an OpenAPI contract.
-- Direct play and remux (HLS fMP4).
+- Direct play and HLS (MPEG-TS, re-encoded to H.264 + stereo AAC, with seeking).
 - Automated tests with test videos generated with FFmpeg.
 
 ## Phase 2: web client (`0.2.0`)

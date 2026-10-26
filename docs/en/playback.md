@@ -23,11 +23,13 @@ How to obtain it: on Android, by querying the system codecs; in the browser, wit
 ## Decision chain
 
 1. **Direct play:** the client understands video, audio, container and subtitles. The server just sends the file (with seek support). Almost no server cost.
-2. **Remux:** the video is compatible but the container is not (for example MKV in a browser). The server repackages on the fly (HLS with fMP4) without re-encoding video.
+2. **Remux:** the video is compatible but the container is not (for example MKV in a browser). The server repackages on the fly to HLS without re-encoding video. *Not used today: see below.*
 3. **Partial transcoding:** the video is copied and only the audio is converted (for example DTS to AAC/AC3).
 4. **Full transcoding:** the server re-encodes the video (with hardware acceleration if available) and adapts resolution and bitrate.
 
-Before remuxing, the server checks the keyframe interval of the first video stream with `ffprobe`. If it exceeds **15 s** (common in old AVI/DivX files), it switches to **software video transcoding** with libx264 (`veryfast`, CRF 20) and AAC audio, forcing keyframes every 6 s so HLS produces several small segments. This part is implemented; the rest of the device-profile chain described in this document (partial transcoding, hardware, subtitles) is still future design.
+**Implemented today:** MP4/M4V are served directly; everything else (MKV, AVI, MOV, TS, M2TS) is served over HLS, **always re-encoded** to H.264 (libx264 `veryfast`, CRF 20, up to 1080p) and **stereo** AAC, with keyframes every 6 s and 6 s MPEG-TS segments. The real library is almost all DivX/MPEG-4 with AC-3 5.1 or MP3 audio, which no browser plays through MSE, and 5.1 AAC is not accepted either, hence the stereo downmix. The rest of the device-profile chain described in this document (remux, partial transcoding, hardware, subtitles) is still future design.
+
+**Seeking.** The playlist is a complete VOD from the first request. FFmpeg starts on the first segment request, at that segment. If a segment more than 4 segments (24 s) ahead of what has been produced is requested later, or a gap behind it, the server stops FFmpeg and restarts it at the requested segment (`-ss` + `-start_number`), as Jellyfin does. So that segments from different processes fit together, all output timestamps carry a fixed 10 s offset (`-output_ts_offset`): segment N always starts at the same instant, whichever process produced it. A segment is considered complete once it appears in its process playlist (`ffmpeg.m3u8`); on restart, the half-written one and those the new process will rewrite are deleted.
 
 The server **prefers H.265** when the client supports it (less space and bandwidth) and **falls back to H.264** when it does not.
 
@@ -50,7 +52,7 @@ It cannot be taken for granted. As of 2026-10-24, according to the sources consu
 - Firefox supports it with hardware on Windows (since 134), macOS (136) and Linux (137), with initial container limitations.
 - Real-world results vary between machines.
 
-That is why the web client **checks** whether it can play the video and the server **falls back to H.264** when it cannot. MKV files are served through HLS with fMP4 segments, which do support H.265.
+That is why the web client **checks** whether it can play the video and the server **falls back to H.264** when it cannot. Until the client-capability decision exists, HLS is always re-encoded to H.264.
 
 ## Cases that force transcoding
 

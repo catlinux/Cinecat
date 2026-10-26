@@ -848,11 +848,8 @@ func TestRemuxMKVGeneraHLS(t *testing.T) {
 	if !strings.HasPrefix(body, "#EXTM3U") {
 		t.Fatalf("playlist inesperada: %q", body)
 	}
-	if !strings.Contains(body, `#EXT-X-MAP:URI="init.mp4?`) {
-		t.Fatalf("la playlist no trae init de fMP4 firmado: %q", body)
-	}
-	if !strings.Contains(body, ".m4s?") {
-		t.Fatalf("la playlist no trae segmentos fMP4 firmados: %q", body)
+	if !strings.Contains(body, ".ts?") {
+		t.Fatalf("la playlist no trae segmentos MPEG-TS firmados: %q", body)
 	}
 
 	var segment string
@@ -911,7 +908,7 @@ func TestFirmaManipuladaYCaducada(t *testing.T) {
 		t.Fatalf("firma manipulada: código = %d, se esperaba 403", resp.StatusCode)
 	}
 
-	server.clock.Advance(16 * time.Minute)
+	server.clock.Advance(playback.DefaultURLTTL + time.Minute)
 	if resp, _ := getRaw(t, validURL, nil); resp.StatusCode != http.StatusForbidden {
 		t.Fatalf("URL caducada: código = %d, se esperaba 403", resp.StatusCode)
 	}

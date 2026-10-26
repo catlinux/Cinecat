@@ -7,6 +7,20 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.10.0] - 2026-10-26
+
+### Corregido
+- Las películas con audio AC-3 5.1 (casi toda la biblioteca real) se quedaban cargando: el audio se convertía a AAC 5.1, que los reproductores del navegador no aceptan. Ahora se baja siempre a AAC estéreo.
+- Saltar a un punto avanzado ya no deja el vídeo «pensando»: si el segmento pedido queda lejos de lo que FFmpeg ha generado (o es un hueco hacia atrás), el servidor detiene FFmpeg y lo relanza en ese segmento (`-ss` + `-start_number`, el mismo criterio que Jellyfin). Un salto tarda menos de un segundo en vídeo SD, en vez de esperar hasta 5 minutos y fallar.
+- La reproducción ya no se corta a los 15 minutos: los segmentos HLS y los saltos en reproducción directa reutilizan la firma de la URL inicial, que caducaba a los 15 minutos. La vida por defecto de la URL pasa a 8 horas.
+- El último segmento de la playlist ya no puede ser un resto de milisegundos que FFmpeg no llega a generar (fallaba al final del vídeo).
+- El reproductor web usa hls.js siempre que el navegador lo admite, en vez del HLS nativo que anuncian Chrome en Android y en escritorio; reintenta ante errores de red o de descodificación en lugar de rendirse al primero, y espera hasta 60 s al primer byte de un segmento.
+
+### Cambiado
+- HLS usa segmentos MPEG-TS (`segment_XXXXX.ts`) en vez de fMP4 (`init.mp4` + `.m4s`): cada segmento lleva sus marcas de tiempo absolutas, así que los generados por procesos FFmpeg distintos encajan en la misma línea de tiempo. Las marcas de salida llevan un desplazamiento fijo de 10 s para que el proceso que empieza en 0 no tenga DTS negativos (que FFmpeg corregía desplazando unos fotogramas).
+- Todo lo que se sirve por HLS se recodifica a H.264 (libx264 `veryfast`, CRF 20, hasta 1080p y dimensiones pares) + AAC estéreo. Se elimina el remux sin recodificar: la biblioteca real es casi toda DivX/MPEG-4 con AC-3 o MP3, que el navegador no reproduce. FFmpeg ya no arranca al pedir la playlist, sino con la primera petición de segmento, en el punto pedido.
+- La API sigue anunciando `mode: "remux"` para HLS.
+
 ## [0.9.1] - 2026-10-26
 
 ### Corregido

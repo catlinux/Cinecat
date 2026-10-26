@@ -7,6 +7,20 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-10-26
+
+### Fixed
+- Movies with AC-3 5.1 audio (almost the whole real library) kept loading forever: audio was converted to 5.1 AAC, which browser players do not accept. It is now always downmixed to stereo AAC.
+- Seeking to a far point no longer leaves the video "thinking": if the requested segment is far from what FFmpeg has produced (or is a gap behind it), the server stops FFmpeg and restarts it at that segment (`-ss` + `-start_number`, the same rule Jellyfin uses). A seek takes under a second on SD video, instead of waiting up to 5 minutes and failing.
+- Playback no longer stops after 15 minutes: HLS segments and seeks in direct play reuse the signature of the initial URL, which expired after 15 minutes. The default URL lifetime is now 8 hours.
+- The last playlist segment can no longer be a few-millisecond remainder that FFmpeg never produces (it failed at the end of the video).
+- The web player uses hls.js whenever the browser supports it, instead of the native HLS that Chrome on Android and desktop advertise; it retries on network or decoding errors instead of giving up on the first one, and waits up to 60 s for the first byte of a segment.
+
+### Changed
+- HLS uses MPEG-TS segments (`segment_XXXXX.ts`) instead of fMP4 (`init.mp4` + `.m4s`): each segment carries absolute timestamps, so segments produced by different FFmpeg processes fit the same timeline. Output timestamps carry a fixed 10 s offset so the process starting at 0 has no negative DTS (which FFmpeg fixed by shifting a few frames).
+- Everything served over HLS is re-encoded to H.264 (libx264 `veryfast`, CRF 20, up to 1080p with even dimensions) + stereo AAC. Remux without re-encoding is removed: the real library is almost all DivX/MPEG-4 with AC-3 or MP3, which browsers cannot play. FFmpeg no longer starts when the playlist is requested but on the first segment request, at the requested point.
+- The API still reports `mode: "remux"` for HLS.
+
 ## [0.9.1] - 2026-10-26
 
 ### Fixed

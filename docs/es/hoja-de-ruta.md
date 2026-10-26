@@ -15,7 +15,7 @@
 - Escaneo de biblioteca y análisis de nombres de archivo.
 - Metadatos en `es-ES` (TMDB) y caché de imágenes.
 - Usuarios, sesiones y API versionada con contrato OpenAPI.
-- Reproducción directa y cambio de contenedor (HLS fMP4).
+- Reproducción directa y HLS (MPEG-TS, recodificado a H.264 + AAC estéreo, con saltos).
 - Pruebas automáticas con vídeos de prueba generados con FFmpeg.
 
 ## Fase 2: cliente web (`0.2.0`)

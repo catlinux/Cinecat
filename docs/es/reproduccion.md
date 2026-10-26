@@ -23,11 +23,13 @@ Cómo obtenerlo: en Android, consultando los códecs del sistema; en el navegado
 ## Cadena de decisión
 
 1. **Reproducción directa:** el cliente entiende vídeo, audio, contenedor y subtítulos. El servidor solo envía el archivo (con soporte de saltos en la línea de tiempo). Coste de servidor casi nulo.
-2. **Cambio de contenedor (remux):** el vídeo es compatible pero el contenedor no (por ejemplo MKV en un navegador). El servidor reempaqueta al vuelo (HLS con fMP4) sin recodificar vídeo.
+2. **Cambio de contenedor (remux):** el vídeo es compatible pero el contenedor no (por ejemplo MKV en un navegador). El servidor reempaqueta al vuelo a HLS sin recodificar vídeo. *Hoy no se usa: ver abajo.*
 3. **Transcodificación parcial:** el vídeo se copia y solo se convierte el audio (por ejemplo DTS a AAC/AC3).
 4. **Transcodificación completa:** el servidor recodifica el vídeo (con aceleración por hardware si existe) y adapta resolución y tasa de bits.
 
-Antes de remuxear, el servidor comprueba con `ffprobe` el intervalo entre keyframes del primer flujo de vídeo. Si supera **15 s** (habitual en AVI/DivX antiguos), pasa a **transcodificar el vídeo por software** con libx264 (`veryfast`, CRF 20) y audio AAC, forzando keyframes cada 6 s para que HLS produzca varios segmentos pequeños. Esto ya está implementado; el resto de la cadena de perfiles por dispositivo que describe este documento (transcodificación parcial, hardware, subtítulos) sigue siendo diseño de futuro.
+**Lo implementado hoy:** MP4/M4V se sirven directamente; el resto (MKV, AVI, MOV, TS, M2TS) se sirve por HLS **recodificado siempre** a H.264 (libx264 `veryfast`, CRF 20, hasta 1080p) y AAC **estéreo**, con keyframes cada 6 s y segmentos MPEG-TS de 6 s. La biblioteca real es casi toda DivX/MPEG-4 con audio AC-3 5.1 o MP3, que ningún navegador reproduce por MSE, y el AAC 5.1 tampoco lo aceptan, por eso se baja a estéreo. El resto de la cadena de perfiles por dispositivo que describe este documento (remux, transcodificación parcial, hardware, subtítulos) sigue siendo diseño de futuro.
+
+**Saltos en la línea de tiempo.** La playlist es un VOD completo desde la primera petición. FFmpeg arranca con la primera petición de segmento, en ese segmento. Si luego se pide uno a más de 4 segmentos (24 s) por delante de lo generado, o un hueco hacia atrás, el servidor detiene FFmpeg y lo relanza en el segmento pedido (`-ss` + `-start_number`), como Jellyfin. Para que los segmentos de procesos distintos encajen, todas las marcas de tiempo de salida llevan un desplazamiento fijo de 10 s (`-output_ts_offset`): así el segmento N empieza siempre en el mismo instante, lo genere el proceso que lo genere. Un segmento se da por completo cuando aparece en la playlist de su proceso (`ffmpeg.m3u8`); al relanzar se borran el que quedó a medias y los que el nuevo proceso va a reescribir.
 
 El servidor **prefiere H.265** cuando el cliente lo soporta (menos espacio y ancho de banda) y **recurre a H.264** cuando no.
 
@@ -50,7 +52,7 @@ No se puede dar por hecho. A fecha 2026-10-24, según las fuentes consultadas:
 - Firefox lo admite con hardware en Windows (desde 134), macOS (136) y Linux (137), con limitaciones iniciales de contenedor.
 - Los resultados reales varían entre equipos.
 
-Por eso el cliente web **comprueba** si puede reproducir el vídeo y el servidor **cae a H.264** cuando no. Los MKV se sirven por HLS con segmentos fMP4, que sí soportan H.265.
+Por eso el cliente web **comprueba** si puede reproducir el vídeo y el servidor **cae a H.264** cuando no. Mientras no exista la decisión por capacidades del cliente, el HLS se recodifica siempre a H.264.
 
 ## Casos que obligan a transcodificar
 

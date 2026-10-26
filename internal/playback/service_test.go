@@ -1,14 +1,14 @@
 package playback
 
 import (
-	"bufio"
 	"context"
 	"errors"
-	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -17,302 +17,249 @@ import (
 	"time"
 )
 
-func playlistSegmentDurations(t *testing.T, playlistPath string) []float64 {
+// generateDivXVideo genera un AVI como los de la biblioteca real: MPEG-4 Part 2
+// con dimensiones impares y audio AC-3 5.1.
+func generateDivXVideo(t *testing.T, target string, seconds int) string {
 	t.Helper()
-	file, err := os.Open(playlistPath)
-	if err != nil {
-		t.Fatalf("abrir playlist: %v", err)
+	duration := strconv.Itoa(seconds)
+	cmd := exec.Command("ffmpeg",
+		"-hide_banner", "-loglevel", "error", "-y",
+		"-f", "lavfi", "-i", "testsrc=duration="+duration+":size=161x121:rate=25",
+		"-f", "lavfi", "-i", "sine=frequency=440:duration="+duration,
+		"-c:v", "mpeg4", "-c:a", "ac3", "-ac", "6",
+		target,
+	)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("generar vídeo: %v: %s", err, out)
 	}
-	defer file.Close()
-
-	var durations []float64
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if !strings.HasPrefix(line, "#EXTINF:") {
-			continue
-		}
-		value := strings.TrimSuffix(strings.TrimPrefix(line, "#EXTINF:"), ",")
-		duration, err := strconv.ParseFloat(value, 64)
-		if err != nil {
-			t.Fatalf("EXTINF no válido %q: %v", line, err)
-		}
-		durations = append(durations, duration)
-	}
-	if err := scanner.Err(); err != nil {
-		t.Fatalf("leer playlist: %v", err)
-	}
-	return durations
+	return target
 }
 
-func TestHLSArgsCopiaVsTranscodificacion(t *testing.T) {
-	copyArgs := strings.Join(hlsArgs("/tmp/peli.mkv"), "\n")
-	if !strings.Contains(copyArgs, "-c:v\ncopy") || !strings.Contains(copyArgs, "-c:a\ncopy") {
-		t.Fatalf("el remux normal debe copiar vídeo y audio: %v", copyArgs)
+func newHLSTestService(t *testing.T) *Service {
+	t.Helper()
+	svc, err := New(Options{WorkDir: filepath.Join(t.TempDir(), "hls")})
+	if err != nil {
+		t.Fatalf("New: %v", err)
 	}
-	if strings.Contains(copyArgs, "libx264") {
-		t.Fatalf("el remux normal no debe recodificar: %v", copyArgs)
-	}
+	t.Cleanup(func() {
+		if err := svc.Close(); err != nil {
+			t.Errorf("Close: %v", err)
+		}
+	})
+	return svc
+}
 
-	transcodeArgs := strings.Join(hlsTranscodeArgs("/tmp/peli.mkv"), "\n")
+// probeStreams devuelve las líneas "tipo,códec,canales,inicio" de un segmento.
+func probeStreams(t *testing.T, path string) []string {
+	t.Helper()
+	out, err := exec.Command("ffprobe", "-v", "error",
+		"-show_entries", "stream=codec_type,codec_name,channels,start_time",
+		"-of", "csv=p=0", path).Output()
+	if err != nil {
+		t.Fatalf("ffprobe %s: %v", path, err)
+	}
+	return strings.Fields(strings.TrimSpace(string(out)))
+}
+
+func videoStart(t *testing.T, path string) float64 {
+	t.Helper()
+	for _, line := range probeStreams(t, path) {
+		fields := strings.Split(line, ",")
+		if len(fields) >= 3 && fields[1] == "video" {
+			value, err := strconv.ParseFloat(fields[len(fields)-1], 64)
+			if err != nil {
+				t.Fatalf("start_time no válido en %q", line)
+			}
+			return value
+		}
+	}
+	t.Fatalf("%s no tiene vídeo", path)
+	return 0
+}
+
+func currentRunStart(svc *Service, entry *hlsEntry) int {
+	svc.mu.Lock()
+	defer svc.mu.Unlock()
+	if entry.run == nil {
+		return -1
+	}
+	return entry.run.start
+}
+
+func TestHLSArgsSaltoYAudioEstereo(t *testing.T) {
+	first := strings.Join(hlsTranscodeArgs("/tmp/peli.avi", 0), "\n")
+	if strings.Contains(first, "-ss\n") {
+		t.Fatalf("el proceso inicial no debe buscar: %v", first)
+	}
 	for _, expected := range []string{
 		"-c:v\nlibx264",
-		"-preset\nveryfast",
-		"-crf\n20",
-		"-force_key_frames\nexpr:gte(t,n_forced*6)",
 		"-c:a\naac",
+		"-ac\n2",
+		"-start_number\n0",
+		"-output_ts_offset\n10",
+		"-hls_segment_filename\nsegment_%05d.ts",
 	} {
-		if !strings.Contains(transcodeArgs, expected) {
-			t.Fatalf("faltan argumentos de transcodificación %q: %v", expected, transcodeArgs)
+		if !strings.Contains(first, expected) {
+			t.Fatalf("falta %q: %v", expected, first)
+		}
+	}
+
+	seek := strings.Join(hlsTranscodeArgs("/tmp/peli.avi", 500), "\n")
+	for _, expected := range []string{"-ss\n3000\n-i", "-start_number\n500", "-output_ts_offset\n3010"} {
+		if !strings.Contains(seek, expected) {
+			t.Fatalf("falta %q en el relanzado: %v", expected, seek)
 		}
 	}
 }
 
-func TestPrepareTranscodificaKeyframesDispersos(t *testing.T) {
+func TestUniformSegmentDurations(t *testing.T) {
+	for _, tc := range []struct {
+		duration time.Duration
+		count    int
+		last     time.Duration
+	}{
+		{300 * time.Second, 50, 6 * time.Second},
+		{300*time.Second + 30*time.Millisecond, 50, 6*time.Second + 30*time.Millisecond},
+		{9082480 * time.Millisecond, 1514, 4480 * time.Millisecond},
+		{500 * time.Millisecond, 1, 500 * time.Millisecond},
+	} {
+		got := uniformSegmentDurations(tc.duration)
+		if len(got) != tc.count || got[len(got)-1] != tc.last {
+			t.Errorf("%s: %d segmentos, último %s; se esperaban %d y %s",
+				tc.duration, len(got), got[len(got)-1], tc.count, tc.last)
+		}
+	}
+}
+
+func TestPrepareEscribeVODSinArrancarFFmpeg(t *testing.T) {
 	requireVideoTools(t)
-	sparse := generateKeyframeVideo(t, filepath.Join(t.TempDir(), "disperso.mkv"), "40",
-		"-x264-params", "keyint=9999:min-keyint=9999:scenecut=0",
-		"-force_key_frames", "expr:gte(t,20)")
-
-	svc, err := New(Options{WorkDir: filepath.Join(t.TempDir(), "hls")})
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
-	t.Cleanup(func() {
-		if err := svc.Close(); err != nil {
-			t.Errorf("Close: %v", err)
-		}
-	})
-
-	entry, err := svc.prepare(context.Background(), 1, sparse)
-	if err != nil {
-		t.Fatalf("prepare: %v", err)
-	}
-	if entry.mode != ModeTranscode {
-		t.Fatalf("modo = %q, se esperaba %q", entry.mode, ModeTranscode)
-	}
-	if _, err := os.Stat(filepath.Join(entry.dir, "playlist.m3u8")); err != nil {
-		t.Fatalf("prepare debe devolver la playlist inicial: %v", err)
-	}
-	select {
-	case <-entry.done:
-	case <-time.After(60 * time.Second):
-		t.Fatal("FFmpeg no terminó en 60 s")
-	}
-	if entry.err != nil {
-		t.Fatalf("FFmpeg terminó con error: %v", entry.err)
-	}
-
-	durations := playlistSegmentDurations(t, filepath.Join(entry.dir, "playlist.m3u8"))
-	t.Logf("segmentos finales: %v", durations)
-	if len(durations) < 2 {
-		t.Fatalf("se esperaban varios segmentos, hay %d: %v", len(durations), durations)
-	}
-	for _, duration := range durations {
-		if duration > 8 {
-			t.Fatalf("segmento demasiado largo para hls_time 6: %.2f s", duration)
-		}
-	}
-}
-
-func TestPrepareMantieneRemuxConKeyframesNormales(t *testing.T) {
-	requireVideoTools(t)
-	normal := generateKeyframeVideo(t, filepath.Join(t.TempDir(), "normal.mkv"), "2",
-		"-g", "5", "-keyint_min", "5", "-sc_threshold", "0")
-
-	svc, err := New(Options{WorkDir: filepath.Join(t.TempDir(), "hls")})
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
-	t.Cleanup(func() {
-		if err := svc.Close(); err != nil {
-			t.Errorf("Close: %v", err)
-		}
-	})
-
-	entry, err := svc.prepare(context.Background(), 2, normal)
-	if err != nil {
-		t.Fatalf("prepare: %v", err)
-	}
-	if entry.mode != ModeRemux {
-		t.Fatalf("modo = %q, se esperaba %q", entry.mode, ModeRemux)
-	}
-	if _, err := os.Stat(filepath.Join(entry.dir, "playlist.m3u8")); err != nil {
-		t.Fatalf("no se generó la playlist: %v", err)
-	}
-}
-
-func TestNeedsTranscodeFuerzaAVISiempre(t *testing.T) {
-	svc, err := New(Options{WorkDir: filepath.Join(t.TempDir(), "hls")})
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
-	t.Cleanup(func() {
-		if err := svc.Close(); err != nil {
-			t.Errorf("Close: %v", err)
-		}
-	})
-
-	// Caso real de producción: un .avi puede tener keyframes bien repartidos
-	// (el prober lo consideraría viable) y aun así no segmentar bien con
-	// -c:v copy porque los timestamps de paquete no son fiables en ese
-	// contenedor. Por eso .avi siempre transcodifica, sin consultar al prober.
-	if !svc.needsTranscode(context.Background(), "inexistente.avi") {
-		t.Fatal(".avi debe forzar transcodificación siempre, sin depender del prober")
-	}
-	if !svc.needsTranscode(context.Background(), "/ruta/con/mayusculas/Pelicula.AVI") {
-		t.Fatal("la detección de .avi debe ser insensible a mayúsculas")
-	}
-}
-
-func TestNeedsTranscodeSiElProberFalla(t *testing.T) {
-	t.Setenv("PATH", t.TempDir())
-
-	svc, err := New(Options{WorkDir: filepath.Join(t.TempDir(), "hls")})
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
-	t.Cleanup(func() {
-		if err := svc.Close(); err != nil {
-			t.Errorf("Close: %v", err)
-		}
-	})
-
-	if !svc.needsTranscode(context.Background(), "inexistente.mkv") {
-		t.Fatal("si no se puede comprobar la viabilidad, debe usarse la transcodificación como fallback")
-	}
-}
-
-func TestPrepareDevuelveAntesDeTerminarYEsperaSegmentos(t *testing.T) {
-	requireVideoTools(t)
-	source := generateKeyframeVideo(t, filepath.Join(t.TempDir(), "larga.mkv"), "300",
-		"-x264-params", "keyint=9999:min-keyint=9999:scenecut=0",
-		"-force_key_frames", "expr:gte(t,120)")
-
-	svc, err := New(Options{WorkDir: filepath.Join(t.TempDir(), "hls")})
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
-	t.Cleanup(func() {
-		if err := svc.Close(); err != nil {
-			t.Errorf("Close: %v", err)
-		}
-	})
+	source := generateDivXVideo(t, filepath.Join(t.TempDir(), "larga.avi"), 300)
+	svc := newHLSTestService(t)
 
 	start := time.Now()
 	entry, err := svc.prepare(context.Background(), 1, source)
-	prepareElapsed := time.Since(start)
 	if err != nil {
 		t.Fatalf("prepare: %v", err)
 	}
-	t.Logf("prepare() devolvió en %s y FFmpeg sigue en segundo plano", prepareElapsed)
-	if prepareElapsed > 15*time.Second {
-		t.Fatalf("prepare tardó %s; debería devolver tras la playlist inicial", prepareElapsed)
+	if elapsed := time.Since(start); elapsed > 5*time.Second {
+		t.Fatalf("prepare tardó %s", elapsed)
 	}
-	playlistPath := filepath.Join(entry.dir, "playlist.m3u8")
-	playlist, err := os.ReadFile(playlistPath)
+	if entry.run != nil {
+		t.Fatal("prepare no debe arrancar FFmpeg hasta que se pida un segmento")
+	}
+	// El AVI dura unos milisegundos más de 300 s por el audio; ese resto va
+	// al último segmento.
+	if entry.segments != 50 {
+		t.Fatalf("segmentos = %d, se esperaban 50 para 300 s", entry.segments)
+	}
+	data, err := os.ReadFile(filepath.Join(entry.dir, "playlist.m3u8"))
 	if err != nil {
-		t.Fatalf("no hay playlist inicial: %v", err)
+		t.Fatalf("leer playlist: %v", err)
 	}
-	text := string(playlist)
-	if !strings.Contains(text, "#EXT-X-PLAYLIST-TYPE:VOD") || !strings.Contains(text, "#EXT-X-ENDLIST") {
-		t.Fatalf("la playlist inicial no es VOD completa: %s", text)
+	text := string(data)
+	for _, expected := range []string{"#EXT-X-PLAYLIST-TYPE:VOD", "#EXT-X-ENDLIST", "segment_00049.ts"} {
+		if !strings.Contains(text, expected) {
+			t.Fatalf("la playlist no contiene %q: %s", expected, text)
+		}
 	}
-	if !strings.Contains(text, "segment_00049.m4s") {
-		t.Fatalf("la playlist no lista el último segmento esperado de 300 s: %s", text)
-	}
-	if durations := playlistSegmentDurations(t, playlistPath); len(durations) != 50 {
-		t.Fatalf("segmentos en la playlist = %d, se esperaban 50", len(durations))
-	}
-	if _, err := os.Stat(filepath.Join(entry.dir, "segment_00049.m4s")); err == nil {
-		t.Fatal("el último segmento no debería existir aún al volver prepare()")
-	}
-
-	select {
-	case <-entry.done:
-		t.Fatal("FFmpeg terminó antes de poder comprobar que prepare() devuelve en segundo plano")
-	default:
-	}
-
-	start = time.Now()
-	if err := svc.waitForHLSFile(context.Background(), entry, "segment_00000.m4s"); err != nil {
-		t.Fatalf("esperar primer segmento: %v", err)
-	}
-	firstElapsed := time.Since(start)
-	t.Logf("primer segmento servible en %s", firstElapsed)
-	if firstElapsed > 15*time.Second {
-		t.Fatalf("el primer segmento tardó %s", firstElapsed)
-	}
-
-	// Un segmento avanzado que FFmpeg aún no ha generado también debe esperarse.
-	if _, err := os.Stat(filepath.Join(entry.dir, "segment_00040.m4s")); err == nil {
-		t.Fatal("el segmento avanzado no debería existir aún al volver prepare()")
-	}
-	if err := svc.waitForHLSFile(context.Background(), entry, "segment_00040.m4s"); err != nil {
-		t.Fatalf("esperar segmento avanzado: %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(entry.dir, "segment_00040.m4s")); err != nil {
-		t.Fatalf("el segmento avanzado no apareció: %v", err)
+	if strings.Contains(text, "EXT-X-MAP") || strings.Contains(text, ".m4s") {
+		t.Fatalf("la playlist no debe usar fMP4: %s", text)
 	}
 }
 
-func TestPlaylistVODRemuxCoincideConKeyframes(t *testing.T) {
+// TestSaltosRelanzanFFmpeg reproduce el fallo real: tras saltar a un punto
+// lejano, el segmento debe llegar en segundos (no esperar a que FFmpeg
+// recorra todo el vídeo), y los segmentos de procesos distintos deben encajar
+// en la misma línea de tiempo.
+func TestSaltosRelanzanFFmpeg(t *testing.T) {
 	requireVideoTools(t)
-	source := generateKeyframeVideo(t, filepath.Join(t.TempDir(), "keyframes8.mkv"), "40",
-		"-g", "80", "-keyint_min", "80", "-sc_threshold", "0")
+	source := generateDivXVideo(t, filepath.Join(t.TempDir(), "saltos.avi"), 300)
+	svc := newHLSTestService(t)
 
-	svc, err := New(Options{WorkDir: filepath.Join(t.TempDir(), "hls")})
+	entry, err := svc.prepare(context.Background(), 2, source)
 	if err != nil {
-		t.Fatalf("New: %v", err)
+		t.Fatalf("prepare: %v", err)
 	}
-	t.Cleanup(func() {
-		if err := svc.Close(); err != nil {
-			t.Errorf("Close: %v", err)
-		}
-	})
+
+	// Salto directo a mitad de vídeo: el primer proceso empieza ahí.
+	start := time.Now()
+	if err := svc.waitForSegment(context.Background(), entry, 40); err != nil {
+		t.Fatalf("segmento 40: %v", err)
+	}
+	t.Logf("segmento 40 servible en %s", time.Since(start))
+	if got := currentRunStart(svc, entry); got != 40 {
+		t.Fatalf("el proceso empieza en %d, se esperaba 40", got)
+	}
+	offset40 := videoStart(t, filepath.Join(entry.dir, segmentName(40))) - 40*hlsSegmentSeconds
+
+	// Salto atrás a un hueco: no se espera al proceso actual, se relanza
+	// (pasado el margen mínimo de vida del proceso).
+	time.Sleep(hlsRestartMinAge)
+	start = time.Now()
+	if err := svc.waitForSegment(context.Background(), entry, 2); err != nil {
+		t.Fatalf("segmento 2: %v", err)
+	}
+	t.Logf("segmento 2 servible en %s", time.Since(start))
+	if got := currentRunStart(svc, entry); got != 2 {
+		t.Fatalf("el proceso empieza en %d, se esperaba 2 tras saltar atrás", got)
+	}
+	if err := svc.waitForSegment(context.Background(), entry, 3); err != nil {
+		t.Fatalf("segmento 3: %v", err)
+	}
+
+	// Misma línea de tiempo: el segmento N empieza en N*6 + desplazamiento,
+	// con el mismo desfase venga del proceso que venga.
+	offset2 := videoStart(t, filepath.Join(entry.dir, segmentName(2))) - 2*hlsSegmentSeconds
+	offset3 := videoStart(t, filepath.Join(entry.dir, segmentName(3))) - 3*hlsSegmentSeconds
+	t.Logf("desfases: seg2 %.3f, seg3 %.3f, seg40 %.3f", offset2, offset3, offset40)
+	if math.Abs(offset2-offset40) > 0.05 || math.Abs(offset3-offset40) > 0.05 {
+		t.Fatalf("los segmentos de procesos distintos no encajan: %.3f, %.3f, %.3f", offset2, offset3, offset40)
+	}
+	if offset40 < hlsTimestampOffsetSeconds || offset40 > hlsTimestampOffsetSeconds+2 {
+		t.Fatalf("desfase inesperado %.3f", offset40)
+	}
+}
+
+func TestAudioSeBajaAEstereo(t *testing.T) {
+	requireVideoTools(t)
+	source := generateDivXVideo(t, filepath.Join(t.TempDir(), "surround.avi"), 20)
+	svc := newHLSTestService(t)
+
+	entry, err := svc.prepare(context.Background(), 3, source)
+	if err != nil {
+		t.Fatalf("prepare: %v", err)
+	}
+	if err := svc.waitForSegment(context.Background(), entry, 0); err != nil {
+		t.Fatalf("segmento 0: %v", err)
+	}
+	streams := strings.Join(probeStreams(t, filepath.Join(entry.dir, segmentName(0))), " ")
+	if !strings.Contains(streams, "h264,video") || !strings.Contains(streams, "aac,audio,2") {
+		t.Fatalf("se esperaba H.264 y AAC estéreo, hay: %s", streams)
+	}
+}
+
+func TestSegmentoFueraDelVideo(t *testing.T) {
+	requireVideoTools(t)
+	source := generateDivXVideo(t, filepath.Join(t.TempDir(), "corta.avi"), 20)
+	svc := newHLSTestService(t)
 
 	entry, err := svc.prepare(context.Background(), 4, source)
 	if err != nil {
 		t.Fatalf("prepare: %v", err)
 	}
-	if entry.mode != ModeRemux {
-		t.Fatalf("modo = %q, se esperaba remux", entry.mode)
+	if err := svc.waitForSegment(context.Background(), entry, entry.segments); !errors.Is(err, ErrFileNotFound) {
+		t.Fatalf("error = %v, se esperaba ErrFileNotFound", err)
 	}
-	durations := playlistSegmentDurations(t, filepath.Join(entry.dir, "playlist.m3u8"))
-	if len(durations) != 5 {
-		t.Fatalf("segmentos VOD = %v, se esperaban 5 según los keyframes cada 8 s", durations)
-	}
-	select {
-	case <-entry.done:
-	case <-time.After(30 * time.Second):
-		t.Fatal("FFmpeg no terminó en 30 s")
-	}
-	if entry.err != nil {
-		t.Fatalf("FFmpeg terminó con error: %v", entry.err)
-	}
-	for i := 0; i < 5; i++ {
-		name := filepath.Join(entry.dir, fmt.Sprintf("segment_%05d.m4s", i))
-		if _, err := os.Stat(name); err != nil {
-			t.Fatalf("falta el segmento %d: %v", i, err)
-		}
+	// El último segmento listado sí debe poder servirse.
+	if err := svc.waitForSegment(context.Background(), entry, entry.segments-1); err != nil {
+		t.Fatalf("último segmento: %v", err)
 	}
 }
 
-func TestPrepareConcurrenteNoDuplicaProceso(t *testing.T) {
+func TestPrepareConcurrenteNoDuplicaEntrada(t *testing.T) {
 	requireVideoTools(t)
-	source := generateKeyframeVideo(t, filepath.Join(t.TempDir(), "concurrente.mkv"), "60",
-		"-x264-params", "keyint=9999:min-keyint=9999:scenecut=0",
-		"-force_key_frames", "expr:gte(t,30)")
-
-	svc, err := New(Options{WorkDir: filepath.Join(t.TempDir(), "hls")})
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
-	t.Cleanup(func() {
-		if err := svc.Close(); err != nil {
-			t.Errorf("Close: %v", err)
-		}
-	})
+	source := generateDivXVideo(t, filepath.Join(t.TempDir(), "concurrente.avi"), 30)
+	svc := newHLSTestService(t)
 
 	var entries [2]*hlsEntry
 	var errs [2]error
@@ -340,37 +287,17 @@ func TestPrepareDevuelveErrorSiFFmpegFalla(t *testing.T) {
 	if err := os.WriteFile(bad, []byte("no es un vídeo"), 0o644); err != nil {
 		t.Fatalf("crear archivo: %v", err)
 	}
+	svc := newHLSTestService(t)
 
-	svc, err := New(Options{WorkDir: filepath.Join(t.TempDir(), "hls")})
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
-	t.Cleanup(func() {
-		if err := svc.Close(); err != nil {
-			t.Errorf("Close: %v", err)
-		}
-	})
-
-	if _, err := svc.prepare(context.Background(), 3, bad); !errors.Is(err, ErrFFmpegFailed) {
+	if _, err := svc.prepare(context.Background(), 5, bad); !errors.Is(err, ErrFFmpegFailed) {
 		t.Fatalf("error = %v, se esperaba ErrFFmpegFailed", err)
 	}
 }
 
-func TestServeHLSSimultaneoReutilizaProceso(t *testing.T) {
+func TestServeHLSPorHTTP(t *testing.T) {
 	requireVideoTools(t)
-	source := generateKeyframeVideo(t, filepath.Join(t.TempDir(), "http.mkv"), "60",
-		"-x264-params", "keyint=9999:min-keyint=9999:scenecut=0",
-		"-force_key_frames", "expr:gte(t,30)")
-
-	svc, err := New(Options{WorkDir: filepath.Join(t.TempDir(), "hls")})
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
-	t.Cleanup(func() {
-		if err := svc.Close(); err != nil {
-			t.Errorf("Close: %v", err)
-		}
-	})
+	source := generateDivXVideo(t, filepath.Join(t.TempDir(), "http.avi"), 60)
+	svc := newHLSTestService(t)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		name := strings.TrimPrefix(r.URL.Path, "/")
@@ -380,55 +307,46 @@ func TestServeHLSSimultaneoReutilizaProceso(t *testing.T) {
 	}))
 	t.Cleanup(server.Close)
 
-	paths := []string{"/playlist.m3u8", "/segment_00000.m4s", "/segment_00008.m4s"}
-	statuses := make([]int, len(paths))
-	bodies := make([]string, len(paths))
+	get := func(path string) (int, string, string) {
+		resp, err := http.Get(server.URL + path)
+		if err != nil {
+			t.Fatalf("GET %s: %v", path, err)
+		}
+		defer resp.Body.Close()
+		data, _ := io.ReadAll(resp.Body)
+		return resp.StatusCode, resp.Header.Get("Content-Type"), string(data)
+	}
+
+	status, _, playlist := get("/playlist.m3u8")
+	if status != http.StatusOK || strings.Count(playlist, "#EXTINF:") != 10 ||
+		!strings.Contains(playlist, "segment_00009.ts?exp=123&sig=firma") {
+		t.Fatalf("playlist HTTP inesperada (%d): %s", status, playlist)
+	}
+
+	// Dos peticiones simultáneas a puntos lejanos: ambas deben acabar
+	// recibiendo su segmento, sin relanzarse FFmpeg la una a la otra.
+	paths := []string{"/segment_00000.ts", "/segment_00008.ts"}
+	results := make([]string, len(paths))
 	var wg sync.WaitGroup
 	for i, path := range paths {
 		wg.Add(1)
 		go func(index int, path string) {
 			defer wg.Done()
-			resp, err := http.Get(server.URL + path)
-			if err != nil {
-				statuses[index] = 0
-				return
+			status, contentType, body := get(path)
+			if status != http.StatusOK || contentType != "video/mp2t" || len(body) == 0 {
+				results[index] = path + ": " + strconv.Itoa(status) + " " + contentType
 			}
-			defer resp.Body.Close()
-			statuses[index] = resp.StatusCode
-			data, _ := io.ReadAll(resp.Body)
-			bodies[index] = string(data)
 		}(i, path)
 	}
 	wg.Wait()
-
-	for i, status := range statuses {
-		if status != http.StatusOK {
-			t.Fatalf("%s devolvió %d", paths[i], status)
+	for _, result := range results {
+		if result != "" {
+			t.Fatal(result)
 		}
 	}
-	if !strings.Contains(bodies[0], "#EXT-X-PLAYLIST-TYPE:VOD") ||
-		!strings.Contains(bodies[0], "#EXT-X-ENDLIST") ||
-		!strings.Contains(bodies[0], "segment_00009.m4s") {
-		t.Fatalf("la playlist HTTP no es un VOD completo: %s", bodies[0])
-	}
-	if strings.Count(bodies[0], "#EXTINF:") != 10 {
-		t.Fatalf("la playlist HTTP no lista los 10 segmentos de 60 s: %s", bodies[0])
-	}
-	if len(bodies[1]) == 0 || len(bodies[2]) == 0 {
-		t.Fatal("los segmentos servidos por HTTP llegaron vacíos")
-	}
 
-	svc.mu.Lock()
-	entry := svc.entries[55]
-	svc.mu.Unlock()
-	if entry == nil {
-		t.Fatal("no se creó la entrada del ítem")
-	}
-	// Solo debe existir un directorio de trabajo para el ítem: no se lanzó
-	// un segundo FFmpeg para la petición simultánea.
-	matches, err := filepath.Glob(filepath.Join(svc.workDir, "item-55"))
-	if err != nil || len(matches) != 1 {
-		t.Fatalf("directorios del ítem: %v, error %v", matches, err)
+	if status, _, _ := get("/init.mp4"); status == http.StatusOK {
+		t.Fatal("init.mp4 ya no existe en HLS MPEG-TS")
 	}
 }
 
@@ -439,33 +357,26 @@ func TestPrepareCaeAPlaylistEventSiFaltaDuracion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("leer h264: %v", err)
 	}
-	// Un flujo H.264 crudo con extensión .avi: fuerza transcodificación y no
-	// tiene duración de contenedor, así que debe usarse la playlist event de
-	// FFmpeg como fallback.
+	// Un flujo H.264 crudo con extensión .avi no tiene duración de
+	// contenedor: se sirve la playlist event de FFmpeg como fallback.
 	avi := filepath.Join(t.TempDir(), "sin-duracion.avi")
 	if err := os.WriteFile(avi, data, 0o644); err != nil {
 		t.Fatalf("crear avi: %v", err)
 	}
-
-	svc, err := New(Options{WorkDir: filepath.Join(t.TempDir(), "hls")})
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
-	t.Cleanup(func() {
-		if err := svc.Close(); err != nil {
-			t.Errorf("Close: %v", err)
-		}
-	})
+	svc := newHLSTestService(t)
 
 	entry, err := svc.prepare(context.Background(), 6, avi)
 	if err != nil {
 		t.Fatalf("prepare: %v", err)
 	}
-	if entry.playlistFile != ffmpegPlaylistFile {
-		t.Fatalf("playlist = %q, se esperaba el fallback %q", entry.playlistFile, ffmpegPlaylistFile)
+	if entry.playlistFile != ffmpegPlaylistFile || entry.segments != 0 {
+		t.Fatalf("playlist = %q (%d segmentos), se esperaba el fallback", entry.playlistFile, entry.segments)
+	}
+	if err := svc.waitForSegment(context.Background(), entry, 0); err != nil {
+		t.Fatalf("segmento 0 del fallback: %v", err)
 	}
 	select {
-	case <-entry.done:
+	case <-entry.run.done:
 	case <-time.After(30 * time.Second):
 		t.Fatal("FFmpeg no terminó en 30 s")
 	}
