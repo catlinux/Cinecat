@@ -302,6 +302,14 @@ paths:
       security:
         - bearerAuth: []
       parameters:
+        - name: library_id
+          in: query
+          description: Si se indica, solo devuelve ítems de esa biblioteca.
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
         - name: limit
           in: query
           description: Número máximo de ítems a devolver.
