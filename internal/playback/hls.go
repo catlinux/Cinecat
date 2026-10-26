@@ -72,12 +72,26 @@ func hlsTranscodeArgs(inputPath string) []string {
 	}
 }
 
-// needsTranscode consulta al prober si el remux sin recodificar es viable. Si
-// el prober no existe se conserva el comportamiento antiguo (copy). Si falla
-// por cualquier motivo (ffprobe ausente, timeout o archivo sin keyframes
-// suficientes), se transcodifica como alternativa segura en vez de arriesgarse
-// a servir un segmento gigante.
+// needsTranscode decide si hace falta recodificar el vídeo en vez de copiarlo.
+//
+// El análisis de intervalo entre keyframes (prober.CheckViable) no basta por
+// sí solo: un .avi real de producción con 2804 keyframes bien repartidos (muy
+// por debajo del umbral de MaxViableKeyframeInterval) seguía generando un
+// único segmento HLS con toda la película, porque FFmpeg -f hls -c:v copy
+// necesita timestamps de paquete fiables para cortar en el punto exacto, y en
+// AVI/DivX antiguos buena parte de los paquetes llevan pts_time "N/A"
+// (reconstruido desde dts). El intervalo entre keyframes puede ser correcto y
+// aun así el contenedor no ser segmentable sin recodificar.
+//
+// Por eso cualquier .avi se transcodifica siempre, sin pasar por el prober: es
+// el contenedor donde se vio el problema real y donde los timestamps son
+// menos fiables en general. Para el resto de contenedores (.mkv, .mov, .ts,
+// .m2ts) se mantiene la detección por intervalo de keyframes, que sigue siendo
+// válida para el caso que resuelve (GOP realmente largo).
 func (s *Service) needsTranscode(ctx context.Context, inputPath string) bool {
+	if strings.EqualFold(filepath.Ext(inputPath), ".avi") {
+		return true
+	}
 	if s.prober == nil {
 		return false
 	}

@@ -7,6 +7,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.8.1] - 2026-10-26
+
+### Corregido
+- La 0.8.0 no arreglaba todos los casos reales: un `.avi` de producción con 2804 keyframes bien repartidos (por debajo del umbral de la detección) seguía generando un único segmento HLS con la película entera, porque `-c:v copy` necesita timestamps de paquete fiables para segmentar, y en AVI/DivX muchos paquetes llevan `pts_time` como `N/A`. El intervalo entre keyframes puede ser correcto y el contenedor no ser segmentable igualmente. Ahora cualquier `.avi` se transcodifica siempre, sin pasar por el análisis de keyframes, que se mantiene para el resto de contenedores (`.mkv`, `.mov`, `.ts`, `.m2ts`).
+
 ## [0.8.0] - 2026-10-26
 
 ### Añadido

@@ -123,6 +123,29 @@ func TestPrepareMantieneRemuxConKeyframesNormales(t *testing.T) {
 	}
 }
 
+func TestNeedsTranscodeFuerzaAVISiempre(t *testing.T) {
+	svc, err := New(Options{WorkDir: filepath.Join(t.TempDir(), "hls")})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := svc.Close(); err != nil {
+			t.Errorf("Close: %v", err)
+		}
+	})
+
+	// Caso real de producción: un .avi puede tener keyframes bien repartidos
+	// (el prober lo consideraría viable) y aun así no segmentar bien con
+	// -c:v copy porque los timestamps de paquete no son fiables en ese
+	// contenedor. Por eso .avi siempre transcodifica, sin consultar al prober.
+	if !svc.needsTranscode(context.Background(), "inexistente.avi") {
+		t.Fatal(".avi debe forzar transcodificación siempre, sin depender del prober")
+	}
+	if !svc.needsTranscode(context.Background(), "/ruta/con/mayusculas/Pelicula.AVI") {
+		t.Fatal("la detección de .avi debe ser insensible a mayúsculas")
+	}
+}
+
 func TestNeedsTranscodeSiElProberFalla(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
 
