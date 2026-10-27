@@ -1,5 +1,5 @@
 <script lang="ts">
-	let { art }: { art: 'movies' | 'collections' | 'series' | 'videos' } = $props();
+	let { art }: { art: 'movies' | 'collections' | 'series' | 'videos' | 'music' } = $props();
 </script>
 
 <div class="category-art" aria-hidden="true">
@@ -45,6 +45,16 @@
 			<circle cx="100" cy="172" r="3" fill="var(--dorado)" />
 			<path d="M230 158h12" stroke="var(--dorado)" stroke-width="3" stroke-linecap="round" />
 			<path d="M268 82c14 14 14 42 0 56M282 68c22 22 22 66 0 88" fill="none" stroke="var(--dorado)" stroke-width="2" opacity="0.55" />
+		{:else if art === 'music'}
+			<circle cx="160" cy="108" r="76" fill="var(--granate-oscuro)" stroke="var(--dorado)" stroke-width="2" />
+			{#each [58, 48, 38] as radius}
+				<circle cx="160" cy="108" r={radius} fill="none" stroke="var(--dorado)" stroke-width="1" opacity="0.4" />
+			{/each}
+			<circle cx="160" cy="108" r="15" fill="var(--dorado)" opacity="0.85" />
+			<circle cx="160" cy="108" r="5" fill="var(--granate-oscuro)" />
+			<path d="M236 76l20-22" stroke="var(--dorado)" stroke-width="3" stroke-linecap="round" />
+			<circle cx="251" cy="49" r="6" fill="var(--dorado)" />
+			<path d="M70 168h180" stroke="var(--crema-clara)" stroke-width="2" opacity="0.3" />
 		{:else}
 			<rect x="36" y="44" width="248" height="142" rx="10" fill="var(--granate-oscuro)" stroke="var(--dorado)" stroke-width="2" />
 			<rect x="52" y="60" width="216" height="110" rx="4" fill="var(--crema-clara)" opacity="0.08" />

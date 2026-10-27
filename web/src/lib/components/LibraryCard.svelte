@@ -25,7 +25,9 @@
 		'Se quitarán de Cinecat las fichas de esta carpeta; los archivos del disco no se tocan';
 	const itemCount = $derived(
 		typeof library.item_count === 'number'
-			? `${library.item_count} ${library.item_count === 1 ? 'ficha' : 'fichas'}`
+			? library.kind === 'music'
+				? `${library.item_count} ${library.item_count === 1 ? 'pista' : 'pistas'}`
+				: `${library.item_count} ${library.item_count === 1 ? 'ficha' : 'fichas'}`
 			: null
 	);
 

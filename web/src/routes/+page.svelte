@@ -15,7 +15,7 @@
 		description: string;
 		kicker: string;
 		href: string | null;
-		art: 'movies' | 'collections' | 'series' | 'videos';
+		art: 'movies' | 'collections' | 'series' | 'videos' | 'music';
 		count: number | null;
 	};
 
@@ -58,6 +58,19 @@
 						kicker: 'Videoclips',
 						href: '/videos',
 						art: 'videos' as const,
+						count: null
+					}
+				]
+			: []),
+		...(data.hasMusic
+			? [
+					{
+						id: 'music',
+						title: 'Música',
+						description: 'Álbumes, artistas y la banda sonora de la casa.',
+						kicker: 'Discoteca',
+						href: '/music',
+						art: 'music' as const,
 						count: null
 					}
 				]

@@ -187,3 +187,34 @@ describe('ApiClient', () => {
 		});
 	});
 });
+
+describe('ApiClient de música', () => {
+	it('construye listados, detalles y reproducción de música', async () => {
+		const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
+			jsonResponse({ artists: [], albums: [], tracks: [], total: 0 })
+		);
+		const client = new ApiClient({ baseUrl: 'http://api.test/', fetch: fetchMock });
+
+		await client.getMusicArtists({ q: 'beat', letter: 'B', limit: 10, offset: 20 }, 'token');
+		await client.getMusicArtist(3, { limit: 5, offset: 0 }, 'token');
+		await client.getMusicAlbums({ q: 'road', letter: 'A', sort: 'year', artist: 3 }, 'token');
+		await client.getMusicAlbum(7, { limit: 200, offset: 0 }, 'token');
+		await client.getMusicTracks({ q: 'come' }, 'token');
+		fetchMock.mockResolvedValueOnce(
+			jsonResponse({ url: '/stream', mime: 'audio/mpeg', expires_at: '', playable: true })
+		);
+		await client.getMusicPlay(11, 'token');
+
+		expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
+			'http://api.test/api/v1/music/artists?limit=10&offset=20&q=beat&letter=B',
+			'http://api.test/api/v1/music/artists/3?limit=5&offset=0',
+			'http://api.test/api/v1/music/albums?q=road&letter=A&sort=year&artist=3',
+			'http://api.test/api/v1/music/albums/7?limit=200&offset=0',
+			'http://api.test/api/v1/music/tracks?q=come',
+			'http://api.test/api/v1/music/tracks/11/play'
+		]);
+		for (const [, init] of fetchMock.mock.calls) {
+			expect((init?.headers as Record<string, string>).Authorization).toBe('Bearer token');
+		}
+	});
+});

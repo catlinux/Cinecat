@@ -26,6 +26,7 @@ function layoutData(serverVersion: string | null, serverCommit: string | null = 
 		hasSession: false,
 		isAdmin: false,
 		hasClips: false,
+		hasMusic: false,
 		isHome: false,
 		activeCategory: null,
 		serverVersion,

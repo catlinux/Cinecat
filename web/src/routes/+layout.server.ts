@@ -10,16 +10,18 @@ import { webVersion } from '$lib/version';
 export const load: LayoutServerLoad = async ({ locals, fetch, url }) => {
 	const pathname = url?.pathname ?? '';
 	const isHome = pathname === '/';
-	const activeCategory: 'movies' | 'collections' | 'series' | 'videos' | null =
-		pathname === '/videos' || pathname.startsWith('/videos/')
-			? 'videos'
-			: pathname === '/movies' || pathname.startsWith('/movies/') || pathname.startsWith('/items/')
-				? 'movies'
-				: pathname === '/collections' || pathname.startsWith('/collections/')
-					? 'collections'
-					: pathname === '/series' || pathname.startsWith('/series/')
-						? 'series'
-						: null;
+	const activeCategory: 'movies' | 'collections' | 'series' | 'videos' | 'music' | null =
+		pathname === '/music' || pathname.startsWith('/music/')
+			? 'music'
+			: pathname === '/videos' || pathname.startsWith('/videos/')
+				? 'videos'
+				: pathname === '/movies' || pathname.startsWith('/movies/') || pathname.startsWith('/items/')
+					? 'movies'
+					: pathname === '/collections' || pathname.startsWith('/collections/')
+						? 'collections'
+						: pathname === '/series' || pathname.startsWith('/series/')
+							? 'series'
+							: null;
 	let serverVersion: string | null = null;
 	let serverCommit: string | null = null;
 	try {
@@ -37,6 +39,7 @@ export const load: LayoutServerLoad = async ({ locals, fetch, url }) => {
 			hasSession: false,
 			isAdmin: false,
 			hasClips: false,
+			hasMusic: false,
 			isHome,
 			activeCategory,
 			serverVersion,
@@ -62,19 +65,25 @@ export const load: LayoutServerLoad = async ({ locals, fetch, url }) => {
 	}
 
 	let hasClips = false;
+	let hasMusic = false;
 	try {
 		const libraries = await createApiClient(fetch).listLibraries(locals.sessionToken);
 		hasClips = (libraries.libraries ?? []).some(
 			(library) => library.kind === 'clips' && (library.item_count ?? 0) > 0
 		);
+		hasMusic = (libraries.libraries ?? []).some(
+			(library) => library.kind === 'music' && (library.item_count ?? 0) > 0
+		);
 	} catch {
 		hasClips = false;
+		hasMusic = false;
 	}
 
 	return {
 		hasSession: true,
 		isAdmin,
 		hasClips,
+		hasMusic,
 		isHome,
 		activeCategory,
 		serverVersion,

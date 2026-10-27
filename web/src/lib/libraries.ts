@@ -42,7 +42,7 @@ export const LIBRARY_KIND_LABELS: Record<LibraryKind, string> = {
 export const LIBRARY_KIND_OPTIONS: LibraryKindOption[] = [
 	{ value: 'video', label: 'Películas y series', disabled: false },
 	{ value: 'clips', label: 'Vídeos (videoclips, conciertos…)', disabled: false },
-	{ value: 'music', label: 'Música', disabled: true }
+	{ value: 'music', label: 'Música', disabled: false }
 ];
 
 export function libraryKindLabel(kind: string | null | undefined): string {

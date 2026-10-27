@@ -2,9 +2,11 @@
 	import '../app.css';
 	import type { Snippet } from 'svelte';
 	import type { LayoutData } from './$types';
+	import MusicPlayerBar from '$lib/components/MusicPlayerBar.svelte';
 	import SideNav from '$lib/components/SideNav.svelte';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import { apiBaseUrl } from '$lib/config';
+	import { musicPlayer } from '$lib/music-player.svelte';
 	import { DEFAULT_PUBLIC_UI } from '$lib/settings';
 	import { versionMismatch } from '$lib/version';
 
@@ -12,6 +14,7 @@
 
 	const ui = $derived({ ...DEFAULT_PUBLIC_UI, ...(data.ui ?? {}) });
 	const sideNav = $derived(ui.nav_layout === 'side');
+	const musicVisible = $derived(musicPlayer.tracks.length > 0);
 	const versionLabel = $derived(
 		`${data.serverVersion ?? data.webVersion}${data.serverCommit ? ` (${data.serverCommit})` : ''}`
 	);
@@ -36,6 +39,7 @@
 			isAdmin={data.isAdmin}
 			hasSession={data.hasSession}
 			hasClips={data.hasClips}
+			hasMusic={data.hasMusic}
 			{versionLabel}
 		/>
 	{/if}
@@ -84,6 +88,13 @@
 								aria-current={data.activeCategory === 'videos' ? 'page' : undefined}>Vídeos</a
 							>
 						{/if}
+						{#if data.hasMusic}
+							<a
+								href="/music"
+								class:category-active={data.activeCategory === 'music'}
+								aria-current={data.activeCategory === 'music' ? 'page' : undefined}>Música</a
+							>
+						{/if}
 					</nav>
 					{#if data.isAdmin}
 						<a class="account-link" href="/admin">Administración</a>
@@ -97,6 +108,7 @@
 		{/if}
 
 		<main
+			class:with-music-player={musicVisible}
 			style={`--grid-cols: ${ui.grid_columns}; --ui-grid-cols: ${ui.grid_columns}; --row-cols: ${ui.row_columns}; --ui-row-cols: ${ui.row_columns};`}
 		>
 			{@render children()}
@@ -111,6 +123,7 @@
 				La web y el servidor tienen versiones distintas: recarga o actualiza.
 			</p>
 		{/if}
+		<MusicPlayerBar />
 		</div>
 	</div>
 </div>

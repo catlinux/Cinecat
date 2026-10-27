@@ -2,7 +2,7 @@
 
 [English](../en/status.md) · [Volver al README](../../README.md)
 
-Versión actual: **0.18.0**. Esta página resume el estado real del código, no el plan inicial. Las versiones salen del [CHANGELOG](../../CHANGELOG.md).
+Versión actual: **0.19.0**. Esta página resume el estado real del código, no el plan inicial. Las versiones salen del [CHANGELOG](../../CHANGELOG.md).
 
 ## Qué hay hecho
 
@@ -14,7 +14,11 @@ Versión actual: **0.18.0**. Esta página resume el estado real del código, no 
 | Servidor y biblioteca | Ficha técnica del archivo con `ffprobe` | ✅ 0.11.0 | Contenedor, tamaño, pistas, subtítulos y modo de reproducción. |
 | Servidor y biblioteca | Varias carpetas por biblioteca y navegador de carpetas | ✅ 0.17.0 | tipos video, clips y music |
 | Servidor y biblioteca | Biblioteca de Vídeos (sin identificar), navegación por carpetas | ✅ 0.18.0 | con miniaturas de fotograma |
-| Servidor y biblioteca | Biblioteca de Música: escaneo, API y reproducción directa | 🟡 | servidor hecho; falta la pantalla |
+| Servidor y biblioteca | Biblioteca de Música: escaneo, API, pantalla y reproductor | ✅ 0.19.0 | reproductor persistente con cola |
+| Música | Listas de reproducción | ⬜ | siguiente paso de música |
+| Música | Favoritos de música | ⬜ | reutilizará el sistema de favoritos |
+| Música | Conversión de formatos no compatibles | ⬜ | transcodificación con FFmpeg |
+| Música | Reproducción sin cortes entre pistas | ⬜ | gapless |
 | Servidor y biblioteca | Subir o borrar archivos con papelera | ⬜ | `/media` se monta en solo lectura. |
 | Identificación y metadatos | TMDB como fuente principal en castellano, con caché | ✅ 0.11.0 | OMDb queda como respaldo si no hay TMDB; OMDb solo rellena sinopsis y cartel de películas. |
 | Identificación y metadatos | Identificación automática, corrección manual y «no es ninguna» | ✅ 0.11.0 | `match_status`: `auto`, `manual`, `none` o vacío; umbral configurable. |

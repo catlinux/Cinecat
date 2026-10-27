@@ -188,6 +188,7 @@ export interface HomeResponse {
 	recent_movies: MediaItem[];
 	recent_series?: Series[];
 	has_clips?: boolean;
+	has_music?: boolean;
 	counts: HomeCounts;
 }
 
@@ -244,6 +245,106 @@ export interface VideoBrowseQuery {
 	path?: string;
 	limit?: number;
 	offset?: number;
+}
+
+export interface MusicArtist {
+	id: number;
+	name: string;
+	album_count: number;
+	track_count: number;
+}
+
+export interface MusicArtistDetail extends MusicArtist {
+	albums: MusicAlbum[];
+	total?: number;
+	limit?: number;
+	offset?: number;
+}
+
+export type MusicAlbumSort = 'title' | 'artist' | 'year' | 'added';
+
+export interface MusicAlbum {
+	id: number;
+	title: string;
+	artist: string;
+	artist_id: number;
+	year: number | null;
+	track_count: number;
+	duration_seconds: number;
+	has_cover: boolean;
+}
+
+export interface MusicTrack {
+	id: number;
+	title: string;
+	track_no: number | null;
+	disc_no: number;
+	artist: string;
+	duration_seconds: number | null;
+	codec: string | null;
+	bitrate: number | null;
+	playable: boolean;
+	// La búsqueda de pistas puede incluir el álbum; el detalle de álbum ya lo
+	// conoce por contexto y no necesita repetirlo.
+	album?: string;
+	album_id?: number;
+}
+
+export interface MusicAlbumDetail extends MusicAlbum {
+	tracks: MusicTrack[];
+	total?: number;
+	limit?: number;
+	offset?: number;
+}
+
+export interface MusicArtistsResponse {
+	artists: MusicArtist[];
+	total: number;
+	limit?: number;
+	offset?: number;
+}
+
+export interface MusicAlbumsResponse {
+	albums: MusicAlbum[];
+	total: number;
+	limit?: number;
+	offset?: number;
+}
+
+export interface MusicTracksResponse {
+	tracks: MusicTrack[];
+	total: number;
+	limit?: number;
+	offset?: number;
+}
+
+export interface MusicPlayResponse {
+	url: string;
+	mime: string;
+	expires_at: string;
+	playable: boolean;
+}
+
+export interface MusicArtistsQuery {
+	limit?: number;
+	offset?: number;
+	q?: string;
+	letter?: string;
+}
+
+export interface MusicAlbumsQuery {
+	limit?: number;
+	offset?: number;
+	q?: string;
+	letter?: string;
+	sort?: MusicAlbumSort;
+	artist?: number;
+}
+
+export interface MusicTracksQuery {
+	limit?: number;
+	offset?: number;
+	q?: string;
 }
 
 export interface Candidate {
@@ -822,6 +923,72 @@ export class ApiClient {
 		return this.get<HomeResponse>('/api/v1/home', token);
 	}
 
+	async getMusicArtists(query: MusicArtistsQuery, token: string): Promise<MusicArtistsResponse> {
+		const params = new URLSearchParams();
+		appendPagination(params, query);
+		if (query.q) {
+			params.set('q', query.q);
+		}
+		if (query.letter) {
+			params.set('letter', query.letter);
+		}
+		return this.get<MusicArtistsResponse>(`/api/v1/music/artists${querySuffix(params)}`, token);
+	}
+
+	async getMusicArtist(
+		id: number,
+		query: { limit?: number; offset?: number } = {},
+		token: string
+	): Promise<MusicArtistDetail> {
+		const params = new URLSearchParams();
+		appendPagination(params, query);
+		return this.get<MusicArtistDetail>(
+			`/api/v1/music/artists/${id}${querySuffix(params)}`,
+			token
+		);
+	}
+
+	async getMusicAlbums(query: MusicAlbumsQuery, token: string): Promise<MusicAlbumsResponse> {
+		const params = new URLSearchParams();
+		appendPagination(params, query);
+		if (query.q) {
+			params.set('q', query.q);
+		}
+		if (query.letter) {
+			params.set('letter', query.letter);
+		}
+		if (query.sort) {
+			params.set('sort', query.sort);
+		}
+		if (query.artist !== undefined) {
+			params.set('artist', String(query.artist));
+		}
+		return this.get<MusicAlbumsResponse>(`/api/v1/music/albums${querySuffix(params)}`, token);
+	}
+
+	async getMusicAlbum(
+		id: number,
+		query: { limit?: number; offset?: number } = {},
+		token: string
+	): Promise<MusicAlbumDetail> {
+		const params = new URLSearchParams();
+		appendPagination(params, query);
+		return this.get<MusicAlbumDetail>(`/api/v1/music/albums/${id}${querySuffix(params)}`, token);
+	}
+
+	async getMusicTracks(query: MusicTracksQuery, token: string): Promise<MusicTracksResponse> {
+		const params = new URLSearchParams();
+		appendPagination(params, query);
+		if (query.q) {
+			params.set('q', query.q);
+		}
+		return this.get<MusicTracksResponse>(`/api/v1/music/tracks${querySuffix(params)}`, token);
+	}
+
+	async getMusicPlay(id: number, token: string): Promise<MusicPlayResponse> {
+		return this.get<MusicPlayResponse>(`/api/v1/music/tracks/${id}/play`, token);
+	}
+
 	async getSeries(query: SeriesQuery, token: string): Promise<SeriesResponse> {
 		const params = new URLSearchParams();
 		if (query.limit !== undefined) {
@@ -1159,6 +1326,22 @@ export class ApiClient {
 		}
 		return new ApiError(serverMessage || defaultMessage(response.status), response.status, fields);
 	}
+}
+
+function appendPagination(
+	params: URLSearchParams,
+	query: { limit?: number; offset?: number }
+): void {
+	if (query.limit !== undefined) {
+		params.set('limit', String(query.limit));
+	}
+	if (query.offset !== undefined) {
+		params.set('offset', String(query.offset));
+	}
+}
+
+function querySuffix(params: URLSearchParams): string {
+	return params.toString() ? `?${params}` : '';
 }
 
 function defaultMessage(status: number): string {

@@ -7,8 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.19.0] - 2026-10-27
+
 ### Añadido
 
+- Sección «Música» en la web: álbumes (con carátula, orden y filtro por letra), artistas y búsqueda de pistas, página de álbum y de artista, entrada en el menú y categoría en el portal. El tipo «Música» se puede elegir al crear una biblioteca.
+- Reproductor de música persistente: una barra fija inferior que sigue sonando mientras se navega, con cola (añadir, reproducir a continuación, quitar, vaciar), aleatorio, repetir, volumen, teclas multimedia y metadatos del sistema (Media Session). Se pausa al reproducir un vídeo y la cola se recuerda entre visitas (se restaura en pausa).
 - Bibliotecas de tipo «Música» en el servidor: el escaneo lee las etiquetas con `ffprobe` (artista, álbum, pista, disco, año, género), sin servicios externos, solo reinspecciona los archivos nuevos o cambiados, y conserva las fichas si una carpeta no está disponible. Migración 0016 (`music_artists`, `music_albums`, `music_tracks`). Carátulas de la carpeta o incrustadas (en caché `cache/covers`).
 - API de música: `GET /api/v1/music/artists`, `/artists/{id}`, `/albums`, `/albums/{id}`, `/albums/{id}/cover`, `/tracks` (búsqueda) y `/tracks/{id}/play`, y flujo firmado con rangos `GET /api/v1/stream/music/{id}`. `GET /api/v1/home` añade `has_music`.
 

@@ -151,6 +151,7 @@ function portalData(overrides: Record<string, unknown> = {}) {
 		collectionsTotal: 7,
 		seriesTotal: 5,
 		hasClips: false,
+		hasMusic: false,
 		continueWatching: [continueItem],
 		nextUp: [],
 		recent: [recentItem],
@@ -366,6 +367,17 @@ describe('portal', () => {
 		expect(withClips).toContain('class="video-card');
 		expect(withClips).toContain('href="/items/30"');
 		expect((withClips.match(/class="portal-category(?:\s|")/g) ?? []).length).toBe(4);
+	});
+
+	it('añade la categoría Música cuando hay pistas', () => {
+		const withMusic = render(PortalPage, {
+			props: { data: portalData({ hasMusic: true }) }
+		}).body;
+
+		expect(withMusic).toContain('href="/music"');
+		expect(withMusic).toContain('Discoteca');
+		expect(withMusic).toContain('Álbumes, artistas y la banda sonora de la casa');
+		expect((withMusic.match(/class="portal-category(?:\s|")/g) ?? []).length).toBe(4);
 	});
 
 	it('aplica el nombre, el título y la introducción de los ajustes', () => {

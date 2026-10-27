@@ -9,14 +9,16 @@
 		isAdmin = false,
 		hasSession = false,
 		hasClips = false,
+		hasMusic = false,
 		versionLabel
 	}: {
 		ui: PublicUI;
-		activeCategory?: 'movies' | 'collections' | 'series' | 'videos' | null;
+		activeCategory?: 'movies' | 'collections' | 'series' | 'videos' | 'music' | null;
 		isHome?: boolean;
 		isAdmin?: boolean;
 		hasSession?: boolean;
 		hasClips?: boolean;
+		hasMusic?: boolean;
 		versionLabel: string;
 	} = $props();
 </script>
@@ -62,6 +64,14 @@
 					<a
 						href="/videos"
 						aria-current={activeCategory === 'videos' ? 'page' : undefined}>Vídeos</a
+					>
+				</li>
+			{/if}
+			{#if hasMusic}
+				<li>
+					<a
+						href="/music"
+						aria-current={activeCategory === 'music' ? 'page' : undefined}>Música</a
 					>
 				</li>
 			{/if}

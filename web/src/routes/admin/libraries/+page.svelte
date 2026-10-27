@@ -38,6 +38,13 @@
 	let browserOpen = $state(false);
 	let browserIndex = $state(0);
 
+	const kindHelp = $derived(
+		kind === 'music'
+			? 'Se leen las etiquetas de los archivos; estructura recomendada Artista/Álbum/Pista.'
+			: kind === 'clips'
+				? 'Sin identificación: el título sale del nombre del archivo y se navega por carpetas.'
+				: 'Identifica películas y series con TMDB; también acepta episodios organizados por temporadas.'
+	);
 	const currentStatus = $derived(status ?? (form?.started ? runningStatus() : null));
 	const createMessage = $derived(form?.action === 'create' ? form : null);
 	const messageInCard = $derived(
@@ -266,10 +273,7 @@
 						</option>
 					{/each}
 				</select>
-				<small class="admin-note">
-					Sin identificación: el título sale del nombre del archivo y se navega por carpetas.
-					Música sigue pendiente.
-				</small>
+				<small class="admin-note">{kindHelp}</small>
 			</label>
 
 			<fieldset class="new-path-list">

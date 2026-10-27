@@ -525,8 +525,8 @@ describe('página de administración', () => {
 		expect(body).toContain('120 fichas');
 		expect(body).toContain('Vídeos (videoclips, conciertos…)');
 		expect(body).not.toContain('Vídeos · Próximamente');
-		expect(body).toContain('Música · Próximamente');
-		expect(body).toContain('Sin identificación: el título sale del nombre del archivo');
+		expect(body).not.toContain('Música · Próximamente');
+		expect(body).toContain('Identifica películas y series con TMDB');
 		expect(body).toContain('Nueva biblioteca');
 		expect(body).toContain('Añadir otra carpeta');
 		expect(body).toContain('Elegir…');
@@ -565,12 +565,24 @@ describe('página de administración', () => {
 		expect(body).toContain('name="paths"');
 	});
 
-	it('explica que Vídeos no se identifica y que Música sigue pendiente', () => {
-		const { body } = render(AdminPage, { props: { data: { libraries } } });
+	it('explica la estructura recomendada al elegir Música', () => {
+		const { body } = render(AdminPage, {
+			props: {
+				data: { libraries },
+				form: {
+					success: false,
+					action: 'create',
+					message: 'error',
+					name: 'Discos',
+					kind: 'music',
+					paths: ['/media/musica']
+				}
+			}
+		});
 
-		expect(body).toContain('Sin identificación: el título sale del nombre del archivo');
-		expect(body).toContain('se navega por carpetas');
-		expect(body).toContain('Música sigue pendiente.');
+		expect(body).toContain('Se leen las etiquetas de los archivos');
+		expect(body).toContain('estructura recomendada Artista/Álbum/Pista');
+		expect(body).not.toContain('Música · Próximamente');
 	});
 });
 

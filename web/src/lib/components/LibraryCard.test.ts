@@ -50,6 +50,15 @@ describe('tarjeta de biblioteca', () => {
 		expect(html).toContain('Vídeos');
 	});
 
+	it('muestra el tipo Música y cuenta pistas', () => {
+		const html = body({
+			library: { ...library, kind: 'music', name: 'Discos', item_count: 3 }
+		});
+
+		expect(html).toContain('Música');
+		expect(html).toContain('3 pistas');
+	});
+
 	it('conserva el nombre y la ruta escritos tras un error', () => {
 		const html = body({
 			library,

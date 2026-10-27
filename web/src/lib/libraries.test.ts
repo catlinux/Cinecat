@@ -15,11 +15,11 @@ describe('textos de tipo de biblioteca', () => {
 		expect(libraryKindLabel(undefined)).toBe('Películas y series');
 	});
 
-	it('deja Vídeos disponible y Música como próximamente', () => {
+	it('deja disponibles los tres tipos de biblioteca', () => {
 		expect(LIBRARY_KIND_OPTIONS).toEqual([
 			{ value: 'video', label: 'Películas y series', disabled: false },
 			{ value: 'clips', label: 'Vídeos (videoclips, conciertos…)', disabled: false },
-			{ value: 'music', label: 'Música', disabled: true }
+			{ value: 'music', label: 'Música', disabled: false }
 		]);
 	});
 });

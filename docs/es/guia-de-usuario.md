@@ -14,7 +14,7 @@ Para cerrar sesión, entra en `/login` y pulsa «Cerrar sesión». La sesión se
 
 ## El portal
 
-El portal es la página de inicio. Arriba verás el nombre del servidor, el eslogan y el texto de bienvenida que haya configurado el administrador. Después aparecen los accesos a **Películas**, **Colecciones**, **Series** y, si existe una biblioteca de Vídeos con contenido, **Vídeos**.
+El portal es la página de inicio. Arriba verás el nombre del servidor, el eslogan y el texto de bienvenida que haya configurado el administrador. Después aparecen los accesos a **Películas**, **Colecciones**, **Series** y, si existen bibliotecas de Vídeos o Música con contenido, **Vídeos** y **Música**.
 
 Debajo se muestran, solo si tienen contenido:
 
@@ -26,7 +26,7 @@ Las filas se pueden desplazar con las flechas `‹` y `›`; con el dedo o el tr
 
 ## Navegar por la biblioteca
 
-El menú puede estar a la izquierda (**lateral**) o arriba (**superior**), según lo configure el administrador. Contiene **Inicio**, **Películas**, **Colecciones**, **Series**, **Vídeos** cuando hay una biblioteca de ese tipo con contenido, **Mi cuenta** y, si eres administrador, **Administración**.
+El menú puede estar a la izquierda (**lateral**) o arriba (**superior**), según lo configure el administrador. Contiene **Inicio**, **Películas**, **Colecciones**, **Series**, **Vídeos** y **Música** cuando hay una biblioteca de esos tipos con contenido, **Mi cuenta** y, si eres administrador, **Administración**.
 
 ### Películas
 
@@ -60,6 +60,14 @@ Los botones de visionado permiten marcar un episodio, una temporada o la serie c
 La sección **Vídeos** aparece en el menú cuando existe una biblioteca de tipo Vídeos con contenido. Para crearla, entra en **Administración → Bibliotecas**, elige el tipo «Vídeos (videoclips, conciertos…)», añade sus carpetas y lanza el escaneo.
 
 Este tipo no identifica los archivos ni descarga carátulas de TMDB u OMDb: el título sale del nombre del archivo. Al abrir la sección verás las carpetas de la biblioteca, con el número de vídeos que contienen (incluidas sus subcarpetas). Dentro de una carpeta, las subcarpetas aparecen primero y después los vídeos en tarjetas apaisadas. Las miniaturas se generan al verlas por primera vez y se guardan en caché; si aún no hay miniatura, se usa una portada de respaldo generada. Las migas de pan permiten volver a cualquier nivel. Puedes reproducir o continuar un vídeo, marcarlo como visto y cambiar audio, subtítulos o calidad.
+
+### Música
+
+La sección **Música** aparece cuando hay una biblioteca de ese tipo con pistas. Para crearla, entra en **Administración → Bibliotecas**, elige el tipo «Música», añade sus carpetas y lanza el escaneo. La estructura recomendada es `Artista/Álbum/Pista`: el servidor lee con `ffprobe` el título, artista, artista del álbum, álbum, pista, disco, año y género. Si faltan etiquetas usa el nombre del archivo y de las carpetas. Se admiten MP3, FLAC, M4A, AAC, OGG, OGA, OPUS y WAV; no se indexan WMA, APE ni otros formatos. La carátula sale de `cover`, `folder`, `front` o `album` en la carpeta del álbum o, si no hay, de la imagen incrustada en la primera pista.
+
+En **Música** puedes cambiar entre **Álbumes**, **Artistas** y **Pistas**, buscar por texto, filtrar por letra y ordenar los álbumes por título, artista, año o añadidos. La vista de pistas solo muestra resultados cuando escribes una búsqueda. Al abrir un álbum verás su carátula, año, número de pistas, duración total y la lista de pistas; con **Reproducir**, **Aleatorio** o **Añadir a la cola** puedes empezar a escuchar. En la página de un artista, **Reproducir todo** encola sus álbumes en orden.
+
+El reproductor de música es una barra fija en la parte inferior que sigue sonando al navegar por la web. Muestra la portada, el título y el artista, permite pausar, avanzar o retroceder, mover el progreso, cambiar el volumen o silenciar, activar el aleatorio y repetir (no, todas o una), y abrir la **Cola** para quitar pistas o vaciarla. La cola, el volumen, el aleatorio y el repetir se recuerdan al recargar; la reproducción se restaura en pausa. Si una pista falla o ha caducado su enlace, se reintenta una vez y, si sigue fallando, se salta con un aviso. Al reproducir un vídeo, la música se pausa automáticamente y no se reanuda sola. No hay atajos nuevos para la barra: usa sus botones, los controles multimedia del sistema y los botones de reproducción de las pistas.
 
 ## La ficha de una película
 

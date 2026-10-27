@@ -7,8 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-10-27
+
 ### Added
 
+- "Music" section on the web: albums (with cover, sorting and letter filter), artists and track search, album and artist pages, a menu entry and a portal category. The "Music" type can be chosen when creating a library.
+- Persistent music player: a fixed bottom bar that keeps playing while you browse, with a queue (add, play next, remove, clear), shuffle, repeat, volume, media keys and system metadata (Media Session). It pauses when a video plays and the queue is remembered between visits (restored paused).
 - "Music" library type on the server: the scan reads tags with `ffprobe` (artist, album, track, disc, year, genre), with no external services, only re-inspects new or changed files, and keeps entries if a folder is unavailable. Migration 0016 (`music_artists`, `music_albums`, `music_tracks`). Covers from the folder or embedded (cached in `cache/covers`).
 - Music API: `GET /api/v1/music/artists`, `/artists/{id}`, `/albums`, `/albums/{id}`, `/albums/{id}/cover`, `/tracks` (search) and `/tracks/{id}/play`, and the signed streaming endpoint with ranges `GET /api/v1/stream/music/{id}`. `GET /api/v1/home` adds `has_music`.
 

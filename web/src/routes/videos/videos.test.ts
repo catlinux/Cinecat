@@ -19,6 +19,7 @@ function pageData(overrides: Record<string, unknown> = {}): any {
 		hasSession: true,
 		isAdmin: false,
 		hasClips: true,
+		hasMusic: true,
 		isHome: false,
 		activeCategory: 'videos' as const,
 		serverVersion: null,

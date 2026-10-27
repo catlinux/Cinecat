@@ -272,6 +272,7 @@ function pageData(overrides: Record<string, unknown> = {}) {
 		hasSession: true,
 		isAdmin: false,
 		hasClips: false,
+		hasMusic: false,
 		isHome: false,
 		activeCategory: 'movies' as const,
 		serverVersion: null,
