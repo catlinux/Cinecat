@@ -58,7 +58,8 @@ func TestMigrateCreaTablas(t *testing.T) {
 	for _, name := range []string{
 		"schema_migrations", "users", "sessions", "libraries", "library_paths", "media_items",
 		"playback_state", "playback_progress", "collections", "collection_items", "series",
-		"series_seasons", "settings", "item_preferences",
+		"series_seasons", "settings", "item_preferences", "music_artists", "music_albums",
+		"music_tracks",
 	} {
 		if !got[name] {
 			t.Errorf("falta la tabla %q", name)
@@ -445,5 +446,55 @@ func TestClavesForaneasActivas(t *testing.T) {
 		`INSERT INTO media_items (library_id, path, title, kind) VALUES (999, '/x.mkv', 'X', 'movie')`)
 	if err == nil {
 		t.Fatal("se esperaba un error de clave foránea con library_id inexistente")
+	}
+}
+
+func TestMigracionMusicaRestriccionesYCascada(t *testing.T) {
+	s, ctx := openTestStore(t, filepath.Join(t.TempDir(), "cinecat.db"))
+	db := s.DB()
+	res, err := db.ExecContext(ctx,
+		`INSERT INTO libraries (path, name, kind) VALUES ('/musica', 'Música', 'music')`)
+	if err != nil {
+		t.Fatalf("crear biblioteca: %v", err)
+	}
+	libraryID, _ := res.LastInsertId()
+	res, err = db.ExecContext(ctx,
+		`INSERT INTO music_artists (name, sort_name) VALUES ('The Beatles', 'Beatles')`)
+	if err != nil {
+		t.Fatalf("crear artista: %v", err)
+	}
+	artistID, _ := res.LastInsertId()
+	if _, err := db.ExecContext(ctx,
+		`INSERT INTO music_artists (name, sort_name) VALUES ('the beatles', 'beatles')`); err == nil {
+		t.Fatal("el nombre de artista debe ser único sin distinguir mayúsculas")
+	}
+	res, err = db.ExecContext(ctx, `
+		INSERT INTO music_albums (library_id, artist_id, title, year)
+		VALUES (?, ?, 'Abbey Road', 1969)`, libraryID, artistID)
+	if err != nil {
+		t.Fatalf("crear álbum: %v", err)
+	}
+	albumID, _ := res.LastInsertId()
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO music_albums (library_id, artist_id, title)
+		VALUES (?, ?, 'abbey road')`, libraryID, artistID); err == nil {
+		t.Fatal("el título del álbum debe ser único sin distinguir mayúsculas")
+	}
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO music_tracks (
+			library_id, album_id, artist_id, path, title, size_bytes, mtime_unix
+		) VALUES (?, ?, ?, '/musica/01.mp3', 'Come Together', 10, 20)`,
+		libraryID, albumID, artistID); err != nil {
+		t.Fatalf("crear pista: %v", err)
+	}
+	if _, err := db.ExecContext(ctx,
+		`DELETE FROM libraries WHERE id = ?`, libraryID); err != nil {
+		t.Fatalf("borrar biblioteca: %v", err)
+	}
+	for _, table := range []string{"music_tracks", "music_albums"} {
+		var count int
+		if err := db.QueryRowContext(ctx, `SELECT count(*) FROM `+table).Scan(&count); err != nil || count != 0 {
+			t.Fatalf("%s tras cascada = %d, %v", table, count, err)
+		}
 	}
 }

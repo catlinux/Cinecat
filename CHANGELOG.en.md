@@ -7,6 +7,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+### Added
+
+- "Music" library type on the server: the scan reads tags with `ffprobe` (artist, album, track, disc, year, genre), with no external services, only re-inspects new or changed files, and keeps entries if a folder is unavailable. Migration 0016 (`music_artists`, `music_albums`, `music_tracks`). Covers from the folder or embedded (cached in `cache/covers`).
+- Music API: `GET /api/v1/music/artists`, `/artists/{id}`, `/albums`, `/albums/{id}`, `/albums/{id}/cover`, `/tracks` (search) and `/tracks/{id}/play`, and the signed streaming endpoint with ranges `GET /api/v1/stream/music/{id}`. `GET /api/v1/home` adds `has_music`.
+
+### Changed
+
+- Signed playback URLs now carry a namespace (`video` or `music`) so a track id cannot validate as a movie or vice versa.
+
 ## [0.18.0] - 2026-10-27
 
 ### Added

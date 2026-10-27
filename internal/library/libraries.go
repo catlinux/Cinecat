@@ -264,7 +264,10 @@ func (a *API) handleLibraries(w http.ResponseWriter, r *http.Request) {
 func (a *API) listLibraries(ctx context.Context) ([]libraryDTO, error) {
 	rows, err := a.db.QueryContext(ctx, `
 		SELECT l.id, l.name, l.kind, l.path,
-		       (SELECT count(*) FROM media_items mi WHERE mi.library_id = l.id)
+		       CASE WHEN l.kind = 'music'
+		            THEN (SELECT count(*) FROM music_tracks mt WHERE mt.library_id = l.id)
+		            ELSE (SELECT count(*) FROM media_items mi WHERE mi.library_id = l.id)
+		       END
 		  FROM libraries l
 		 ORDER BY l.name COLLATE NOCASE, l.id`)
 	if err != nil {
@@ -591,6 +594,11 @@ func (a *API) handleDeleteLibraryPath(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if err := deleteMusicTracksUnderPath(r.Context(), tx, id, removed); err != nil {
+		logLibraryError("borrar pistas de la carpeta", err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
 	if _, err := tx.ExecContext(r.Context(),
 		`DELETE FROM library_paths WHERE id = ? AND library_id = ?`, pathID, id); err != nil {
 		logLibraryError("borrar carpeta de biblioteca", err)
@@ -626,6 +634,11 @@ func (a *API) handleDeleteLibraryPath(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
 		return
 	}
+	if err := cleanupMusicOrphans(r.Context(), tx); err != nil {
+		logLibraryError("limpiar huérfanos de música tras retirar carpeta", err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
 	if err := tx.Commit(); err != nil {
 		logLibraryError("confirmar retirada de carpeta", err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
@@ -651,6 +664,9 @@ func (a *API) handleDeleteLibrary(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusNotFound, "biblioteca no encontrada")
 		return
 	}
+	if err := cleanupMusicOrphans(r.Context(), a.db); err != nil {
+		logLibraryError("limpiar artistas tras borrar biblioteca", err)
+	}
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -658,7 +674,10 @@ func (a *API) libraryByID(ctx context.Context, id int64) (libraryDTO, error) {
 	var item libraryDTO
 	err := a.db.QueryRowContext(ctx, `
 		SELECT l.id, l.name, l.kind, l.path,
-		       (SELECT count(*) FROM media_items mi WHERE mi.library_id = l.id)
+		       CASE WHEN l.kind = 'music'
+		            THEN (SELECT count(*) FROM music_tracks mt WHERE mt.library_id = l.id)
+		            ELSE (SELECT count(*) FROM media_items mi WHERE mi.library_id = l.id)
+		       END
 		  FROM libraries l WHERE l.id = ?`, id).
 		Scan(&item.ID, &item.Name, &item.Kind, &item.Path, &item.ItemCount)
 	if err != nil {

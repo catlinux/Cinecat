@@ -188,11 +188,12 @@ func TestScannerCarpetaNoDisponibleConservaFichasYProgreso(t *testing.T) {
 	}
 }
 
-func TestScannerSaltaMusica(t *testing.T) {
+func TestScannerIndexaMusicaConValoresDeRespaldo(t *testing.T) {
 	ctx := context.Background()
 	db := openTestDB(t)
 	root := t.TempDir()
-	writeFile(t, filepath.Join(root, "music.mkv"))
+	writeFile(t, filepath.Join(root, "Cancion.mp3"))
+	writeFile(t, filepath.Join(root, "video.mkv"))
 	result, err := db.Exec(
 		`INSERT INTO libraries (path, name, kind) VALUES (?, ?, 'music')`, root, "music")
 	if err != nil {
@@ -208,17 +209,17 @@ func TestScannerSaltaMusica(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Scan: %v", err)
 	}
-	if res.Files != 0 {
-		t.Fatalf("música no debe escanearse todavía: %+v", res)
+	if res.Files != 1 {
+		t.Fatalf("debe indexar solo el audio: %+v", res)
 	}
-	found := false
-	for _, warning := range res.Warnings {
-		if strings.Contains(warning, "tipo music pendiente de implementar") {
-			found = true
-		}
+	var title, artist string
+	if err := db.QueryRow(
+		`SELECT mt.title, ar.name FROM music_tracks mt JOIN music_artists ar ON ar.id = mt.artist_id`).
+		Scan(&title, &artist); err != nil {
+		t.Fatalf("leer pista: %v", err)
 	}
-	if !found {
-		t.Fatalf("falta el aviso para music: %v", res.Warnings)
+	if title != "Cancion" || artist != unknownMusicArtist {
+		t.Fatalf("pista inesperada: title=%q artist=%q", title, artist)
 	}
 }
 

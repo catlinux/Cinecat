@@ -7,6 +7,15 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Añadido
+
+- Bibliotecas de tipo «Música» en el servidor: el escaneo lee las etiquetas con `ffprobe` (artista, álbum, pista, disco, año, género), sin servicios externos, solo reinspecciona los archivos nuevos o cambiados, y conserva las fichas si una carpeta no está disponible. Migración 0016 (`music_artists`, `music_albums`, `music_tracks`). Carátulas de la carpeta o incrustadas (en caché `cache/covers`).
+- API de música: `GET /api/v1/music/artists`, `/artists/{id}`, `/albums`, `/albums/{id}`, `/albums/{id}/cover`, `/tracks` (búsqueda) y `/tracks/{id}/play`, y flujo firmado con rangos `GET /api/v1/stream/music/{id}`. `GET /api/v1/home` añade `has_music`.
+
+### Cambiado
+
+- Las URL firmadas de reproducción llevan ahora un espacio de nombres (`video` o `music`) para que un id de pista no valide como película ni al revés.
+
 ## [0.18.0] - 2026-10-27
 
 ### Añadido

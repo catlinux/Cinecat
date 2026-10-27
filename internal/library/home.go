@@ -19,6 +19,7 @@ type homeResponse struct {
 	RecentMovies []mediaItemDTO  `json:"recent_movies"`
 	RecentSeries []seriesListDTO `json:"recent_series"`
 	HasClips     bool            `json:"has_clips"`
+	HasMusic     bool            `json:"has_music"`
 	Counts       homeCounts      `json:"counts"`
 }
 
@@ -100,12 +101,25 @@ func (a *API) handleHome(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var hasMusic int
+	if err := a.db.QueryRowContext(r.Context(), `
+		SELECT EXISTS (
+			SELECT 1 FROM music_tracks mt
+			  JOIN libraries l ON l.id = mt.library_id
+			 WHERE l.kind = 'music'
+		)`).Scan(&hasMusic); err != nil {
+		log.Printf("library: comprobar bibliotecas de música: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
+
 	writeJSON(w, http.StatusOK, homeResponse{
 		Continue:     continueItems,
 		NextUp:       nextUp,
 		RecentMovies: recentMovies,
 		RecentSeries: recentSeries,
 		HasClips:     hasClips != 0,
+		HasMusic:     hasMusic != 0,
 		Counts:       counts,
 	})
 }

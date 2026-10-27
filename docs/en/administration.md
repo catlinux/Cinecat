@@ -21,7 +21,7 @@ Only users with the `admin` role can open `/admin`. The server checks the role o
 ## Creating a library
 
 1. Open **Administración → Bibliotecas**.
-2. Under "Nueva biblioteca", enter a **Nombre** and choose the **Tipo**: "Películas y series" or "Vídeos (videoclips, conciertos…)". "Música" is still pending.
+2. Under "Nueva biblioteca", enter a **Nombre** and choose the **Tipo**: "Películas y series", "Vídeos (videoclips, conciertos…)" or "Música".
 3. Type the first folder path or press **Elegir…** to browse the server folders. With **Añadir otra carpeta** you can add more; all of them are stored in the same library.
 4. Press **Crear biblioteca**. The paths must exist and be directories inside the allowed roots; for example `/media/Multimedia/Pelis`.
 5. On each library card you can **Renombrar**, **Añadir carpeta**, **Quitar** a folder, **Escanear** or **Borrar biblioteca**. To delete one you must type its name to confirm.
@@ -30,13 +30,23 @@ The scan continues in the background even if you close the page. The **Escanear*
 
 ### Multiple folders per library
 
-A library can group several folders, even on different disks. The first folder is kept as the main folder for compatibility; if it is removed, the next oldest becomes the main one. A library can be `video` (movies and series), `clips` (unidentified videos) or `music`. The `video` and `clips` types are scanned; `music` is still pending and is skipped with a warning.
+A library can group several folders, even on different disks. The first folder is kept as the main folder for compatibility; if it is removed, the next oldest becomes the main one. A library can be `video` (movies and series), `clips` (unidentified videos) or `music`. All three types are scanned; Music tracks use their own tables and are never mixed with movies, series or videos.
 
 ### Vídeos libraries (unidentified)
 
 A `clips` library walks its folders like a movie library, but identifies nothing: it does not query TMDB or OMDb, does not infer a year, does not create series or collections and makes no external metadata requests. The title comes from the file name, replacing `_` and `.` with spaces; for example, `2019-08-15_Cumple.de.Ana.mp4` is shown as "2019-08-15 Cumple de Ana".
 
-Videos from these libraries are not mixed with movies in listings, searches, filters, recommendations, collections, portal counts or the administration summary. They keep watched state, progress, preferences and playback, and can appear in "Continue watching". The **Vídeos** section of the web app lets you browse their folders and subfolders, open a minimal detail page and play them. The Música type is still pending.
+Videos from these libraries are not mixed with movies in listings, searches, filters, recommendations, collections, portal counts or the administration summary. They keep watched state, progress, preferences and playback, and can appear in "Continue watching". The **Vídeos** section of the web app lets you browse their folders and subfolders, open a minimal detail page and play them. The Music type has its own scan and API; the Music web screen will arrive in a later task.
+
+### Music libraries
+
+A `music` library walks all its folders and reads audio tags with `ffprobe`: title, artist, album artist, album, track, disc, year and genre. The recommended structure is `Artist/Album/Track`; when tags are missing, the title comes from the file name (without a prefix such as `01 - `), the album from the folder and the artist from the parent folder. Compilations tagged "Various Artists", "VV.AA." or "Varios artistas" are unified as "Varios artistas".
+
+The supported formats are MP3, FLAC, M4A, AAC, OGG, OGA, OPUS and WAV; WMA, APE and other formats are not indexed. No external service is queried: no MusicBrainz, no downloaded covers and no lyrics. A track that fails in `ffprobe` is still indexed with fallback values and the scan reports a warning.
+
+The album cover comes from the first `cover`, `folder`, `front` or `album` file with a JPG, JPEG, PNG or WEBP extension in the track folder, case-insensitively. If there is none, the embedded image of the first track that has one is extracted with FFmpeg and stored in `cache/covers`, next to the database. Covers and thumbnails can be deleted safely because they are generated again. FFmpeg and ffprobe must be installed in the container.
+
+The scan does not inspect a track again when its size and modification time have not changed, and limits concurrent `ffprobe` reads to four. Removing a folder or a library also removes its tracks, albums and artists that are left empty, but never the files on disk.
 
 Thumbnails are generated the first time they are viewed and stored in `cache/thumbs`, next to the database and inside the persistent volume. They can be deleted without risk: they will be generated again. The server needs FFmpeg and ffprobe installed in the container.
 

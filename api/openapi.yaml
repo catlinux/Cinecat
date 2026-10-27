@@ -3442,12 +3442,424 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/music/artists:
+    get:
+      summary: Lista artistas de música
+      description: Ordena por el nombre de orden, sin «The », «El » ni «La » iniciales.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/MusicQuery'
+        - $ref: '#/components/parameters/MusicLetter'
+        - $ref: '#/components/parameters/PageLimit'
+        - $ref: '#/components/parameters/PageOffset'
+      responses:
+        '200':
+          description: Artistas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MusicArtistsResponse'
+        '400':
+          description: Parámetros no válidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/music/artists/{id}:
+    get:
+      summary: Artista con sus álbumes
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - $ref: '#/components/parameters/PageLimit'
+        - $ref: '#/components/parameters/PageOffset'
+      responses:
+        '200':
+          description: Artista y álbumes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MusicArtistDetail'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Artista no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/music/albums:
+    get:
+      summary: Lista álbumes de música
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/MusicQuery'
+        - $ref: '#/components/parameters/MusicLetter'
+        - name: sort
+          in: query
+          description: Orden de los álbumes.
+          schema:
+            type: string
+            enum: [title, artist, year, added]
+            default: title
+        - name: artist
+          in: query
+          description: Identificador del artista.
+          schema:
+            type: integer
+            format: int64
+        - $ref: '#/components/parameters/PageLimit'
+        - $ref: '#/components/parameters/PageOffset'
+      responses:
+        '200':
+          description: Álbumes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MusicAlbumsResponse'
+        '400':
+          description: Parámetros no válidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/music/albums/{id}:
+    get:
+      summary: Álbum con sus pistas
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - $ref: '#/components/parameters/PageLimit'
+        - $ref: '#/components/parameters/PageOffset'
+      responses:
+        '200':
+          description: Álbum y pistas ordenadas por disco y número
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MusicAlbumDetail'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Álbum no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/music/albums/{id}/cover:
+    get:
+      summary: Carátula de un álbum
+      description: |
+        Sirve el archivo cover/folder/front/album de la carpeta o, si no hay,
+        la imagen incrustada de la primera pista que la tenga. La imagen
+        incrustada se extrae con FFmpeg y se cachea en disco.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Imagen de carátula
+          headers:
+            ETag:
+              description: Etiqueta de la imagen para validar la caché.
+              schema:
+                type: string
+            Cache-Control:
+              description: private, max-age=86400
+              schema:
+                type: string
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+        '304':
+          description: La carátula no ha cambiado
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Álbum o carátula no encontrados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Demasiadas carátulas generándose a la vez
+          headers:
+            Retry-After:
+              description: Segundos que conviene esperar.
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/music/tracks:
+    get:
+      summary: Busca pistas de música
+      description: Busca por título, artista o álbum sin distinguir mayúsculas.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/MusicQuery'
+        - $ref: '#/components/parameters/PageLimit'
+        - $ref: '#/components/parameters/PageOffset'
+      responses:
+        '200':
+          description: Pistas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MusicTracksResponse'
+        '400':
+          description: Parámetros no válidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/music/tracks/{id}/play:
+    get:
+      summary: Prepara la reproducción de una pista
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: URL firmada y datos de reproducción
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MusicPlayResponse'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Pista no encontrada o fuera de su biblioteca
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/stream/music/{id}:
+    get:
+      summary: Sirve una pista firmada
+      description: |
+        Sirve el archivo de audio con soporte de rangos HTTP. La URL caduca y
+        la firma pertenece al espacio de nombres de música; no vale para vídeos.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - $ref: '#/components/parameters/SignatureExp'
+        - $ref: '#/components/parameters/Signature'
+      responses:
+        '200':
+          description: Archivo completo
+          content:
+            audio/mpeg:
+              schema:
+                type: string
+                format: binary
+            audio/flac:
+              schema:
+                type: string
+                format: binary
+            audio/mp4:
+              schema:
+                type: string
+                format: binary
+            audio/aac:
+              schema:
+                type: string
+                format: binary
+            audio/ogg:
+              schema:
+                type: string
+                format: binary
+            audio/opus:
+              schema:
+                type: string
+                format: binary
+            audio/wav:
+              schema:
+                type: string
+                format: binary
+        '206':
+          description: Fragmento solicitado con Range
+          content:
+            audio/*:
+              schema:
+                type: string
+                format: binary
+        '403':
+          description: Firma no válida o caducada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Pista no encontrada o fuera de su biblioteca
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
   parameters:
+    PageLimit:
+      name: limit
+      in: query
+      description: Número máximo de elementos.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+    PageOffset:
+      name: offset
+      in: query
+      description: Elementos que se saltan antes de devolver la página.
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    MusicQuery:
+      name: q
+      in: query
+      description: Texto de búsqueda; no distingue mayúsculas.
+      schema:
+        type: string
+    MusicLetter:
+      name: letter
+      in: query
+      description: Letra inicial A-Z o #.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 1
+    SignatureExp:
+      name: exp
+      in: query
+      required: true
+      description: Caducidad de la firma en segundos Unix.
+      schema:
+        type: integer
+        format: int64
+    Signature:
+      name: sig
+      in: query
+      required: true
+      description: Firma HMAC de la URL.
+      schema:
+        type: string
     ImageKind:
       name: kind
       in: path
@@ -4347,6 +4759,7 @@ components:
         - recent_movies
         - recent_series
         - has_clips
+        - has_music
         - counts
       properties:
         continue:
@@ -4372,6 +4785,9 @@ components:
         has_clips:
           type: boolean
           description: Hay alguna biblioteca de tipo clips con vídeos.
+        has_music:
+          type: boolean
+          description: Hay alguna biblioteca de tipo music con pistas.
         counts:
           $ref: '#/components/schemas/HomeCounts'
       additionalProperties: false
@@ -5298,4 +5714,263 @@ components:
           description: Mensaje de error por cada clave no válida.
           additionalProperties:
             type: string
+      additionalProperties: false
+    MusicArtist:
+      type: object
+      required:
+        - id
+        - name
+        - album_count
+        - track_count
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        album_count:
+          type: integer
+          format: int64
+        track_count:
+          type: integer
+          format: int64
+      additionalProperties: false
+    MusicArtistDetail:
+      type: object
+      required:
+        - id
+        - name
+        - album_count
+        - track_count
+        - albums
+        - total
+        - limit
+        - offset
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        album_count:
+          type: integer
+          format: int64
+        track_count:
+          type: integer
+          format: int64
+        albums:
+          type: array
+          items:
+            $ref: '#/components/schemas/MusicAlbum'
+        total:
+          type: integer
+          format: int64
+        limit:
+          type: integer
+        offset:
+          type: integer
+      additionalProperties: false
+    MusicAlbum:
+      type: object
+      required:
+        - id
+        - title
+        - artist
+        - artist_id
+        - year
+        - track_count
+        - duration_seconds
+        - has_cover
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        artist:
+          type: string
+        artist_id:
+          type: integer
+          format: int64
+        year:
+          type: integer
+          nullable: true
+        track_count:
+          type: integer
+          format: int64
+        duration_seconds:
+          type: number
+          format: double
+        has_cover:
+          type: boolean
+          description: Hay carátula de carpeta o incrustada en alguna pista.
+      additionalProperties: false
+    MusicAlbumDetail:
+      type: object
+      required:
+        - id
+        - title
+        - artist
+        - artist_id
+        - year
+        - track_count
+        - duration_seconds
+        - has_cover
+        - tracks
+        - total
+        - limit
+        - offset
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        artist:
+          type: string
+        artist_id:
+          type: integer
+          format: int64
+        year:
+          type: integer
+          nullable: true
+        track_count:
+          type: integer
+          format: int64
+        duration_seconds:
+          type: number
+          format: double
+        has_cover:
+          type: boolean
+        tracks:
+          type: array
+          description: Pistas ordenadas por disco y número.
+          items:
+            $ref: '#/components/schemas/MusicTrack'
+        total:
+          type: integer
+          format: int64
+        limit:
+          type: integer
+        offset:
+          type: integer
+      additionalProperties: false
+    MusicTrack:
+      type: object
+      required:
+        - id
+        - title
+        - track_no
+        - disc_no
+        - artist
+        - duration_seconds
+        - codec
+        - bitrate
+        - playable
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        track_no:
+          type: integer
+          nullable: true
+        disc_no:
+          type: integer
+        artist:
+          type: string
+        duration_seconds:
+          type: number
+          format: double
+          nullable: true
+        codec:
+          type: string
+          nullable: true
+        bitrate:
+          type: integer
+          format: int64
+          nullable: true
+        playable:
+          type: boolean
+          description: Falso para WAV de más de dos canales.
+      additionalProperties: false
+    MusicArtistsResponse:
+      type: object
+      required:
+        - artists
+        - total
+        - limit
+        - offset
+      properties:
+        artists:
+          type: array
+          items:
+            $ref: '#/components/schemas/MusicArtist'
+        total:
+          type: integer
+          format: int64
+        limit:
+          type: integer
+        offset:
+          type: integer
+      additionalProperties: false
+    MusicAlbumsResponse:
+      type: object
+      required:
+        - albums
+        - total
+        - limit
+        - offset
+      properties:
+        albums:
+          type: array
+          items:
+            $ref: '#/components/schemas/MusicAlbum'
+        total:
+          type: integer
+          format: int64
+        limit:
+          type: integer
+        offset:
+          type: integer
+      additionalProperties: false
+    MusicTracksResponse:
+      type: object
+      required:
+        - tracks
+        - total
+        - limit
+        - offset
+      properties:
+        tracks:
+          type: array
+          items:
+            $ref: '#/components/schemas/MusicTrack'
+        total:
+          type: integer
+          format: int64
+        limit:
+          type: integer
+        offset:
+          type: integer
+      additionalProperties: false
+    MusicPlayResponse:
+      type: object
+      required:
+        - url
+        - mime
+        - expires_at
+        - playable
+      properties:
+        url:
+          type: string
+          description: URL relativa firmada para el flujo de audio.
+        mime:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        playable:
+          type: boolean
       additionalProperties: false

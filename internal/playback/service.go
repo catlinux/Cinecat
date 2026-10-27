@@ -390,13 +390,24 @@ func (s *Service) maxTranscodeLimit() int {
 // Sign devuelve la firma y la caducidad de una URL de reproducción para el
 // ítem indicado.
 func (s *Service) Sign(itemID int64) (string, time.Time) {
-	expires := s.now().Add(s.ttl).UTC().Truncate(time.Second)
-	return s.signature(itemID, expires.Unix()), expires
+	return s.SignResource("video", itemID)
 }
 
-// Verify comprueba que la firma corresponde al ítem y que la URL no ha
-// caducado.
+// SignResource firma una URL dentro de un espacio de nombres. Así un id de
+// pista musical no puede validar como una película aunque coincida el número.
+func (s *Service) SignResource(kind string, itemID int64) (string, time.Time) {
+	expires := s.now().Add(s.ttl).UTC().Truncate(time.Second)
+	return s.signature(kind, itemID, expires.Unix()), expires
+}
+
+// Verify comprueba que la firma corresponde al ítem de vídeo y que la URL no
+// ha caducado.
 func (s *Service) Verify(itemID int64, expRaw, signature string) error {
+	return s.VerifyResource("video", itemID, expRaw, signature)
+}
+
+// VerifyResource valida una firma de un recurso concreto.
+func (s *Service) VerifyResource(kind string, itemID int64, expRaw, signature string) error {
 	expires, err := strconv.ParseInt(expRaw, 10, 64)
 	if err != nil {
 		return ErrInvalidSignature
@@ -409,24 +420,26 @@ func (s *Service) Verify(itemID int64, expRaw, signature string) error {
 	if err != nil {
 		return ErrInvalidSignature
 	}
-	expected := s.signatureBytes(itemID, expires)
+	expected := s.signatureBytes(kind, itemID, expires)
 	if !hmac.Equal(got, expected) {
 		return ErrInvalidSignature
 	}
 	return nil
 }
 
-func (s *Service) signature(itemID, expires int64) string {
-	return base64.RawURLEncoding.EncodeToString(s.signatureBytes(itemID, expires))
+func (s *Service) signature(kind string, itemID, expires int64) string {
+	return base64.RawURLEncoding.EncodeToString(s.signatureBytes(kind, itemID, expires))
 }
 
-func (s *Service) signatureBytes(itemID, expires int64) []byte {
+func (s *Service) signatureBytes(kind string, itemID, expires int64) []byte {
 	mac := hmac.New(sha256.New, s.key)
-	// Los dos enteros van en binario para que la firma no dependa de cómo se
-	// formateen como texto.
-	var message [16]byte
-	binary.BigEndian.PutUint64(message[:8], uint64(itemID))
-	binary.BigEndian.PutUint64(message[8:], uint64(expires))
+	// El tipo y los dos enteros van en binario para que la firma no dependa de
+	// cómo se formateen como texto.
+	mac.Write([]byte(kind))
+	var message [17]byte
+	message[0] = 0
+	binary.BigEndian.PutUint64(message[1:9], uint64(itemID))
+	binary.BigEndian.PutUint64(message[9:], uint64(expires))
 	mac.Write(message[:])
 	return mac.Sum(nil)
 }

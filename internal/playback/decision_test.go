@@ -245,3 +245,19 @@ func TestSinShellEnElCodigo(t *testing.T) {
 		}
 	}
 }
+
+func TestFirmaPorEspacioDeNombres(t *testing.T) {
+	svc, _ := newTestService(t, 15*time.Minute)
+
+	signature, expires := svc.SignResource("music", 7)
+	expRaw := strconv.FormatInt(expires.Unix(), 10)
+	if err := svc.VerifyResource("music", 7, expRaw, signature); err != nil {
+		t.Fatalf("música: %v", err)
+	}
+	if err := svc.VerifyResource("video", 7, expRaw, signature); !errors.Is(err, ErrInvalidSignature) {
+		t.Fatalf("un id de música no puede validar como vídeo: %v", err)
+	}
+	if err := svc.VerifyResource("music", 8, expRaw, signature); !errors.Is(err, ErrInvalidSignature) {
+		t.Fatalf("otro id: %v", err)
+	}
+}

@@ -36,6 +36,7 @@ type API struct {
 	settingsStore *settings.Store
 	mediaRoots    []string
 	thumbnails    *Thumbnailer
+	musicCovers   *MusicCoverer
 }
 
 // NewAPI crea los handlers de la API de biblioteca.
@@ -93,6 +94,13 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.Handle("POST /api/v1/libraries/{id}/paths", a.requireAdmin(a.handleAddLibraryPath))
 	mux.Handle("DELETE /api/v1/libraries/{id}/paths/{pathId}", a.requireAdmin(a.handleDeleteLibraryPath))
 	mux.Handle("GET /api/v1/libraries/{id}/browse", a.requireSession(a.handleClipBrowse))
+	mux.Handle("GET /api/v1/music/artists", a.requireSession(a.handleMusicArtists))
+	mux.Handle("GET /api/v1/music/artists/{id}", a.requireSession(a.handleMusicArtist))
+	mux.Handle("GET /api/v1/music/albums", a.requireSession(a.handleMusicAlbums))
+	mux.Handle("GET /api/v1/music/albums/{id}", a.requireSession(a.handleMusicAlbum))
+	mux.Handle("GET /api/v1/music/albums/{id}/cover", a.requireSession(a.handleMusicAlbumCover))
+	mux.Handle("GET /api/v1/music/tracks", a.requireSession(a.handleMusicTracks))
+	mux.Handle("GET /api/v1/music/tracks/{id}/play", a.requireSession(a.handleMusicTrackPlay))
 	mux.Handle("GET /api/v1/genres", a.requireSession(a.handleGenres))
 	mux.Handle("GET /api/v1/home", a.requireSession(a.handleHome))
 	mux.Handle("GET /api/v1/collections", a.requireSession(a.handleCollections))
@@ -136,6 +144,7 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.Handle("GET /api/v1/items/{id}/images", a.requireAdmin(a.handleItemImages))
 	mux.Handle("PUT /api/v1/items/{id}/images/{kind}", a.requireAdmin(a.handleItemImagePut))
 	mux.Handle("DELETE /api/v1/items/{id}/images/{kind}", a.requireAdmin(a.handleItemImageDelete))
+	mux.Handle("GET /api/v1/stream/music/{id}", http.HandlerFunc(a.handleMusicStream))
 	if a.playback != nil {
 		mux.Handle("GET /api/v1/items/{id}/play", a.requireSession(a.handlePlay))
 		mux.Handle("GET /api/v1/stream/{id}", http.HandlerFunc(a.handleStream))

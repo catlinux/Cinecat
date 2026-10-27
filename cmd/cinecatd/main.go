@@ -125,7 +125,7 @@ func main() {
 	}
 	defer playSvc.Close()
 
-	scanner := library.New(st.DB())
+	scanner := library.New(st.DB()).WithMusicInspector(playSvc)
 	var tmdbClient library.TMDBClient
 	if cfg.TMDBAPIKey != "" {
 		tmdb, err := metadata.New(metadata.Options{
@@ -179,6 +179,7 @@ func main() {
 	api = api.WithSettings(settingsStore)
 	api = api.WithFileInspector(playSvc)
 	api = api.WithThumbnails(thumbnailCacheDir(cfg.DatabasePath))
+	api = api.WithMusicCovers(musicCoverCacheDir(cfg.DatabasePath))
 	api = api.WithMediaRoots(cfg.MediaRoots)
 
 	updateAPI := update.NewAPI(
@@ -360,6 +361,15 @@ func thumbnailCacheDir(databasePath string) string {
 		return ""
 	}
 	return filepath.Join(filepath.Dir(path), "cache", "thumbs")
+}
+
+// musicCoverCacheDir guarda las carátulas incrustadas extraídas de las pistas.
+func musicCoverCacheDir(databasePath string) string {
+	path := strings.TrimSpace(databasePath)
+	if path == "" || path == ":memory:" {
+		return ""
+	}
+	return filepath.Join(filepath.Dir(path), "cache", "covers")
 }
 
 func newHandler(authSvc *auth.Service, api *library.API, updateAPIs ...*update.API) http.Handler {

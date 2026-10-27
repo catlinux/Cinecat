@@ -21,7 +21,7 @@ Solo los usuarios con rol `admin` pueden entrar en `/admin`. El servidor comprue
 ## Crear una biblioteca
 
 1. Abre **Administración → Bibliotecas**.
-2. En «Nueva biblioteca», escribe un **Nombre** y elige el **Tipo**: «Películas y series» o «Vídeos (videoclips, conciertos…)». «Música» sigue pendiente.
+2. En «Nueva biblioteca», escribe un **Nombre** y elige el **Tipo**: «Películas y series», «Vídeos (videoclips, conciertos…)» o «Música».
 3. Escribe la ruta de la primera carpeta o pulsa **Elegir…** para navegar por las carpetas del servidor. Con **Añadir otra carpeta** puedes añadir más; todas se guardan en la misma biblioteca.
 4. Pulsa **Crear biblioteca**. Las rutas deben existir y ser directorios dentro de las raíces permitidas; por ejemplo `/media/Multimedia/Pelis`.
 5. En la tarjeta de cada biblioteca puedes **Renombrar**, **Añadir carpeta**, **Quitar** una carpeta, **Escanear** o **Borrar biblioteca**. Al borrar hay que escribir el nombre para confirmar.
@@ -30,13 +30,23 @@ El escaneo sigue en segundo plano aunque cierres la página. El botón **Escanea
 
 ### Varias carpetas por biblioteca
 
-Una biblioteca puede agrupar varias carpetas, incluso de discos distintos. La primera carpeta se conserva como carpeta principal por compatibilidad; al quitar la principal, pasa a serlo la siguiente más antigua. Una biblioteca puede ser de tipo `video` (películas y series), `clips` (vídeos sin identificar) o `music` (música). Los tipos `video` y `clips` se escanean; `music` sigue pendiente y se omite con un aviso.
+Una biblioteca puede agrupar varias carpetas, incluso de discos distintos. La primera carpeta se conserva como carpeta principal por compatibilidad; al quitar la principal, pasa a serlo la siguiente más antigua. Una biblioteca puede ser de tipo `video` (películas y series), `clips` (vídeos sin identificar) o `music` (música). Los tres tipos se escanean; las pistas de Música usan tablas propias y nunca se mezclan con películas, series o vídeos.
 
 ### Bibliotecas de Vídeos (sin identificar)
 
 Una biblioteca de tipo `clips` recorre sus carpetas igual que una de películas, pero no identifica nada: no consulta TMDB ni OMDb, no deduce año, no crea series ni colecciones y no pide metadatos externos. El título sale del nombre del archivo, cambiando `_` y `.` por espacios; por ejemplo, `2019-08-15_Cumple.de.Ana.mp4` se muestra como «2019-08-15 Cumple de Ana».
 
-Los vídeos de estas bibliotecas no se mezclan con las películas en listados, búsquedas, filtros, recomendaciones, colecciones, recuentos del portal ni del resumen de administración. Sí conservan visto, progreso, preferencias y reproducción, y pueden aparecer en «Continuar viendo». La sección **Vídeos** de la web permite navegar por sus carpetas y subcarpetas, abrir una ficha mínima y reproducirlos. El tipo Música sigue pendiente.
+Los vídeos de estas bibliotecas no se mezclan con las películas en listados, búsquedas, filtros, recomendaciones, colecciones, recuentos del portal ni del resumen de administración. Sí conservan visto, progreso, preferencias y reproducción, y pueden aparecer en «Continuar viendo». La sección **Vídeos** de la web permite navegar por sus carpetas y subcarpetas, abrir una ficha mínima y reproducirlos. El tipo Música tiene su propio escaneo y API; la pantalla web de Música llegará en una tarea posterior.
+
+### Bibliotecas de Música
+
+Una biblioteca de tipo `music` recorre todas sus carpetas y lee las etiquetas de los archivos de audio con `ffprobe`: título, artista, artista del álbum, álbum, pista, disco, año y género. La estructura recomendada es `Artista/Álbum/Pista`; si faltan etiquetas, el título sale del nombre del archivo (sin un prefijo como `01 - `), el álbum de la carpeta y el artista de la carpeta padre. Las recopilaciones con «Various Artists», «VV.AA.» o «Varios artistas» se unifican como «Varios artistas».
+
+Los formatos admitidos son MP3, FLAC, M4A, AAC, OGG, OGA, OPUS y WAV; WMA, APE y otros formatos no se indexan. No se consulta ningún servicio externo: ni MusicBrainz, ni carátulas descargadas, ni letras. Una pista que falla en `ffprobe` se indexa igualmente con los valores de respaldo y el escaneo muestra un aviso.
+
+La carátula del álbum se toma del primer archivo `cover`, `folder`, `front` o `album` con extensión JPG, JPEG, PNG o WEBP que esté en la carpeta de las pistas, sin distinguir mayúsculas. Si no existe, se usa la imagen incrustada de la primera pista que la tenga: se extrae con FFmpeg y se guarda en `cache/covers`, junto a la base de datos. Las carátulas y miniaturas se pueden borrar sin riesgo porque se vuelven a generar. Hacen falta FFmpeg y ffprobe instalados en el contenedor.
+
+El escaneo no vuelve a inspeccionar una pista cuyo tamaño y fecha no han cambiado y limita a cuatro las lecturas simultáneas de `ffprobe`. Al quitar una carpeta o una biblioteca se borran también sus pistas, álbumes y artistas que se quedan sin contenido, pero nunca los archivos del disco.
 
 Las miniaturas se generan al verlas por primera vez y se guardan en `cache/thumbs`, junto a la base de datos y dentro del volumen persistente. Se pueden borrar sin riesgo: se volverán a generar. El servidor necesita FFmpeg y ffprobe instalados en el contenedor.
 

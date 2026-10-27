@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/catlinux/cinecat/internal/metadata"
+	"github.com/catlinux/cinecat/internal/playback"
 )
 
 // videoExtensions son las extensiones que se consideran vídeo.
@@ -37,16 +38,17 @@ type TMDBClient interface {
 	TVImages(ctx context.Context, tvID int) (*metadata.ImageOptions, error)
 }
 
-// Scanner recorre las bibliotecas dadas de alta y puebla media_items.
+// Scanner recorre las bibliotecas dadas de alta y puebla sus tablas.
 type Scanner struct {
-	db   *sql.DB
-	omdb *metadata.OMDbClient
-	tmdb TMDBClient
+	db             *sql.DB
+	omdb           *metadata.OMDbClient
+	tmdb           TMDBClient
+	musicInspector MusicInspector
 }
 
 // New crea un escáner sobre la base de datos indicada.
 func New(db *sql.DB) *Scanner {
-	return &Scanner{db: db}
+	return &Scanner{db: db, musicInspector: playback.NewProber()}
 }
 
 // WithOMDb activa la consulta de metadatos de OMDb para películas. Si no se
@@ -112,7 +114,7 @@ func (s *Scanner) Scan(ctx context.Context) (Result, error) {
 
 	for _, l := range libraries {
 		res.Libraries++
-		if l.kind != "video" && l.kind != "clips" {
+		if l.kind != "video" && l.kind != "clips" && l.kind != "music" {
 			res.Warnings = append(res.Warnings,
 				fmt.Sprintf("%s: tipo %s pendiente de implementar", l.name, l.kind))
 			continue
@@ -133,6 +135,12 @@ func (s *Scanner) Scan(ctx context.Context) (Result, error) {
 				scannedRoots = append(scannedRoots, filepath.Clean(root))
 			}
 		}
+		if l.kind == "music" {
+			if err := s.pruneMusicLibrary(ctx, l.id, seen, scannedRoots, &res); err != nil {
+				return res, err
+			}
+			continue
+		}
 		if err := s.pruneLibrary(ctx, l.id, seen, scannedRoots, &res); err != nil {
 			return res, err
 		}
@@ -147,6 +155,9 @@ func (s *Scanner) Scan(ctx context.Context) (Result, error) {
 		}
 	}
 	if err := cleanupOrphans(ctx, s.db); err != nil {
+		return res, err
+	}
+	if err := cleanupMusicOrphans(ctx, s.db); err != nil {
 		return res, err
 	}
 	return res, nil
@@ -178,6 +189,7 @@ func (s *Scanner) scanLibraryPath(
 		return false, nil
 	}
 
+	musicFiles := make([]musicFile, 0)
 	walkFailed := false
 	err = filepath.WalkDir(root, func(path string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
@@ -208,7 +220,16 @@ func (s *Scanner) scanLibraryPath(
 			return nil
 		}
 
-		if strings.HasPrefix(d.Name(), ".") || !IsVideoFile(d.Name()) {
+		if strings.HasPrefix(d.Name(), ".") {
+			return nil
+		}
+		if libraryKind == "music" {
+			if IsAudioFile(d.Name()) {
+				musicFiles = append(musicFiles, musicFile{path: path, root: root})
+			}
+			return nil
+		}
+		if !IsVideoFile(d.Name()) {
 			return nil
 		}
 
@@ -268,6 +289,11 @@ func (s *Scanner) scanLibraryPath(
 	if err != nil {
 		res.Warnings = append(res.Warnings, fmt.Sprintf("%s: %v", root, err))
 		walkFailed = true
+	}
+	if libraryKind == "music" {
+		if err := s.scanMusicFiles(ctx, libraryID, musicFiles, seen, res); err != nil {
+			return false, err
+		}
 	}
 	if walkFailed {
 		return false, nil

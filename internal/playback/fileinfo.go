@@ -25,6 +25,8 @@ type FileInfo struct {
 	Subtitles         []SubtitleStream `json:"subtitles"`
 	Chapters          int              `json:"chapters"`
 	Quality           string           `json:"quality"`
+	Tags              AudioTags        `json:"tags,omitempty"`
+	HasEmbeddedCover  bool             `json:"has_embedded_cover,omitempty"`
 }
 
 type VideoStream struct {
@@ -114,12 +116,13 @@ type ffprobeOutput struct {
 }
 
 type ffprobeFormat struct {
-	Filename       string  `json:"filename"`
-	FormatName     string  `json:"format_name"`
-	FormatLongName string  `json:"format_long_name"`
-	Duration       ffFloat `json:"duration"`
-	Size           ffInt   `json:"size"`
-	BitRate        ffInt   `json:"bit_rate"`
+	Filename       string            `json:"filename"`
+	FormatName     string            `json:"format_name"`
+	FormatLongName string            `json:"format_long_name"`
+	Duration       ffFloat           `json:"duration"`
+	Size           ffInt             `json:"size"`
+	BitRate        ffInt             `json:"bit_rate"`
+	Tags           map[string]string `json:"tags"`
 }
 
 type ffprobeStream struct {
@@ -142,8 +145,9 @@ type ffprobeStream struct {
 	ColorTransfer      string            `json:"color_transfer"`
 	Tags               map[string]string `json:"tags"`
 	Disposition        struct {
-		Default ffInt `json:"default"`
-		Forced  ffInt `json:"forced"`
+		Default     ffInt `json:"default"`
+		Forced      ffInt `json:"forced"`
+		AttachedPic ffInt `json:"attached_pic"`
 	} `json:"disposition"`
 	SideDataList []struct {
 		SideDataType string `json:"side_data_type"`
@@ -215,9 +219,13 @@ func parseFFprobeJSON(data []byte) (*FileInfo, error) {
 		Audio:             make([]AudioStream, 0),
 		Subtitles:         make([]SubtitleStream, 0),
 		Chapters:          len(raw.Chapters),
+		Tags:              audioTagsFromTags(raw.Format.Tags),
 	}
 
 	for _, stream := range raw.Streams {
+		if stream.Disposition.AttachedPic != 0 {
+			info.HasEmbeddedCover = true
+		}
 		switch strings.ToLower(cleanFFString(stream.CodecType)) {
 		case "video":
 			streamInfo := VideoStream{
