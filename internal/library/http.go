@@ -1,6 +1,7 @@
 package library
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -34,6 +35,7 @@ type API struct {
 	fileInfoCache *fileInfoCache
 	settingsStore *settings.Store
 	mediaRoots    []string
+	thumbnails    *Thumbnailer
 }
 
 // NewAPI crea los handlers de la API de biblioteca.
@@ -119,6 +121,7 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.Handle("GET /api/v1/items", a.requireSession(a.handleItems))
 	mux.Handle("GET /api/v1/items/{id}", a.requireSession(a.handleItem))
 	mux.Handle("GET /api/v1/items/{id}/similar", a.requireSession(a.handleSimilarItems))
+	mux.Handle("GET /api/v1/items/{id}/thumbnail", a.requireSession(a.handleItemThumbnail))
 	mux.Handle("GET /api/v1/items/{id}/file-info", a.requireSession(a.handleItemFileInfo))
 	mux.Handle("GET /api/v1/items/{id}/preferences", a.requireSession(a.handleItemPreferencesGet))
 	mux.Handle("PUT /api/v1/items/{id}/preferences", a.requireSession(a.handleItemPreferencesPut))
@@ -584,13 +587,44 @@ func (a *API) resolveMedia(w http.ResponseWriter, r *http.Request, id int64) (pl
 
 func (a *API) mediaFile(r *http.Request, id int64) (mediaFile, error) {
 	var media mediaFile
+	var libraryID int64
 	err := a.db.QueryRowContext(r.Context(), `
-		SELECT mi.path, l.path
+		SELECT mi.path, l.path, l.id
 		  FROM media_items mi
 		  JOIN libraries l ON l.id = mi.library_id
 		 WHERE mi.id = ?`, id,
-	).Scan(&media.path, &media.libraryPath)
-	return media, err
+	).Scan(&media.path, &media.libraryPath, &libraryID)
+	if err != nil {
+		return media, err
+	}
+	media.libraryPath = a.libraryRootFor(r.Context(), libraryID, media.path, media.libraryPath)
+	return media, nil
+}
+
+// libraryRootFor devuelve la carpeta de la biblioteca que contiene el archivo:
+// una biblioteca puede tener varias y `libraries.path` es solo la principal, así
+// que comprobar contra ella dejaría fuera los archivos de las demás carpetas.
+func (a *API) libraryRootFor(ctx context.Context, libraryID int64, mediaPath, fallback string) string {
+	rows, err := a.db.QueryContext(ctx,
+		`SELECT path FROM library_paths WHERE library_id = ?`, libraryID)
+	if err != nil {
+		return fallback
+	}
+	defer rows.Close()
+	best := ""
+	for rows.Next() {
+		var root string
+		if rows.Scan(&root) != nil {
+			continue
+		}
+		if pathWithin(root, mediaPath) && len(root) > len(best) {
+			best = root
+		}
+	}
+	if best == "" {
+		return fallback
+	}
+	return best
 }
 
 func (a *API) writePlaybackError(w http.ResponseWriter, err error) {

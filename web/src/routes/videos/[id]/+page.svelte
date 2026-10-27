@@ -58,6 +58,7 @@
 					<FolderTile
 						name={root.name}
 						itemCount={root.item_count}
+						coverItemId={root.cover_item_id}
 						href={videoRootHref(data.libraryID, root.id)}
 					/>
 				{/each}
@@ -78,6 +79,7 @@
 						<FolderTile
 							name={folder.name}
 							itemCount={folder.item_count}
+							coverItemId={folder.cover_item_id}
 							href={videoFolderHref(data.libraryID, data.root?.id ?? 0, folder.path)}
 						/>
 					{/each}

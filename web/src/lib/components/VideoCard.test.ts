@@ -51,6 +51,9 @@ describe('tarjeta de vídeo', () => {
 		expect(body).toContain('href="/items/12"');
 		expect(body).toContain('Cumple de Ana');
 		expect(body).toContain('video-fallback');
+		expect(body).toContain('src="/items/12/thumb"');
+		expect(body).toContain('loading="lazy"');
+		expect(body).toContain('decoding="async"');
 		expect(body).toContain('--video-a:');
 	});
 

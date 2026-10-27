@@ -90,6 +90,33 @@ func itemFileInfoURL(ts *libraryTestServer, id int64) string {
 	return ts.URL + "/api/v1/items/" + strconv.FormatInt(id, 10) + "/file-info"
 }
 
+// Una biblioteca con varias carpetas debe servir los archivos de todas, no solo
+// los de la principal; un archivo fuera de ellas sigue rechazado.
+func TestFileInfoArchivoEnCarpetaSecundaria(t *testing.T) {
+	ts := newLibraryHTTPTestServer(t)
+	ts.api.WithFileInspector(&fakeFileInspector{info: fileInfoFixture()})
+	primary := t.TempDir()
+	secondary := t.TempDir()
+	outside := t.TempDir()
+	libraryID := createLibrary(t, ts.db, primary)
+	addScannerLibraryPath(t, ts.db, libraryID, primary)
+	addScannerLibraryPath(t, ts.db, libraryID, secondary)
+
+	inSecondary := filepath.Join(secondary, "Concierto (2019).mp4")
+	writeFile(t, inSecondary)
+	id := insertItemFixture(t, ts.db, itemFixture{libraryID: libraryID, path: inSecondary, title: "Concierto"})
+	if status, body := libraryHTTPGet(t, itemFileInfoURL(ts, id), ts.token); status != http.StatusOK {
+		t.Fatalf("archivo de la carpeta secundaria: código = %d, cuerpo = %s", status, body)
+	}
+
+	stray := filepath.Join(outside, "Ajena (2001).mp4")
+	writeFile(t, stray)
+	strayID := insertItemFixture(t, ts.db, itemFixture{libraryID: libraryID, path: stray, title: "Ajena"})
+	if status, _ := libraryHTTPGet(t, itemFileInfoURL(ts, strayID), ts.token); status != http.StatusNotFound {
+		t.Fatalf("archivo fuera de las carpetas: código = %d, se esperaba 404", status)
+	}
+}
+
 func TestFileInfoDirectoYCache(t *testing.T) {
 	ts := newLibraryHTTPTestServer(t)
 	id, file := insertFileInfoItem(t, ts, "Sub/Pelicula (2019).mp4", true)

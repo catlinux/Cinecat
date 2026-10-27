@@ -59,7 +59,7 @@ The watched buttons mark an episode, a season or the whole series as watched. Th
 
 The **Vídeos** section appears in the menu when a Vídeos library has content. To create one, open **Administración → Bibliotecas**, choose the "Vídeos (videoclips, conciertos…)" type, add its folders and run a scan.
 
-This type does not identify files or download posters from TMDB or OMDb: the title comes from the file name. Opening the section shows the library folders with the number of videos they contain (including subfolders). Inside a folder, subfolders come first and then the videos as landscape cards with a generated fallback cover; the breadcrumbs let you go back to any level. You can play or continue a video, mark it as watched and change audio, subtitles or quality. There are no frame thumbnails yet.
+This type does not identify files or download posters from TMDB or OMDb: the title comes from the file name. Opening the section shows the library folders with the number of videos they contain (including subfolders). Inside a folder, subfolders come first and then the videos as landscape cards. Thumbnails are generated the first time they are viewed and stored in a cache; if no thumbnail exists yet, a generated fallback cover is used. The breadcrumbs let you go back to any level. You can play or continue a video, mark it as watched and change audio, subtitles or quality.
 
 ## Movie detail page
 

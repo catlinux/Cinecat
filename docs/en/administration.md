@@ -38,6 +38,8 @@ A `clips` library walks its folders like a movie library, but identifies nothing
 
 Videos from these libraries are not mixed with movies in listings, searches, filters, recommendations, collections, portal counts or the administration summary. They keep watched state, progress, preferences and playback, and can appear in "Continue watching". The **Vídeos** section of the web app lets you browse their folders and subfolders, open a minimal detail page and play them. The Música type is still pending.
 
+Thumbnails are generated the first time they are viewed and stored in `cache/thumbs`, next to the database and inside the persistent volume. They can be deleted without risk: they will be generated again. The server needs FFmpeg and ffprobe installed in the container.
+
 The **Elegir…** button opens a server folder browser. It shows the allowed roots, lets you go down into subfolders, go up with **Subir**, move through the breadcrumbs and confirm with **Elegir esta carpeta**. It only lists directories, does not follow links that leave the roots and limits the listing to 1000 entries. You can also type the path by hand without JavaScript. The container mounts `CINECAT_MEDIA_PATH` whole and read-only at `/media`.
 
 Folders are validated against `CINECAT_MEDIA_ROOTS`: a list of roots separated by `:` on Linux and `;` on Windows (default `/media`). A path outside those roots, missing, not a directory, repeated or overlapping another one is rejected. Removing a folder deletes its records from the database but does not touch files on disk.

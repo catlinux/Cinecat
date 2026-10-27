@@ -7,10 +7,17 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.18.0] - 2026-10-27
+
 ### Añadido
 
+- Miniaturas de los vídeos con un fotograma del propio archivo, generadas con FFmpeg la primera vez que se ven y guardadas en caché (`cache/thumbs`); cada carpeta usa la de uno de sus vídeos como portada (`cover_item_id`). Si no hay FFmpeg o falla, la tarjeta conserva su degradado. Endpoint `GET /api/v1/items/{id}/thumbnail`.
 - Bibliotecas de tipo «Vídeos» (`clips`), pensadas para videoclips y conciertos: se escanean sin identificación ni conexiones externas (el título sale del nombre del archivo), no se mezclan con películas, búsqueda, colecciones ni contadores, y se navegan por carpetas con `GET /api/v1/libraries/{id}/browse`. El ítem expone `library_kind` y el portal `has_clips`.
 - Sección «Vídeos» en la web: entrada en el menú (si hay vídeos), navegación por carpetas con migas de pan y paginación, tarjetas con progreso y marca de visto, ficha mínima (sin reparto ni corrección de ficha) y categoría en el portal. El tipo «Vídeos» se puede elegir al crear una biblioteca.
+
+### Corregido
+
+- Reproducción, información del archivo y miniaturas fallaban («archivo no encontrado») para los archivos de las carpetas secundarias de una biblioteca con varias carpetas, porque se comprobaba solo contra la carpeta principal.
 
 ## [0.17.0] - 2026-10-27
 

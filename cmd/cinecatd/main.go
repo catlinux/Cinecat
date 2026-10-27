@@ -178,6 +178,7 @@ func main() {
 	api := library.NewAPI(st.DB(), authSvc, playSvc, scanJob, tmdbClient)
 	api = api.WithSettings(settingsStore)
 	api = api.WithFileInspector(playSvc)
+	api = api.WithThumbnails(thumbnailCacheDir(cfg.DatabasePath))
 	api = api.WithMediaRoots(cfg.MediaRoots)
 
 	updateAPI := update.NewAPI(
@@ -349,6 +350,16 @@ func tmdbCacheDir(databasePath string) string {
 		return ""
 	}
 	return filepath.Join(filepath.Dir(path), "cache", "tmdb")
+}
+
+// thumbnailCacheDir guarda los fotogramas en el volumen de la base, para que
+// sobrevivan a las actualizaciones y se puedan borrar sin tocar la biblioteca.
+func thumbnailCacheDir(databasePath string) string {
+	path := strings.TrimSpace(databasePath)
+	if path == "" || path == ":memory:" {
+		return ""
+	}
+	return filepath.Join(filepath.Dir(path), "cache", "thumbs")
 }
 
 func newHandler(authSvc *auth.Service, api *library.API, updateAPIs ...*update.API) http.Handler {

@@ -4,32 +4,45 @@
 	let {
 		name,
 		itemCount,
-		href
+		href,
+		coverItemId = null
 	}: {
 		name: string;
 		itemCount: number;
 		href: string;
+		coverItemId?: number | null;
 	} = $props();
 </script>
 
-<a class="folder-tile" {href}>
-	<span class="folder-tile-art" aria-hidden="true">
-		<svg viewBox="0 0 160 110" role="presentation" focusable="false">
-			<path
-				d="M14 31h47l12 14h73v47a8 8 0 0 1-8 8H22a8 8 0 0 1-8-8z"
-				fill="var(--granate-oscuro)"
-				opacity="0.82"
-			/>
-			<path d="M14 45h132v47a8 8 0 0 1-8 8H22a8 8 0 0 1-8-8z" fill="var(--granate)" opacity="0.24" />
-			<path d="M28 45h104" stroke="var(--dorado)" stroke-width="2" opacity="0.72" />
-			<path
-				d="M68 63l26 15-26 15z"
-				fill="var(--dorado)"
-				opacity="0.92"
-			/>
-			<path d="M118 33h22M129 22v22" stroke="var(--dorado)" stroke-width="1.5" opacity="0.45" />
-		</svg>
-	</span>
+<a class="folder-tile" class:folder-tile--cover={coverItemId} {href}>
+	{#if coverItemId}
+		<img
+			class="folder-tile-cover"
+			src={`/items/${coverItemId}/thumb`}
+			alt=""
+			loading="lazy"
+			decoding="async"
+		/>
+		<span class="folder-tile-shade" aria-hidden="true"></span>
+	{:else}
+		<span class="folder-tile-art" aria-hidden="true">
+			<svg viewBox="0 0 160 110" role="presentation" focusable="false">
+				<path
+					d="M14 31h47l12 14h73v47a8 8 0 0 1-8 8H22a8 8 0 0 1-8-8z"
+					fill="var(--granate-oscuro)"
+					opacity="0.82"
+				/>
+				<path
+					d="M14 45h132v47a8 8 0 0 1-8 8H22a8 8 0 0 1-8-8z"
+					fill="var(--granate)"
+					opacity="0.24"
+				/>
+				<path d="M28 45h104" stroke="var(--dorado)" stroke-width="2" opacity="0.72" />
+				<path d="M68 63l26 15-26 15z" fill="var(--dorado)" opacity="0.92" />
+				<path d="M118 33h22M129 22v22" stroke="var(--dorado)" stroke-width="1.5" opacity="0.45" />
+			</svg>
+		</span>
+	{/if}
 	<span class="folder-tile-copy">
 		<strong>{name}</strong>
 		<span>{videoCountLabel(itemCount)}</span>
@@ -88,6 +101,38 @@
 	.folder-tile-copy span {
 		color: var(--texto-apagado);
 		font-size: 0.74rem;
+	}
+	.folder-tile--cover {
+		position: relative;
+		display: flex;
+		align-items: flex-end;
+		min-height: 7.5rem;
+		overflow: hidden;
+		background: var(--granate-oscuro);
+	}
+	.folder-tile-cover,
+	.folder-tile-shade {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+	}
+	.folder-tile-cover {
+		object-fit: cover;
+	}
+	.folder-tile-shade {
+		background: linear-gradient(180deg, rgb(20 10 11 / 8%) 20%, rgb(20 10 11 / 82%));
+	}
+	.folder-tile--cover .folder-tile-copy {
+		position: relative;
+		z-index: 1;
+	}
+	.folder-tile--cover .folder-tile-copy strong {
+		color: var(--crema-clara);
+		text-shadow: 0 2px 8px rgb(0 0 0 / 55%);
+	}
+	.folder-tile--cover .folder-tile-copy span {
+		color: rgb(253 247 234 / 82%);
 	}
 	@media (max-width: 520px) {
 		.folder-tile {

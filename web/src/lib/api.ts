@@ -195,6 +195,7 @@ export interface VideoRoot {
 	id: number;
 	name: string;
 	item_count: number;
+	cover_item_id: number | null;
 }
 
 export interface VideoRootsResponse {
@@ -210,6 +211,7 @@ export interface VideoFolder {
 	name: string;
 	path: string;
 	item_count: number;
+	cover_item_id: number | null;
 }
 
 export interface VideoLibraryRef {

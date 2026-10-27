@@ -7,10 +7,17 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-10-27
+
 ### Added
 
+- Video thumbnails taken from a frame of the file itself, generated with FFmpeg the first time they are viewed and cached (`cache/thumbs`); each folder uses one of its videos as its cover (`cover_item_id`). Without FFmpeg, or on failure, the card keeps its gradient. Endpoint `GET /api/v1/items/{id}/thumbnail`.
 - "Videos" (`clips`) library type, meant for music videos and concerts: scanned without identification or outbound connections (the title comes from the file name), kept apart from movies, search, collections and counters, and browsed by folders with `GET /api/v1/libraries/{id}/browse`. Items expose `library_kind` and the home exposes `has_clips`.
 - "Videos" section on the web: menu entry (when there are videos), folder browsing with breadcrumbs and pagination, cards with progress and watched mark, a minimal detail page (no cast or metadata correction) and a portal category. The "Videos" type can be chosen when creating a library.
+
+### Fixed
+
+- Playback, file information and thumbnails failed ("file not found") for files in the secondary folders of a multi-folder library, because only the main folder was checked.
 
 ## [0.17.0] - 2026-10-27
 

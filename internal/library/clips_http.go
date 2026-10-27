@@ -18,9 +18,10 @@ const (
 )
 
 type clipRootDTO struct {
-	ID        int64  `json:"id"`
-	Name      string `json:"name"`
-	ItemCount int64  `json:"item_count"`
+	ID          int64  `json:"id"`
+	Name        string `json:"name"`
+	ItemCount   int64  `json:"item_count"`
+	CoverItemID *int64 `json:"cover_item_id"`
 }
 
 type clipRootsResponse struct {
@@ -43,9 +44,10 @@ type clipBreadcrumbDTO struct {
 }
 
 type clipFolderDTO struct {
-	Name      string `json:"name"`
-	Path      string `json:"path"`
-	ItemCount int64  `json:"item_count"`
+	Name        string `json:"name"`
+	Path        string `json:"path"`
+	ItemCount   int64  `json:"item_count"`
+	CoverItemID *int64 `json:"cover_item_id"`
 }
 
 type clipBrowseResponse struct {
@@ -62,10 +64,11 @@ type clipBrowseResponse struct {
 }
 
 type clipRoot struct {
-	id        int64
-	name      string
-	path      string
-	itemCount int64
+	id          int64
+	name        string
+	path        string
+	itemCount   int64
+	coverItemID int64
 }
 
 type clipItemPath struct {
@@ -110,6 +113,7 @@ func (a *API) handleClipBrowse(w http.ResponseWriter, r *http.Request) {
 		for _, root := range roots {
 			entries = append(entries, clipRootDTO{
 				ID: root.id, Name: root.name, ItemCount: root.itemCount,
+				CoverItemID: optionalItemID(root.coverItemID),
 			})
 		}
 		writeJSON(w, http.StatusOK, clipRootsResponse{Roots: entries})
@@ -158,6 +162,7 @@ func (a *API) handleClipBrowse(w http.ResponseWriter, r *http.Request) {
 
 	direct := make([]clipItemPath, 0)
 	folderCounts := make(map[string]int64)
+	folderCovers := make(map[string]clipItemPath)
 	for _, item := range items {
 		if !pathWithin(root.path, item.path) {
 			continue
@@ -174,17 +179,26 @@ func (a *API) handleClipBrowse(w http.ResponseWriter, r *http.Request) {
 		if len(partsForItem) == 1 {
 			direct = append(direct, item)
 		} else {
-			folderCounts[partsForItem[0]]++
+			name := partsForItem[0]
+			folderCounts[name]++
+			if cover, ok := folderCovers[name]; !ok || betterClipCover(item, cover) {
+				folderCovers[name] = item
+			}
 		}
 	}
 
 	folders := make([]clipFolderDTO, 0, len(folderCounts))
 	for name, count := range folderCounts {
 		pathParts := append(append([]string{}, parts...), name)
+		coverID := int64(0)
+		if cover, ok := folderCovers[name]; ok {
+			coverID = cover.id
+		}
 		folders = append(folders, clipFolderDTO{
-			Name:      name,
-			Path:      strings.Join(pathParts, "/"),
-			ItemCount: count,
+			Name:        name,
+			Path:        strings.Join(pathParts, "/"),
+			ItemCount:   count,
+			CoverItemID: optionalItemID(coverID),
 		})
 	}
 	sort.SliceStable(folders, func(i, j int) bool {
@@ -304,10 +318,19 @@ func loadClipRoots(ctx context.Context, db *sql.DB, libraryID int64, fallback st
 		nameCounts[strings.ToLower(root.name)]++
 	}
 	for index := range roots {
+		var cover clipItemPath
+		hasCover := false
 		for _, item := range items {
 			if pathWithin(roots[index].path, item.path) {
 				roots[index].itemCount++
+				if !hasCover || betterClipCover(item, cover) {
+					cover = item
+					hasCover = true
+				}
 			}
+		}
+		if hasCover {
+			roots[index].coverItemID = cover.id
 		}
 		if nameCounts[strings.ToLower(roots[index].name)] > 1 {
 			parentName := filepath.Base(filepath.Dir(roots[index].path))
@@ -325,6 +348,23 @@ func loadClipRoots(ctx context.Context, db *sql.DB, libraryID int64, fallback st
 		return roots[i].id < roots[j].id
 	})
 	return roots, nil
+}
+
+func betterClipCover(candidate, current clipItemPath) bool {
+	left := strings.ToLower(candidate.title)
+	right := strings.ToLower(current.title)
+	if left != right {
+		return left < right
+	}
+	return candidate.id < current.id
+}
+
+func optionalItemID(id int64) *int64 {
+	if id <= 0 {
+		return nil
+	}
+	value := id
+	return &value
 }
 
 func loadClipItemPaths(ctx context.Context, db *sql.DB, libraryID int64) ([]clipItemPath, error) {

@@ -21,6 +21,13 @@
 	style={`--video-a: ${colors.from}; --video-b: ${colors.to};`}
 >
 	<div class="video-frame">
+		<img
+			class="video-thumb"
+			src={`/items/${item.id}/thumb`}
+			alt=""
+			loading="lazy"
+			decoding="async"
+		/>
 		<div class="video-fallback">
 			<span class="video-play" aria-hidden="true">▶</span>
 			<span class="video-title">{item.title}</span>
@@ -78,14 +85,24 @@
 		transform: translateY(-3px);
 		box-shadow: 0 1.4rem 2rem -1rem var(--sombra);
 	}
+	.video-thumb {
+		position: absolute;
+		inset: 0;
+		z-index: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
 	.video-fallback {
 		position: absolute;
 		inset: 0;
+		z-index: 1;
 		display: flex;
 		flex-direction: column;
 		justify-content: flex-end;
 		gap: 0.35rem;
 		padding: 0.9rem;
+		background: linear-gradient(180deg, transparent 30%, rgb(20 10 11 / 58%));
 		color: var(--crema-clara);
 	}
 	.video-play {
@@ -106,6 +123,7 @@
 	.video-kind,
 	.video-watched {
 		position: absolute;
+		z-index: 2;
 		top: 0.55rem;
 		padding: 0.2rem 0.4rem;
 		border-radius: 2px;
@@ -125,6 +143,7 @@
 	}
 	.video-progress {
 		position: absolute;
+		z-index: 2;
 		right: 0;
 		bottom: 0;
 		left: 0;

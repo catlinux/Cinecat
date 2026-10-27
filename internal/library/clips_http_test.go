@@ -44,15 +44,15 @@ func TestClipBrowseJerarquiaSinRutasAbsolutas(t *testing.T) {
 		t.Fatalf("leer raíz 2: %v", err)
 	}
 
-	insertItemFixture(t, ts.db, itemFixture{
+	clipAID := insertItemFixture(t, ts.db, itemFixture{
 		libraryID: libraryID, path: filepath.Join(root1, "Pelis", "Clip A.mp4"),
 		title: "Clip A", kind: KindMovie, matchStatus: "none",
 	})
-	insertItemFixture(t, ts.db, itemFixture{
+	clipBID := insertItemFixture(t, ts.db, itemFixture{
 		libraryID: libraryID, path: filepath.Join(root1, "Pelis", "Sub", "Clip B.mp4"),
 		title: "Clip B", kind: KindMovie, matchStatus: "none",
 	})
-	insertItemFixture(t, ts.db, itemFixture{
+	clipCID := insertItemFixture(t, ts.db, itemFixture{
 		libraryID: libraryID, path: filepath.Join(root1, "Pelis", "Sub", "Deep", "Clip C.mp4"),
 		title: "Clip C", kind: KindMovie, matchStatus: "none",
 	})
@@ -64,7 +64,7 @@ func TestClipBrowseJerarquiaSinRutasAbsolutas(t *testing.T) {
 		libraryID: libraryID, path: filepath.Join(root1, "Otro.mp4"),
 		title: "Otro", kind: KindMovie, matchStatus: "none",
 	})
-	insertItemFixture(t, ts.db, itemFixture{
+	clipDID := insertItemFixture(t, ts.db, itemFixture{
 		libraryID: libraryID, path: filepath.Join(root2, "Otra", "Clip D.mp4"),
 		title: "Clip D", kind: KindMovie, matchStatus: "none",
 	})
@@ -89,6 +89,15 @@ func TestClipBrowseJerarquiaSinRutasAbsolutas(t *testing.T) {
 	if roots.Roots[0].ItemCount+roots.Roots[1].ItemCount != 6 {
 		t.Fatalf("recuentos de raíces inesperados: %+v", roots.Roots)
 	}
+	covers := map[int64]bool{}
+	for _, root := range roots.Roots {
+		if root.CoverItemID != nil {
+			covers[*root.CoverItemID] = true
+		}
+	}
+	if !covers[clipAID] || !covers[clipDID] {
+		t.Fatalf("portadas de raíz inesperadas: %+v", roots.Roots)
+	}
 
 	rootURL := func(path string) string {
 		values := url.Values{}
@@ -112,7 +121,8 @@ func TestClipBrowseJerarquiaSinRutasAbsolutas(t *testing.T) {
 	}
 	if root.Path != "" || root.Parent != nil || len(root.Items) != 2 ||
 		len(root.Folders) != 1 || root.Folders[0].Name != "Pelis" ||
-		root.Folders[0].ItemCount != 3 || root.Total != 2 {
+		root.Folders[0].ItemCount != 3 || root.Total != 2 ||
+		root.Folders[0].CoverItemID == nil || *root.Folders[0].CoverItemID != clipAID {
 		t.Fatalf("raíz inesperada: %+v", root)
 	}
 	if root.Items[0].LibraryKind != "clips" || root.Items[0].Path != "Otro.mp4" {
@@ -129,7 +139,8 @@ func TestClipBrowseJerarquiaSinRutasAbsolutas(t *testing.T) {
 	}
 	if pelis.Path != "Pelis" || pelis.Parent == nil || *pelis.Parent != "" ||
 		len(pelis.Folders) != 1 || pelis.Folders[0].Path != "Pelis/Sub" ||
-		pelis.Folders[0].ItemCount != 2 || pelis.Items[0].Path != "Pelis/Clip A.mp4" {
+		pelis.Folders[0].ItemCount != 2 || pelis.Items[0].Path != "Pelis/Clip A.mp4" ||
+		pelis.Folders[0].CoverItemID == nil || *pelis.Folders[0].CoverItemID != clipBID {
 		t.Fatalf("Pelis inesperada: %+v", pelis)
 	}
 	if len(pelis.Crumbs) != 2 || pelis.Crumbs[1].Path != "Pelis" {
@@ -145,7 +156,8 @@ func TestClipBrowseJerarquiaSinRutasAbsolutas(t *testing.T) {
 		t.Fatalf("Sub: %v", err)
 	}
 	if sub.Parent == nil || *sub.Parent != "Pelis" || sub.Folders[0].Path != "Pelis/Sub/Deep" ||
-		sub.Folders[0].ItemCount != 1 || sub.Items[0].Path != "Pelis/Sub/Clip B.mp4" {
+		sub.Folders[0].ItemCount != 1 || sub.Items[0].Path != "Pelis/Sub/Clip B.mp4" ||
+		sub.Folders[0].CoverItemID == nil || *sub.Folders[0].CoverItemID != clipCID {
 		t.Fatalf("Sub inesperada: %+v", sub)
 	}
 
@@ -159,6 +171,9 @@ func TestClipBrowseJerarquiaSinRutasAbsolutas(t *testing.T) {
 	}
 	if len(deep.Folders) != 0 || len(deep.Items) != 1 || deep.Items[0].Path != "Pelis/Sub/Deep/Clip C.mp4" {
 		t.Fatalf("Deep inesperada: %+v", deep)
+	}
+	if deep.Items[0].ID != clipCID {
+		t.Fatalf("clip de Deep inesperado: %+v", deep.Items[0])
 	}
 
 	values := url.Values{"root": {itoa(root1ID)}, "limit": {"1"}, "offset": {"1"}}

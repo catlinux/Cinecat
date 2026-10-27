@@ -29,6 +29,7 @@ This file contains only work that is still open. Published work is in the [CHANG
 
 ## 🟢 Later
 
+- 🟢 **Purge thumbnails for items that no longer exist.**
 - **Plugins**, still at the design stage.
 - **DLNA/UPnP**, still at the design stage.
 - **Library types** other than video (music, photos or others) when the model is addressed.

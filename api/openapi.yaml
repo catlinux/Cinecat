@@ -1675,6 +1675,65 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/items/{id}/thumbnail:
+    get:
+      summary: Miniatura de un vídeo de biblioteca clips
+      description: |
+        Devuelve un fotograma JPEG generado con FFmpeg y guardado en caché. Solo
+        está disponible para ítems de bibliotecas de tipo `clips`. La primera
+        petición genera la miniatura; las siguientes reutilizan la caché y el
+        ETag permite responder 304. Requiere una sesión válida.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        '200':
+          description: Miniatura JPEG
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                example: private, max-age=86400
+            ETag:
+              schema:
+                type: string
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        '304':
+          description: La miniatura no ha cambiado
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ítem no encontrado, no es de una biblioteca clips o no se pudo generar la miniatura
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Hay dos miniaturas generándose; se puede reintentar
+          headers:
+            Retry-After:
+              schema:
+                type: string
+                example: '5'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/items/{id}/file-info:
     get:
       summary: Ficha técnica del archivo de vídeo
@@ -3621,6 +3680,7 @@ components:
         - id
         - name
         - item_count
+        - cover_item_id
       properties:
         id:
           type: integer
@@ -3631,6 +3691,11 @@ components:
         item_count:
           type: integer
           format: int64
+        cover_item_id:
+          type: integer
+          format: int64
+          nullable: true
+          description: Primer vídeo por nombre dentro de la carpeta y sus subcarpetas; null si no hay vídeos.
       additionalProperties: false
     ClipRootsResponse:
       type: object
@@ -3684,6 +3749,7 @@ components:
         - name
         - path
         - item_count
+        - cover_item_id
       properties:
         name:
           type: string
@@ -3694,6 +3760,11 @@ components:
           type: integer
           format: int64
           description: Vídeos de la carpeta y sus subcarpetas.
+        cover_item_id:
+          type: integer
+          format: int64
+          nullable: true
+          description: Primer vídeo por nombre dentro de la carpeta y sus subcarpetas; null si no hay vídeos.
       additionalProperties: false
     ClipBrowseResponse:
       type: object

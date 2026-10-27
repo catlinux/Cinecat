@@ -59,7 +59,7 @@ Los botones de visionado permiten marcar un episodio, una temporada o la serie c
 
 La sección **Vídeos** aparece en el menú cuando existe una biblioteca de tipo Vídeos con contenido. Para crearla, entra en **Administración → Bibliotecas**, elige el tipo «Vídeos (videoclips, conciertos…)», añade sus carpetas y lanza el escaneo.
 
-Este tipo no identifica los archivos ni descarga carátulas de TMDB u OMDb: el título sale del nombre del archivo. Al abrir la sección verás las carpetas de la biblioteca, con el número de vídeos que contienen (incluidas sus subcarpetas). Dentro de una carpeta, las subcarpetas aparecen primero y después los vídeos en tarjetas apaisadas con una portada de respaldo generada; las migas de pan permiten volver a cualquier nivel. Puedes reproducir o continuar un vídeo, marcarlo como visto y cambiar audio, subtítulos o calidad. Todavía no hay miniaturas de fotograma.
+Este tipo no identifica los archivos ni descarga carátulas de TMDB u OMDb: el título sale del nombre del archivo. Al abrir la sección verás las carpetas de la biblioteca, con el número de vídeos que contienen (incluidas sus subcarpetas). Dentro de una carpeta, las subcarpetas aparecen primero y después los vídeos en tarjetas apaisadas. Las miniaturas se generan al verlas por primera vez y se guardan en caché; si aún no hay miniatura, se usa una portada de respaldo generada. Las migas de pan permiten volver a cualquier nivel. Puedes reproducir o continuar un vídeo, marcarlo como visto y cambiar audio, subtítulos o calidad.
 
 ## La ficha de una película
 

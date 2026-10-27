@@ -29,6 +29,7 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 
 ## 🟢 Más adelante
 
+- 🟢 **Purgar miniaturas de ítems que ya no existen.**
 - **Complementos**, todavía en diseño.
 - **DLNA/UPnP**, todavía en diseño.
 - **Tipos de biblioteca** distintos de vídeo (música, fotos u otros) cuando se aborde el modelo.

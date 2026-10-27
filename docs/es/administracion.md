@@ -38,6 +38,8 @@ Una biblioteca de tipo `clips` recorre sus carpetas igual que una de películas,
 
 Los vídeos de estas bibliotecas no se mezclan con las películas en listados, búsquedas, filtros, recomendaciones, colecciones, recuentos del portal ni del resumen de administración. Sí conservan visto, progreso, preferencias y reproducción, y pueden aparecer en «Continuar viendo». La sección **Vídeos** de la web permite navegar por sus carpetas y subcarpetas, abrir una ficha mínima y reproducirlos. El tipo Música sigue pendiente.
 
+Las miniaturas se generan al verlas por primera vez y se guardan en `cache/thumbs`, junto a la base de datos y dentro del volumen persistente. Se pueden borrar sin riesgo: se volverán a generar. El servidor necesita FFmpeg y ffprobe instalados en el contenedor.
+
 El botón **Elegir…** abre un navegador de carpetas del servidor. Muestra las raíces permitidas, permite bajar por las subcarpetas, subir con **Subir**, moverse con las migas de pan y confirmar con **Elegir esta carpeta**. Solo lista directorios, no sigue enlaces que salgan de las raíces y limita el listado a 1000 entradas. También puedes escribir la ruta a mano sin usar JavaScript. El contenedor monta `CINECAT_MEDIA_PATH` completo y en solo lectura en `/media`.
 
 Las carpetas se validan contra `CINECAT_MEDIA_ROOTS`: una lista de raíces separadas por `:` en Linux y `;` en Windows (por defecto `/media`). Una ruta fuera de esas raíces, inexistente, que no sea un directorio, repetida o solapada con otra se rechaza. Quitar una carpeta borra sus fichas de la base de datos, pero no toca los archivos del disco.

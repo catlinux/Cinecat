@@ -84,8 +84,8 @@ function videoItem(overrides: Partial<MediaItem> = {}): MediaItem {
 function rootsResponse(): VideoRootsResponse {
 	return {
 		roots: [
-			{ id: 9, name: 'Conciertos', item_count: 7 },
-			{ id: 10, name: 'Videoclips', item_count: 5 }
+			{ id: 9, name: 'Conciertos', item_count: 7, cover_item_id: 21 },
+			{ id: 10, name: 'Videoclips', item_count: 5, cover_item_id: null }
 		]
 	};
 }
@@ -100,7 +100,9 @@ function browseResponse(overrides: Partial<VideoBrowseResponse> = {}): VideoBrow
 			{ name: 'Conciertos', path: '' },
 			{ name: 'Año 2020', path: 'Año 2020' }
 		],
-		folders: [{ name: 'Verano', path: 'Año 2020/Verano', item_count: 2 }],
+		folders: [
+			{ name: 'Verano', path: 'Año 2020/Verano', item_count: 2, cover_item_id: 22 }
+		],
 		items: [videoItem()],
 		total: 1,
 		limit: 48,
@@ -378,6 +380,7 @@ describe('páginas de vídeos', () => {
 		expect(roots).toContain('Vídeos de casa');
 		expect(roots).toContain('Conciertos');
 		expect(roots).toContain('href="/videos/4?root=9"');
+		expect(roots).toContain('src="/items/21/thumb"');
 		expect(roots).toContain('Videoclips');
 		expect(roots).toContain('href="/videos"');
 
@@ -405,6 +408,7 @@ describe('páginas de vídeos', () => {
 		expect(browse).toContain('Año 2020');
 		expect(browse).toContain('Verano');
 		expect(browse).toContain('href="/videos/4?root=9&amp;path=A%C3%B1o+2020%2FVerano"');
+		expect(browse).toContain('src="/items/22/thumb"');
 		expect(browse).toContain('Clip de prueba');
 		expect(browse).toContain('href="/items/21"');
 	});

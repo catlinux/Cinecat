@@ -38,6 +38,9 @@ type fileInfoResponse struct {
 // WithFileInspector permite usar el analizador del servicio de playback.
 func (a *API) WithFileInspector(inspector FileInspector) *API {
 	a.fileInspector = inspector
+	if a.thumbnails != nil {
+		a.thumbnails.inspector = inspector
+	}
 	return a
 }
 
