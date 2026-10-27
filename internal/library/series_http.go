@@ -30,6 +30,8 @@ type seriesListDTO struct {
 	EpisodeCount int64    `json:"episode_count"`
 	WatchedCount int64    `json:"watched_count"`
 	MatchStatus  *string  `json:"match_status"`
+	Favorite     bool     `json:"favorite"`
+	Watchlist    bool     `json:"watchlist"`
 }
 
 type seriesResponse struct {
@@ -73,6 +75,8 @@ type seriesDetailDTO struct {
 	SeasonCount      int64             `json:"season_count"`
 	EpisodeCount     int64             `json:"episode_count"`
 	WatchedCount     int64             `json:"watched_count"`
+	Favorite         bool              `json:"favorite"`
+	Watchlist        bool              `json:"watchlist"`
 	Seasons          []seriesSeasonDTO `json:"seasons"`
 	NextEpisode      *mediaItemDTO     `json:"next_episode"`
 }
@@ -219,7 +223,7 @@ func querySeriesList(
 	limit int,
 	offset int,
 ) ([]seriesListDTO, error) {
-	queryArgs := append([]any{userID}, args...)
+	queryArgs := append([]any{userID, userID, userID}, args...)
 	queryArgs = append(queryArgs, limit, offset)
 	rows, err := db.QueryContext(ctx, `
 		SELECT s.id, COALESCE(NULLIF(s.display_title, ''), s.title), s.title,
@@ -230,7 +234,15 @@ func querySeriesList(
 		       (SELECT count(*) FROM media_items mi
 		          JOIN watch_state ws ON ws.media_item_id = mi.id AND ws.user_id = ?
 		         WHERE mi.series_id = s.id),
-		       s.match_status
+		       s.match_status,
+		       EXISTS (SELECT 1 FROM series_lists sl_favorite
+		                WHERE sl_favorite.user_id = ?
+		                  AND sl_favorite.series_id = s.id
+		                  AND sl_favorite.list = 'favorite'),
+		       EXISTS (SELECT 1 FROM series_lists sl_watchlist
+		                WHERE sl_watchlist.user_id = ?
+		                  AND sl_watchlist.series_id = s.id
+		                  AND sl_watchlist.list = 'watchlist')
 		  FROM series s
 		 WHERE `+where+order+` LIMIT ? OFFSET ?`, queryArgs...)
 	if err != nil {
@@ -269,15 +281,18 @@ func scanSeriesList(scan func(dest ...any) error) (seriesListDTO, error) {
 	var item seriesListDTO
 	var year sql.NullInt64
 	var poster, genres, matchStatus sql.NullString
+	var favorite, watchlist int
 	if err := scan(&item.ID, &item.Title, &item.FileTitle, &year, &poster,
 		&genres, &item.SeasonCount, &item.EpisodeCount, &item.WatchedCount,
-		&matchStatus); err != nil {
+		&matchStatus, &favorite, &watchlist); err != nil {
 		return seriesListDTO{}, err
 	}
 	item.Year = intPointer(year)
 	item.PosterURL = stringPointer(poster)
 	item.Genres = decodeStringArray(genres)
 	item.MatchStatus = stringPointer(matchStatus)
+	item.Favorite = favorite != 0
+	item.Watchlist = watchlist != 0
 	return item, nil
 }
 
@@ -360,7 +375,7 @@ func querySeriesDetail(
 	var genres, directors, castNames, matchStatus, credits sql.NullString
 	var year, tmdbID sql.NullInt64
 	var rating, matchScore sql.NullFloat64
-	var posterLocked, backdropLocked int
+	var posterLocked, backdropLocked, favorite, watchlist int
 	err := db.QueryRowContext(ctx, `
 		SELECT s.id, COALESCE(NULLIF(s.display_title, ''), s.title), s.title, s.folder,
 		       s.original_title, s.year, s.tagline, s.overview, s.overview_language,
@@ -370,13 +385,21 @@ func querySeriesDetail(
 		       (SELECT count(*) FROM media_items mi WHERE mi.series_id = s.id),
 		       (SELECT count(*) FROM media_items mi
 		          JOIN watch_state ws ON ws.media_item_id = mi.id AND ws.user_id = ?
-		         WHERE mi.series_id = s.id)
-		  FROM series s WHERE s.id = ?`, userID, seriesID).
+		         WHERE mi.series_id = s.id),
+		       EXISTS (SELECT 1 FROM series_lists sl_favorite
+		                WHERE sl_favorite.user_id = ?
+		                  AND sl_favorite.series_id = s.id
+		                  AND sl_favorite.list = 'favorite'),
+		       EXISTS (SELECT 1 FROM series_lists sl_watchlist
+		                WHERE sl_watchlist.user_id = ?
+		                  AND sl_watchlist.series_id = s.id
+		                  AND sl_watchlist.list = 'watchlist')
+		  FROM series s WHERE s.id = ?`, userID, userID, userID, seriesID).
 		Scan(&detail.ID, &detail.Title, &detail.FileTitle, &detail.Folder,
 			&originalTitle, &year, &tagline, &overview, &overviewLanguage,
 			&poster, &backdrop, &genres, &rating, &directors, &castNames, &credits,
 			&tmdbID, &matchStatus, &matchScore, &posterLocked, &backdropLocked,
-			&detail.EpisodeCount, &detail.WatchedCount)
+			&detail.EpisodeCount, &detail.WatchedCount, &favorite, &watchlist)
 	if err != nil {
 		return seriesDetailDTO{}, err
 	}
@@ -397,6 +420,8 @@ func querySeriesDetail(
 	detail.MatchScore = floatPointer(matchScore)
 	detail.PosterCustom = posterLocked != 0
 	detail.BackdropCustom = backdropLocked != 0
+	detail.Favorite = favorite != 0
+	detail.Watchlist = watchlist != 0
 
 	seasons, err := querySeriesSeasons(ctx, db, seriesID, userID)
 	if err != nil {
@@ -549,14 +574,14 @@ func (a *API) handleSeriesSeason(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) querySeriesItems(ctx context.Context, seriesID int64, season *int, userID int64) ([]mediaItemDTO, error) {
-	query := `SELECT ` + mediaItemColumns + watchedColumn + progressColumn + `
+	query := `SELECT ` + mediaItemColumns + watchedColumn + progressColumn + itemListColumns + `
 		  FROM media_items
 		  LEFT JOIN watch_state ws
 		    ON ws.media_item_id = media_items.id AND ws.user_id = ?
 		  LEFT JOIN playback_progress pp
 		    ON pp.media_item_id = media_items.id AND pp.user_id = ?
 		 WHERE media_items.series_id = ?`
-	args := []any{userID, userID, seriesID}
+	args := []any{userID, userID, userID, userID, seriesID}
 	if season != nil {
 		query += " AND media_items.season = ?"
 		args = append(args, *season)
@@ -919,14 +944,16 @@ func (a *API) handleSeriesSeasonWatched(w http.ResponseWriter, r *http.Request, 
 }
 
 type seriesEpisodeFilter struct {
-	query string
-	args  []any
+	seriesID int64
+	query    string
+	args     []any
 }
 
 func seriesEpisodeWhere(seriesID int64, season *int) seriesEpisodeFilter {
 	filter := seriesEpisodeFilter{
-		query: "series_id = ?",
-		args:  []any{seriesID},
+		seriesID: seriesID,
+		query:    "series_id = ?",
+		args:     []any{seriesID},
 	}
 	if season != nil {
 		filter.query += " AND season = ?"
@@ -972,6 +999,21 @@ func (a *API) setSeriesWatched(w http.ResponseWriter, r *http.Request, filter se
 		log.Printf("library: borrar progreso de episodios: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
 		return
+	}
+	if watched {
+		query := `DELETE FROM item_lists
+			WHERE user_id = ? AND list = 'watchlist' AND media_item_id IN (
+				SELECT id FROM media_items WHERE ` + filter.query + `)`
+		if _, err := tx.ExecContext(r.Context(), query, append([]any{userID}, filter.args...)...); err != nil {
+			log.Printf("library: quitar episodios vistos de próximas: %v", err)
+			writeJSONError(w, http.StatusInternalServerError, "error interno")
+			return
+		}
+		if err := clearSeriesWatchlistIfWatched(r.Context(), tx, userID, filter.seriesID); err != nil {
+			log.Printf("library: limpiar próxima a ver de la serie %d: %v", filter.seriesID, err)
+			writeJSONError(w, http.StatusInternalServerError, "error interno")
+			return
+		}
 	}
 	if err := tx.Commit(); err != nil {
 		log.Printf("library: confirmar visionado en bloque: %v", err)

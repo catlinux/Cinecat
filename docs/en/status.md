@@ -42,7 +42,8 @@ Current version: **0.19.1**. This page describes the real state of the code, not
 | Web interface | Login, httpOnly session, logout and password change | ✅ 0.2.0 / 0.3.5 | Logout is on `/login`. |
 | Web interface | Portal, movies, series and collections with search, filters, sorting and pagination | ✅ 0.11.0 / 0.15.0 | Columns × rows per page; letter, genre and watched filters on movies. |
 | Web interface | Light/dark/system themes, side or top navigation and responsive layout | ✅ 0.2.0 / 0.14.0 | Theme preference stored in the browser. |
-| Web interface | Favorites, watchlist, global search and profiles | ⬜ | Not implemented. |
+| Web interface | Favorites and watchlist | 🟡 | server done; screen pending (F2). |
+| Web interface | Global search and profiles | ⬜ | Not implemented. |
 | Administration | Summary, libraries, scan, settings, correction and images | ✅ 0.11.0 / 0.12.0 | Settings apply without a restart. |
 | Administration | Users, sessions, devices, activity and backups | ⬜ | "Users" appears as "Soon"; there is no user CRUD. |
 | Updates | Check tags and release notes from the server | ✅ 0.14.0 | GitHub `vX.Y.Z` tags; `system.check_updates` is opt-in. |

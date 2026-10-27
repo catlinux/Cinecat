@@ -1257,6 +1257,249 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/items/{id}/lists/{list}:
+    put:
+      summary: Marca un ítem como favorito o próximo a ver
+      description: La operación es idempotente y solo afecta al usuario de la sesión.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ItemId'
+        - $ref: '#/components/parameters/UserList'
+      responses:
+        '204':
+          description: Marca creada o ya existente
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ítem no encontrado o lista no válida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Desmarca un ítem de favoritos o próximos a ver
+      description: La operación es idempotente y solo afecta al usuario de la sesión.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ItemId'
+        - $ref: '#/components/parameters/UserList'
+      responses:
+        '204':
+          description: Marca eliminada o inexistente
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ítem no encontrado o lista no válida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/series/{id}/lists/{list}:
+    put:
+      summary: Marca una serie como favorita o próxima a ver
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - $ref: '#/components/parameters/UserList'
+      responses:
+        '204':
+          description: Marca creada o ya existente
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Serie no encontrada o lista no válida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Desmarca una serie de favoritos o próximos a ver
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - $ref: '#/components/parameters/UserList'
+      responses:
+        '204':
+          description: Marca eliminada o inexistente
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Serie no encontrada o lista no válida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/collections/{id}/lists/{list}:
+    put:
+      summary: Marca una colección como favorita o próxima a ver
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - $ref: '#/components/parameters/UserList'
+      responses:
+        '204':
+          description: Marca creada o ya existente
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Colección no encontrada o lista no válida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Desmarca una colección de favoritos o próximos a ver
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - $ref: '#/components/parameters/UserList'
+      responses:
+        '204':
+          description: Marca eliminada o inexistente
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Colección no encontrada o lista no válida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/lists/{list}:
+    get:
+      summary: Lista favoritos o próximos a ver del usuario
+      description: |
+        Sin `kind`, devuelve los primeros `limit` elementos de cada bloque y
+        los totales de los tres. Con `kind`, devuelve solo ese bloque paginado
+        y `total`. Los ítems mezclan películas y clips, cada uno con
+        `library_kind`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserList'
+        - name: kind
+          in: query
+          schema:
+            type: string
+            enum: [items, series, collections]
+        - $ref: '#/components/parameters/PageLimit'
+        - $ref: '#/components/parameters/PageOffset'
+      responses:
+        '200':
+          description: Elementos de la lista
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListsResponse'
+        '400':
+          description: Parámetros no válidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Lista no válida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/items:
     get:
       summary: Lista los ítems de las bibliotecas
@@ -3867,6 +4110,14 @@ components:
       description: Firma HMAC de la URL.
       schema:
         type: string
+    UserList:
+      name: list
+      in: path
+      required: true
+      description: Tipo de lista del usuario.
+      schema:
+        type: string
+        enum: [favorite, watchlist]
     ImageKind:
       name: kind
       in: path
@@ -4741,6 +4992,73 @@ components:
           format: double
           minimum: 0
       additionalProperties: false
+    HomeListEntry:
+      type: object
+      required:
+        - kind
+      properties:
+        kind:
+          type: string
+          enum: [item, series]
+        item:
+          allOf:
+            - $ref: '#/components/schemas/MediaItem'
+          description: Presente cuando kind es item.
+        series:
+          allOf:
+            - $ref: '#/components/schemas/Series'
+          description: Presente cuando kind es series.
+      additionalProperties: false
+    ListTotals:
+      type: object
+      required:
+        - items
+        - series
+        - collections
+      properties:
+        items:
+          type: integer
+          format: int64
+        series:
+          type: integer
+          format: int64
+        collections:
+          type: integer
+          format: int64
+      additionalProperties: false
+    ListsResponse:
+      type: object
+      required:
+        - items
+        - series
+        - collections
+        - totals
+        - limit
+        - offset
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MediaItem'
+        series:
+          type: array
+          items:
+            $ref: '#/components/schemas/Series'
+        collections:
+          type: array
+          items:
+            $ref: '#/components/schemas/Collection'
+        totals:
+          $ref: '#/components/schemas/ListTotals'
+        total:
+          type: integer
+          format: int64
+          description: Total del bloque seleccionado; solo aparece con kind.
+        limit:
+          type: integer
+        offset:
+          type: integer
+      additionalProperties: false
     HomeCounts:
       type: object
       required:
@@ -4765,6 +5083,8 @@ components:
         - next_up
         - recent_movies
         - recent_series
+        - watchlist
+        - favorites
         - has_clips
         - has_music
         - counts
@@ -4789,6 +5109,16 @@ components:
           description: Las 20 últimas series con episodios, por fecha de alta descendente.
           items:
             $ref: '#/components/schemas/Series'
+        watchlist:
+          type: array
+          description: Hasta 20 ítems y series próximos a ver, del más reciente al más antiguo.
+          items:
+            $ref: '#/components/schemas/HomeListEntry'
+        favorites:
+          type: array
+          description: Hasta 20 ítems y series favoritos, del más reciente al más antiguo.
+          items:
+            $ref: '#/components/schemas/HomeListEntry'
         has_clips:
           type: boolean
           description: Hay alguna biblioteca de tipo clips con vídeos.
@@ -4821,6 +5151,8 @@ components:
         - item_count
         - source
         - edited
+        - favorite
+        - watchlist
       properties:
         id:
           type: integer
@@ -4846,6 +5178,12 @@ components:
             - manual
         edited:
           type: boolean
+        favorite:
+          type: boolean
+          description: El usuario de la sesión ha marcado esta colección como favorita.
+        watchlist:
+          type: boolean
+          description: El usuario de la sesión ha marcado esta colección como próxima a ver.
       additionalProperties: false
     CollectionDetail:
       type: object
@@ -4858,6 +5196,8 @@ components:
         - item_count
         - source
         - edited
+        - favorite
+        - watchlist
         - items
       properties:
         id:
@@ -4883,6 +5223,10 @@ components:
             - tmdb
             - manual
         edited:
+          type: boolean
+        favorite:
+          type: boolean
+        watchlist:
           type: boolean
         items:
           type: array
@@ -5026,6 +5370,8 @@ components:
         - episode_count
         - watched_count
         - match_status
+        - favorite
+        - watchlist
       properties:
         id:
           type: integer
@@ -5060,6 +5406,12 @@ components:
           type: string
           nullable: true
           enum: [auto, manual, none]
+        favorite:
+          type: boolean
+          description: El usuario de la sesión ha marcado esta serie como favorita.
+        watchlist:
+          type: boolean
+          description: El usuario de la sesión ha marcado esta serie como próxima a ver.
       additionalProperties: false
     SeriesResponse:
       type: object
@@ -5147,6 +5499,8 @@ components:
         - season_count
         - episode_count
         - watched_count
+        - favorite
+        - watchlist
         - seasons
         - next_episode
       properties:
@@ -5224,6 +5578,10 @@ components:
         watched_count:
           type: integer
           format: int64
+        favorite:
+          type: boolean
+        watchlist:
+          type: boolean
         seasons:
           type: array
           items:
@@ -5289,6 +5647,8 @@ components:
         - match_status
         - match_score
         - watched
+        - favorite
+        - watchlist
         - progress
         - preferences
         - collections
@@ -5401,6 +5761,12 @@ components:
         watched:
           type: boolean
           description: El usuario de la sesión ha marcado este ítem como visto.
+        favorite:
+          type: boolean
+          description: El usuario de la sesión ha marcado este ítem como favorito.
+        watchlist:
+          type: boolean
+          description: El usuario de la sesión ha marcado este ítem como próximo a ver.
         progress:
           allOf:
             - $ref: '#/components/schemas/PlaybackProgress'

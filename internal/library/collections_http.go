@@ -44,6 +44,8 @@ type collectionDTO struct {
 	ItemCount   int64   `json:"item_count"`
 	Source      string  `json:"source"`
 	Edited      bool    `json:"edited"`
+	Favorite    bool    `json:"favorite"`
+	Watchlist   bool    `json:"watchlist"`
 }
 
 type collectionDetailDTO struct {
@@ -55,6 +57,8 @@ type collectionDetailDTO struct {
 	ItemCount   int64          `json:"item_count"`
 	Source      string         `json:"source"`
 	Edited      bool           `json:"edited"`
+	Favorite    bool           `json:"favorite"`
+	Watchlist   bool           `json:"watchlist"`
 	Items       []mediaItemDTO `json:"items"`
 }
 
@@ -128,11 +132,19 @@ func (a *API) handleCollections(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	queryArgs := append([]any{}, args...)
+	queryArgs := append([]any{sessionUserID(r), sessionUserID(r)}, args...)
 	queryArgs = append(queryArgs, limit, offset)
 	rows, err := a.db.QueryContext(r.Context(), `
 		SELECT c.id, c.name, c.overview, `+collectionPosterExpr+`, c.backdrop_url,
-		       `+collectionItemCountExpr+`, c.source, c.edited
+		       `+collectionItemCountExpr+`, c.source, c.edited,
+		       EXISTS (SELECT 1 FROM collection_lists cl_favorite
+		                WHERE cl_favorite.user_id = ?
+		                  AND cl_favorite.collection_id = c.id
+		                  AND cl_favorite.list = 'favorite'),
+		       EXISTS (SELECT 1 FROM collection_lists cl_watchlist
+		                WHERE cl_watchlist.user_id = ?
+		                  AND cl_watchlist.collection_id = c.id
+		                  AND cl_watchlist.list = 'watchlist')
 		  FROM collections c
 		 WHERE `+where+order+` LIMIT ? OFFSET ?`, queryArgs...)
 	if err != nil {
@@ -190,36 +202,53 @@ func collectionPagination(r *http.Request) (limit, offset int, err error) {
 func scanCollection(scan func(dest ...any) error) (collectionDTO, error) {
 	var collection collectionDTO
 	var overview, poster, backdrop sql.NullString
-	var edited int
+	var edited, favorite, watchlist int
 	if err := scan(&collection.ID, &collection.Name, &overview, &poster, &backdrop,
-		&collection.ItemCount, &collection.Source, &edited); err != nil {
+		&collection.ItemCount, &collection.Source, &edited, &favorite, &watchlist); err != nil {
 		return collectionDTO{}, err
 	}
 	collection.Overview = stringPointer(overview)
 	collection.PosterURL = stringPointer(poster)
 	collection.BackdropURL = stringPointer(backdrop)
 	collection.Edited = edited != 0
+	collection.Favorite = favorite != 0
+	collection.Watchlist = watchlist != 0
 	return collection, nil
 }
 
-func queryCollectionBase(ctx context.Context, db *sql.DB, id int64) (collectionDTO, bool, error) {
+func queryCollectionBase(ctx context.Context, db *sql.DB, id int64, userIDs ...int64) (collectionDTO, bool, error) {
+	var userID int64
+	if len(userIDs) > 0 {
+		userID = userIDs[0]
+	}
 	row := db.QueryRowContext(ctx, `
 		SELECT c.id, c.name, c.overview, `+collectionPosterExpr+`, c.backdrop_url,
-		       `+collectionItemCountExpr+`, c.source, c.edited, c.deleted
+		       `+collectionItemCountExpr+`, c.source, c.edited, c.deleted,
+		       EXISTS (SELECT 1 FROM collection_lists cl_favorite
+		                WHERE cl_favorite.user_id = ?
+		                  AND cl_favorite.collection_id = c.id
+		                  AND cl_favorite.list = 'favorite'),
+		       EXISTS (SELECT 1 FROM collection_lists cl_watchlist
+		                WHERE cl_watchlist.user_id = ?
+		                  AND cl_watchlist.collection_id = c.id
+		                  AND cl_watchlist.list = 'watchlist')
 		  FROM collections c
-		 WHERE c.id = ?`, id)
+		 WHERE c.id = ?`, userID, userID, id)
 
 	var collection collectionDTO
 	var overview, poster, backdrop sql.NullString
-	var edited, deleted int
+	var edited, deleted, favorite, watchlist int
 	if err := row.Scan(&collection.ID, &collection.Name, &overview, &poster,
-		&backdrop, &collection.ItemCount, &collection.Source, &edited, &deleted); err != nil {
+		&backdrop, &collection.ItemCount, &collection.Source, &edited, &deleted,
+		&favorite, &watchlist); err != nil {
 		return collectionDTO{}, false, err
 	}
 	collection.Overview = stringPointer(overview)
 	collection.PosterURL = stringPointer(poster)
 	collection.BackdropURL = stringPointer(backdrop)
 	collection.Edited = edited != 0
+	collection.Favorite = favorite != 0
+	collection.Watchlist = watchlist != 0
 	return collection, deleted != 0, nil
 }
 
@@ -229,7 +258,7 @@ func (a *API) handleCollection(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusNotFound, "colección no encontrada")
 		return
 	}
-	collection, deleted, err := queryCollectionBase(r.Context(), a.db, id)
+	collection, deleted, err := queryCollectionBase(r.Context(), a.db, id, sessionUserID(r))
 	if errors.Is(err, sql.ErrNoRows) || deleted {
 		writeJSONError(w, http.StatusNotFound, "colección no encontrada")
 		return
@@ -260,13 +289,15 @@ func (a *API) handleCollection(w http.ResponseWriter, r *http.Request) {
 		ItemCount:   collection.ItemCount,
 		Source:      collection.Source,
 		Edited:      collection.Edited,
+		Favorite:    collection.Favorite,
+		Watchlist:   collection.Watchlist,
 		Items:       items,
 	})
 }
 
 func (a *API) collectionMovieItems(ctx context.Context, collectionID, userID int64) ([]mediaItemDTO, error) {
 	rows, err := a.db.QueryContext(ctx, `
-		SELECT `+mediaItemColumns+watchedColumn+progressColumn+`
+		SELECT `+mediaItemColumns+watchedColumn+progressColumn+itemListColumns+`
 		  FROM media_items
 		  JOIN collection_items ci
 		    ON ci.media_item_id = media_items.id
@@ -279,7 +310,7 @@ func (a *API) collectionMovieItems(ctx context.Context, collectionID, userID int
 		 WHERE `+videoLibraryClause("media_items")+`
 		 ORDER BY ci.position IS NULL, ci.position ASC,
 		          media_items.year IS NULL, media_items.year ASC, media_items.id`,
-		collectionID, userID, userID)
+		userID, userID, collectionID, userID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -361,7 +392,7 @@ func (a *API) handleCollectionCreate(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
 		return
 	}
-	collection, _, err := queryCollectionBase(r.Context(), a.db, id)
+	collection, _, err := queryCollectionBase(r.Context(), a.db, id, sessionUserID(r))
 	if err != nil {
 		log.Printf("library: leer colección creada %d: %v", id, err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
@@ -447,6 +478,10 @@ func (a *API) handleCollectionDelete(w http.ResponseWriter, r *http.Request) {
 		_, err = a.db.ExecContext(r.Context(), `DELETE FROM collections WHERE id = ?`, collection.ID)
 	} else {
 		_, err = a.db.ExecContext(r.Context(), `UPDATE collections SET deleted = 1 WHERE id = ?`, collection.ID)
+		if err == nil {
+			_, err = a.db.ExecContext(r.Context(),
+				`DELETE FROM collection_lists WHERE collection_id = ?`, collection.ID)
+		}
 	}
 	if err != nil {
 		log.Printf("library: borrar colección %d: %v", collection.ID, err)
@@ -462,7 +497,7 @@ func (a *API) loadAdminCollection(w http.ResponseWriter, r *http.Request) (colle
 		writeJSONError(w, http.StatusNotFound, "colección no encontrada")
 		return collectionDTO{}, false
 	}
-	collection, deleted, err := queryCollectionBase(r.Context(), a.db, id)
+	collection, deleted, err := queryCollectionBase(r.Context(), a.db, id, sessionUserID(r))
 	if errors.Is(err, sql.ErrNoRows) || deleted {
 		writeJSONError(w, http.StatusNotFound, "colección no encontrada")
 		return collectionDTO{}, false
@@ -476,7 +511,7 @@ func (a *API) loadAdminCollection(w http.ResponseWriter, r *http.Request) (colle
 }
 
 func (a *API) writeCollection(w http.ResponseWriter, r *http.Request, id int64) {
-	collection, _, err := queryCollectionBase(r.Context(), a.db, id)
+	collection, _, err := queryCollectionBase(r.Context(), a.db, id, sessionUserID(r))
 	if err != nil {
 		log.Printf("library: leer colección %d: %v", id, err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")

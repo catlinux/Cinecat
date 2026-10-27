@@ -127,6 +127,8 @@ Leídas por el servidor:
 
 En Docker, además: `CINECAT_MEDIA_PATH` (ruta del host montada en `/media`), `CINECAT_MEDIA_ROOTS` (raíces visibles dentro del contenedor), `CINECAT_API_PORT` (`8080`) y `CINECAT_WEB_PORT` (`8081`). El contenedor web usa `ADDRESS_HEADER=X-Forwarded-For` y `XFF_DEPTH=1` (número de proxies de confianza delante de la web); `PUBLIC_API_URL` y `PROTOCOL_HEADER` también son del contenedor web. No hay variables para la ruta de FFmpeg, CORS, usuarios ni límites de HLS.
 
+Cada usuario tiene sus propias listas de **Favoritos** y **Próximas a ver**; no se comparten entre cuentas.
+
 ## Actualizar el servidor
 
 - **Manual:** `./scripts/actualizar.sh` en la raíz del repositorio. Hace `git pull --ff-only`, reconstruye y levanta; la base y las bibliotecas se conservan.

@@ -103,8 +103,11 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.Handle("GET /api/v1/music/tracks/{id}/play", a.requireSession(a.handleMusicTrackPlay))
 	mux.Handle("GET /api/v1/genres", a.requireSession(a.handleGenres))
 	mux.Handle("GET /api/v1/home", a.requireSession(a.handleHome))
+	mux.Handle("GET /api/v1/lists/{list}", a.requireSession(a.handleLists))
 	mux.Handle("GET /api/v1/collections", a.requireSession(a.handleCollections))
 	mux.Handle("GET /api/v1/collections/{id}", a.requireSession(a.handleCollection))
+	mux.Handle("PUT /api/v1/collections/{id}/lists/{list}", a.requireSession(a.handleCollectionListPut))
+	mux.Handle("DELETE /api/v1/collections/{id}/lists/{list}", a.requireSession(a.handleCollectionListDelete))
 	mux.Handle("POST /api/v1/collections", a.requireAdmin(a.handleCollectionCreate))
 	mux.Handle("PATCH /api/v1/collections/{id}", a.requireAdmin(a.handleCollectionPatch))
 	mux.Handle("DELETE /api/v1/collections/{id}", a.requireAdmin(a.handleCollectionDelete))
@@ -115,6 +118,8 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.Handle("GET /api/v1/series/genres", a.requireSession(a.handleSeriesGenres))
 	mux.Handle("GET /api/v1/series/{id}", a.requireSession(a.handleSeriesDetail))
 	mux.Handle("GET /api/v1/series/{id}/similar", a.requireSession(a.handleSimilarSeries))
+	mux.Handle("PUT /api/v1/series/{id}/lists/{list}", a.requireSession(a.handleSeriesListPut))
+	mux.Handle("DELETE /api/v1/series/{id}/lists/{list}", a.requireSession(a.handleSeriesListDelete))
 	mux.Handle("GET /api/v1/series/{id}/seasons/{n}", a.requireSession(a.handleSeriesSeason))
 	mux.Handle("PUT /api/v1/series/{id}/watched", a.requireSession(a.handleSeriesWatchedPut))
 	mux.Handle("DELETE /api/v1/series/{id}/watched", a.requireSession(a.handleSeriesWatchedDelete))
@@ -130,6 +135,8 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.Handle("GET /api/v1/items/{id}", a.requireSession(a.handleItem))
 	mux.Handle("GET /api/v1/items/{id}/similar", a.requireSession(a.handleSimilarItems))
 	mux.Handle("GET /api/v1/items/{id}/thumbnail", a.requireSession(a.handleItemThumbnail))
+	mux.Handle("PUT /api/v1/items/{id}/lists/{list}", a.requireSession(a.handleItemListPut))
+	mux.Handle("DELETE /api/v1/items/{id}/lists/{list}", a.requireSession(a.handleItemListDelete))
 	mux.Handle("GET /api/v1/items/{id}/file-info", a.requireSession(a.handleItemFileInfo))
 	mux.Handle("GET /api/v1/items/{id}/preferences", a.requireSession(a.handleItemPreferencesGet))
 	mux.Handle("PUT /api/v1/items/{id}/preferences", a.requireSession(a.handleItemPreferencesPut))
@@ -242,10 +249,10 @@ func (a *API) handleItems(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	queryArgs := append([]any{userID, userID}, args...)
+	queryArgs := append([]any{userID, userID, userID, userID}, args...)
 	queryArgs = append(queryArgs, limit, offset)
 	rows, err := a.db.QueryContext(r.Context(),
-		`SELECT `+mediaItemColumns+watchedColumn+progressColumn+`
+		`SELECT `+mediaItemColumns+watchedColumn+progressColumn+itemListColumns+`
 		   FROM media_items
 		   LEFT JOIN watch_state ws
 		     ON ws.media_item_id = media_items.id AND ws.user_id = ?

@@ -46,6 +46,8 @@ type mediaItemDTO struct {
 	MatchStatus       *string             `json:"match_status"`
 	MatchScore        *float64            `json:"match_score"`
 	Watched           bool                `json:"watched"`
+	Favorite          bool                `json:"favorite"`
+	Watchlist         bool                `json:"watchlist"`
 	Progress          *playbackProgress   `json:"progress"`
 	Collections       []itemCollection    `json:"collections"`
 	SeriesID          *int64              `json:"series_id"`
@@ -95,6 +97,18 @@ const watchedColumn = `, CASE WHEN ws.user_id IS NULL THEN 0 ELSE 1 END`
 
 const progressColumn = `, pp.position_seconds, pp.duration_seconds, pp.updated_at`
 
+// itemListColumns usa dos parámetros de usuario para calcular las dos marcas
+// del usuario actual sin una consulta por ítem.
+const itemListColumns = `,
+	EXISTS (SELECT 1 FROM item_lists il_favorite
+	         WHERE il_favorite.user_id = ?
+	           AND il_favorite.media_item_id = media_items.id
+	           AND il_favorite.list = 'favorite'),
+	EXISTS (SELECT 1 FROM item_lists il_watchlist
+	         WHERE il_watchlist.user_id = ?
+	           AND il_watchlist.media_item_id = media_items.id
+	           AND il_watchlist.list = 'watchlist')`
+
 func queryMediaItem(
 	ctx context.Context,
 	db *sql.DB,
@@ -103,13 +117,13 @@ func queryMediaItem(
 ) (mediaItemDTO, error) {
 	minimum := collectionMinimum(minCollectionItems...)
 	row := db.QueryRowContext(ctx, `
-		SELECT `+mediaItemColumns+watchedColumn+progressColumn+`
+		SELECT `+mediaItemColumns+watchedColumn+progressColumn+itemListColumns+`
 		  FROM media_items
 		  LEFT JOIN watch_state ws
 		    ON ws.media_item_id = media_items.id AND ws.user_id = ?
 		  LEFT JOIN playback_progress pp
 		    ON pp.media_item_id = media_items.id AND pp.user_id = ?
-		 WHERE media_items.id = ?`, userID, userID, id)
+		 WHERE media_items.id = ?`, userID, userID, userID, userID, id)
 	item, err := scanItem(row.Scan)
 	if err != nil {
 		return mediaItemDTO{}, err
@@ -191,7 +205,7 @@ func scanItem(scan func(dest ...any) error) (mediaItemDTO, error) {
 	var seriesPosterURL, seriesBackdropURL, libraryKind sql.NullString
 	var rating, matchScore, progressPosition, progressDuration sql.NullFloat64
 	var progressUpdated sql.NullString
-	var posterLocked, backdropLocked, watched int
+	var posterLocked, backdropLocked, watched, favorite, watchlist int
 
 	err := scan(
 		&item.ID, &item.LibraryID, &item.Path, &item.FileTitle, &item.Title,
@@ -202,6 +216,7 @@ func scanItem(scan func(dest ...any) error) (mediaItemDTO, error) {
 		&seriesID, &seriesTitle, &episodeTitle, &stillURL, &credits,
 		&seriesPosterURL, &seriesBackdropURL, &libraryKind, &watched,
 		&progressPosition, &progressDuration, &progressUpdated,
+		&favorite, &watchlist,
 	)
 	if err != nil {
 		return mediaItemDTO{}, err
@@ -236,6 +251,8 @@ func scanItem(scan func(dest ...any) error) (mediaItemDTO, error) {
 	item.LibraryKind = libraryKind.String
 	item.Credits = decodeCredits(credits)
 	item.Watched = watched != 0
+	item.Favorite = favorite != 0
+	item.Watchlist = watchlist != 0
 	if progressPosition.Valid && progressDuration.Valid && progressUpdated.Valid {
 		item.Progress = &playbackProgress{
 			PositionSeconds: progressPosition.Float64,

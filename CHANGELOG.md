@@ -7,6 +7,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Añadido
+
+- Favoritos y «Próximas a ver» en el servidor: cada usuario marca y desmarca películas, vídeos, series y colecciones (`PUT`/`DELETE /api/v1/{items|series|collections}/{id}/lists/{list}`) y los lista con `GET /api/v1/lists/{list}`. Migración 0017. Los DTO traen `favorite` y `watchlist`, y el portal `watchlist` y `favorites`. Al marcar algo como visto sale solo de «Próximas a ver» (y la serie, cuando queda completamente vista). La pantalla llega en la siguiente versión.
+
 ## [0.19.1] - 2026-10-27
 
 ### Seguridad

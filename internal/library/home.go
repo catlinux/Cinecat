@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+	"sort"
 )
 
 type homeCounts struct {
@@ -13,11 +14,19 @@ type homeCounts struct {
 	Series   int64 `json:"series"`
 }
 
+type homeListEntry struct {
+	Kind   string         `json:"kind"`
+	Item   *mediaItemDTO  `json:"item,omitempty"`
+	Series *seriesListDTO `json:"series,omitempty"`
+}
+
 type homeResponse struct {
 	Continue     []mediaItemDTO  `json:"continue"`
 	NextUp       []mediaItemDTO  `json:"next_up"`
 	RecentMovies []mediaItemDTO  `json:"recent_movies"`
 	RecentSeries []seriesListDTO `json:"recent_series"`
+	Watchlist    []homeListEntry `json:"watchlist"`
+	Favorites    []homeListEntry `json:"favorites"`
 	HasClips     bool            `json:"has_clips"`
 	HasMusic     bool            `json:"has_music"`
 	Counts       homeCounts      `json:"counts"`
@@ -31,7 +40,7 @@ func (a *API) handleHome(w http.ResponseWriter, r *http.Request) {
 	}
 
 	continueItems, err := queryHomeItems(r.Context(), a.db, `
-		SELECT `+mediaItemColumns+watchedColumn+progressColumn+`
+		SELECT `+mediaItemColumns+watchedColumn+progressColumn+itemListColumns+`
 		  FROM media_items
 		  JOIN playback_progress pp
 		    ON pp.media_item_id = media_items.id AND pp.user_id = ?
@@ -39,7 +48,7 @@ func (a *API) handleHome(w http.ResponseWriter, r *http.Request) {
 		    ON ws.media_item_id = media_items.id AND ws.user_id = ?
 		 WHERE media_items.kind IN ('movie', 'episode')
 		 ORDER BY pp.updated_at DESC, media_items.id DESC
-		 LIMIT 20`, user.ID, user.ID)
+		 LIMIT 20`, user.ID, user.ID, user.ID, user.ID)
 	if err != nil {
 		log.Printf("library: listar continuar viendo: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
@@ -47,7 +56,7 @@ func (a *API) handleHome(w http.ResponseWriter, r *http.Request) {
 	}
 
 	recentMovies, err := queryHomeItems(r.Context(), a.db, `
-		SELECT `+mediaItemColumns+watchedColumn+progressColumn+`
+		SELECT `+mediaItemColumns+watchedColumn+progressColumn+itemListColumns+`
 		  FROM media_items
 		  LEFT JOIN watch_state ws
 		    ON ws.media_item_id = media_items.id AND ws.user_id = ?
@@ -56,7 +65,7 @@ func (a *API) handleHome(w http.ResponseWriter, r *http.Request) {
 		 WHERE media_items.kind = 'movie'
 		   AND `+videoLibraryClause("media_items")+`
 		 ORDER BY media_items.id DESC
-		 LIMIT 20`, user.ID, user.ID)
+		 LIMIT 20`, user.ID, user.ID, user.ID, user.ID)
 	if err != nil {
 		log.Printf("library: listar películas recientes: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
@@ -73,6 +82,19 @@ func (a *API) handleHome(w http.ResponseWriter, r *http.Request) {
 	nextUp, err := queryHomeNextUp(r.Context(), a.db, user.ID, a.collectionMin())
 	if err != nil {
 		log.Printf("library: listar siguientes episodios: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
+
+	watchlist, err := queryHomeList(r.Context(), a.db, user.ID, listWatchlist)
+	if err != nil {
+		log.Printf("library: listar próximas a ver: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
+	favorites, err := queryHomeList(r.Context(), a.db, user.ID, listFavorite)
+	if err != nil {
+		log.Printf("library: listar favoritos: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
 		return
 	}
@@ -118,6 +140,8 @@ func (a *API) handleHome(w http.ResponseWriter, r *http.Request) {
 		NextUp:       nextUp,
 		RecentMovies: recentMovies,
 		RecentSeries: recentSeries,
+		Watchlist:    watchlist,
+		Favorites:    favorites,
 		HasClips:     hasClips != 0,
 		HasMusic:     hasMusic != 0,
 		Counts:       counts,
@@ -222,4 +246,45 @@ func queryHomeItems(ctx context.Context, db *sql.DB, query string, args ...any) 
 		return nil, err
 	}
 	return items, nil
+}
+
+func queryHomeList(ctx context.Context, db *sql.DB, userID int64, list string) ([]homeListEntry, error) {
+	items, _, err := queryListItems(ctx, db, userID, list, 20, 0)
+	if err != nil {
+		return nil, err
+	}
+	series, _, err := queryListSeries(ctx, db, userID, list, 20, 0)
+	if err != nil {
+		return nil, err
+	}
+	type entry struct {
+		addedAt string
+		value   homeListEntry
+	}
+	entries := make([]entry, 0, len(items)+len(series))
+	for i := range items {
+		item := items[i].Item
+		entries = append(entries, entry{
+			addedAt: items[i].AddedAt,
+			value:   homeListEntry{Kind: "item", Item: &item},
+		})
+	}
+	for i := range series {
+		item := series[i].Series
+		entries = append(entries, entry{
+			addedAt: series[i].AddedAt,
+			value:   homeListEntry{Kind: "series", Series: &item},
+		})
+	}
+	sort.SliceStable(entries, func(i, j int) bool {
+		return entries[i].addedAt > entries[j].addedAt
+	})
+	result := make([]homeListEntry, 0, len(entries))
+	for _, item := range entries {
+		result = append(result, item.value)
+		if len(result) == 20 {
+			break
+		}
+	}
+	return result, nil
 }

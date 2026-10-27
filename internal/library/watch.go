@@ -75,6 +75,11 @@ func (a *API) setWatched(w http.ResponseWriter, r *http.Request, watched bool) {
 		_, err = tx.ExecContext(r.Context(),
 			`INSERT OR IGNORE INTO watch_state (user_id, media_item_id) VALUES (?, ?)`,
 			user.ID, id)
+		if err == nil {
+			_, err = tx.ExecContext(r.Context(),
+				`DELETE FROM item_lists WHERE user_id = ? AND media_item_id = ? AND list = 'watchlist'`,
+				user.ID, id)
+		}
 	} else {
 		_, err = tx.ExecContext(r.Context(),
 			`DELETE FROM watch_state WHERE user_id = ? AND media_item_id = ?`,
@@ -91,6 +96,22 @@ func (a *API) setWatched(w http.ResponseWriter, r *http.Request, watched bool) {
 		log.Printf("library: borrar progreso al cambiar visionado del ítem %d: %v", id, err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
 		return
+	}
+	if watched {
+		var seriesID sql.NullInt64
+		if err := tx.QueryRowContext(r.Context(),
+			`SELECT series_id FROM media_items WHERE id = ?`, id).Scan(&seriesID); err != nil {
+			log.Printf("library: leer serie del ítem %d: %v", id, err)
+			writeJSONError(w, http.StatusInternalServerError, "error interno")
+			return
+		}
+		if seriesID.Valid {
+			if err := clearSeriesWatchlistIfWatched(r.Context(), tx, user.ID, seriesID.Int64); err != nil {
+				log.Printf("library: limpiar próxima a ver de la serie %d: %v", seriesID.Int64, err)
+				writeJSONError(w, http.StatusInternalServerError, "error interno")
+				return
+			}
+		}
 	}
 	if err := tx.Commit(); err != nil {
 		log.Printf("library: confirmar visionado del ítem %d: %v", id, err)

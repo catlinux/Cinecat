@@ -59,7 +59,7 @@ func TestMigrateCreaTablas(t *testing.T) {
 		"schema_migrations", "users", "sessions", "libraries", "library_paths", "media_items",
 		"playback_state", "playback_progress", "collections", "collection_items", "series",
 		"series_seasons", "settings", "item_preferences", "music_artists", "music_albums",
-		"music_tracks",
+		"music_tracks", "item_lists", "series_lists", "collection_lists",
 	} {
 		if !got[name] {
 			t.Errorf("falta la tabla %q", name)
@@ -496,5 +496,89 @@ func TestMigracionMusicaRestriccionesYCascada(t *testing.T) {
 		if err := db.QueryRowContext(ctx, `SELECT count(*) FROM `+table).Scan(&count); err != nil || count != 0 {
 			t.Fatalf("%s tras cascada = %d, %v", table, count, err)
 		}
+	}
+}
+
+func TestMigracionUserListsCascada(t *testing.T) {
+	s, ctx := openTestStore(t, filepath.Join(t.TempDir(), "cinecat.db"))
+	db := s.DB()
+	res, err := db.ExecContext(ctx, `INSERT INTO users (username, password_hash) VALUES ('ana', 'hash')`)
+	if err != nil {
+		t.Fatalf("crear usuario: %v", err)
+	}
+	userID, _ := res.LastInsertId()
+	res, err = db.ExecContext(ctx, `INSERT INTO libraries (path, name) VALUES ('/media/lista', 'Lista')`)
+	if err != nil {
+		t.Fatalf("crear biblioteca: %v", err)
+	}
+	libraryID, _ := res.LastInsertId()
+	res, err = db.ExecContext(ctx, `
+		INSERT INTO media_items (library_id, path, title, kind)
+		VALUES (?, '/media/lista/pelicula.mkv', 'Película', 'movie')`, libraryID)
+	if err != nil {
+		t.Fatalf("crear ítem: %v", err)
+	}
+	itemID, _ := res.LastInsertId()
+	res, err = db.ExecContext(ctx, `
+		INSERT INTO series (library_id, folder, title) VALUES (?, 'Serie', 'Serie')`, libraryID)
+	if err != nil {
+		t.Fatalf("crear serie: %v", err)
+	}
+	seriesID, _ := res.LastInsertId()
+	res, err = db.ExecContext(ctx, `INSERT INTO collections (name, source) VALUES ('Colección', 'manual')`)
+	if err != nil {
+		t.Fatalf("crear colección: %v", err)
+	}
+	collectionID, _ := res.LastInsertId()
+	for _, statement := range []struct {
+		query string
+		args  []any
+	}{
+		{`INSERT INTO item_lists (user_id, media_item_id, list) VALUES (?, ?, 'favorite')`, []any{userID, itemID}},
+		{`INSERT INTO series_lists (user_id, series_id, list) VALUES (?, ?, 'favorite')`, []any{userID, seriesID}},
+		{`INSERT INTO collection_lists (user_id, collection_id, list) VALUES (?, ?, 'favorite')`, []any{userID, collectionID}},
+	} {
+		if _, err := db.ExecContext(ctx, statement.query, statement.args...); err != nil {
+			t.Fatalf("crear marca: %v", err)
+		}
+	}
+
+	if _, err := db.ExecContext(ctx, `DELETE FROM media_items WHERE id = ?`, itemID); err != nil {
+		t.Fatalf("borrar ítem: %v", err)
+	}
+	var count int
+	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM item_lists`).Scan(&count); err != nil || count != 0 {
+		t.Fatalf("marcas de ítem tras cascada = %d, %v", count, err)
+	}
+	if _, err := db.ExecContext(ctx, `DELETE FROM series WHERE id = ?`, seriesID); err != nil {
+		t.Fatalf("borrar serie: %v", err)
+	}
+	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM series_lists`).Scan(&count); err != nil || count != 0 {
+		t.Fatalf("marcas de serie tras cascada = %d, %v", count, err)
+	}
+	if _, err := db.ExecContext(ctx, `DELETE FROM collections WHERE id = ?`, collectionID); err != nil {
+		t.Fatalf("borrar colección: %v", err)
+	}
+	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM collection_lists`).Scan(&count); err != nil || count != 0 {
+		t.Fatalf("marcas de colección tras cascada = %d, %v", count, err)
+	}
+
+	res, err = db.ExecContext(ctx, `
+		INSERT INTO media_items (library_id, path, title, kind)
+		VALUES (?, '/media/lista/otra.mkv', 'Otra', 'movie')`, libraryID)
+	if err != nil {
+		t.Fatalf("crear segundo ítem: %v", err)
+	}
+	secondItemID, _ := res.LastInsertId()
+	if _, err := db.ExecContext(ctx,
+		`INSERT INTO item_lists (user_id, media_item_id, list) VALUES (?, ?, 'watchlist')`,
+		userID, secondItemID); err != nil {
+		t.Fatalf("crear segunda marca: %v", err)
+	}
+	if _, err := db.ExecContext(ctx, `DELETE FROM users WHERE id = ?`, userID); err != nil {
+		t.Fatalf("borrar usuario: %v", err)
+	}
+	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM item_lists`).Scan(&count); err != nil || count != 0 {
+		t.Fatalf("marcas tras borrar usuario = %d, %v", count, err)
 	}
 }

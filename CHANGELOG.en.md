@@ -7,6 +7,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+### Added
+
+- Favorites and "Watch next" on the server: each user marks and unmarks movies, videos, series and collections (`PUT`/`DELETE /api/v1/{items|series|collections}/{id}/lists/{list}`) and lists them with `GET /api/v1/lists/{list}`. Migration 0017. DTOs carry `favorite` and `watchlist`, and the home carries `watchlist` and `favorites`. Marking something as watched removes it from "Watch next" automatically (and a series once it is fully watched). The screen arrives in the next version.
+
 ## [0.19.1] - 2026-10-27
 
 ### Security

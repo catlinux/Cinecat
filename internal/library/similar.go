@@ -423,13 +423,13 @@ func (a *API) mediaItemsByIDs(
 		return []mediaItemDTO{}, nil
 	}
 	placeholders := strings.TrimSuffix(strings.Repeat("?,", len(ids)), ",")
-	args := make([]any, 0, len(ids)+2)
-	args = append(args, userID, userID)
+	args := make([]any, 0, len(ids)+4)
+	args = append(args, userID, userID, userID, userID)
 	for _, id := range ids {
 		args = append(args, id)
 	}
 	rows, err := a.db.QueryContext(ctx, `
-		SELECT `+mediaItemColumns+watchedColumn+progressColumn+`
+		SELECT `+mediaItemColumns+watchedColumn+progressColumn+itemListColumns+`
 		  FROM media_items
 		  LEFT JOIN watch_state ws
 		    ON ws.media_item_id = media_items.id AND ws.user_id = ?
@@ -480,8 +480,8 @@ func (a *API) seriesListByIDs(
 		return []seriesListDTO{}, nil
 	}
 	placeholders := strings.TrimSuffix(strings.Repeat("?,", len(ids)), ",")
-	args := make([]any, 0, len(ids)+1)
-	args = append(args, userID)
+	args := make([]any, 0, len(ids)+3)
+	args = append(args, userID, userID, userID)
 	for _, id := range ids {
 		args = append(args, id)
 	}
@@ -494,7 +494,15 @@ func (a *API) seriesListByIDs(
 		       (SELECT count(*) FROM media_items mi
 		          JOIN watch_state ws ON ws.media_item_id = mi.id AND ws.user_id = ?
 		         WHERE mi.series_id = s.id),
-		       s.match_status
+		       s.match_status,
+		       EXISTS (SELECT 1 FROM series_lists sl_favorite
+		                WHERE sl_favorite.user_id = ?
+		                  AND sl_favorite.series_id = s.id
+		                  AND sl_favorite.list = 'favorite'),
+		       EXISTS (SELECT 1 FROM series_lists sl_watchlist
+		                WHERE sl_watchlist.user_id = ?
+		                  AND sl_watchlist.series_id = s.id
+		                  AND sl_watchlist.list = 'watchlist')
 		  FROM series s
 		 WHERE s.id IN (`+placeholders+`)`, args...)
 	if err != nil {
