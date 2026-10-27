@@ -103,6 +103,9 @@ type Options struct {
 	// WorkDir es el directorio de trabajo de los remux; si está vacío se crea
 	// uno temporal. El servicio lo elimina al cerrarse.
 	WorkDir string
+	// KeyframeCacheDir guarda los índices de fotogramas clave entre
+	// reinicios. Si está vacío, la caché solo vive en memoria.
+	KeyframeCacheDir string
 	// Key es la clave HMAC; si está vacía se genera una aleatoria por proceso.
 	Key []byte
 	// Prober sustituye el detector de keyframes; si es nil se usa el de por
@@ -135,13 +138,14 @@ type Options struct {
 
 // Service firma URLs, prepara remux HLS y sirve sus archivos.
 type Service struct {
-	key      []byte
-	ttl      time.Duration
-	now      func() time.Time
-	workDir  string
-	prober   *Prober
-	settings func() TranscodeSettings
-	threads  int
+	key       []byte
+	ttl       time.Duration
+	now       func() time.Time
+	workDir   string
+	prober    *Prober
+	keyframes *KeyframeIndex
+	settings  func() TranscodeSettings
+	threads   int
 
 	maxTranscodes     int
 	maxTranscodesFunc func() int
@@ -278,12 +282,14 @@ func New(opts Options) (*Service, error) {
 	}
 
 	procCtx, procCancel := context.WithCancel(context.Background())
+	keyframes := NewKeyframeIndexWithContext(procCtx, opts.KeyframeCacheDir)
 	svc := &Service{
 		key:               key,
 		ttl:               ttl,
 		now:               now,
 		workDir:           workDir,
 		prober:            prober,
+		keyframes:         keyframes,
 		settings:          settings,
 		threads:           threads,
 		maxTranscodes:     maxTranscodes,
@@ -332,7 +338,16 @@ func (s *Service) Close() error {
 	}
 	s.recountLiveTranscodesLocked()
 	s.mu.Unlock()
+	if s.keyframes != nil {
+		_ = s.keyframes.Close()
+	}
 	return os.RemoveAll(s.workDir)
+}
+
+// Keyframes expone la caché de índices de fotogramas clave para el futuro
+// modo copia.
+func (s *Service) Keyframes() *KeyframeIndex {
+	return s.keyframes
 }
 
 // cleanupLoop borra los remux antiguos y vigila los procesos vivos: los para

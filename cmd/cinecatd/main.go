@@ -119,6 +119,7 @@ func main() {
 		MaxTranscodesFunc: func() int {
 			return settingsStore.Int("playback.max_transcodes")
 		},
+		KeyframeCacheDir: keyframeCacheDir(cfg.DatabasePath),
 	})
 	if err != nil {
 		log.Fatalf("cinecatd: %v", err)
@@ -362,6 +363,15 @@ func thumbnailCacheDir(databasePath string) string {
 		return ""
 	}
 	return filepath.Join(filepath.Dir(path), "cache", "thumbs")
+}
+
+// keyframeCacheDir guarda los índices de claves junto a la base de datos.
+func keyframeCacheDir(databasePath string) string {
+	path := strings.TrimSpace(databasePath)
+	if path == "" || path == ":memory:" {
+		return ""
+	}
+	return filepath.Join(filepath.Dir(path), "cache", "keyframes")
 }
 
 // musicCoverCacheDir guarda las carátulas incrustadas extraídas de las pistas.
