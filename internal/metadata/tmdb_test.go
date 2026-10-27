@@ -616,23 +616,30 @@ func TestMovieDetails(t *testing.T) {
 		"genres":         []map[string]any{{"name": "Acción"}, {"name": "Ciencia ficción"}},
 		"credits": map[string]any{
 			"cast": []map[string]any{
-				{"name": "Actor 5", "order": 5},
-				{"name": "Actor 0", "order": 0},
-				{"name": "Actor 2", "order": 2},
-				{"name": "Actor 1", "order": 1},
-				{"name": "Actor 3", "order": 3},
-				{"name": "Actor 4", "order": 4},
-				{"name": "Actor 6", "order": 6},
-				{"name": "Actor 7", "order": 7},
-				{"name": "Actor 8", "order": 8},
-				{"name": "Actor 9", "order": 9},
+				{"id": 1000, "name": "Actor 5", "order": 5},
+				{"id": 1001, "name": "Actor 0", "order": 0},
+				{"id": 1002, "name": "Actor 2", "order": 2},
+				{"id": 1003, "name": "Actor 1", "order": 1},
+				{"id": 1004, "name": "Actor 3", "order": 3},
+				{"id": 1005, "name": "Actor 4", "order": 4},
+				{"id": 1006, "name": "Actor 6", "order": 6},
+				{"id": 1007, "name": "Actor 7", "order": 7},
+				{"id": 1008, "name": "Actor 8", "order": 8},
+				{"id": 1009, "name": "Actor 9", "order": 9},
 			},
 			"crew": []map[string]any{
-				{"name": "Lana Wachowski", "job": "Director"},
-				{"name": "Productor", "job": "Producer"},
-				{"name": "Lilly Wachowski", "job": "Director"},
+				{"id": 2000, "name": "Lana Wachowski", "job": "Director"},
+				{"id": 2001, "name": "Productor", "job": "Producer"},
+				{"id": 2002, "name": "Lilly Wachowski", "job": "Director"},
 			},
 		},
+		"videos": map[string]any{"results": []map[string]any{
+			{"key": "en-trailer", "site": "YouTube", "type": "Trailer", "official": true, "iso_639_1": "en"},
+			{"key": "es-teaser", "site": "YouTube", "type": "Teaser", "official": true, "iso_639_1": "es"},
+			{"key": "es-normal", "site": "YouTube", "type": "Trailer", "official": false, "iso_639_1": "es"},
+			{"key": "es-oficial", "site": "YouTube", "type": "Trailer", "official": true, "iso_639_1": "es"},
+			{"key": "vimeo", "site": "Vimeo", "type": "Trailer", "official": true, "iso_639_1": "es"},
+		}},
 		"images": map[string]any{
 			"posters": []map[string]any{
 				{"file_path": "/en.jpg", "iso_639_1": "en", "vote_average": 9},
@@ -675,7 +682,7 @@ func TestMovieDetails(t *testing.T) {
 	}
 	if len(details.Credits.Crew) != 3 || details.Credits.Crew[0].Name != "Lana Wachowski" ||
 		details.Credits.Crew[1].Name != "Lilly Wachowski" || details.Credits.Crew[2].Name != "Productor" ||
-		details.Credits.Crew[0].PhotoURL != "" {
+		details.Credits.Crew[0].PhotoURL != "" || details.Credits.Crew[0].ID != 2000 {
 		t.Fatalf("equipo sin foto inesperado: %+v", details.Credits.Crew)
 	}
 	if want := api.URL + "/img/w500/es-ES.jpg"; details.PosterURL != want {
@@ -683,6 +690,10 @@ func TestMovieDetails(t *testing.T) {
 	}
 	if want := api.URL + "/img/w1280/backdrop.jpg"; details.BackdropURL != want {
 		t.Fatalf("BackdropURL = %q, se esperaba %q", details.BackdropURL, want)
+	}
+	if details.TrailerURL != "https://www.youtube.com/watch?v=es-oficial" ||
+		details.TrailerLanguage != "es" {
+		t.Fatalf("tráiler inesperado: %q/%q", details.TrailerURL, details.TrailerLanguage)
 	}
 	if details.Collection == nil || details.Collection.TMDBID != 10 ||
 		details.Collection.Name != "Saga Matrix" ||
@@ -693,8 +704,9 @@ func TestMovieDetails(t *testing.T) {
 
 	query := api.query("/movie/603")
 	if query.Get("language") != "es-ES" ||
-		query.Get("append_to_response") != "credits,images" ||
-		query.Get("include_image_language") != "es,null,en" {
+		query.Get("append_to_response") != "credits,images,videos" ||
+		query.Get("include_image_language") != "es,null,en" ||
+		query.Get("include_video_language") != "es,en,null" {
 		t.Fatalf("parámetros inesperados: %v", query)
 	}
 }
@@ -1447,5 +1459,114 @@ func TestLimitadorDePeticiones(t *testing.T) {
 	}
 	if gap := times[1].Sub(times[0]); gap < 40*time.Millisecond {
 		t.Fatalf("las peticiones se hicieron con %s de diferencia; el limitador exige ~50 ms", gap)
+	}
+}
+
+func TestPickTrailerPrioridad(t *testing.T) {
+	tests := []struct {
+		name     string
+		videos   []videoItem
+		wantURL  string
+		wantLang string
+	}{
+		{
+			name: "prefiere tráiler oficial en castellano",
+			videos: []videoItem{
+				{Key: "en", Site: "YouTube", Type: "Trailer", Official: true, ISO6391: "en"},
+				{Key: "es-normal", Site: "YouTube", Type: "Trailer", Official: false, ISO6391: "es"},
+				{Key: "es-oficial", Site: "YouTube", Type: "Trailer", Official: true, ISO6391: "es"},
+			},
+			wantURL:  "https://www.youtube.com/watch?v=es-oficial",
+			wantLang: "es",
+		},
+		{
+			name: "un teaser en castellano va antes que un tráiler en inglés",
+			videos: []videoItem{
+				{Key: "en", Site: "YouTube", Type: "Trailer", Official: true, ISO6391: "en"},
+				{Key: "teaser", Site: "YouTube", Type: "Teaser", Official: true, ISO6391: "es"},
+			},
+			wantURL:  "https://www.youtube.com/watch?v=teaser",
+			wantLang: "es",
+		},
+		{
+			name: "descarta otras webs y teasers ingleses",
+			videos: []videoItem{
+				{Key: "vimeo", Site: "Vimeo", Type: "Trailer", Official: true, ISO6391: "es"},
+				{Key: "teaser-en", Site: "YouTube", Type: "Teaser", Official: true, ISO6391: "en"},
+			},
+			wantURL: "",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			url, language := pickTrailer(test.videos)
+			if url != test.wantURL || language != test.wantLang {
+				t.Fatalf("pickTrailer = %q/%q, se esperaba %q/%q", url, language, test.wantURL, test.wantLang)
+			}
+		})
+	}
+}
+
+func TestPersonDetailsConCreditosCombinadosYBiografiaEnIngles(t *testing.T) {
+	api := newTestAPI(t)
+	api.route("/person/123", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.URL.Query().Get("language") == "en-US" {
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"id": 123, "name": "Persona", "biography": "English biography",
+			})
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"id":                   123,
+			"name":                 "Persona",
+			"biography":            "",
+			"birthday":             "1970-01-02",
+			"deathday":             "",
+			"place_of_birth":       "Madrid",
+			"profile_path":         "/persona.jpg",
+			"known_for_department": "Acting",
+			"combined_credits": map[string]any{
+				"cast": []map[string]any{
+					{"id": 603, "media_type": "movie", "title": "Matrix", "release_date": "1999-03-31", "poster_path": "/matrix.jpg", "character": "Neo"},
+					{"id": 1399, "media_type": "tv", "name": "Juego de tronos", "first_air_date": "2011-04-17", "poster_path": "/got.jpg", "character": "Tyrion"},
+					{"id": 9, "media_type": "person", "name": "Ignorado"},
+				},
+				"crew": []map[string]any{
+					{"id": 603, "media_type": "movie", "title": "Matrix", "release_date": "1999-03-31", "poster_path": "/matrix.jpg", "job": "Director"},
+				},
+			},
+		})
+	})
+	client := newAPIClient(t, api, t.TempDir(), nil, "clave-de-prueba")
+	person, err := client.PersonDetails(context.Background(), 123)
+	if err != nil {
+		t.Fatalf("PersonDetails: %v", err)
+	}
+	if person.ID != 123 || person.Name != "Persona" || person.Biography != "English biography" ||
+		person.Birthday != "1970-01-02" || person.Deathday != "" ||
+		person.PlaceOfBirth != "Madrid" || person.KnownFor != "Acting" {
+		t.Fatalf("persona inesperada: %+v", person)
+	}
+	if person.PhotoURL != api.URL+"/img/w342/persona.jpg" {
+		t.Fatalf("foto = %q", person.PhotoURL)
+	}
+	if len(person.Credits) != 3 {
+		t.Fatalf("créditos = %d, se esperaban 3: %+v", len(person.Credits), person.Credits)
+	}
+	if person.Credits[0].MediaType != "movie" || person.Credits[0].TMDBID != 603 ||
+		person.Credits[0].Character != "Neo" || person.Credits[0].CreditType != "cast" ||
+		person.Credits[0].Year != 1999 || person.Credits[0].PosterURL != api.URL+"/img/w342/matrix.jpg" {
+		t.Fatalf("crédito de película inesperado: %+v", person.Credits[0])
+	}
+	if person.Credits[1].MediaType != "tv" || person.Credits[1].Title != "Juego de tronos" ||
+		person.Credits[1].Year != 2011 {
+		t.Fatalf("crédito de serie inesperado: %+v", person.Credits[1])
+	}
+	if person.Credits[2].Job != "Director" || person.Credits[2].CreditType != "crew" {
+		t.Fatalf("crédito de equipo inesperado: %+v", person.Credits[2])
+	}
+	if api.pathCount("/person/123") != 2 {
+		t.Fatalf("peticiones a persona = %d, se esperaban 2", api.pathCount("/person/123"))
 	}
 }

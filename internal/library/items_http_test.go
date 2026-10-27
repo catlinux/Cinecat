@@ -597,3 +597,36 @@ func TestCorreccionPermisosYErrores(t *testing.T) {
 		}
 	}
 }
+
+func TestItemDTOConTrailerYCreditosConID(t *testing.T) {
+	ts := newLibraryHTTPTestServer(t)
+	libraryID := createLibrary(t, ts.db, t.TempDir())
+	itemID := insertItemFixture(t, ts.db, itemFixture{
+		libraryID: libraryID, path: "/media/peli.mkv", title: "Peli", kind: KindMovie,
+	})
+	if _, err := ts.db.Exec(`
+		UPDATE media_items
+		   SET trailer_url = ?, trailer_language = ?, credits = ?
+		 WHERE id = ?`,
+		"https://www.youtube.com/watch?v=abc", "es",
+		`{"cast":[{"id":123,"name":"Persona","character":"Protagonista","photo":""}],"crew":[{"id":124,"name":"Dirección","job":"Director","photo":""}]}`,
+		itemID); err != nil {
+		t.Fatalf("preparar tráiler: %v", err)
+	}
+	status, body := libraryHTTPGet(t, ts.URL+"/api/v1/items/"+strconv.FormatInt(itemID, 10), ts.token)
+	if status != http.StatusOK {
+		t.Fatalf("ítem: código = %d, cuerpo = %s", status, body)
+	}
+	var item mediaItemDTO
+	if err := json.Unmarshal(body, &item); err != nil {
+		t.Fatalf("respuesta: %v", err)
+	}
+	if item.TrailerURL == nil || *item.TrailerURL != "https://www.youtube.com/watch?v=abc" ||
+		item.TrailerLanguage == nil || *item.TrailerLanguage != "es" {
+		t.Fatalf("tráiler inesperado: %+v", item)
+	}
+	if len(item.Credits.Cast) != 1 || item.Credits.Cast[0].ID != 123 ||
+		len(item.Credits.Crew) != 1 || item.Credits.Crew[0].ID != 124 {
+		t.Fatalf("créditos con id inesperados: %+v", item.Credits)
+	}
+}

@@ -494,6 +494,7 @@ func (a *API) seriesListByIDs(
 		       (SELECT count(*) FROM media_items mi
 		          JOIN watch_state ws ON ws.media_item_id = mi.id AND ws.user_id = ?
 		         WHERE mi.series_id = s.id),
+		       s.rating, s.trailer_url, s.trailer_language,
 		       s.match_status,
 		       EXISTS (SELECT 1 FROM series_lists sl_favorite
 		                WHERE sl_favorite.user_id = ?

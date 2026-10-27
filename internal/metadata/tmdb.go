@@ -33,7 +33,7 @@ const (
 
 	// cacheSchemaVersion separa las respuestas crudas actuales de las entradas
 	// antiguas, que guardaban solo los campos reducidos del struct de turno.
-	cacheSchemaVersion = 2
+	cacheSchemaVersion = 3
 
 	// minRequestInterval mantiene el límite de TMDB de ~20 peticiones/s.
 	minRequestInterval = 50 * time.Millisecond
@@ -86,6 +86,7 @@ type CollectionRef struct {
 
 // CastCredit es una persona del reparto con su personaje y foto.
 type CastCredit struct {
+	ID        int
 	Name      string
 	Character string
 	PhotoURL  string
@@ -93,6 +94,7 @@ type CastCredit struct {
 
 // CrewCredit es una persona del equipo técnico con su trabajo y foto.
 type CrewCredit struct {
+	ID         int
 	Name       string
 	Job        string
 	Department string
@@ -124,8 +126,35 @@ type Details struct {
 	PosterURL        string         `json:"poster_url"`
 	BackdropURL      string         `json:"backdrop_url"`
 	Collection       *CollectionRef `json:"collection,omitempty"`
+	TrailerURL       string         `json:"trailer_url"`
+	TrailerLanguage  string         `json:"trailer_language"`
 	// SeasonPosters asocia el número de temporada con su carátula de TMDB.
 	SeasonPosters map[int]string `json:"-"`
+}
+
+// Person es la ficha de una persona de TMDB y sus créditos combinados.
+type Person struct {
+	ID           int
+	Name         string
+	Biography    string
+	Birthday     string
+	Deathday     string
+	PlaceOfBirth string
+	PhotoURL     string
+	KnownFor     string
+	Credits      []PersonCredit
+}
+
+// PersonCredit es una película o serie en la que participa una persona.
+type PersonCredit struct {
+	MediaType  string
+	TMDBID     int
+	Title      string
+	Year       int
+	PosterURL  string
+	Character  string
+	Job        string
+	CreditType string
 }
 
 // Episode es la ficha de un episodio concreto.
@@ -459,6 +488,7 @@ type collectionResponse struct {
 }
 
 type castMember struct {
+	ID          int    `json:"id"`
 	Name        string `json:"name"`
 	Character   string `json:"character"`
 	ProfilePath string `json:"profile_path"`
@@ -466,6 +496,7 @@ type castMember struct {
 }
 
 type crewMember struct {
+	ID          int    `json:"id"`
 	Name        string `json:"name"`
 	Job         string `json:"job"`
 	Department  string `json:"department"`
@@ -478,12 +509,25 @@ type creditsResponse struct {
 }
 
 type creatorMember struct {
+	ID          int    `json:"id"`
 	Name        string `json:"name"`
 	ProfilePath string `json:"profile_path"`
 }
 
 type genre struct {
 	Name string `json:"name"`
+}
+
+type videoItem struct {
+	Key      string `json:"key"`
+	Site     string `json:"site"`
+	Type     string `json:"type"`
+	Official bool   `json:"official"`
+	ISO6391  string `json:"iso_639_1"`
+}
+
+type videosResponse struct {
+	Results []videoItem `json:"results"`
 }
 
 type movieDetailsResponse struct {
@@ -499,6 +543,7 @@ type movieDetailsResponse struct {
 	Genres              []genre         `json:"genres"`
 	Credits             creditsResponse `json:"credits"`
 	Images              imagesResponse  `json:"images"`
+	Videos              videosResponse  `json:"videos"`
 	PosterPath          string          `json:"poster_path"`
 	BackdropPath        string          `json:"backdrop_path"`
 	BelongsToCollection *collectionRef  `json:"belongs_to_collection"`
@@ -516,6 +561,7 @@ type tvDetailsResponse struct {
 	CreatedBy    []creatorMember `json:"created_by"`
 	Credits      creditsResponse `json:"credits"`
 	Images       imagesResponse  `json:"images"`
+	Videos       videosResponse  `json:"videos"`
 	PosterPath   string          `json:"poster_path"`
 	BackdropPath string          `json:"backdrop_path"`
 	Seasons      []struct {
@@ -555,6 +601,35 @@ type translationItem struct {
 
 type translationsResponse struct {
 	Translations []translationItem `json:"translations"`
+}
+
+type personCreditResponse struct {
+	ID           int    `json:"id"`
+	MediaType    string `json:"media_type"`
+	Title        string `json:"title"`
+	Name         string `json:"name"`
+	ReleaseDate  string `json:"release_date"`
+	FirstAirDate string `json:"first_air_date"`
+	PosterPath   string `json:"poster_path"`
+	Character    string `json:"character"`
+	Job          string `json:"job"`
+}
+
+type combinedCreditsResponse struct {
+	Cast []personCreditResponse `json:"cast"`
+	Crew []personCreditResponse `json:"crew"`
+}
+
+type personResponse struct {
+	ID                 int                     `json:"id"`
+	Name               string                  `json:"name"`
+	Biography          string                  `json:"biography"`
+	Birthday           string                  `json:"birthday"`
+	Deathday           string                  `json:"deathday"`
+	PlaceOfBirth       string                  `json:"place_of_birth"`
+	ProfilePath        string                  `json:"profile_path"`
+	KnownForDepartment string                  `json:"known_for_department"`
+	CombinedCredits    combinedCreditsResponse `json:"combined_credits"`
 }
 
 // SearchMovies busca películas por título y año opcional en el idioma configurado.
@@ -763,8 +838,9 @@ func (c *Client) SearchTV(ctx context.Context, query string, year int) ([]Candid
 func (c *Client) MovieDetails(ctx context.Context, id int) (*Details, error) {
 	params := url.Values{}
 	params.Set("language", c.languageCode())
-	params.Set("append_to_response", "credits,images")
+	params.Set("append_to_response", "credits,images,videos")
 	params.Set("include_image_language", "es,null,en")
+	params.Set("include_video_language", "es,en,null")
 
 	var response movieDetailsResponse
 	path := "/movie/" + strconv.Itoa(id)
@@ -789,6 +865,7 @@ func (c *Client) MovieDetails(ctx context.Context, id int) (*Details, error) {
 		PosterURL:      c.posterURL(response.Images.Posters, response.PosterPath),
 		BackdropURL:    c.imageURLSize(response.BackdropPath, "w1280"),
 	}
+	details.TrailerURL, details.TrailerLanguage = pickTrailer(response.Videos.Results)
 	if collection := response.BelongsToCollection; collection != nil && collection.ID > 0 {
 		details.Collection = &CollectionRef{
 			TMDBID:      collection.ID,
@@ -810,8 +887,9 @@ func (c *Client) MovieDetails(ctx context.Context, id int) (*Details, error) {
 func (c *Client) TVDetails(ctx context.Context, id int) (*Details, error) {
 	params := url.Values{}
 	params.Set("language", c.languageCode())
-	params.Set("append_to_response", "credits,images")
+	params.Set("append_to_response", "credits,images,videos")
 	params.Set("include_image_language", "es,null,en")
+	params.Set("include_video_language", "es,en,null")
 
 	var response tvDetailsResponse
 	path := "/tv/" + strconv.Itoa(id)
@@ -843,6 +921,7 @@ func (c *Client) TVDetails(ctx context.Context, id int) (*Details, error) {
 		BackdropURL:    c.imageURLSize(response.BackdropPath, "w1280"),
 		SeasonPosters:  make(map[int]string),
 	}
+	details.TrailerURL, details.TrailerLanguage = pickTrailer(response.Videos.Results)
 	for _, season := range response.Seasons {
 		if season.SeasonNumber > 0 && season.PosterPath != "" {
 			details.SeasonPosters[season.SeasonNumber] = c.imageURLSize(season.PosterPath, "w342")
@@ -855,6 +934,110 @@ func (c *Client) TVDetails(ctx context.Context, id int) (*Details, error) {
 		details.OverviewLanguage = language
 	}
 	return details, nil
+}
+
+// PersonDetails obtiene la ficha de una persona y sus créditos combinados. Si
+// la biografía no está en el idioma configurado, se prueba en inglés.
+func (c *Client) PersonDetails(ctx context.Context, id int) (*Person, error) {
+	params := url.Values{}
+	params.Set("language", c.languageCode())
+	params.Set("append_to_response", "combined_credits")
+
+	path := "/person/" + strconv.Itoa(id)
+	var response personResponse
+	if err := c.getCachedJSON(ctx, path, params, &response); err != nil {
+		return nil, err
+	}
+	person := &Person{
+		ID:           response.ID,
+		Name:         response.Name,
+		Biography:    strings.TrimSpace(response.Biography),
+		Birthday:     strings.TrimSpace(response.Birthday),
+		Deathday:     strings.TrimSpace(response.Deathday),
+		PlaceOfBirth: strings.TrimSpace(response.PlaceOfBirth),
+		PhotoURL:     c.imageURLSize(response.ProfilePath, "w342"),
+		KnownFor:     strings.TrimSpace(response.KnownForDepartment),
+		Credits:      make([]PersonCredit, 0, len(response.CombinedCredits.Cast)+len(response.CombinedCredits.Crew)),
+	}
+	if person.Biography == "" {
+		person.Biography = c.personBiographyEnglish(ctx, id)
+	}
+	for _, credit := range response.CombinedCredits.Cast {
+		if converted, ok := c.personCredit(credit, "cast"); ok {
+			person.Credits = append(person.Credits, converted)
+		}
+	}
+	for _, credit := range response.CombinedCredits.Crew {
+		if converted, ok := c.personCredit(credit, "crew"); ok {
+			person.Credits = append(person.Credits, converted)
+		}
+	}
+	return person, nil
+}
+
+func (c *Client) personBiographyEnglish(ctx context.Context, id int) string {
+	params := url.Values{}
+	params.Set("language", "en-US")
+	var response personResponse
+	if err := c.getCachedJSON(ctx, "/person/"+strconv.Itoa(id), params, &response); err != nil {
+		return ""
+	}
+	return strings.TrimSpace(response.Biography)
+}
+
+func (c *Client) personCredit(credit personCreditResponse, creditType string) (PersonCredit, bool) {
+	mediaType := strings.ToLower(strings.TrimSpace(credit.MediaType))
+	if mediaType != "movie" && mediaType != "tv" {
+		return PersonCredit{}, false
+	}
+	if credit.ID <= 0 {
+		return PersonCredit{}, false
+	}
+	title := strings.TrimSpace(credit.Title)
+	date := credit.ReleaseDate
+	if mediaType == "tv" {
+		title = strings.TrimSpace(credit.Name)
+		date = credit.FirstAirDate
+	}
+	if title == "" {
+		return PersonCredit{}, false
+	}
+	return PersonCredit{
+		MediaType:  mediaType,
+		TMDBID:     credit.ID,
+		Title:      title,
+		Year:       releaseYear(date),
+		PosterURL:  c.imageURLSize(credit.PosterPath, "w342"),
+		Character:  strings.TrimSpace(credit.Character),
+		Job:        strings.TrimSpace(credit.Job),
+		CreditType: creditType,
+	}, true
+}
+
+func pickTrailer(videos []videoItem) (string, string) {
+	priorities := []struct {
+		language string
+		kind     string
+	}{
+		{"es", "Trailer"},
+		{"es", "Teaser"},
+		{"en", "Trailer"},
+	}
+	for _, priority := range priorities {
+		for _, official := range []bool{true, false} {
+			for _, video := range videos {
+				if !strings.EqualFold(strings.TrimSpace(video.Site), "YouTube") ||
+					!strings.EqualFold(strings.TrimSpace(video.Type), priority.kind) ||
+					strings.ToLower(strings.TrimSpace(video.ISO6391)) != priority.language ||
+					video.Official != official ||
+					strings.TrimSpace(video.Key) == "" {
+					continue
+				}
+				return "https://www.youtube.com/watch?v=" + strings.TrimSpace(video.Key), priority.language
+			}
+		}
+	}
+	return "", ""
 }
 
 // SeasonDetails obtiene una temporada y todos sus episodios en el idioma
@@ -966,6 +1149,7 @@ func (c *Client) castCredits(cast []castMember) []CastCredit {
 			continue
 		}
 		credits = append(credits, CastCredit{
+			ID:        member.ID,
 			Name:      name,
 			Character: strings.TrimSpace(member.Character),
 			PhotoURL:  c.imageURLSize(member.ProfilePath, "w185"),
@@ -1007,6 +1191,7 @@ func (c *Client) crewCredits(crew []crewMember, creators []creatorMember) []Crew
 
 	for _, creator := range creators {
 		if add(CrewCredit{
+			ID:       creator.ID,
 			Name:     creator.Name,
 			Job:      "Creator",
 			PhotoURL: c.imageURLSize(creator.ProfilePath, "w185"),
@@ -1021,6 +1206,7 @@ func (c *Client) crewCredits(crew []crewMember, creators []creatorMember) []Crew
 				continue
 			}
 			if add(CrewCredit{
+				ID:         member.ID,
 				Name:       member.Name,
 				Job:        member.Job,
 				Department: strings.TrimSpace(member.Department),

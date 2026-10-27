@@ -36,6 +36,8 @@ type mediaItemDTO struct {
 	Genres            []string            `json:"genres"`
 	RuntimeMinutes    *int                `json:"runtime_minutes"`
 	Rating            *float64            `json:"rating"`
+	TrailerURL        *string             `json:"trailer_url"`
+	TrailerLanguage   *string             `json:"trailer_language"`
 	Directors         []string            `json:"directors"`
 	Cast              []string            `json:"cast"`
 	Credits           creditsDTO          `json:"credits"`
@@ -88,7 +90,7 @@ const mediaItemColumns = `
 	match_status, match_score, series_id,
 	(SELECT COALESCE(NULLIF(s.display_title, ''), s.title)
 	   FROM series s WHERE s.id = media_items.series_id),
-	episode_title, still_url, credits,
+	episode_title, still_url, credits, trailer_url, trailer_language,
 	(SELECT s.poster_url FROM series s WHERE s.id = media_items.series_id),
 	(SELECT s.backdrop_url FROM series s WHERE s.id = media_items.series_id),
 	(SELECT l.kind FROM libraries l WHERE l.id = media_items.library_id)`
@@ -202,6 +204,7 @@ func scanItem(scan func(dest ...any) error) (mediaItemDTO, error) {
 	var overview, posterURL, originalTitle, imdbID, tagline sql.NullString
 	var genres, directors, castNames, backdropURL, overviewLanguage, matchStatus sql.NullString
 	var seriesTitle, episodeTitle, stillURL, credits sql.NullString
+	var trailerURL, trailerLanguage sql.NullString
 	var seriesPosterURL, seriesBackdropURL, libraryKind sql.NullString
 	var rating, matchScore, progressPosition, progressDuration sql.NullFloat64
 	var progressUpdated sql.NullString
@@ -214,6 +217,7 @@ func scanItem(scan func(dest ...any) error) (mediaItemDTO, error) {
 		&genres, &runtime, &rating, &directors, &castNames, &backdropURL,
 		&backdropLocked, &overviewLanguage, &matchStatus, &matchScore,
 		&seriesID, &seriesTitle, &episodeTitle, &stillURL, &credits,
+		&trailerURL, &trailerLanguage,
 		&seriesPosterURL, &seriesBackdropURL, &libraryKind, &watched,
 		&progressPosition, &progressDuration, &progressUpdated,
 		&favorite, &watchlist,
@@ -246,6 +250,8 @@ func scanItem(scan func(dest ...any) error) (mediaItemDTO, error) {
 	item.SeriesTitle = stringPointer(seriesTitle)
 	item.EpisodeTitle = stringPointer(episodeTitle)
 	item.StillURL = stringPointer(stillURL)
+	item.TrailerURL = stringPointer(trailerURL)
+	item.TrailerLanguage = stringPointer(trailerLanguage)
 	item.SeriesPosterURL = stringPointer(seriesPosterURL)
 	item.SeriesBackdropURL = stringPointer(seriesBackdropURL)
 	item.LibraryKind = libraryKind.String

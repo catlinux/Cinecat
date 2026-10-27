@@ -9,6 +9,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ### Añadido
 
+- Personas y tráileres en el servidor: los créditos guardan el id de TMDB de cada persona, `GET /api/v1/people/{id}` devuelve su ficha con lo que hay en la biblioteca y lo que no (por separado), y películas y series traen `trailer_url` (YouTube, en castellano si existe; si no, en inglés). La lista de series incluye la puntuación. Migración 0019: el siguiente escaneo vuelve a pedir a TMDB las fichas para rellenarlo (tardará más de lo normal). La pantalla llega en la siguiente versión.
 - Puntuación de TMDB en una esquina de las carátulas de películas y series (por ejemplo «7,4»), solo cuando existe.
 
 ### Corregido

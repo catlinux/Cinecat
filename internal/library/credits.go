@@ -9,12 +9,14 @@ import (
 )
 
 type castCreditDTO struct {
+	ID        int    `json:"id,omitempty"`
 	Name      string `json:"name"`
 	Character string `json:"character"`
 	PhotoURL  string `json:"photo_url"`
 }
 
 type crewCreditDTO struct {
+	ID       int    `json:"id,omitempty"`
 	Name     string `json:"name"`
 	Job      string `json:"job"`
 	PhotoURL string `json:"photo_url"`
@@ -26,12 +28,14 @@ type creditsDTO struct {
 }
 
 type storedCastCredit struct {
+	ID        int    `json:"id,omitempty"`
 	Name      string `json:"name"`
 	Character string `json:"character"`
 	Photo     string `json:"photo"`
 }
 
 type storedCrewCredit struct {
+	ID    int    `json:"id,omitempty"`
 	Name  string `json:"name"`
 	Job   string `json:"job"`
 	Photo string `json:"photo"`
@@ -56,7 +60,7 @@ func creditsJSON(credits metadata.Credits) string {
 			continue
 		}
 		stored.Cast = append(stored.Cast, storedCastCredit{
-			Name: credit.Name, Character: credit.Character, Photo: credit.PhotoURL,
+			ID: credit.ID, Name: credit.Name, Character: credit.Character, Photo: credit.PhotoURL,
 		})
 	}
 	for _, credit := range credits.Crew {
@@ -64,7 +68,7 @@ func creditsJSON(credits metadata.Credits) string {
 			continue
 		}
 		stored.Crew = append(stored.Crew, storedCrewCredit{
-			Name: credit.Name, Job: credit.Job, Photo: credit.PhotoURL,
+			ID: credit.ID, Name: credit.Name, Job: credit.Job, Photo: credit.PhotoURL,
 		})
 	}
 	data, err := json.Marshal(stored)
@@ -88,7 +92,7 @@ func decodeCredits(raw sql.NullString) creditsDTO {
 			continue
 		}
 		result.Cast = append(result.Cast, castCreditDTO{
-			Name: credit.Name, Character: credit.Character, PhotoURL: credit.Photo,
+			ID: credit.ID, Name: credit.Name, Character: credit.Character, PhotoURL: credit.Photo,
 		})
 	}
 	for _, credit := range stored.Crew {
@@ -96,7 +100,7 @@ func decodeCredits(raw sql.NullString) creditsDTO {
 			continue
 		}
 		result.Crew = append(result.Crew, crewCreditDTO{
-			Name: credit.Name, Job: credit.Job, PhotoURL: credit.Photo,
+			ID: credit.ID, Name: credit.Name, Job: credit.Job, PhotoURL: credit.Photo,
 		})
 	}
 	return result

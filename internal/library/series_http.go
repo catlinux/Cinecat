@@ -20,18 +20,21 @@ const (
 )
 
 type seriesListDTO struct {
-	ID           int64    `json:"id"`
-	Title        string   `json:"title"`
-	FileTitle    string   `json:"file_title"`
-	Year         *int     `json:"year"`
-	PosterURL    *string  `json:"poster_url"`
-	Genres       []string `json:"genres"`
-	SeasonCount  int64    `json:"season_count"`
-	EpisodeCount int64    `json:"episode_count"`
-	WatchedCount int64    `json:"watched_count"`
-	MatchStatus  *string  `json:"match_status"`
-	Favorite     bool     `json:"favorite"`
-	Watchlist    bool     `json:"watchlist"`
+	ID              int64    `json:"id"`
+	Title           string   `json:"title"`
+	FileTitle       string   `json:"file_title"`
+	Year            *int     `json:"year"`
+	PosterURL       *string  `json:"poster_url"`
+	Genres          []string `json:"genres"`
+	SeasonCount     int64    `json:"season_count"`
+	EpisodeCount    int64    `json:"episode_count"`
+	WatchedCount    int64    `json:"watched_count"`
+	Rating          *float64 `json:"rating"`
+	TrailerURL      *string  `json:"trailer_url"`
+	TrailerLanguage *string  `json:"trailer_language"`
+	MatchStatus     *string  `json:"match_status"`
+	Favorite        bool     `json:"favorite"`
+	Watchlist       bool     `json:"watchlist"`
 }
 
 type seriesResponse struct {
@@ -64,6 +67,8 @@ type seriesDetailDTO struct {
 	BackdropURL      *string           `json:"backdrop_url"`
 	Genres           []string          `json:"genres"`
 	Rating           *float64          `json:"rating"`
+	TrailerURL       *string           `json:"trailer_url"`
+	TrailerLanguage  *string           `json:"trailer_language"`
 	Directors        []string          `json:"directors"`
 	Cast             []string          `json:"cast"`
 	Credits          creditsDTO        `json:"credits"`
@@ -234,6 +239,7 @@ func querySeriesList(
 		       (SELECT count(*) FROM media_items mi
 		          JOIN watch_state ws ON ws.media_item_id = mi.id AND ws.user_id = ?
 		         WHERE mi.series_id = s.id),
+		       s.rating, s.trailer_url, s.trailer_language,
 		       s.match_status,
 		       EXISTS (SELECT 1 FROM series_lists sl_favorite
 		                WHERE sl_favorite.user_id = ?
@@ -281,15 +287,21 @@ func scanSeriesList(scan func(dest ...any) error) (seriesListDTO, error) {
 	var item seriesListDTO
 	var year sql.NullInt64
 	var poster, genres, matchStatus sql.NullString
+	var rating sql.NullFloat64
+	var trailerURL, trailerLanguage sql.NullString
 	var favorite, watchlist int
 	if err := scan(&item.ID, &item.Title, &item.FileTitle, &year, &poster,
 		&genres, &item.SeasonCount, &item.EpisodeCount, &item.WatchedCount,
+		&rating, &trailerURL, &trailerLanguage,
 		&matchStatus, &favorite, &watchlist); err != nil {
 		return seriesListDTO{}, err
 	}
 	item.Year = intPointer(year)
 	item.PosterURL = stringPointer(poster)
 	item.Genres = decodeStringArray(genres)
+	item.Rating = floatPointer(rating)
+	item.TrailerURL = stringPointer(trailerURL)
+	item.TrailerLanguage = stringPointer(trailerLanguage)
 	item.MatchStatus = stringPointer(matchStatus)
 	item.Favorite = favorite != 0
 	item.Watchlist = watchlist != 0
@@ -373,6 +385,7 @@ func querySeriesDetail(
 	var detail seriesDetailDTO
 	var originalTitle, tagline, overview, overviewLanguage, poster, backdrop sql.NullString
 	var genres, directors, castNames, matchStatus, credits sql.NullString
+	var trailerURL, trailerLanguage sql.NullString
 	var year, tmdbID sql.NullInt64
 	var rating, matchScore sql.NullFloat64
 	var posterLocked, backdropLocked, favorite, watchlist int
@@ -380,7 +393,8 @@ func querySeriesDetail(
 		SELECT s.id, COALESCE(NULLIF(s.display_title, ''), s.title), s.title, s.folder,
 		       s.original_title, s.year, s.tagline, s.overview, s.overview_language,
 		       s.poster_url, s.backdrop_url, s.genres, s.rating, s.directors,
-		       s.cast_names, s.credits, s.tmdb_id, s.match_status, s.match_score,
+		       s.cast_names, s.credits, s.trailer_url, s.trailer_language,
+		       s.tmdb_id, s.match_status, s.match_score,
 		       s.poster_locked, s.backdrop_locked,
 		       (SELECT count(*) FROM media_items mi WHERE mi.series_id = s.id),
 		       (SELECT count(*) FROM media_items mi
@@ -398,6 +412,7 @@ func querySeriesDetail(
 		Scan(&detail.ID, &detail.Title, &detail.FileTitle, &detail.Folder,
 			&originalTitle, &year, &tagline, &overview, &overviewLanguage,
 			&poster, &backdrop, &genres, &rating, &directors, &castNames, &credits,
+			&trailerURL, &trailerLanguage,
 			&tmdbID, &matchStatus, &matchScore, &posterLocked, &backdropLocked,
 			&detail.EpisodeCount, &detail.WatchedCount, &favorite, &watchlist)
 	if err != nil {
@@ -412,6 +427,8 @@ func querySeriesDetail(
 	detail.BackdropURL = stringPointer(backdrop)
 	detail.Genres = decodeStringArray(genres)
 	detail.Rating = floatPointer(rating)
+	detail.TrailerURL = stringPointer(trailerURL)
+	detail.TrailerLanguage = stringPointer(trailerLanguage)
 	detail.Directors = decodeStringArray(directors)
 	detail.Cast = decodeStringArray(castNames)
 	detail.Credits = decodeCredits(credits)

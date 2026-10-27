@@ -117,6 +117,7 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.Handle("POST /api/v1/collections/{id}/items", a.requireAdmin(a.handleCollectionItemAdd))
 	mux.Handle("DELETE /api/v1/collections/{id}/items/{itemId}", a.requireAdmin(a.handleCollectionItemRemove))
 	mux.Handle("PUT /api/v1/collections/{id}/order", a.requireAdmin(a.handleCollectionOrder))
+	mux.Handle("GET /api/v1/people/{id}", a.requireSession(a.handlePerson))
 	mux.Handle("GET /api/v1/series", a.requireSession(a.handleSeries))
 	mux.Handle("GET /api/v1/series/genres", a.requireSession(a.handleSeriesGenres))
 	mux.Handle("GET /api/v1/series/{id}", a.requireSession(a.handleSeriesDetail))

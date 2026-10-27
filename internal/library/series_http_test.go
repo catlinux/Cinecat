@@ -118,7 +118,7 @@ func TestSeriesListadoYGeneros(t *testing.T) {
 		libraryID: libraryID, folder: "Chicago fire", title: "Chicago fire",
 		displayTitle: "Chicago Fire", originalTitle: "Chicago Fire", year: 2012,
 		posterURL: "https://images.example/chicago.jpg",
-		genres:    `["Drama","Acción"]`, directors: `["Derek Haas"]`,
+		genres:    `["Drama","Acción"]`, rating: 8.3, directors: `["Derek Haas"]`,
 		cast: `["Taylor Kinney"]`, tmdbID: 44006, metadataSource: "tmdb",
 		matchStatus: "auto", matchScore: 1,
 	})
@@ -178,6 +178,7 @@ func TestSeriesListadoYGeneros(t *testing.T) {
 	if list.Series[0].Title != "Chicago Fire" || list.Series[0].FileTitle != "Chicago fire" ||
 		list.Series[0].SeasonCount != 2 || list.Series[0].EpisodeCount != 3 ||
 		list.Series[0].WatchedCount != 1 ||
+		list.Series[0].Rating == nil || *list.Series[0].Rating != 8.3 ||
 		list.Series[0].MatchStatus == nil || *list.Series[0].MatchStatus != "auto" {
 		t.Fatalf("serie Chicago inesperada: %+v", list.Series[0])
 	}
@@ -785,5 +786,37 @@ func TestHomeNextUpYContadorSeries(t *testing.T) {
 		if item.ID == c.first {
 			t.Fatal("next_up no debe repetir una serie en continue")
 		}
+	}
+}
+
+func TestSerieDTOConTrailerYCreditosConID(t *testing.T) {
+	ts := newLibraryHTTPTestServer(t)
+	libraryID := createLibrary(t, ts.db, t.TempDir())
+	seriesID := insertSeriesHTTPFixture(t, ts, seriesHTTPFixture{
+		libraryID: libraryID, folder: "Serie", title: "Serie",
+	})
+	if _, err := ts.db.Exec(`
+		UPDATE series
+		   SET trailer_url = ?, trailer_language = ?, credits = ?
+		 WHERE id = ?`,
+		"https://www.youtube.com/watch?v=serie", "en",
+		`{"cast":[{"id":123,"name":"Persona","character":"Protagonista","photo":""}],"crew":[]}`,
+		seriesID); err != nil {
+		t.Fatalf("preparar tráiler de serie: %v", err)
+	}
+	status, body := libraryHTTPGet(t, seriesHTTPURL(ts, seriesID, ""), ts.token)
+	if status != http.StatusOK {
+		t.Fatalf("serie: código = %d, cuerpo = %s", status, body)
+	}
+	var detail seriesDetailDTO
+	if err := json.Unmarshal(body, &detail); err != nil {
+		t.Fatalf("respuesta: %v", err)
+	}
+	if detail.TrailerURL == nil || *detail.TrailerURL != "https://www.youtube.com/watch?v=serie" ||
+		detail.TrailerLanguage == nil || *detail.TrailerLanguage != "en" {
+		t.Fatalf("tráiler inesperado: %+v", detail)
+	}
+	if len(detail.Credits.Cast) != 1 || detail.Credits.Cast[0].ID != 123 {
+		t.Fatalf("créditos con id inesperados: %+v", detail.Credits)
 	}
 }

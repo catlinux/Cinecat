@@ -9,6 +9,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ### Added
 
+- People and trailers on the server: credits store each person's TMDB id, `GET /api/v1/people/{id}` returns their profile with what is in the library and what is not (separately), and movies and series carry `trailer_url` (YouTube, in Spanish when available, otherwise in English). The series list includes the rating. Migration 0019: the next scan asks TMDB again for the entries to fill this in (it will take longer than usual). The screen arrives in the next version.
 - TMDB rating in a corner of movie and series posters (for example "7,4"), only when available.
 
 ### Fixed

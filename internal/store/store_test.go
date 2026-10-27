@@ -217,6 +217,20 @@ func columns(t *testing.T, ctx context.Context, s *Store, table string) map[stri
 	return got
 }
 
+func TestMigracionPersonasYTrailers(t *testing.T) {
+	s, ctx := openTestStore(t, filepath.Join(t.TempDir(), "cinecat.db"))
+
+	for table, expected := range map[string]string{
+		"media_items": "trailer_url",
+		"series":      "trailer_url",
+	} {
+		columns := columns(t, ctx, s, table)
+		if !columns[expected] || !columns["trailer_language"] {
+			t.Fatalf("%s: faltan las columnas de tráiler: %v", table, columns)
+		}
+	}
+}
+
 func TestMigracionPapelera(t *testing.T) {
 	s, ctx := openTestStore(t, filepath.Join(t.TempDir(), "cinecat.db"))
 
