@@ -131,7 +131,7 @@ Read by the server:
 | `CINECAT_TRUSTED_PROXIES` | loopback and private networks | Networks from which `X-Forwarded-For` is accepted; comma-separated CIDR or IP list. |
 | `CINECAT_FILE_UID` / `CINECAT_FILE_GID` | empty | Numeric owner of what the server creates on the disks (uploads, folders, trash). |
 
-Docker also uses `CINECAT_MEDIA_PATH` (host path mounted at `/media`), `CINECAT_MEDIA_ROOTS` (roots visible inside the container), `CINECAT_API_PORT` (`8080`), `CINECAT_WEB_PORT` (`8081`) and `CINECAT_MEDIA_MODE` (`ro`; `rw` to upload and use the trash). The web container uses `ADDRESS_HEADER=X-Forwarded-For` and `XFF_DEPTH=1` (number of trusted proxies in front of the web app) and `BODY_SIZE_LIMIT=Infinity` (for uploads); `PUBLIC_API_URL` and `PROTOCOL_HEADER` also belong to the web container. There are no variables for the FFmpeg path, CORS, users or HLS limits.
+Docker also uses `CINECAT_MEDIA_PATH` (host path mounted at `/media`), `CINECAT_MEDIA_ROOTS` (roots visible inside the container), `CINECAT_API_PORT` (`8080`), `CINECAT_WEB_PORT` (`8081`) and `CINECAT_MEDIA_MODE` (`ro`; `rw` to upload and use the trash). The web container uses `ADDRESS_HEADER=X-Forwarded-For` and `XFF_DEPTH=1` (number of trusted proxies in front of the web app) and `BODY_SIZE_LIMIT=Infinity` (for uploads); `PUBLIC_API_URL`, `PROTOCOL_HEADER` and `INTERNAL_API_URL` (the server's internal address, `http://servidor:8080`, used to forward uploads without going through the internet) also belong to the web container. There are no variables for the FFmpeg path, CORS, users or HLS limits.
 
 Each user has their own **Favorites** and **Watchlist**; they are not shared between accounts.
 

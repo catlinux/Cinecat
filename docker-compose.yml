@@ -35,6 +35,8 @@ services:
       - "127.0.0.1:${CINECAT_WEB_PORT:-8081}:3000"
     environment:
       PUBLIC_API_URL: ""
+      # Las subidas van directas al servidor por la red de Docker, sin salir a internet.
+      INTERNAL_API_URL: http://servidor:8080
       PROTOCOL_HEADER: x-forwarded-proto
       # Apache añade X-Forwarded-For; XFF_DEPTH es el número de proxies de
       # confianza que hay delante de la web (1 = solo Apache).

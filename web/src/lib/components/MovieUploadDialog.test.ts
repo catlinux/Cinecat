@@ -39,7 +39,7 @@ describe('MovieUploadDialog', () => {
 		expect(body).toContain('Subir película');
 		expect(body).toContain('Crear una carpeta para cada película');
 		expect(body).toContain('type="checkbox"');
-		expect(body).toContain('checked');
+		expect(body).not.toMatch(/type="checkbox"[^>]*checked/);
 		expect(body).toContain('No cierres la página hasta que terminen las subidas.');
 		expect(body).toContain('/media/peliculas');
 		expect(body).toContain('/media/otra');

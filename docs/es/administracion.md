@@ -131,7 +131,7 @@ Leídas por el servidor:
 | `CINECAT_TRUSTED_PROXIES` | loopback y redes privadas | Redes desde las que se acepta `X-Forwarded-For`; lista separada por comas de CIDR o IP. |
 | `CINECAT_FILE_UID` / `CINECAT_FILE_GID` | vacío | Propietario numérico de lo que el servidor crea en los discos (subidas, carpetas, papelera). |
 
-En Docker, además: `CINECAT_MEDIA_PATH` (ruta del host montada en `/media`), `CINECAT_MEDIA_ROOTS` (raíces visibles dentro del contenedor), `CINECAT_API_PORT` (`8080`), `CINECAT_WEB_PORT` (`8081`) y `CINECAT_MEDIA_MODE` (`ro`; `rw` para subir y usar la papelera). El contenedor web usa `ADDRESS_HEADER=X-Forwarded-For` y `XFF_DEPTH=1` (número de proxies de confianza delante de la web) y `BODY_SIZE_LIMIT=Infinity` (para las subidas); `PUBLIC_API_URL` y `PROTOCOL_HEADER` también son del contenedor web. No hay variables para la ruta de FFmpeg, CORS, usuarios ni límites de HLS.
+En Docker, además: `CINECAT_MEDIA_PATH` (ruta del host montada en `/media`), `CINECAT_MEDIA_ROOTS` (raíces visibles dentro del contenedor), `CINECAT_API_PORT` (`8080`), `CINECAT_WEB_PORT` (`8081`) y `CINECAT_MEDIA_MODE` (`ro`; `rw` para subir y usar la papelera). El contenedor web usa `ADDRESS_HEADER=X-Forwarded-For` y `XFF_DEPTH=1` (número de proxies de confianza delante de la web) y `BODY_SIZE_LIMIT=Infinity` (para las subidas); `PUBLIC_API_URL`, `PROTOCOL_HEADER` e `INTERNAL_API_URL` (dirección interna del servidor, `http://servidor:8080`, para reenviar las subidas sin pasar por internet) también son del contenedor web. No hay variables para la ruta de FFmpeg, CORS, usuarios ni límites de HLS.
 
 Cada usuario tiene sus propias listas de **Favoritos** y **Próximas a ver**; no se comparten entre cuentas.
 

@@ -12,6 +12,14 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 - Modo copia en la reproducción: si el navegador admite el códec (H.264 de 8 bits, o H.265 cuando el navegador lo reproduce por MSE), los MKV y MP4 se reempaquetan a HLS copiando el vídeo sin recodificarlo; solo se convierte el audio a AAC. Casi no consume CPU y no pierde calidad. Los segmentos se cortan en los fotogramas clave reales, que se leen del índice interno de los MKV en milisegundos o, en el resto, con ffprobe en segundo plano la primera vez (se guardan en `cache/keyframes`); mientras tanto, y ante cualquier fallo, se recodifica como antes. Los AVI y TS siempre se recodifican. Las copias no cuentan para «Transcodificaciones simultáneas». La ficha del archivo indica el método: directo, copia o recodificación.
 - La web declara si el navegador reproduce H.265 por MSE (`hevcmse`, `hevc10mse` en la cookie `cinecat_caps`).
 
+### Cambiado
+
+- «Subir película»: «Crear una carpeta para cada película» viene desmarcado por defecto.
+
+### Corregido
+
+- Las subidas largas ya no fallan con `fetch failed`: la web reenviaba el archivo con un `fetch` que corta a los 300 s sin respuesta, y el servidor solo responde al terminar de recibirlo. Ahora se reenvía en streaming sin límite de tiempo y directo al servidor por la red de Docker (`INTERNAL_API_URL`, ya en `docker-compose.yml`), sin salir a internet ni pasar otra vez por Apache.
+
 ## [0.22.1] - 2026-10-28
 
 ### Corregido

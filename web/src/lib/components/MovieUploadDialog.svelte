@@ -61,7 +61,7 @@
 	let finished = $state(false);
 	let cancelled = $state(false);
 	let message = $state('');
-	let createFolders = $state(true);
+	let createFolders = $state(false);
 	let selectedRootPath = $state(untrack(() => preferredRoot?.path ?? ''));
 	let currentXHR: XMLHttpRequest | null = null;
 

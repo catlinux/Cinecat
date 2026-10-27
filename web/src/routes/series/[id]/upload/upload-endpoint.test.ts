@@ -1,15 +1,19 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const proxyUpload = vi.hoisted(() => vi.fn());
+
+vi.mock('$lib/server/upload-proxy', () => ({ proxyUpload }));
+
 import { PUT } from './+server';
 
 function jsonResponse(body: unknown, status = 200): Response {
 	return new Response(JSON.stringify(body), {
 		status,
-		headers: { 'Content-Type': 'application/json' }
+		headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
 	});
 }
 
 function event(
-	fetchImpl: typeof fetch,
 	token: string | null = 'token-123',
 	options: { body?: string; contentLength?: string | null } = {}
 ) {
@@ -30,7 +34,7 @@ function event(
 		request,
 		url,
 		locals: { sessionToken: token },
-		fetch: fetchImpl,
+		fetch: vi.fn(),
 		cookies: {},
 		params: { id: '7' },
 		route: { id: '/series/[id]/upload' },
@@ -42,24 +46,21 @@ function event(
 	};
 }
 
+beforeEach(() => {
+	proxyUpload.mockReset();
+});
+
 describe('PUT /series/[id]/upload', () => {
 	it('reenvía el cuerpo, temporada, episodio y nombre en streaming', async () => {
-		let forwardedBody = '';
-		let forwarded: { url: string; init: RequestInit & { duplex?: string } } | null = null;
-		const fetchMock = vi.fn(
-			async (input: RequestInfo | URL, init?: RequestInit & { duplex?: string }) => {
-				forwarded = { url: String(input), init: init ?? {} };
-				if (init?.body) {
-					forwardedBody = await new Response(init.body as BodyInit).text();
-				}
-				return jsonResponse(
-					{ path: '/media/series/Serie S02E05.es.srt', size: 6, season: 2, episode: 5 },
-					201
-				);
-			}
+		proxyUpload.mockResolvedValue(
+			jsonResponse(
+				{ path: '/media/series/Serie S02E05.es.srt', size: 6, season: 2, episode: 5 },
+				201
+			)
 		);
+		const uploadEvent = event('token-123', { body: 'abcdef' });
 
-		const response = await PUT(event(fetchMock as never, 'token-123', { body: 'abcdef' }) as never);
+		const response = await PUT(uploadEvent as never);
 		const body = (await response.json()) as {
 			path: string;
 			size: number;
@@ -70,28 +71,27 @@ describe('PUT /series/[id]/upload', () => {
 		expect(response.status).toBe(201);
 		expect(response.headers.get('Cache-Control')).toBe('no-store');
 		expect(body.season).toBe(2);
-		expect(forwarded).not.toBeNull();
-		expect(forwarded!.url).toBe(
-			'http://api.test/api/v1/series/7/files?season=2&episode=5&name=Capitulo.es.srt'
+		expect(proxyUpload).toHaveBeenCalledTimes(1);
+		expect(proxyUpload).toHaveBeenCalledWith(
+			uploadEvent.request,
+			'/api/v1/series/7/files?season=2&episode=5&name=Capitulo.es.srt',
+			{
+				token: 'token-123',
+				contentLength: '6',
+				errorMessage: 'No se pudo contactar con el servidor para subir el capítulo.',
+				origin: 'http://localhost',
+				publicBase: 'http://api.test'
+			}
 		);
-		expect(forwarded!.init.method).toBe('PUT');
-		expect(forwarded!.init.duplex).toBe('half');
-		expect(forwarded!.init.headers).toMatchObject({
-			Authorization: 'Bearer token-123',
-			'Content-Length': '6',
-			'Content-Type': 'application/octet-stream'
-		});
-		expect(forwardedBody).toBe('abcdef');
 	});
 
 	it('exige sesión y Content-Length', async () => {
-		const unauthorized = await PUT(event(vi.fn() as never, null) as never);
+		const unauthorized = await PUT(event(null) as never);
 		expect(unauthorized.status).toBe(401);
 
-		const noLength = await PUT(
-			event(vi.fn() as never, 'token-123', { contentLength: null }) as never
-		);
+		const noLength = await PUT(event('token-123', { contentLength: null }) as never);
 		expect(noLength.status).toBe(411);
+		expect(proxyUpload).not.toHaveBeenCalled();
 	});
 
 	it('reenvía los estados de error y su JSON', async () => {
@@ -102,8 +102,8 @@ describe('PUT /series/[id]/upload', () => {
 			[413, 'demasiado grande'],
 			[507, 'sin espacio']
 		] as const) {
-			const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ error: message }, status));
-			const response = await PUT(event(fetchMock as never) as never);
+			proxyUpload.mockResolvedValue(jsonResponse({ error: message }, status));
+			const response = await PUT(event() as never);
 			const body = (await response.json()) as { error: string };
 			expect(response.status).toBe(status);
 			expect(body.error).toBe(message);
@@ -111,8 +111,8 @@ describe('PUT /series/[id]/upload', () => {
 	});
 
 	it('devuelve 502 si no se puede contactar con la API', async () => {
-		const fetchMock = vi.fn().mockRejectedValue(new Error('sin conexión'));
-		const response = await PUT(event(fetchMock as never) as never);
+		proxyUpload.mockRejectedValue(new Error('sin conexión'));
+		const response = await PUT(event() as never);
 		const body = (await response.json()) as { error: string };
 		expect(response.status).toBe(502);
 		expect(body.error).toContain('No se pudo contactar');
