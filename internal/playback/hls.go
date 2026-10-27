@@ -58,6 +58,9 @@ const (
 	hlsMaxAheadSegments = 20
 	// hlsMonitorInterval es la frecuencia con la que se revisan los procesos.
 	hlsMonitorInterval = 2 * time.Second
+	// hlsMaxCopyProcesses es el límite propio de procesos de copia. No compiten
+	// con playback.max_transcodes porque apenas consumen CPU.
+	hlsMaxCopyProcesses = 6
 )
 
 // ffmpegPlaylistFile es la playlist interna de cada proceso FFmpeg. Solo lista
@@ -131,6 +134,58 @@ func hlsTranscodeArgs(inputPath string, startSegment int, transcode ...Transcode
 	)
 }
 
+// hlsCopyArgs construye los argumentos de FFmpeg para copiar el vídeo y
+// reempaquetarlo en segmentos MPEG-TS. Los cortes son los fotogramas clave
+// reales: -copyts conserva las marcas absolutas y -segment_times las recibe ya
+// desplazadas por -output_ts_offset. -ss se adelanta 0,2 s para que FFmpeg no
+// caiga en la clave anterior por el ajuste de los fotogramas B.
+func hlsCopyArgs(inputPath string, startSegment int, bounds []float64, settings TranscodeSettings) []string {
+	settings = normalizeTranscodeSettings(settings)
+	args := []string{
+		"-hide_banner",
+		"-loglevel", "error",
+		"-nostdin",
+		"-y",
+		"-copyts",
+	}
+	if startSegment > 0 && startSegment < len(bounds) {
+		args = append(args, "-ss", fmt.Sprintf("%.6f", bounds[startSegment]+0.2))
+	}
+	args = append(args,
+		"-i", inputPath,
+		"-map", "0:V:0",
+		"-map", fmt.Sprintf("0:a:%d?", settings.Audio),
+		"-c:v", "copy",
+		"-c:a", "aac",
+		"-ac", "2",
+		"-b:a", "160k",
+		"-output_ts_offset", strconv.Itoa(hlsTimestampOffsetSeconds),
+		"-f", "segment",
+		"-segment_format", "mpegts",
+	)
+	if times := copySegmentTimes(bounds, startSegment); len(times) > 0 {
+		args = append(args, "-segment_times", strings.Join(times, ","))
+	}
+	return append(args,
+		"-segment_time_delta", "0.05",
+		"-segment_start_number", strconv.Itoa(startSegment),
+		"-segment_list", ffmpegPlaylistFile,
+		"-segment_list_type", "m3u8",
+		"segment_%05d.ts",
+	)
+}
+
+func copySegmentTimes(bounds []float64, startSegment int) []string {
+	if startSegment < 0 || startSegment+1 >= len(bounds) {
+		return nil
+	}
+	times := make([]string, 0, len(bounds)-startSegment-1)
+	for _, bound := range bounds[startSegment+1:] {
+		times = append(times, fmt.Sprintf("%.6f", bound+float64(hlsTimestampOffsetSeconds)))
+	}
+	return times
+}
+
 // ServeDirect sirve el archivo tal cual con http.ServeContent, que admite
 // peticiones con Range.
 func ServeDirect(w http.ResponseWriter, r *http.Request, filePath string) error {
@@ -164,7 +219,11 @@ func (s *Service) ServeHLSFile(w http.ResponseWriter, r *http.Request, itemID in
 		return err
 	}
 
-	query := signedQuery(exp, sig)
+	mode := "transcode"
+	if entry.mode == hlsModeCopy {
+		mode = "copy"
+	}
+	query := signedQuery(exp, sig, "m", mode)
 	if len(selections) > 0 {
 		quality := selections[0].Quality
 		if quality == "" {
@@ -177,6 +236,7 @@ func (s *Service) ServeHLSFile(w http.ResponseWriter, r *http.Request, itemID in
 		extra := []string{
 			"audio", strconv.Itoa(audio),
 			"q", quality,
+			"m", mode,
 		}
 		if selections[0].Caps != "" {
 			extra = append(extra, "caps", selections[0].Caps)
@@ -247,37 +307,52 @@ func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string, s
 		transcode.MaxHeight = selection.MaxHeight
 	}
 	transcode.Audio = selection.Audio
-	stream := streamKey(transcode, selection.Quality)
-	key := hlsEntryKey{itemID: itemID, transcode: stream}
-	if entry, ok := s.entries[key]; ok {
-		now := s.now()
-		entry.lastUsed = now
-		entry.lastRequest = now
-		if s.playlistExists(entry) {
-			return entry, nil
-		}
-		if entry.run != nil && !entry.run.finished() {
-			if err := s.waitForPlaylist(ctx, entry); err != nil {
-				if errors.Is(err, ErrHLSStartupTimeout) {
-					s.removeEntryLocked(key, entry)
-				}
-				return nil, err
-			}
-			return entry, nil
-		}
-		s.removeEntryLocked(key, entry)
-		if entry.run != nil && entry.run.err != nil {
-			return nil, entry.run.err
-		}
-	}
-
-	if err := s.ffmpegAvailable(); err != nil {
-		return nil, err
-	}
 
 	absInput, err := filepath.Abs(inputPath)
 	if err != nil {
 		return nil, fmt.Errorf("playback: ruta de entrada no válida: %w", err)
+	}
+
+	baseStream := streamKey(transcode, selection.Quality)
+	stream := baseStream
+	mode := hlsModeTranscode
+	var copyBounds []float64
+	var copyDurations []time.Duration
+
+	if (selection.Copy || selection.ForceCopy) && !selection.ForceTranscode {
+		if copyExtensionBlocked(absInput) {
+			if selection.ForceCopy {
+				return nil, ErrFileNotFound
+			}
+		} else if s.copyDisabledLocked(absInput) {
+			if selection.ForceCopy {
+				return nil, ErrFileNotFound
+			}
+		} else {
+			copyStream := baseStream + "-copy"
+			copyKey := hlsEntryKey{itemID: itemID, transcode: copyStream}
+			if entry, handled, err := s.reuseEntryLocked(ctx, copyKey); handled {
+				return entry, err
+			}
+			if bounds, durations, ok := s.copyPlanLocked(ctx, absInput, selection.Duration); ok {
+				mode = hlsModeCopy
+				stream = copyStream
+				copyBounds = bounds
+				copyDurations = durations
+			} else if selection.ForceCopy {
+				// Un segmento con m=copy no puede cambiar a recodificación:
+				// sus marcas no coincidirían con la playlist que lo pidió.
+				return nil, ErrFileNotFound
+			}
+		}
+	}
+
+	key := hlsEntryKey{itemID: itemID, transcode: stream}
+	if entry, handled, err := s.reuseEntryLocked(ctx, key); handled {
+		return entry, err
+	}
+	if err := s.ffmpegAvailable(); err != nil {
+		return nil, err
 	}
 
 	dir := filepath.Join(s.workDir, fmt.Sprintf("item-%d-%s", itemID, stream))
@@ -297,7 +372,20 @@ func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string, s
 		lastRequest:      now,
 		playlistFile:     ffmpegPlaylistFile,
 		transcode:        transcode,
+		mode:             mode,
+		copyBounds:       copyBounds,
 		highestRequested: -1,
+	}
+
+	if mode == hlsModeCopy {
+		if err := writeVODPlaylist(filepath.Join(dir, "playlist.m3u8"), copyDurations); err != nil {
+			_ = os.RemoveAll(dir)
+			return nil, fmt.Errorf("playback: escribir la playlist VOD de copia: %w", err)
+		}
+		entry.playlistFile = "playlist.m3u8"
+		entry.segments = len(copyDurations)
+		s.entries[key] = entry
+		return entry, nil
 	}
 
 	if durations, err := s.playlistDurations(ctx, absInput); err == nil {
@@ -326,6 +414,98 @@ func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string, s
 		return nil, err
 	}
 	return entry, nil
+}
+
+// reuseEntryLocked reutiliza una entrada ya preparada. handled indica que la
+// entrada existía; si se descartó porque su proceso terminó sin playlist y no
+// hubo error, el llamador debe crear una nueva.
+func (s *Service) reuseEntryLocked(ctx context.Context, key hlsEntryKey) (*hlsEntry, bool, error) {
+	entry, ok := s.entries[key]
+	if !ok {
+		return nil, false, nil
+	}
+	now := s.now()
+	entry.lastUsed = now
+	entry.lastRequest = now
+	if s.playlistExists(entry) {
+		return entry, true, nil
+	}
+	if entry.run != nil && !entry.run.finished() {
+		if err := s.waitForPlaylist(ctx, entry); err != nil {
+			if errors.Is(err, ErrHLSStartupTimeout) {
+				s.removeEntryLocked(key, entry)
+			}
+			return nil, true, err
+		}
+		return entry, true, nil
+	}
+	s.removeEntryLocked(key, entry)
+	if entry.run != nil && entry.run.err != nil {
+		return nil, true, entry.run.err
+	}
+	return nil, false, nil
+}
+
+// copyPlanLocked obtiene los límites y las duraciones reales de la copia. Si
+// falta el índice o la duración, Lookup ya deja el cálculo encolado y la
+// llamada usa recodificación.
+func (s *Service) copyPlanLocked(ctx context.Context, path string, knownDuration time.Duration) ([]float64, []time.Duration, bool) {
+	if s.keyframes == nil {
+		return nil, nil, false
+	}
+	index, err := s.keyframes.Lookup(path)
+	if err != nil || index == nil || len(index.Keyframes) == 0 {
+		return nil, nil, false
+	}
+	duration := knownDuration
+	if duration <= 0 {
+		if s.prober == nil {
+			return nil, nil, false
+		}
+		duration, err = s.prober.VideoDuration(ctx, path)
+		if err != nil || duration <= 0 {
+			return nil, nil, false
+		}
+	}
+	bounds := SegmentBoundaries(index.Keyframes, duration.Seconds())
+	seconds := BoundaryDurations(bounds, duration.Seconds())
+	if len(bounds) == 0 || len(bounds) != len(seconds) {
+		return nil, nil, false
+	}
+	durations := make([]time.Duration, len(seconds))
+	for i, value := range seconds {
+		durations[i] = time.Duration(value * float64(time.Second))
+	}
+	return bounds, durations, true
+}
+
+func (s *Service) markCopyDisabled(path string) {
+	key := copyFileKey(path)
+	s.copyMu.Lock()
+	if s.copyDisabled == nil {
+		s.copyDisabled = make(map[string]bool)
+	}
+	s.copyDisabled[key] = true
+	s.copyMu.Unlock()
+}
+
+func (s *Service) copyDisabledLocked(path string) bool {
+	s.copyMu.Lock()
+	disabled := s.copyDisabled[copyFileKey(path)]
+	s.copyMu.Unlock()
+	return disabled
+}
+
+func copyFileKey(path string) string {
+	absolute, err := filepath.Abs(path)
+	if err != nil {
+		absolute = path
+	}
+	info, err := os.Stat(absolute)
+	if err != nil {
+		return absolute
+	}
+	return fmt.Sprintf("%s\x00%d\x00%d", absolute, info.Size(), info.ModTime().UnixNano())
 }
 
 // transcodeKey identifica los parámetros de calidad en la caché y en el
@@ -366,12 +546,19 @@ func (s *Service) startRunLocked(entry *hlsEntry, start int) error {
 		discardSegments(entry.dir, old.start, start)
 	}
 
-	s.reserveTranscodeSlotLocked(entry)
+	if entry.mode == hlsModeCopy {
+		s.reserveCopySlotLocked(entry)
+	} else {
+		s.reserveTranscodeSlotLocked(entry)
+	}
 
 	// El proceso vive ligado al contexto del servicio, no al de la petición
 	// HTTP que lo arranca, para que no se cancele al terminar esa petición.
 	procCtx, cancel := context.WithTimeout(s.procCtx, hlsProcessTimeout)
 	args := hlsTranscodeArgs(entry.inputPath, start, entry.transcode)
+	if entry.mode == hlsModeCopy {
+		args = hlsCopyArgs(entry.inputPath, start, entry.copyBounds, entry.transcode)
+	}
 	var cmd *exec.Cmd
 	if s.command != nil {
 		cmd = s.command(procCtx, "ffmpeg", args...)
@@ -397,14 +584,20 @@ func (s *Service) startRunLocked(entry *hlsEntry, start int) error {
 	}
 
 	run := &hlsRun{
-		start:   start,
-		started: time.Now(),
-		done:    make(chan struct{}),
-		cancel:  cancel,
-		counted: true,
+		start:       start,
+		started:     time.Now(),
+		done:        make(chan struct{}),
+		cancel:      cancel,
+		counted:     entry.mode != hlsModeCopy,
+		mode:        entry.mode,
+		copyCounted: entry.mode == hlsModeCopy,
 	}
 	entry.run = run
-	s.liveTranscodes++
+	if run.isCopy() {
+		s.liveCopies++
+	} else {
+		s.liveTranscodes++
+	}
 
 	go func() {
 		err := cmd.Wait()
@@ -412,6 +605,12 @@ func (s *Service) startRunLocked(entry *hlsEntry, start int) error {
 		// un fallo.
 		if err != nil && procCtx.Err() == nil {
 			run.err = fmt.Errorf("%w: %v: %s", ErrFFmpegFailed, err, tailString(stderr.String(), 500))
+		}
+		if run.err != nil && run.isCopy() && !run.interrupted &&
+			!fileNotEmpty(filepath.Join(entry.dir, segmentName(start))) {
+			log.Printf("playback: la copia del ítem %d falló antes del segmento %d; se recodificará: %v",
+				entry.itemID, start, run.err)
+			s.markCopyDisabled(entry.inputPath)
 		}
 		cancel()
 		close(run.done)
@@ -423,6 +622,13 @@ func (s *Service) startRunLocked(entry *hlsEntry, start int) error {
 			s.liveTranscodes--
 			if s.liveTranscodes < 0 {
 				s.liveTranscodes = 0
+			}
+		}
+		if run.copyCounted {
+			run.copyCounted = false
+			s.liveCopies--
+			if s.liveCopies < 0 {
+				s.liveCopies = 0
 			}
 		}
 		s.mu.Unlock()
@@ -445,11 +651,45 @@ func (s *Service) reserveTranscodeSlotLocked(entry *hlsEntry) {
 	}
 }
 
+// reserveCopySlotLocked aplica el límite propio de las copias. Los procesos de
+// copia no cuentan para playback.max_transcodes.
+func (s *Service) reserveCopySlotLocked(entry *hlsEntry) {
+	s.recountLiveTranscodesLocked()
+	for s.liveCopies >= hlsMaxCopyProcesses {
+		victim := s.oldestCopyRunLocked(entry)
+		if victim == nil {
+			return
+		}
+		s.stopRunLocked(victim, "límite de procesos de copia")
+	}
+}
+
 func (s *Service) oldestLiveRunLocked(except *hlsEntry) *hlsEntry {
 	var victim *hlsEntry
 	var victimTime time.Time
 	for _, candidate := range s.entries {
-		if candidate == except || candidate.run == nil || candidate.run.finished() {
+		if candidate == except || candidate.run == nil || candidate.run.finished() ||
+			candidate.run.isCopy() {
+			continue
+		}
+		requested := candidate.lastRequest
+		if requested.IsZero() {
+			requested = candidate.lastUsed
+		}
+		if victim == nil || requested.Before(victimTime) {
+			victim = candidate
+			victimTime = requested
+		}
+	}
+	return victim
+}
+
+func (s *Service) oldestCopyRunLocked(except *hlsEntry) *hlsEntry {
+	var victim *hlsEntry
+	var victimTime time.Time
+	for _, candidate := range s.entries {
+		if candidate == except || candidate.run == nil || candidate.run.finished() ||
+			!candidate.run.isCopy() {
 			continue
 		}
 		requested := candidate.lastRequest
@@ -482,19 +722,30 @@ func (s *Service) stopRunLocked(entry *hlsEntry, reason string) {
 // siguen vivos. Los procesos terminados dejan de sumar aunque su goroutine
 // todavía no haya podido tomar el mutex.
 func (s *Service) recountLiveTranscodesLocked() {
-	count := 0
+	transcodes := 0
+	copies := 0
 	for _, entry := range s.entries {
-		if entry.run == nil {
+		run := entry.run
+		if run == nil {
 			continue
 		}
-		if entry.run.finished() {
-			entry.run.counted = false
+		if run.finished() {
+			run.counted = false
+			run.copyCounted = false
 			continue
 		}
-		count++
-		entry.run.counted = true
+		if run.isCopy() {
+			copies++
+			run.counted = false
+			run.copyCounted = true
+		} else {
+			transcodes++
+			run.counted = true
+			run.copyCounted = false
+		}
 	}
-	s.liveTranscodes = count
+	s.liveTranscodes = transcodes
+	s.liveCopies = copies
 }
 
 // discardSegments se llama con el proceso anterior ya terminado. Borra el

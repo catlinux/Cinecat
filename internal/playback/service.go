@@ -49,6 +49,17 @@ type StreamSelection struct {
 	MaxHeight int
 	Quality   string
 	Caps      string
+	// Duration es la duración de la ficha de ffprobe; si es cero, el servicio
+	// la consulta al preparar una copia.
+	Duration time.Duration
+	// Copy pide el modo copia; el llamador comprueba antes CanCopy.
+	Copy bool
+	// ForceCopy viene de un segmento con m=copy: si la copia no se puede
+	// recrear, la petición falla en vez de recodificar.
+	ForceCopy bool
+	// ForceTranscode viene de un segmento con m=transcode y mantiene la
+	// decisión que tomó la playlist.
+	ForceTranscode bool
 }
 
 func defaultTranscodeSettings() TranscodeSettings {
@@ -160,15 +171,32 @@ type Service struct {
 	mu             sync.Mutex
 	entries        map[hlsEntryKey]*hlsEntry
 	liveTranscodes int
-	stop           chan struct{}
-	done           chan struct{}
-	closeOnce      sync.Once
+	liveCopies     int
+	// copyDisabled recuerda en memoria los archivos cuya copia falló. La clave
+	// incluye ruta, tamaño y fecha para que un archivo sustituido se vuelva a
+	// intentar. Tiene su propio mutex porque el proceso de copia lo marca
+	// mientras otra goroutine puede estar esperando su final con Service.mu.
+	copyMu       sync.Mutex
+	copyDisabled map[string]bool
+	stop         chan struct{}
+	done         chan struct{}
+	closeOnce    sync.Once
 }
 
 type hlsEntryKey struct {
 	itemID    int64
 	transcode string
 }
+
+// hlsMode distingue una entrada copiada de una recodificada. El valor cero se
+// trata como recodificación para no romper entradas creadas por pruebas o por
+// versiones anteriores.
+type hlsMode string
+
+const (
+	hlsModeTranscode hlsMode = "transcode"
+	hlsModeCopy      hlsMode = "copy"
+)
 
 // hlsEntry es el HLS de un ítem. Sus campos se protegen con Service.mu.
 type hlsEntry struct {
@@ -179,6 +207,12 @@ type hlsEntry struct {
 	lastRequest  time.Time
 	playlistFile string
 	transcode    TranscodeSettings
+	// mode indica si el vídeo se copia o se recodifica y forma parte de la
+	// clave y del directorio.
+	mode hlsMode
+	// copyBounds son los inicios de segmento del índice de claves; solo se
+	// usan en modo copia.
+	copyBounds []float64
 	// highestRequested es el mayor segmento que ha pedido el cliente.
 	highestRequested int
 	// segments es el total de la playlist VOD propia; 0 si se sirve la de
@@ -205,6 +239,14 @@ type hlsRun struct {
 	interrupted bool
 	// counted indica que este proceso suma en Service.liveTranscodes.
 	counted bool
+	// mode es el modo de la entrada que lo lanzó.
+	mode hlsMode
+	// copyCounted indica que este proceso suma en Service.liveCopies.
+	copyCounted bool
+}
+
+func (r *hlsRun) isCopy() bool {
+	return r != nil && r.mode == hlsModeCopy
 }
 
 func (r *hlsRun) finished() bool {
@@ -301,6 +343,7 @@ func New(opts Options) (*Service, error) {
 		procCtx:           procCtx,
 		procCancel:        procCancel,
 		entries:           make(map[hlsEntryKey]*hlsEntry),
+		copyDisabled:      make(map[string]bool),
 		stop:              make(chan struct{}),
 		done:              make(chan struct{}),
 	}

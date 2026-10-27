@@ -24,7 +24,9 @@ type FileInspector interface {
 }
 
 type PlaybackInfo struct {
-	Mode        string `json:"mode"`
+	Mode string `json:"mode"`
+	// Method distingue dentro de HLS si se copia el vídeo o se recodifica.
+	Method      string `json:"method"`
 	Description string `json:"description"`
 	Supported   bool   `json:"supported"`
 }
@@ -133,7 +135,7 @@ func (a *API) handleItemFileInfo(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, fileInfoResponse{
 		FileInfo: &info,
 		Path:     relative,
-		Playback: playbackInfo(safePath, &info, caps),
+		Playback: playbackInfo(safePath, &info, caps, a.maxPlaybackHeight()),
 	})
 }
 
@@ -186,7 +188,7 @@ func normalizedFileInfo(info *playback.FileInfo) playback.FileInfo {
 	return result
 }
 
-func playbackInfo(path string, info *playback.FileInfo, caps playback.Capabilities) PlaybackInfo {
+func playbackInfo(path string, info *playback.FileInfo, caps playback.Capabilities, maxHeight int) PlaybackInfo {
 	mode, err := playback.DecideFor(path, info, caps)
 	if errors.Is(err, playback.ErrUnsupportedContainer) {
 		return PlaybackInfo{
@@ -208,10 +210,32 @@ func playbackInfo(path string, info *playback.FileInfo, caps playback.Capabiliti
 		if extension != "" {
 			description = fmt.Sprintf("Reproducción directa (%s)", extension)
 		}
-		return PlaybackInfo{Mode: "direct", Description: description, Supported: true}
+		return PlaybackInfo{
+			Mode:        "direct",
+			Method:      "direct",
+			Description: description,
+			Supported:   true,
+		}
 	case playback.ModeRemux:
+		copyInfo := info
+		if info != nil {
+			// La extensión del archivo manda sobre un FileName de caché que no
+			// coincida con la ruta real.
+			clone := *info
+			clone.FileName = filepath.Base(path)
+			copyInfo = &clone
+		}
+		if playback.CanCopy(copyInfo, caps, maxHeight) {
+			return PlaybackInfo{
+				Mode:        "hls",
+				Method:      "copy",
+				Description: "Copia (sin recodificar)",
+				Supported:   true,
+			}
+		}
 		return PlaybackInfo{
 			Mode:        "hls",
+			Method:      "transcode",
 			Description: "Se recodifica a H.264 + AAC estéreo por HLS",
 			Supported:   true,
 		}

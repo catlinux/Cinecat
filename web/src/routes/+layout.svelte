@@ -28,11 +28,17 @@
 
 	onMount(() => {
 		const isTypeSupported = (type: string) => {
-			if (typeof MediaSource === 'undefined') {
+			const source = (
+				window as unknown as {
+					ManagedMediaSource?: { isTypeSupported?: (mime: string) => boolean };
+					MediaSource?: { isTypeSupported?: (mime: string) => boolean };
+				}
+			).ManagedMediaSource ?? window.MediaSource;
+			if (!source || typeof source.isTypeSupported !== 'function') {
 				return false;
 			}
 			try {
-				return MediaSource.isTypeSupported(type);
+				return source.isTypeSupported(type);
 			} catch {
 				return false;
 			}

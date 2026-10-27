@@ -21,18 +21,36 @@ function supported(
 	}
 }
 
+function mseSupported(isTypeSupported: (type: string) => boolean, type: string): boolean {
+	try {
+		return Boolean(isTypeSupported(type));
+	} catch {
+		return false;
+	}
+}
+
 export function detectClientCapabilities(
 	isTypeSupported: (type: string) => boolean,
 	canPlayType: (type: string) => string
 ): string {
 	const hevc10 = supported(isTypeSupported, canPlayType, HEVC10_MIME);
 	const hevc = hevc10 || supported(isTypeSupported, canPlayType, HEVC_MIME);
+	// El HLS de Cinecat lleva HEVC en MPEG-TS y los iPhone sin MSE no lo
+	// admiten, así que estos tokens miran solo MediaSource.
+	const hevc10mse = mseSupported(isTypeSupported, HEVC10_MIME);
+	const hevcmse = hevc10mse || mseSupported(isTypeSupported, HEVC_MIME);
 	const values: string[] = [];
 	if (hevc) {
 		values.push('hevc');
 	}
 	if (hevc10) {
 		values.push('hevc10');
+	}
+	if (hevcmse) {
+		values.push('hevcmse');
+	}
+	if (hevc10mse) {
+		values.push('hevc10mse');
 	}
 	return values.join(',');
 }
@@ -41,12 +59,15 @@ export function sanitizeClientCapabilities(raw: string | null | undefined): stri
 	const tokens = new Set<string>();
 	for (const value of String(raw ?? '').split(',')) {
 		const token = value.trim().toLowerCase();
-		if (token === 'hevc' || token === 'hevc10') {
+		if (token === 'hevc' || token === 'hevc10' || token === 'hevcmse' || token === 'hevc10mse') {
 			tokens.add(token);
 		}
 	}
 	if (tokens.has('hevc10')) {
 		tokens.add('hevc');
+	}
+	if (tokens.has('hevc10mse')) {
+		tokens.add('hevcmse');
 	}
 	const values: string[] = [];
 	if (tokens.has('hevc')) {
@@ -54,6 +75,12 @@ export function sanitizeClientCapabilities(raw: string | null | undefined): stri
 	}
 	if (tokens.has('hevc10')) {
 		values.push('hevc10');
+	}
+	if (tokens.has('hevcmse')) {
+		values.push('hevcmse');
+	}
+	if (tokens.has('hevc10mse')) {
+		values.push('hevc10mse');
 	}
 	return values.join(',');
 }

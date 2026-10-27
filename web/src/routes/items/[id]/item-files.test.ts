@@ -132,6 +132,7 @@ function makeFileInfo(overrides: Partial<FileInfo> = {}): FileInfo {
 		quality: 'Full HD',
 		playback: {
 			mode: 'hls',
+			method: 'transcode',
 			description: 'Se recodifica a H.264 + AAC estéreo por HLS',
 			supported: true
 		},
@@ -329,7 +330,12 @@ describe('FilePanel', () => {
 					],
 					audio: [],
 					subtitles: [],
-					playback: { mode: 'direct', description: 'Reproducción directa (AVI)', supported: true }
+					playback: {
+						mode: 'direct',
+						method: 'direct',
+						description: 'Reproducción directa (AVI)',
+						supported: true
+					}
 				})
 			)
 		);
@@ -381,6 +387,7 @@ describe('FilePanel', () => {
 				makeFileInfo({
 					playback: {
 						mode: '',
+						method: '',
 						description: 'Contenedor no soportado para reproducción',
 						supported: false
 					}

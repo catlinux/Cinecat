@@ -423,6 +423,7 @@ export interface CandidatesResponse {
 
 export interface PlaybackInfo {
 	mode: 'direct' | 'hls' | '';
+	method: 'direct' | 'copy' | 'transcode' | '';
 	description: string;
 	supported: boolean;
 }

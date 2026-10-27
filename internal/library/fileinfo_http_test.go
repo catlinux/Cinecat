@@ -176,8 +176,8 @@ func TestFileInfoHLSYContenedorNoSoportado(t *testing.T) {
 	if err := json.Unmarshal(body, &response); err != nil {
 		t.Fatalf("MKV: %v", err)
 	}
-	if response.Playback.Mode != "hls" || !response.Playback.Supported ||
-		response.Playback.Description != "Se recodifica a H.264 + AAC estéreo por HLS" {
+	if response.Playback.Mode != "hls" || response.Playback.Method != "copy" ||
+		!response.Playback.Supported || response.Playback.Description != "Copia (sin recodificar)" {
 		t.Fatalf("playback MKV = %+v", response.Playback)
 	}
 

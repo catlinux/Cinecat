@@ -320,7 +320,7 @@ func TestServeHLSPorHTTP(t *testing.T) {
 
 	status, _, playlist := get("/playlist.m3u8")
 	if status != http.StatusOK || strings.Count(playlist, "#EXTINF:") != 10 ||
-		!strings.Contains(playlist, "segment_00009.ts?exp=123&sig=firma") {
+		!strings.Contains(playlist, "segment_00009.ts"+signedQuery("123", "firma", "m", "transcode")) {
 		t.Fatalf("playlist HTTP inesperada (%d): %s", status, playlist)
 	}
 

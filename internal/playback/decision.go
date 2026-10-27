@@ -16,8 +16,8 @@ const (
 	// ModeDirect sirve el archivo tal cual, con soporte de rangos HTTP.
 	ModeDirect Mode = "direct"
 	// ModeRemux sirve el vídeo por HLS. El nombre se conserva por
-	// compatibilidad con los clientes; hoy el servidor siempre recodifica a
-	// H.264 + AAC estéreo (ver hlsTranscodeArgs).
+	// compatibilidad con los clientes; según el códec y el índice de claves se
+	// copia el vídeo o se recodifica a H.264 + AAC estéreo.
 	ModeRemux Mode = "remux"
 )
 
@@ -32,14 +32,19 @@ var (
 	ErrExpired              = errors.New("playback: URL de reproducción caducada")
 )
 
-// Capabilities resume los códecs que declara el cliente.
+// Capabilities resume los códecs que declara el cliente. HEVC y HEVC10
+// corresponden a la reproducción directa; HEVCMSE y HEVC10MSE indican que el
+// navegador puede recibir HEVC por MSE, que es lo que exige el HLS en MPEG-TS.
 type Capabilities struct {
-	HEVC   bool
-	HEVC10 bool
+	HEVC      bool
+	HEVC10    bool
+	HEVCMSE   bool
+	HEVC10MSE bool
 }
 
 // ParseCapabilities interpreta la lista separada por comas que envía la web.
-// Los tokens desconocidos se ignoran y hevc10 implica hevc.
+// Los tokens desconocidos se ignoran; hevc10 implica hevc y hevc10mse implica
+// hevcmse.
 func ParseCapabilities(raw string) Capabilities {
 	var result Capabilities
 	for _, token := range strings.Split(raw, ",") {
@@ -49,6 +54,11 @@ func ParseCapabilities(raw string) Capabilities {
 		case "hevc10":
 			result.HEVC = true
 			result.HEVC10 = true
+		case "hevcmse":
+			result.HEVCMSE = true
+		case "hevc10mse":
+			result.HEVCMSE = true
+			result.HEVC10MSE = true
 		}
 	}
 	return result
@@ -56,12 +66,18 @@ func ParseCapabilities(raw string) Capabilities {
 
 // QueryValue devuelve la lista canónica de capacidades para las URLs firmadas.
 func (c Capabilities) QueryValue() string {
-	values := make([]string, 0, 2)
+	values := make([]string, 0, 4)
 	if c.HEVC || c.HEVC10 {
 		values = append(values, "hevc")
 	}
 	if c.HEVC10 {
 		values = append(values, "hevc10")
+	}
+	if c.HEVCMSE || c.HEVC10MSE {
+		values = append(values, "hevcmse")
+	}
+	if c.HEVC10MSE {
+		values = append(values, "hevc10mse")
 	}
 	return strings.Join(values, ",")
 }
@@ -128,6 +144,74 @@ func hevc10Bit(video VideoStream) bool {
 		strings.Contains(profile, "main10") ||
 		strings.Contains(pixel, "10") ||
 		strings.Contains(pixel, "p010")
+}
+
+// CanCopy indica si el vídeo se puede reempaquetar a HLS sin recodificarlo.
+// No decide si conviene hacerlo ahora: el índice de fotogramas clave y el
+// estado del archivo se comprueban en el servicio HLS.
+func CanCopy(info *FileInfo, caps Capabilities, maxHeight int) bool {
+	if info == nil || copyContainerBlocked(info) {
+		return false
+	}
+	if len(info.Video) == 0 {
+		return false
+	}
+	video := info.Video[0]
+	if maxHeight > 0 && (video.Height <= 0 || video.Height > maxHeight) {
+		return false
+	}
+	switch strings.ToLower(strings.TrimSpace(video.Codec)) {
+	case "h264":
+		return copyableH264(video)
+	case "hevc":
+		if hevc10Bit(video) {
+			return caps.HEVC10MSE
+		}
+		return caps.HEVCMSE || caps.HEVC10MSE
+	default:
+		return false
+	}
+}
+
+// copyContainerBlocked descarta los contenedores que el muxer segment no
+// puede copiar de forma fiable. El formato de ffprobe manda, pero la extensión
+// también cuenta porque FileInfo puede venir de una caché antigua o vacía.
+func copyContainerBlocked(info *FileInfo) bool {
+	if copyExtensionBlocked(info.FileName) {
+		return true
+	}
+	// Si la ficha no trae nombre (por ejemplo, una caché antigua), el formato
+	// de ffprobe sigue bastando para descartar AVI y MPEG-TS.
+	for _, name := range strings.Split(strings.ToLower(info.Container), ",") {
+		switch strings.TrimSpace(name) {
+		case "avi", "mpegts", "m2ts", "ts":
+			return true
+		}
+	}
+	return false
+}
+
+func copyExtensionBlocked(path string) bool {
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".avi", ".ts", ".m2ts":
+		return true
+	default:
+		return false
+	}
+}
+
+func copyableH264(video VideoStream) bool {
+	if video.BitDepth > 8 {
+		return false
+	}
+	profile := strings.ToLower(video.Profile)
+	if strings.Contains(profile, "high 10") ||
+		strings.Contains(profile, "high 4:2:2") ||
+		strings.Contains(profile, "high 4:4:4") {
+		return false
+	}
+	pixel := strings.ToLower(strings.TrimSpace(video.PixelFormat))
+	return pixel == "yuv420p" || pixel == "yuvj420p"
 }
 
 func directAudio(info *FileInfo) bool {

@@ -269,8 +269,51 @@ func TestParseCapabilities(t *testing.T) {
 	if got := ParseCapabilities("hevc10"); !got.HEVC || !got.HEVC10 {
 		t.Fatalf("hevc10 debe implicar hevc: %+v", got)
 	}
-	if got := ParseCapabilities("otro"); got.HEVC || got.HEVC10 {
+	if got := ParseCapabilities("hevc10mse"); !got.HEVCMSE || !got.HEVC10MSE {
+		t.Fatalf("hevc10mse debe implicar hevcmse: %+v", got)
+	}
+	if got := ParseCapabilities("otro"); got.HEVC || got.HEVC10 || got.HEVCMSE || got.HEVC10MSE {
 		t.Fatalf("token desconocido: %+v", got)
+	}
+	if got := (Capabilities{HEVC: true, HEVC10: true, HEVCMSE: true, HEVC10MSE: true}).QueryValue(); got != "hevc,hevc10,hevcmse,hevc10mse" {
+		t.Fatalf("QueryValue = %q", got)
+	}
+}
+
+func TestCanCopy(t *testing.T) {
+	h264 := VideoStream{Codec: "h264", Profile: "High", PixelFormat: "yuv420p", BitDepth: 8, Height: 1080}
+	h264High10 := VideoStream{Codec: "h264", Profile: "High 10", PixelFormat: "yuv420p10le", BitDepth: 10, Height: 1080}
+	hevc8 := VideoStream{Codec: "hevc", Profile: "Main", PixelFormat: "yuv420p", BitDepth: 8, Height: 1080}
+	hevc10 := VideoStream{Codec: "hevc", Profile: "Main 10", PixelFormat: "yuv420p10le", BitDepth: 10, Height: 1080}
+	tests := []struct {
+		name      string
+		info      *FileInfo
+		caps      Capabilities
+		maxHeight int
+		want      bool
+	}{
+		{name: "sin ficha", info: nil, want: false},
+		{name: "h264 mkv", info: &FileInfo{Container: "matroska", FileName: "peli.mkv", Video: []VideoStream{h264}}, want: true},
+		{name: "h264 mp4", info: &FileInfo{Container: "mp4", FileName: "peli.mp4", Video: []VideoStream{h264}}, want: true},
+		{name: "avi por formato", info: &FileInfo{Container: "avi", FileName: "peli.avi", Video: []VideoStream{h264}}, want: false},
+		{name: "avi por extensión", info: &FileInfo{Container: "matroska", FileName: "peli.avi", Video: []VideoStream{h264}}, want: false},
+		{name: "ts por formato", info: &FileInfo{Container: "mpegts", FileName: "peli.mkv", Video: []VideoStream{h264}}, want: false},
+		{name: "m2ts por extensión", info: &FileInfo{Container: "mpegts", FileName: "peli.m2ts", Video: []VideoStream{h264}}, want: false},
+		{name: "h264 high10", info: &FileInfo{Container: "matroska", FileName: "peli.mkv", Video: []VideoStream{h264High10}}, want: false},
+		{name: "sin pista de vídeo", info: &FileInfo{Container: "matroska", FileName: "peli.mkv"}, want: false},
+		{name: "altura por encima del límite", info: &FileInfo{Container: "matroska", FileName: "peli.mkv", Video: []VideoStream{h264}}, maxHeight: 720, want: false},
+		{name: "altura desconocida", info: &FileInfo{Container: "matroska", FileName: "peli.mkv", Video: []VideoStream{{Codec: "h264", PixelFormat: "yuv420p"}}}, maxHeight: 720, want: false},
+		{name: "hevc 8 sin mse", info: &FileInfo{Container: "matroska", FileName: "peli.mkv", Video: []VideoStream{hevc8}}, caps: Capabilities{HEVC: true}, want: false},
+		{name: "hevc 8 con mse", info: &FileInfo{Container: "matroska", FileName: "peli.mkv", Video: []VideoStream{hevc8}}, caps: Capabilities{HEVCMSE: true}, want: true},
+		{name: "hevc 10 con mse 8", info: &FileInfo{Container: "matroska", FileName: "peli.mkv", Video: []VideoStream{hevc10}}, caps: Capabilities{HEVCMSE: true}, want: false},
+		{name: "hevc 10 con mse 10", info: &FileInfo{Container: "matroska", FileName: "peli.mkv", Video: []VideoStream{hevc10}}, caps: Capabilities{HEVC10MSE: true}, want: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := CanCopy(test.info, test.caps, test.maxHeight); got != test.want {
+				t.Fatalf("CanCopy = %v, se esperaba %v", got, test.want)
+			}
+		})
 	}
 }
 

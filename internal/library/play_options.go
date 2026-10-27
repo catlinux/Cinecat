@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/catlinux/cinecat/internal/playback"
 )
@@ -335,10 +336,35 @@ func (a *API) streamSelection(
 	}
 
 	originalHeight := 0
-	if info != nil && len(info.Video) > 0 {
-		originalHeight = info.Video[0].Height
+	if info != nil {
+		if len(info.Video) > 0 {
+			originalHeight = info.Video[0].Height
+		}
+		if info.DurationSeconds > 0 {
+			result.Duration = time.Duration(info.DurationSeconds * float64(time.Second))
+		}
 	}
 	result.MaxHeight = effectiveHeight(result.Quality, a.maxPlaybackHeight(), originalHeight)
+
+	// La playlist decide una sola vez si copia o recodifica. El parámetro m de
+	// las URLs firmadas mantiene esa decisión en todos los segmentos aunque el
+	// índice de claves pase de pendiente a listo entre peticiones.
+	switch firstQueryValue(query, "m") {
+	case "copy":
+		if mode == playback.ModeRemux {
+			result.Copy = true
+			result.ForceCopy = true
+		}
+	case "transcode":
+		if mode == playback.ModeRemux {
+			result.ForceTranscode = true
+		}
+	default:
+		if mode == playback.ModeRemux {
+			caps := playback.ParseCapabilities(result.Caps)
+			result.Copy = playback.CanCopy(info, caps, result.MaxHeight)
+		}
+	}
 	return result, nil
 }
 

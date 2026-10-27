@@ -7,6 +7,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+### Added
+
+- Copy mode in playback: when the browser supports the codec (8-bit H.264, or H.265 when the browser plays it through MSE), MKV and MP4 files are repackaged to HLS copying the video without re-encoding it; only the audio is converted to AAC. It uses almost no CPU and loses no quality. Segments are cut at the real keyframes, read from the MKV internal index in milliseconds or, for other files, with ffprobe in the background the first time (stored in `cache/keyframes`); meanwhile, and on any failure, it re-encodes as before. AVI and TS files are always re-encoded. Copies do not count towards "Simultaneous transcodes". The file details show the method: direct, copy or re-encode.
+- The web app declares whether the browser plays H.265 through MSE (`hevcmse`, `hevc10mse` in the `cinecat_caps` cookie).
+
 ## [0.22.1] - 2026-10-28
 
 ### Fixed

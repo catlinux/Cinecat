@@ -20,7 +20,7 @@ func TestPlaybackHelperProcess(t *testing.T) {
 	}
 	start := 0
 	for index, arg := range os.Args {
-		if arg == "-start_number" && index+1 < len(os.Args) {
+		if (arg == "-start_number" || arg == "-segment_start_number") && index+1 < len(os.Args) {
 			start, _ = strconv.Atoi(os.Args[index+1])
 		}
 	}

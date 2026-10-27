@@ -9,19 +9,23 @@ import {
 } from './client-caps';
 
 describe('capacidades del cliente', () => {
-	it('detecta HEVC y HEVC 10 bits por cualquiera de las dos comprobaciones', () => {
-		expect(detectClientCapabilities((type) => type === HEVC_MIME, () => '')).toBe('hevc');
+	it('detecta HEVC, HEVC 10 bits y sus variantes por MSE', () => {
+		expect(detectClientCapabilities((type) => type === HEVC_MIME, () => '')).toBe('hevc,hevcmse');
 		expect(detectClientCapabilities(() => false, (type) => (type === HEVC_MIME ? 'probably' : ''))).toBe(
 			'hevc'
 		);
 		expect(detectClientCapabilities(() => false, (type) => (type === HEVC10_MIME ? 'maybe' : ''))).toBe(
 			'hevc,hevc10'
 		);
+		expect(detectClientCapabilities((type) => type === HEVC10_MIME, () => '')).toBe(
+			'hevc,hevc10,hevcmse,hevc10mse'
+		);
 		expect(detectClientCapabilities(() => false, () => '')).toBe('');
 	});
 
-	it('sanea la lista de capacidades y hevc10 implica hevc', () => {
+	it('sanea la lista de capacidades y aplica las implicaciones', () => {
 		expect(sanitizeClientCapabilities('HEVC10, otro ,hevc')).toBe('hevc,hevc10');
+		expect(sanitizeClientCapabilities('HEVC10MSE, otro')).toBe('hevcmse,hevc10mse');
 		expect(sanitizeClientCapabilities('otro')).toBe('');
 		expect(sanitizeClientCapabilities(null)).toBe('');
 	});
