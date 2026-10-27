@@ -37,6 +37,7 @@ type API struct {
 	mediaRoots    []string
 	thumbnails    *Thumbnailer
 	musicCovers   *MusicCoverer
+	now           func() time.Time
 }
 
 // NewAPI crea los handlers de la API de biblioteca.
@@ -54,6 +55,7 @@ func NewAPI(db *sql.DB, authSvc *auth.Service, playSvc *playback.Service, scanJo
 		fileInspector: inspector,
 		fileInfoCache: newFileInfoCache(),
 		mediaRoots:    defaultMediaRoots(),
+		now:           time.Now,
 	}
 }
 
@@ -132,6 +134,11 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.Handle("PUT /api/v1/series/{id}/images/{kind}", a.requireAdmin(a.handleSeriesImagePut))
 	mux.Handle("DELETE /api/v1/series/{id}/images/{kind}", a.requireAdmin(a.handleSeriesImageDelete))
 	mux.Handle("GET /api/v1/items", a.requireSession(a.handleItems))
+	mux.Handle("DELETE /api/v1/items/{id}", a.requireAdmin(a.handleItemTrash))
+	mux.Handle("GET /api/v1/trash", a.requireAdmin(a.handleTrashList))
+	mux.Handle("POST /api/v1/trash/{id}/restore", a.requireAdmin(a.handleTrashRestore))
+	mux.Handle("DELETE /api/v1/trash/{id}", a.requireAdmin(a.handleTrashDelete))
+	mux.Handle("POST /api/v1/trash/purge", a.requireAdmin(a.handleTrashPurge))
 	mux.Handle("GET /api/v1/items/{id}", a.requireSession(a.handleItem))
 	mux.Handle("GET /api/v1/items/{id}/similar", a.requireSession(a.handleSimilarItems))
 	mux.Handle("GET /api/v1/items/{id}/thumbnail", a.requireSession(a.handleItemThumbnail))

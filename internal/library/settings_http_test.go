@@ -62,14 +62,14 @@ func TestSettingsGetEstructuraYOrden(t *testing.T) {
 		t.Fatalf("GET ajustes: código = %d, cuerpo = %s", status, body)
 	}
 	response := settingsJSON(t, body)
-	if len(response.Sections) != 5 {
-		t.Fatalf("secciones = %d, se esperaban 5", len(response.Sections))
+	if len(response.Sections) != 6 {
+		t.Fatalf("secciones = %d, se esperaban 6", len(response.Sections))
 	}
 	labels := make([]string, 0, len(response.Sections))
 	for _, section := range response.Sections {
 		labels = append(labels, section.Label)
 	}
-	if !reflect.DeepEqual(labels, []string{"Escaneo", "Metadatos", "Interfaz", "Reproducción", "Sistema"}) {
+	if !reflect.DeepEqual(labels, []string{"Escaneo", "Metadatos", "Interfaz", "Reproducción", "Biblioteca", "Sistema"}) {
 		t.Fatalf("etiquetas de sección inesperadas: %v", labels)
 	}
 

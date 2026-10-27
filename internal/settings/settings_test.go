@@ -48,8 +48,8 @@ func raw(value string) json.RawMessage {
 
 func TestDefinitions(t *testing.T) {
 	definitions := Definitions()
-	if len(definitions) != 23 {
-		t.Fatalf("ajustes = %d, se esperaban 23", len(definitions))
+	if len(definitions) != 25 {
+		t.Fatalf("ajustes = %d, se esperaban 25", len(definitions))
 	}
 
 	seen := make(map[string]bool)
@@ -85,7 +85,7 @@ func TestDefinitions(t *testing.T) {
 	for _, section := range Sections() {
 		sectionKeys = append(sectionKeys, section.Key)
 	}
-	if !reflect.DeepEqual(sectionKeys, []string{"scan", "metadata", "ui", "playback", "system"}) {
+	if !reflect.DeepEqual(sectionKeys, []string{"scan", "metadata", "ui", "playback", "library", "system"}) {
 		t.Fatalf("secciones inesperadas: %v", sectionKeys)
 	}
 	if lookup, ok := Lookup(KeyScanInterval); !ok || lookup.Default != "6h" {
@@ -161,6 +161,9 @@ func TestValidate(t *testing.T) {
 		{"enum numérico mínimo", "playback.max_height", "480", 480},
 		{"transcodificaciones mínimo", "playback.max_transcodes", "1", 1},
 		{"transcodificaciones máximo", "playback.max_transcodes", "8", 8},
+		{"cambiar archivos", KeyAllowFileChanges, "true", true},
+		{"retención mínima", KeyTrashRetention, "1", 1},
+		{"retención máxima", KeyTrashRetention, "90", 90},
 	}
 
 	for _, test := range tests {
@@ -209,6 +212,8 @@ func TestValidate(t *testing.T) {
 		{"transcodificaciones fuera por abajo", "playback.max_transcodes", "0"},
 		{"transcodificaciones fuera por arriba", "playback.max_transcodes", "9"},
 		{"transcodificaciones decimal", "playback.max_transcodes", "2.5"},
+		{"retención fuera por abajo", KeyTrashRetention, "0"},
+		{"retención fuera por arriba", KeyTrashRetention, "91"},
 		{"valor null", "ui.show_series", "null"},
 		{"json inválido", "ui.show_series", "{"},
 	}

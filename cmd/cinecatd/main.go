@@ -181,6 +181,7 @@ func main() {
 	api = api.WithThumbnails(thumbnailCacheDir(cfg.DatabasePath))
 	api = api.WithMusicCovers(musicCoverCacheDir(cfg.DatabasePath))
 	api = api.WithMediaRoots(cfg.MediaRoots)
+	go api.StartTrashPurger(ctx)
 
 	updateAPI := update.NewAPI(
 		authSvc.Authenticate,

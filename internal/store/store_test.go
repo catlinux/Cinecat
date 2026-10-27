@@ -59,7 +59,7 @@ func TestMigrateCreaTablas(t *testing.T) {
 		"schema_migrations", "users", "sessions", "libraries", "library_paths", "media_items",
 		"playback_state", "playback_progress", "collections", "collection_items", "series",
 		"series_seasons", "settings", "item_preferences", "music_artists", "music_albums",
-		"music_tracks", "item_lists", "series_lists", "collection_lists",
+		"music_tracks", "item_lists", "series_lists", "collection_lists", "trash_items",
 	} {
 		if !got[name] {
 			t.Errorf("falta la tabla %q", name)
@@ -215,6 +215,43 @@ func columns(t *testing.T, ctx context.Context, s *Store, table string) map[stri
 		t.Fatalf("recorrer columnas de %s: %v", table, err)
 	}
 	return got
+}
+
+func TestMigracionPapelera(t *testing.T) {
+	s, ctx := openTestStore(t, filepath.Join(t.TempDir(), "cinecat.db"))
+
+	got := columns(t, ctx, s, "trash_items")
+	for _, name := range []string{
+		"id", "library_id", "original_path", "trash_path", "moved_kind", "extra_paths",
+		"title", "year", "kind", "snapshot", "deleted_by", "deleted_at",
+	} {
+		if !got[name] {
+			t.Errorf("trash_items: falta la columna %q", name)
+		}
+	}
+	result, err := s.DB().ExecContext(ctx,
+		`INSERT INTO libraries (path, name) VALUES ('/media/papelera', 'Papelera')`)
+	if err != nil {
+		t.Fatalf("crear biblioteca: %v", err)
+	}
+	libraryID, _ := result.LastInsertId()
+	if _, err := s.DB().ExecContext(ctx, `
+		INSERT INTO trash_items
+			(library_id, original_path, trash_path, moved_kind, title, kind, snapshot, deleted_at)
+		VALUES (?, '/media/papelera/peli.mkv', '/media/papelera/.cinecat-papelera/peli.mkv',
+		        'file', 'Peli', 'movie', '{}', '2026-10-27T10:00:00Z')`, libraryID); err != nil {
+		t.Fatalf("crear elemento de papelera: %v", err)
+	}
+	if _, err := s.DB().ExecContext(ctx, `DELETE FROM libraries WHERE id = ?`, libraryID); err != nil {
+		t.Fatalf("borrar biblioteca: %v", err)
+	}
+	var count int
+	if err := s.DB().QueryRowContext(ctx, `SELECT count(*) FROM trash_items`).Scan(&count); err != nil {
+		t.Fatalf("contar papelera: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("la papelera debería caer en cascada, quedan %d filas", count)
+	}
 }
 
 func TestMigracionPreferencias(t *testing.T) {

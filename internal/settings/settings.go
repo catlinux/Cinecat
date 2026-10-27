@@ -39,6 +39,12 @@ func (t Type) String() string {
 // KeyScanInterval es la clave del intervalo de escaneo.
 const KeyScanInterval = "scan.interval"
 
+// Claves de la gestión de archivos de la biblioteca.
+const (
+	KeyAllowFileChanges = "library.allow_file_changes"
+	KeyTrashRetention   = "trash.retention_days"
+)
+
 // ErrUnknownKey indica que la clave no forma parte del registro de ajustes.
 var ErrUnknownKey = errors.New("ajuste desconocido")
 
@@ -76,6 +82,7 @@ var sections = []Section{
 	{Key: "metadata", Label: "Metadatos"},
 	{Key: "ui", Label: "Interfaz"},
 	{Key: "playback", Label: "Reproducción"},
+	{Key: "library", Label: "Biblioteca"},
 	{Key: "system", Label: "Sistema"},
 }
 
@@ -326,6 +333,24 @@ var definitions = []Definition{
 		Default:     2,
 		Min:         1,
 		Max:         8,
+	},
+	{
+		Key:         KeyAllowFileChanges,
+		Section:     "library",
+		Label:       "Permitir cambiar archivos",
+		Description: "Permite mover archivos de la biblioteca a la papelera; exige montar la biblioteca en lectura y escritura.",
+		Type:        TypeBool,
+		Default:     false,
+	},
+	{
+		Key:         KeyTrashRetention,
+		Section:     "library",
+		Label:       "Días en la papelera",
+		Description: "Tiempo que se conservan los archivos y las fichas antes de purgarlos definitivamente.",
+		Type:        TypeInt,
+		Default:     14,
+		Min:         1,
+		Max:         90,
 	},
 	{
 		Key:         "system.check_updates",
