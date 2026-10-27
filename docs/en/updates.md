@@ -98,6 +98,17 @@ Status is written atomically to `run/update-status.json`. Phases are
 versión”, “Compilando”, “Reiniciando”, “Comprobando que arranca”, “Terminado” and
 “Revertido”. The final result is `ok`, `failed` or `rolled_back`.
 
+## Known problems
+
+- **"No se pudo consultar el directorio de Docker"** (could not query Docker's
+  directory): user services inherit the groups of the `systemd --user` manager,
+  which with linger can stay alive for months. If the user joined the `docker`
+  group after it started, the service cannot use Docker even though your session
+  can. Fix, once: `sudo systemctl restart user@$(id -u).service` (or reboot the
+  server). The installer detects it and warns.
+- **`systemctl --user` cannot find the bus**: see above, the `XDG_RUNTIME_DIR`
+  and `DBUS_SESSION_BUS_ADDRESS` variables.
+
 ## Checking the status
 
 ```bash

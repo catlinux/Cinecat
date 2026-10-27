@@ -40,6 +40,19 @@ check_requirements() {
 		printf 'El usuario %s no puede usar Docker (¿falta añadirlo al grupo docker?).\n' "$USER_NAME" >&2
 		PROBLEMS=1
 	fi
+	# Los servicios de usuario heredan los grupos del gestor `systemd --user`,
+	# que no se refrescan si el usuario entró en el grupo docker después de que
+	# el gestor arrancase (con linger puede llevar meses vivo).
+	local docker_gid manager_pid
+	docker_gid=$(getent group docker 2>/dev/null | cut -d: -f3 || true)
+	manager_pid=$(pgrep -u "$(id -u)" -x systemd 2>/dev/null | head -n 1 || true)
+	if [ -n "$docker_gid" ] && [ -n "$manager_pid" ] && [ -r "/proc/$manager_pid/status" ] &&
+		id -G | tr ' ' '\n' | grep -qx "$docker_gid" &&
+		! grep '^Groups:' "/proc/$manager_pid/status" | tr -s '[:space:]' '\n' | grep -qx "$docker_gid"; then
+		printf 'El gestor de usuario de systemd arrancó antes de que %s entrase en el grupo docker: el servicio no podría usar Docker.\nEjecuta una vez: sudo systemctl restart user@%s.service (o reinicia el servidor) y vuelve a lanzar este instalador.\n' \
+			"$USER_NAME" "$(id -u)" >&2
+		PROBLEMS=1
+	fi
 	# El servicio no tiene terminal ni agente SSH: si git necesita contraseña o
 	# frase de paso, la actualización fallaría en el momento de descargar.
 	if command -v git >/dev/null 2>&1 &&

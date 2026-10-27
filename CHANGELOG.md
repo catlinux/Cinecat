@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.16.2] - 2026-10-27
+
+### Corregido
+
+- El instalador del actualizador detecta que el gestor `systemd --user` arrancó antes de que el usuario entrase en el grupo `docker` (el servicio no podría usar Docker) y explica cómo corregirlo; el actualizador da ese mismo mensaje en lugar de «No se pudo consultar el directorio de Docker» a secas.
+
 ## [0.16.1] - 2026-10-27
 
 ### Corregido

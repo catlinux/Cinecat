@@ -101,6 +101,17 @@ El estado se escribe de forma atómica en `run/update-status.json`. Las fases so
 versión», «Compilando», «Reiniciando», «Comprobando que arranca», «Terminado» y
 «Revertido». El resultado final es `ok`, `failed` o `rolled_back`.
 
+## Problemas conocidos
+
+- **«No se pudo consultar el directorio de Docker»**: los servicios de usuario
+  heredan los grupos del gestor `systemd --user`, que con linger puede llevar
+  meses vivo. Si el usuario entró en el grupo `docker` después de que arrancase,
+  el servicio no puede usar Docker aunque tu sesión sí. Solución, una vez:
+  `sudo systemctl restart user@$(id -u).service` (o reiniciar el servidor). El
+  instalador lo detecta y lo avisa.
+- **`systemctl --user` dice que no encuentra el bus**: ver arriba, variables
+  `XDG_RUNTIME_DIR` y `DBUS_SESSION_BUS_ADDRESS`.
+
 ## Comprobar el estado
 
 ```bash

@@ -206,7 +206,7 @@ print(tag)
 check_space() {
 	local docker_root
 	docker_root=$("$DOCKER_BIN" info -f '{{.DockerRootDir}}' 2>/dev/null) ||
-		fail "No se pudo consultar el directorio de Docker."
+		fail "No se pudo consultar el directorio de Docker: el servicio no puede usar Docker. Si el usuario entró en el grupo docker después de arrancar el servidor, reinicia el gestor de usuario con «sudo systemctl restart user@$(id -u).service» o reinicia el servidor."
 	local available
 	available=$("$DF_BIN" -Pk "$docker_root" 2>/dev/null | awk 'NR==2 {print $4}')
 	if [ -z "$available" ] || [ "$available" -lt "$REQUIRED_FREE_KB" ]; then
