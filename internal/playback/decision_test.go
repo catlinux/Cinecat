@@ -261,3 +261,57 @@ func TestFirmaPorEspacioDeNombres(t *testing.T) {
 		t.Fatalf("otro id: %v", err)
 	}
 }
+
+func TestParseCapabilities(t *testing.T) {
+	if got := ParseCapabilities("hevc, HEVC10, av1"); !got.HEVC || !got.HEVC10 {
+		t.Fatalf("capacidades = %+v", got)
+	}
+	if got := ParseCapabilities("hevc10"); !got.HEVC || !got.HEVC10 {
+		t.Fatalf("hevc10 debe implicar hevc: %+v", got)
+	}
+	if got := ParseCapabilities("otro"); got.HEVC || got.HEVC10 {
+		t.Fatalf("token desconocido: %+v", got)
+	}
+}
+
+func TestDecideFor(t *testing.T) {
+	h264 := VideoStream{Codec: "h264", Profile: "High", PixelFormat: "yuv420p", BitDepth: 8}
+	hevc := VideoStream{Codec: "hevc", Profile: "Main", PixelFormat: "yuv420p", BitDepth: 8}
+	hevc10 := VideoStream{Codec: "hevc", Profile: "Main 10", PixelFormat: "yuv420p10le", BitDepth: 10}
+	aac := AudioStream{Codec: "aac", Default: true}
+	ac3 := AudioStream{Codec: "ac3", Default: true}
+	tests := []struct {
+		name string
+		path string
+		info *FileInfo
+		caps Capabilities
+		want Mode
+	}{
+		{name: "h264 mp4 aac directo", path: "/media/peli.mp4", info: &FileInfo{Video: []VideoStream{h264}, Audio: []AudioStream{aac}}, want: ModeDirect},
+		{name: "h264 mp4 sin audio directo", path: "/media/peli.m4v", info: &FileInfo{Video: []VideoStream{h264}}, want: ModeDirect},
+		{name: "h264 mp4 ac3 recodifica", path: "/media/peli.mp4", info: &FileInfo{Video: []VideoStream{h264}, Audio: []AudioStream{ac3}}, want: ModeRemux},
+		{name: "hevc sin capacidades recodifica", path: "/media/peli.mp4", info: &FileInfo{Video: []VideoStream{hevc}, Audio: []AudioStream{aac}}, want: ModeRemux},
+		{name: "hevc con capacidad directo", path: "/media/peli.mp4", info: &FileInfo{Video: []VideoStream{hevc}, Audio: []AudioStream{aac}}, caps: Capabilities{HEVC: true}, want: ModeDirect},
+		{name: "hevc 10 bits sin hevc10 recodifica", path: "/media/peli.mp4", info: &FileInfo{Video: []VideoStream{hevc10}, Audio: []AudioStream{aac}}, caps: Capabilities{HEVC: true}, want: ModeRemux},
+		{name: "hevc 10 bits con hevc10 directo", path: "/media/peli.mp4", info: &FileInfo{Video: []VideoStream{hevc10}, Audio: []AudioStream{aac}}, caps: Capabilities{HEVC: true, HEVC10: true}, want: ModeDirect},
+		{name: "h264 high10 recodifica", path: "/media/peli.mp4", info: &FileInfo{Video: []VideoStream{{Codec: "h264", Profile: "High 10", PixelFormat: "yuv420p10le", BitDepth: 10}}, Audio: []AudioStream{aac}}, caps: Capabilities{HEVC: true, HEVC10: true}, want: ModeRemux},
+		{name: "mkv siempre recodifica", path: "/media/peli.mkv", info: &FileInfo{Video: []VideoStream{h264}, Audio: []AudioStream{aac}}, want: ModeRemux},
+		{name: "av1 mp4 recodifica", path: "/media/peli.mp4", info: &FileInfo{Video: []VideoStream{{Codec: "av1", PixelFormat: "yuv420p", BitDepth: 8}}, Audio: []AudioStream{aac}}, want: ModeRemux},
+		{name: "sin info mp4 directo", path: "/media/peli.mp4", info: nil, want: ModeDirect},
+		{name: "sin info mkv recodifica", path: "/media/peli.mkv", info: nil, want: ModeRemux},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := DecideFor(test.path, test.info, test.caps)
+			if err != nil {
+				t.Fatalf("DecideFor: %v", err)
+			}
+			if got != test.want {
+				t.Fatalf("modo = %q, se esperaba %q", got, test.want)
+			}
+		})
+	}
+	if _, err := DecideFor("/media/notas.txt", nil, Capabilities{}); !errors.Is(err, ErrUnsupportedContainer) {
+		t.Fatalf("extensión desconocida: %v", err)
+	}
+}

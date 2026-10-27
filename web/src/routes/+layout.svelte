@@ -1,6 +1,6 @@
 <script lang="ts">
 	import '../app.css';
-	import type { Snippet } from 'svelte';
+	import { onMount, type Snippet } from 'svelte';
 	import type { LayoutData } from './$types';
 	import MusicPlayerBar from '$lib/components/MusicPlayerBar.svelte';
 	import SideNav from '$lib/components/SideNav.svelte';
@@ -8,6 +8,7 @@
 	import { apiBaseUrl } from '$lib/config';
 	import { musicPlayer } from '$lib/music-player.svelte';
 	import { DEFAULT_PUBLIC_UI } from '$lib/settings';
+	import { capsCookie, capsFromCookie, detectClientCapabilities } from '$lib/client-caps';
 	import { versionMismatch } from '$lib/version';
 
 	let { data, children }: { data: LayoutData; children: Snippet } = $props();
@@ -22,6 +23,30 @@
 	$effect(() => {
 		if (typeof document !== 'undefined') {
 			document.documentElement.dataset.accent = ui.accent;
+		}
+	});
+
+	onMount(() => {
+		const isTypeSupported = (type: string) => {
+			if (typeof MediaSource === 'undefined') {
+				return false;
+			}
+			try {
+				return MediaSource.isTypeSupported(type);
+			} catch {
+				return false;
+			}
+		};
+		const canPlayType = (type: string) => {
+			try {
+				return document.createElement('video').canPlayType(type);
+			} catch {
+				return '';
+			}
+		};
+		const detected = detectClientCapabilities(isTypeSupported, canPlayType);
+		if (capsFromCookie(document.cookie) !== detected) {
+			document.cookie = capsCookie(detected);
 		}
 	});
 </script>

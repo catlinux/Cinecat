@@ -57,12 +57,13 @@ const play: PlayResponse = {
 	expires_at: '2026-10-26T12:00:00Z'
 };
 
-function loadEvent(fetchImpl: typeof fetch, path = '/items/7/play') {
+function loadEvent(fetchImpl: typeof fetch, path = '/items/7/play', caps = '') {
 	return {
 		params: { id: '7' },
 		locals: { sessionToken: 'token-123' },
 		fetch: fetchImpl,
-		url: new URL(`http://localhost${path}`)
+		url: new URL(`http://localhost${path}`),
+		cookies: { get: () => caps }
 	};
 }
 
@@ -238,5 +239,31 @@ describe('página de reproducción', () => {
 	it('no muestra el aviso si se empieza desde el principio', () => {
 		const body = renderPlay(0);
 		expect(body).not.toContain('Continúas por');
+	});
+});
+
+
+describe('capacidades en la reproducción', () => {
+	it('pasa los códecs admitidos a getPlay y al reintento', async () => {
+		const calls: string[] = [];
+		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+			const url = new URL(String(input));
+			if (url.pathname === '/api/v1/items/7') {
+				return jsonResponse(item);
+			}
+			calls.push(url.toString());
+			if (url.searchParams.get('audio') === '1') {
+				return jsonResponse({ error: 'pista no válida' }, 400);
+			}
+			return jsonResponse(play);
+		});
+
+		await load(loadEvent(fetchMock, '/items/7/play?audio=1', 'hevc10,otro') as never);
+
+		expect(calls).toHaveLength(2);
+		for (const call of calls) {
+			const url = new URL(call);
+			expect(url.searchParams.get('caps')).toBe('hevc,hevc10');
+		}
 	});
 });

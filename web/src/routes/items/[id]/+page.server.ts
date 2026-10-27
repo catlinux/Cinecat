@@ -11,6 +11,7 @@ import type {
 	TrashItem
 } from '$lib/api';
 import { ConfigurationError, createApiClient } from '$lib/api-factory';
+import { sanitizeClientCapabilities } from '$lib/client-caps';
 import { loadEpisodeNavigation } from '$lib/episode-navigation';
 import { requireSessionToken } from '$lib/session';
 import type { Actions, PageServerLoad } from './$types';
@@ -20,8 +21,9 @@ function itemID(params: { id?: string }): number | null {
 	return Number.isInteger(id) && id > 0 ? id : null;
 }
 
-export const load: PageServerLoad = async ({ params, locals, fetch, url, parent }) => {
+export const load: PageServerLoad = async ({ params, locals, fetch, url, parent, cookies }) => {
 	const token = requireSessionToken(locals);
+	const caps = sanitizeClientCapabilities(cookies?.get('cinecat_caps') ?? '');
 	const id = itemID(params);
 	if (id === null) {
 		error(404, 'Ítem no encontrado');
@@ -34,12 +36,12 @@ export const load: PageServerLoad = async ({ params, locals, fetch, url, parent 
 		const api = createApiClient(fetch);
 		const item = await api.getItem(id, token);
 		const isClip = item.library_kind === 'clips';
-		const fileInfo: Promise<FileInfoResult> = api.getFileInfo(id, token).then(
+		const fileInfo: Promise<FileInfoResult> = api.getFileInfo(id, token, caps).then(
 			(data) => ({ data }),
 			(cause) => ({ error: fileInfoError(cause) })
 		);
 		const playbackOptions: Promise<PlayResponse | null> = api
-			.getPlay(id, {}, token)
+			.getPlay(id, { caps }, token)
 			.catch(() => null);
 		const similarItems: Promise<MediaItem[] | null> | null =
 			item.kind === 'movie' && !isClip

@@ -129,10 +129,11 @@ func (a *API) handleItemFileInfo(w http.ResponseWriter, r *http.Request) {
 	if info.FileName == "" {
 		info.FileName = filepath.Base(safePath)
 	}
+	caps := playback.ParseCapabilities(r.URL.Query().Get("caps"))
 	writeJSON(w, http.StatusOK, fileInfoResponse{
 		FileInfo: &info,
 		Path:     relative,
-		Playback: playbackInfo(safePath),
+		Playback: playbackInfo(safePath, &info, caps),
 	})
 }
 
@@ -185,8 +186,8 @@ func normalizedFileInfo(info *playback.FileInfo) playback.FileInfo {
 	return result
 }
 
-func playbackInfo(path string) PlaybackInfo {
-	mode, err := playback.Decide(path)
+func playbackInfo(path string, info *playback.FileInfo, caps playback.Capabilities) PlaybackInfo {
+	mode, err := playback.DecideFor(path, info, caps)
 	if errors.Is(err, playback.ErrUnsupportedContainer) {
 		return PlaybackInfo{
 			Description: "Contenedor no soportado para reproducción",

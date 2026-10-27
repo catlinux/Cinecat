@@ -297,7 +297,10 @@ func (a *API) streamSelection(
 	info *playback.FileInfo,
 	query map[string][]string,
 ) (playback.StreamSelection, *playOptionsError) {
-	result := playback.StreamSelection{Quality: "auto"}
+	result := playback.StreamSelection{
+		Quality: "auto",
+		Caps:    playback.ParseCapabilities(firstQueryValue(query, "caps")).QueryValue(),
+	}
 	if mode == playback.ModeDirect {
 		result.Quality = "original"
 	}
@@ -337,6 +340,13 @@ func (a *API) streamSelection(
 	}
 	result.MaxHeight = effectiveHeight(result.Quality, a.maxPlaybackHeight(), originalHeight)
 	return result, nil
+}
+
+func firstQueryValue(query map[string][]string, key string) string {
+	if values, ok := query[key]; ok && len(values) > 0 {
+		return values[0]
+	}
+	return ""
 }
 
 func subtitleURL(itemID int64, subtitleID, exp, sig string) string {

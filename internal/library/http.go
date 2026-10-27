@@ -379,6 +379,7 @@ func (a *API) handlePlay(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	caps := playback.ParseCapabilities(r.URL.Query().Get("caps"))
 	mode, safePath, ok := a.resolveMedia(w, r, id)
 	if !ok {
 		return
@@ -419,6 +420,9 @@ func (a *API) handlePlay(w http.ResponseWriter, r *http.Request) {
 	query := url.Values{}
 	query.Set("exp", expires)
 	query.Set("sig", signature)
+	if value := caps.QueryValue(); value != "" {
+		query.Set("caps", value)
+	}
 	if mode == playback.ModeRemux {
 		query.Set("audio", strconv.Itoa(options.Audio))
 		query.Set("q", options.Quality)
@@ -584,12 +588,10 @@ func (a *API) resolveMedia(w http.ResponseWriter, r *http.Request, id int64) (pl
 		return "", "", false
 	}
 
-	mode, err := playback.Decide(media.path)
-	if errors.Is(err, playback.ErrUnsupportedContainer) {
+	if _, err := playback.Decide(media.path); errors.Is(err, playback.ErrUnsupportedContainer) {
 		writeJSONError(w, http.StatusUnsupportedMediaType, "contenedor no soportado para reproducción")
 		return "", "", false
-	}
-	if err != nil {
+	} else if err != nil {
 		log.Printf("library: decidir reproducción del ítem %d: %v", id, err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
 		return "", "", false
@@ -602,9 +604,23 @@ func (a *API) resolveMedia(w http.ResponseWriter, r *http.Request, id int64) (pl
 		return "", "", false
 	}
 
-	info, err := os.Stat(safePath)
-	if err != nil || info.IsDir() {
+	stat, err := os.Stat(safePath)
+	if err != nil || stat.IsDir() {
 		writeJSONError(w, http.StatusNotFound, "archivo no encontrado")
+		return "", "", false
+	}
+	fileInfo, _ := a.cachedFileInfo(r.Context(), safePath)
+	var infoPointer *playback.FileInfo
+	if fileInfo.FileName != "" || len(fileInfo.Video) > 0 ||
+		len(fileInfo.Audio) > 0 || len(fileInfo.Subtitles) > 0 {
+		infoPointer = &fileInfo
+	}
+	mode, err := playback.DecideFor(
+		media.path, infoPointer, playback.ParseCapabilities(r.URL.Query().Get("caps")),
+	)
+	if err != nil {
+		log.Printf("library: decidir reproducción del ítem %d: %v", id, err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
 		return "", "", false
 	}
 	return mode, safePath, true

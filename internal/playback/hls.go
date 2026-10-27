@@ -174,10 +174,14 @@ func (s *Service) ServeHLSFile(w http.ResponseWriter, r *http.Request, itemID in
 		if audio < 0 {
 			audio = 0
 		}
-		query = signedQuery(exp, sig,
+		extra := []string{
 			"audio", strconv.Itoa(audio),
 			"q", quality,
-		)
+		}
+		if selections[0].Caps != "" {
+			extra = append(extra, "caps", selections[0].Caps)
+		}
+		query = signedQuery(exp, sig, extra...)
 	}
 
 	if name == "playlist.m3u8" {

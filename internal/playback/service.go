@@ -48,6 +48,7 @@ type StreamSelection struct {
 	Audio     int
 	MaxHeight int
 	Quality   string
+	Caps      string
 }
 
 func defaultTranscodeSettings() TranscodeSettings {

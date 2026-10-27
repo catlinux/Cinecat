@@ -143,13 +143,14 @@ function fileInfoResult(info: FileInfo = makeFileInfo()): FileInfoResult {
 	return { data: info, error: null };
 }
 
-function loadEvent(fetchImpl: typeof fetch, isAdmin = false) {
+function loadEvent(fetchImpl: typeof fetch, isAdmin = false, caps = '') {
 	return {
 		params: { id: '7' },
 		locals: { sessionToken: 'token-123' },
 		fetch: fetchImpl,
 		url: new URL('http://localhost/items/7'),
-		parent: async () => ({ isAdmin })
+		parent: async () => ({ isAdmin }),
+		cookies: { get: () => caps }
 	};
 }
 
@@ -173,6 +174,37 @@ function actionEvent(
 }
 
 describe('carga del panel de archivo', () => {
+	it('pasa las capacidades saneadas al file-info y a las opciones', async () => {
+		const calls: string[] = [];
+		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+			const url = new URL(String(input));
+			if (url.pathname === '/api/v1/items/7') {
+				return jsonResponse(makeItem());
+			}
+			if (url.pathname === '/api/v1/items/7/file-info') {
+				calls.push(url.toString());
+				return jsonResponse(makeFileInfo());
+			}
+			if (url.pathname === '/api/v1/items/7/play') {
+				calls.push(url.toString());
+				return jsonResponse({ url: '', mode: 'direct' });
+			}
+			throw new Error(`URL inesperada: ${url}`);
+		});
+
+		const result = (await load(loadEvent(fetchMock, false, 'HEVC10, otro') as never)) as {
+			fileInfo: Promise<FileInfoResult>;
+			playbackOptions: Promise<unknown>;
+		};
+		await result.fileInfo;
+		await result.playbackOptions;
+
+		expect(calls).toHaveLength(2);
+		for (const call of calls) {
+			expect(new URL(call).searchParams.get('caps')).toBe('hevc,hevc10');
+		}
+	});
+
 	it('devuelve la ficha y el file-info como promesa', async () => {
 		const info = makeFileInfo();
 		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {

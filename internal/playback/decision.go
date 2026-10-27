@@ -32,18 +32,120 @@ var (
 	ErrExpired              = errors.New("playback: URL de reproducción caducada")
 )
 
-// Decide elige el modo según la extensión del archivo. Para este paso se
-// consideran servibles directamente los contenedores MP4; el resto de formatos
-// de vídeo habituales se reempaquetan a HLS. Cualquier otra extensión es un
-// error claro: la transcodificación queda para la Fase 3.
+// Capabilities resume los códecs que declara el cliente.
+type Capabilities struct {
+	HEVC   bool
+	HEVC10 bool
+}
+
+// ParseCapabilities interpreta la lista separada por comas que envía la web.
+// Los tokens desconocidos se ignoran y hevc10 implica hevc.
+func ParseCapabilities(raw string) Capabilities {
+	var result Capabilities
+	for _, token := range strings.Split(raw, ",") {
+		switch strings.ToLower(strings.TrimSpace(token)) {
+		case "hevc":
+			result.HEVC = true
+		case "hevc10":
+			result.HEVC = true
+			result.HEVC10 = true
+		}
+	}
+	return result
+}
+
+// QueryValue devuelve la lista canónica de capacidades para las URLs firmadas.
+func (c Capabilities) QueryValue() string {
+	values := make([]string, 0, 2)
+	if c.HEVC || c.HEVC10 {
+		values = append(values, "hevc")
+	}
+	if c.HEVC10 {
+		values = append(values, "hevc10")
+	}
+	return strings.Join(values, ",")
+}
+
+// Decide mantiene la decisión por extensión para los llamadores que no tienen
+// la ficha de ffprobe. Se conserva para compatibilidad.
 func Decide(path string) (Mode, error) {
-	switch strings.ToLower(filepath.Ext(path)) {
+	return DecideFor(path, nil, Capabilities{})
+}
+
+// DecideFor elige el modo con la ficha real del archivo y las capacidades del
+// cliente. Si no hay ficha, se mantiene la decisión por extensión.
+func DecideFor(path string, info *FileInfo, caps Capabilities) (Mode, error) {
+	extension := strings.ToLower(filepath.Ext(path))
+	switch extension {
 	case ".mp4", ".m4v":
+		if info == nil {
+			return ModeDirect, nil
+		}
+		if !directVideo(info, caps) || !directAudio(info) {
+			return ModeRemux, nil
+		}
 		return ModeDirect, nil
 	case ".mkv", ".avi", ".mov", ".ts", ".m2ts":
 		return ModeRemux, nil
 	default:
-		return "", fmt.Errorf("%w: %q", ErrUnsupportedContainer, filepath.Ext(path))
+		return "", fmt.Errorf("%w: %q", ErrUnsupportedContainer, extension)
+	}
+}
+
+func directVideo(info *FileInfo, caps Capabilities) bool {
+	if info == nil || len(info.Video) == 0 {
+		return false
+	}
+	video := info.Video[0]
+	codec := strings.ToLower(strings.TrimSpace(video.Codec))
+	switch codec {
+	case "h264":
+		profile := strings.ToLower(video.Profile)
+		if strings.Contains(profile, "high 10") ||
+			strings.Contains(profile, "high 4:2:2") ||
+			strings.Contains(profile, "high 4:4:4") {
+			return false
+		}
+		pixel := strings.ToLower(strings.TrimSpace(video.PixelFormat))
+		return pixel == "yuv420p" || pixel == "yuvj420p"
+	case "hevc":
+		if !caps.HEVC && !caps.HEVC10 {
+			return false
+		}
+		return !hevc10Bit(video) || caps.HEVC10
+	default:
+		return false
+	}
+}
+
+func hevc10Bit(video VideoStream) bool {
+	if video.BitDepth > 8 {
+		return true
+	}
+	profile := strings.ToLower(video.Profile)
+	pixel := strings.ToLower(video.PixelFormat)
+	return strings.Contains(profile, "main 10") ||
+		strings.Contains(profile, "main10") ||
+		strings.Contains(pixel, "10") ||
+		strings.Contains(pixel, "p010")
+}
+
+func directAudio(info *FileInfo) bool {
+	if info == nil || len(info.Audio) == 0 {
+		return true
+	}
+	audio := info.Audio[0]
+	for _, track := range info.Audio {
+		if track.Default {
+			audio = track
+			break
+		}
+	}
+	switch strings.ToLower(strings.TrimSpace(audio.Codec)) {
+	case "aac", "mp3":
+		return true
+	default:
+		return false
 	}
 }
 

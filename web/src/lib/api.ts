@@ -646,6 +646,7 @@ export interface PlayQuery {
 	audio?: number;
 	quality?: string;
 	subtitle?: string;
+	caps?: string;
 }
 
 export interface ScanStatus {
@@ -1263,6 +1264,9 @@ export class ApiClient {
 
 	async getPlay(id: number, query: PlayQuery, token: string): Promise<PlayResponse> {
 		const params = new URLSearchParams();
+		if (query.caps) {
+			params.set('caps', query.caps);
+		}
 		if (query.audio !== undefined) {
 			params.set('audio', String(query.audio));
 		}
@@ -1288,8 +1292,13 @@ export class ApiClient {
 		await this.delete(`/api/v1/items/${id}/preferences`, token);
 	}
 
-	async getFileInfo(id: number, token: string): Promise<FileInfo> {
-		return this.get<FileInfo>(`/api/v1/items/${id}/file-info`, token);
+	async getFileInfo(id: number, token: string, caps = ''): Promise<FileInfo> {
+		const params = new URLSearchParams();
+		if (caps) {
+			params.set('caps', caps);
+		}
+		const suffix = params.toString() ? `?${params}` : '';
+		return this.get<FileInfo>(`/api/v1/items/${id}/file-info${suffix}`, token);
 	}
 
 	async getImageOptions(id: number, token: string): Promise<ImageOptions> {
