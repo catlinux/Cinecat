@@ -1,4 +1,5 @@
 <script lang="ts">
+	import EpisodeUploadDialog from '$lib/components/EpisodeUploadDialog.svelte';
 	import LibraryFilters from '$lib/components/LibraryFilters.svelte';
 	import Pagination from '$lib/components/Pagination.svelte';
 	import SeriesCard from '$lib/components/SeriesCard.svelte';
@@ -21,6 +22,17 @@
 			{data.total} {data.total === 1 ? 'serie' : 'series'}
 		</p>
 	</div>
+
+	{#if data.isAdmin}
+		<div class="series-admin-actions">
+			<EpisodeUploadDialog
+				id="crear-serie"
+				mode="serie-nueva"
+				roots={data.uploadTargets?.roots ?? []}
+				allowed={data.uploadTargets?.allowed ?? true}
+			/>
+		</div>
+	{/if}
 
 	<LibraryFilters
 		filters={data.filters}

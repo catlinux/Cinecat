@@ -159,6 +159,7 @@ function listData(overrides: Record<string, unknown> = {}) {
 		clearHref: '/series',
 		currentUrl: '/series',
 		errorMessage: null,
+		uploadTargets: null,
 		...overrides
 	};
 }
@@ -318,6 +319,57 @@ describe('carga del listado de series', () => {
 		expect(result.series).toEqual([]);
 		expect(result.total).toBe(0);
 		expect(result.errorMessage).toBeTruthy();
+	});
+
+	it('carga los destinos de subida solo para administradores', async () => {
+		const targets = {
+			allowed: true,
+			roots: [
+				{
+					library_id: 1,
+					library_name: 'Series',
+					library_kind: 'video',
+					path: '/media/series',
+					movie_count: 0,
+					series_count: 5
+				}
+			]
+		};
+		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+			const url = new URL(String(input));
+			if (url.pathname === '/api/v1/series') {
+				return jsonResponse({ series: [seriesItem], total: 1, limit: 48, offset: 0 });
+			}
+			if (url.pathname === '/api/v1/series/genres') {
+				return jsonResponse({ genres: [] });
+			}
+			if (url.pathname === '/api/v1/uploads/targets') {
+				return jsonResponse(targets);
+			}
+			throw new Error(`URL inesperada: ${url}`);
+		});
+
+		const result = (await loadList(listEvent(fetchMock, '/series', true) as never)) as {
+			uploadTargets: typeof targets;
+		};
+		expect(result.uploadTargets).toEqual(targets);
+
+		const userFetch = vi.fn(async (input: RequestInfo | URL) => {
+			const url = new URL(String(input));
+			if (url.pathname === '/api/v1/series') {
+				return jsonResponse({ series: [seriesItem], total: 1, limit: 48, offset: 0 });
+			}
+			if (url.pathname === '/api/v1/series/genres') {
+				return jsonResponse({ genres: [] });
+			}
+			throw new Error(`URL inesperada: ${url}`);
+		});
+		await loadList(listEvent(userFetch, '/series', false) as never);
+		expect(
+			userFetch.mock.calls.some(
+				([input]) => new URL(String(input)).pathname === '/api/v1/uploads/targets'
+			)
+		).toBe(false);
 	});
 
 	it('no consulta las series sin identificar para quien no es admin', async () => {
@@ -524,6 +576,19 @@ describe('render del listado de series', () => {
 		expect(body).toContain('href="/series/5"');
 	});
 
+	it('muestra «Crear nueva serie» solo a administradores', () => {
+		const admin = render(SeriesListPage, {
+			props: { data: listData({ isAdmin: true }) as never }
+		}).body;
+		expect(admin).toContain('Crear nueva serie');
+		expect(admin).toContain('Nombre de la serie');
+
+		const user = render(SeriesListPage, {
+			props: { data: listData({ isAdmin: false }) as never }
+		}).body;
+		expect(user).not.toContain('Crear nueva serie');
+	});
+
 	it('distingue los estados vacíos con y sin filtros', () => {
 		const empty = render(SeriesListPage, {
 			props: { data: listData({ series: [], total: 0 }) as never }
@@ -565,6 +630,20 @@ describe('render de la ficha de serie', () => {
 		expect(body).toContain('Marcar temporada como vista');
 		expect(body).toContain('Marcar como visto');
 		expect(body).toContain('Continuar');
+	});
+
+	it('muestra «Nueva temporada» y «Subir capítulo» solo a administradores', () => {
+		const admin = render(SeriesPage, {
+			props: { data: detailData({ isAdmin: true }) as never }
+		}).body;
+		expect(admin).toContain('Nueva temporada');
+		expect(admin).toContain('Subir capítulo');
+
+		const user = render(SeriesPage, {
+			props: { data: detailData({ isAdmin: false }) as never }
+		}).body;
+		expect(user).not.toContain('Nueva temporada');
+		expect(user).not.toContain('Subir capítulo');
 	});
 
 	it('muestra «Más como este» al final, después de temporadas y antes de administración', () => {

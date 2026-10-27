@@ -32,6 +32,35 @@ export function formatUploadSize(bytes: number): string {
 	return formatBytes(bytes);
 }
 
+export function uploadExtension(name: string): string {
+	const dot = name.lastIndexOf('.');
+	return dot >= 0 ? name.slice(dot).toLowerCase() : '';
+}
+
+function subtitleLanguageSuffix(name: string, extension: string): string {
+	if (!(UPLOAD_SUBTITLE_EXTENSIONS as readonly string[]).includes(extension)) {
+		return '';
+	}
+	const stem = name.slice(0, name.length - extension.length);
+	const dot = stem.lastIndexOf('.');
+	if (dot < 0) {
+		return '';
+	}
+	const language = stem.slice(dot + 1);
+	return /^[A-Za-z]{2,3}$/.test(language) ? `.${language.toLowerCase()}` : '';
+}
+
+export function buildEpisodeUploadName(
+	seriesName: string,
+	season: number,
+	episode: number,
+	originalName: string
+): string {
+	const extension = uploadExtension(originalName);
+	const suffix = subtitleLanguageSuffix(originalName, extension);
+	return `${seriesName} S${String(season).padStart(2, '0')}E${String(episode).padStart(2, '0')}${suffix}${extension}`;
+}
+
 export interface UploadURLParameters {
 	library: number;
 	dir: string;

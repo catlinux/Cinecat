@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import type { Candidate, ImageKind, ImageOptions, Series } from '$lib/api';
 	import CastRow from '$lib/components/CastRow.svelte';
+	import EpisodeUploadDialog from '$lib/components/EpisodeUploadDialog.svelte';
 	import EpisodeRow from '$lib/components/EpisodeRow.svelte';
 	import ListToggle from '$lib/components/ListToggle.svelte';
 	import ImagePanel from '$lib/components/ImagePanel.svelte';
@@ -79,6 +80,17 @@
 	const currentSeasonWatched = $derived(currentSeason ? seasonWatched(currentSeason) : false);
 	const currentSeasonPoster = $derived(
 		data.season?.poster_url || series.poster_url || null
+	);
+	const nextSeason = $derived(
+		Math.min(99, Math.max(0, ...series.seasons.map((item) => item.season)) + 1)
+	);
+	const nextEpisode = $derived(
+		data.season
+			? Math.min(
+					999,
+					Math.max(0, ...data.season.items.map((item) => item.episode ?? 0)) + 1
+				)
+			: 1
 	);
 </script>
 
@@ -219,23 +231,35 @@
 						{/if}
 					</div>
 				</div>
-				<form method="POST" action="?/watchedSeason" use:enhance>
-					<input type="hidden" name="season" value={data.season.season} />
-					<input
-						type="hidden"
-						name="watched"
-						value={currentSeasonWatched ? '0' : '1'}
-					/>
-					<button
-						class="button button-secondary"
-						type="submit"
-						aria-pressed={currentSeasonWatched}
-					>
-						{currentSeasonWatched
-							? 'Marcar temporada como no vista'
-							: 'Marcar temporada como vista'}
-					</button>
-				</form>
+				<div class="season-actions">
+					{#if data.isAdmin}
+						<EpisodeUploadDialog
+							id={`subir-capitulo-${data.season.season}`}
+							mode="capitulo"
+							seriesId={series.id}
+							seriesTitle={series.title}
+							season={data.season.season}
+							defaultEpisode={nextEpisode}
+						/>
+					{/if}
+					<form method="POST" action="?/watchedSeason" use:enhance>
+						<input type="hidden" name="season" value={data.season.season} />
+						<input
+							type="hidden"
+							name="watched"
+							value={currentSeasonWatched ? '0' : '1'}
+						/>
+						<button
+							class="button button-secondary"
+							type="submit"
+							aria-pressed={currentSeasonWatched}
+						>
+							{currentSeasonWatched
+								? 'Marcar temporada como no vista'
+								: 'Marcar temporada como vista'}
+						</button>
+					</form>
+				</div>
 			</div>
 
 			<ul class="episode-list">
@@ -250,6 +274,20 @@
 		<p class="kicker">Estante vacío</p>
 		<h2>Esta serie todavía no tiene episodios</h2>
 		<p>Cuando el escáner encuentre archivos, aparecerán aquí.</p>
+	</div>
+{/if}
+
+{#if data.isAdmin}
+	<div class="series-season-actions">
+		<EpisodeUploadDialog
+			id="nueva-temporada"
+			mode="temporada-nueva"
+			seriesId={series.id}
+			seriesTitle={series.title}
+			defaultSeason={nextSeason}
+			defaultEpisode={1}
+			triggerLabel="Nueva temporada"
+		/>
 	</div>
 {/if}
 

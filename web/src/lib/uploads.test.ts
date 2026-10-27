@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
 	UPLOAD_ACCEPT,
+	buildEpisodeUploadName,
 	buildUploadURL,
 	formatUploadSize,
 	isUploadableFileName,
@@ -48,5 +49,28 @@ describe('utilidades de subida', () => {
 		expect(uploadErrorMessage(413, null)).toContain('tamaño máximo');
 		expect(uploadErrorMessage(507, null)).toContain('espacio libre');
 		expect(uploadErrorMessage(502, null)).toBe('No se pudo subir el archivo.');
+	});
+});
+
+describe('nombre de archivo de episodio', () => {
+	it('construye el nombre con temporada y episodio a dos cifras', () => {
+		expect(buildEpisodeUploadName('The Big Bang Theory', 1, 5, 'Capitulo.MKV')).toBe(
+			'The Big Bang Theory S01E05.mkv'
+		);
+		expect(buildEpisodeUploadName('Serie', 10, 123, 'Capitulo.mp4')).toBe(
+			'Serie S10E123.mp4'
+		);
+	});
+
+	it('conserva el idioma de los subtítulos', () => {
+		expect(buildEpisodeUploadName('Serie', 2, 3, 'Capitulo.ES.SRT')).toBe(
+			'Serie S02E03.es.srt'
+		);
+		expect(buildEpisodeUploadName('Serie', 2, 3, 'Capitulo.spa.ass')).toBe(
+			'Serie S02E03.spa.ass'
+		);
+		expect(buildEpisodeUploadName('Serie', 2, 3, 'Capitulo.vtt')).toBe(
+			'Serie S02E03.vtt'
+		);
 	});
 });

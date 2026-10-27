@@ -32,6 +32,27 @@ export interface LibrariesResponse {
 	libraries: Library[];
 }
 
+export interface UploadTargetRoot {
+	library_id: number;
+	library_name: string;
+	library_kind: 'video' | 'clips';
+	path: string;
+	movie_count: number;
+	series_count: number;
+}
+
+export interface UploadTargetsResponse {
+	allowed: boolean;
+	roots: UploadTargetRoot[];
+}
+
+export interface SeriesUploadResponse {
+	path: string;
+	size: number;
+	season: number;
+	episode: number;
+}
+
 export interface CreateLibraryInput {
 	name: string;
 	kind: LibraryKind;
@@ -828,6 +849,10 @@ export class ApiClient {
 
 	async listLibraries(token: string): Promise<LibrariesResponse> {
 		return this.get<LibrariesResponse>('/api/v1/libraries', token);
+	}
+
+	async getUploadTargets(token: string): Promise<UploadTargetsResponse> {
+		return this.get<UploadTargetsResponse>('/api/v1/uploads/targets', token);
 	}
 
 	async createLibrary(input: CreateLibraryInput, token: string): Promise<Library> {

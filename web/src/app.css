@@ -4014,6 +4014,25 @@ footer {
 	margin-top: 0.4rem;
 }
 
+.series-admin-actions,
+.series-season-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	margin-top: 0.8rem;
+}
+
+.season-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.season-actions .button {
+	margin: 0;
+}
+
 .season-head {
 	display: flex;
 	flex-wrap: wrap;
