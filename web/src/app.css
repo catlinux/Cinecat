@@ -2791,6 +2791,33 @@ footer {
 	text-transform: uppercase;
 }
 
+.poster-rating,
+.series-rating {
+	position: absolute;
+	top: 0.6rem;
+	right: 0.6rem;
+	z-index: 3;
+	padding: 0.18rem 0.42rem;
+	border: 1px solid var(--dorado);
+	border-radius: 999px;
+	background: rgb(58 16 19 / 82%);
+	color: var(--crema-clara);
+	font-family: 'Inter', system-ui, sans-serif;
+	font-size: 0.62rem;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	line-height: 1.2;
+}
+
+.poster-frame.has-rating .poster-watched,
+.series-frame.has-rating .series-progress {
+	top: 2.25rem;
+}
+
+.list-card-wrap.has-rating .list-toggle-form--small {
+	top: 4.2rem;
+}
+
 .portal {
 	width: 100%;
 }

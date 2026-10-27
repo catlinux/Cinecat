@@ -499,6 +499,7 @@ export interface Series {
 	season_count: number;
 	episode_count: number;
 	watched_count: number;
+	rating?: number | null;
 	match_status: 'auto' | 'manual' | 'none' | null;
 	favorite?: boolean;
 	watchlist?: boolean;

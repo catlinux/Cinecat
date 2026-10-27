@@ -4,6 +4,7 @@
 	import {
 		episodeCardSubtitle,
 		episodeImageURL,
+		formatScore,
 		itemSubtitle,
 		kindLabel
 	} from '$lib/media';
@@ -38,9 +39,12 @@
 	const isEpisode = $derived(item.kind === 'episode');
 	const artwork = $derived(isEpisode ? episodeImageURL(item) : posterUrl);
 	const episodeSubtitle = $derived(isEpisode ? episodeCardSubtitle(item) : '');
+	const ratingText = $derived(
+		!isEpisode && item.library_kind !== 'clips' ? formatScore(item.rating) : ''
+	);
 </script>
 
-<div class="list-card-wrap">
+<div class="list-card-wrap" class:has-rating={Boolean(ratingText)}>
 {#if isEpisode}
 	<a
 		class="episode-card"
@@ -86,7 +90,7 @@
 		href={`/items/${item.id}`}
 		style={`--poster-a: ${colors.from}; --poster-b: ${colors.to};`}
 	>
-		<div class="poster-frame">
+		<div class="poster-frame" class:has-rating={Boolean(ratingText)}>
 			{#if posterUrl}
 				<img class="poster-image" src={posterUrl} alt={`Cartel de ${item.title}`} loading="lazy" />
 			{:else}
@@ -95,6 +99,11 @@
 				</div>
 			{/if}
 			<span class="poster-kind">{kindLabel(item.kind)}</span>
+			{#if ratingText}
+				<span class="poster-rating" aria-label={`Puntuación ${ratingText} de 10`}>
+					{ratingText}
+				</span>
+			{/if}
 			{#if item.watched}
 				<span class="poster-watched">Visto</span>
 			{/if}

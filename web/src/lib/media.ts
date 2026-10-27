@@ -266,6 +266,14 @@ export function formatRating(rating: number | null): string {
 	return `★ ${rating.toFixed(1).replace('.', ',')}`;
 }
 
+// Puntuación para la insignia de las carátulas; vacía si no hay una nota válida.
+export function formatScore(rating: number | null): string {
+	if (rating === null || !Number.isFinite(rating) || rating <= 0) {
+		return '';
+	}
+	return rating.toFixed(1).replace('.', ',');
+}
+
 export function formatGenres(genres: string[]): string {
 	return genres
 		.map((genre) => genre.trim())

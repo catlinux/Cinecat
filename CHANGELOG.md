@@ -7,6 +7,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Añadido
+
+- Puntuación de TMDB en una esquina de las carátulas de películas y series (por ejemplo «7,4»), solo cuando existe.
+
 ### Corregido
 
 - La carpeta `.cinecat-papelera` se crea con permisos 0775, como el resto de la biblioteca, en lugar de 0755 por la umask del contenedor.

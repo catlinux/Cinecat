@@ -15,6 +15,7 @@ import {
 	formatMovieMeta,
 	formatRating,
 	formatResolution,
+	formatScore,
 	formatRuntime,
 	formatSampleRate,
 	matchStatusLabel,
@@ -79,6 +80,14 @@ describe('formato de la ficha', () => {
 		expect(formatRating(7.8)).toBe('★ 7,8');
 		expect(formatRating(10)).toBe('★ 10,0');
 		expect(formatRating(null)).toBe('');
+	});
+
+	it('formatea la puntuación de la carátula sin estrella', () => {
+		expect(formatScore(7.4)).toBe('7,4');
+		expect(formatScore(10)).toBe('10,0');
+		expect(formatScore(0)).toBe('');
+		expect(formatScore(-1)).toBe('');
+		expect(formatScore(null)).toBe('');
 	});
 
 	it('une los géneros sin entradas vacías', () => {

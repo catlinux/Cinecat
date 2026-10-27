@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Series } from '$lib/api';
 	import ListToggle from './ListToggle.svelte';
+	import { formatScore } from '$lib/media';
 	import { formatSeriesCounts, formatSeriesProgress } from '$lib/series';
 	import { posterColors } from '$lib/poster-color';
 
@@ -12,15 +13,16 @@
 			? formatSeriesProgress(series.watched_count, series.episode_count)
 			: ''
 	);
+	const ratingText = $derived(formatScore(series.rating ?? null));
 </script>
 
-<div class="list-card-wrap">
+<div class="list-card-wrap" class:has-rating={Boolean(ratingText)}>
 <a
 	class="series-card"
 	href={`/series/${series.id}`}
 	style={`--poster-a: ${colors.from}; --poster-b: ${colors.to};`}
 >
-	<div class="series-frame">
+	<div class="series-frame" class:has-rating={Boolean(ratingText)}>
 		{#if series.poster_url}
 			<img
 				src={series.poster_url}
@@ -31,6 +33,11 @@
 			<div class="series-fallback">
 				<span>{series.title}</span>
 			</div>
+		{/if}
+		{#if ratingText}
+			<span class="series-rating" aria-label={`Puntuación ${ratingText} de 10`}>
+				{ratingText}
+			</span>
 		{/if}
 		{#if progress}
 			<span class="series-progress" class:series-progress--complete={progress === 'Vista'}>

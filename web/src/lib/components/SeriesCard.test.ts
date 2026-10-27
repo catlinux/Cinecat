@@ -23,6 +23,21 @@ describe('SeriesCard', () => {
 		expect(body).toContain('href="/series/3"');
 		expect(body).toContain('2 temporadas');
 	});
+	it('muestra la puntuación de la serie cuando existe', () => {
+		const { body } = render(SeriesCard, { props: { series: { ...series, rating: 8.2 } } });
+		expect(body).toContain('series-rating');
+		expect(body).toContain('>8,2</span>');
+		expect(body).toContain('aria-label="Puntuación 8,2 de 10"');
+	});
+
+	it('omite la puntuación si falta o es cero', () => {
+		const missing = render(SeriesCard, { props: { series } }).body;
+		expect(missing).not.toContain('series-rating');
+
+		const zero = render(SeriesCard, { props: { series: { ...series, rating: 0 } } }).body;
+		expect(zero).not.toContain('series-rating');
+	});
+
 	it('pone el botón de favorito fuera del enlace', () => {
 		const { body } = render(SeriesCard, { props: { series: { ...series, favorite: false } } });
 		expect(body).toContain('action="/lists"');

@@ -51,6 +51,32 @@ describe('PosterCard', () => {
 		expect(body).not.toContain('Visto');
 	});
 
+	it('muestra la puntuación con una decimal y coma', () => {
+		const { body } = render(PosterCard, { props: { item: { ...item, rating: 7.4 } } });
+
+		expect(body).toContain('poster-rating');
+		expect(body).toContain('>7,4</span>');
+		expect(body).toContain('aria-label="Puntuación 7,4 de 10"');
+	});
+
+	it('omite la puntuación si no hay nota o no es de una película', () => {
+		const withoutRating = render(PosterCard, { props: { item: { ...item, rating: null } } }).body;
+		expect(withoutRating).not.toContain('poster-rating');
+
+		const zero = render(PosterCard, { props: { item: { ...item, rating: 0 } } }).body;
+		expect(zero).not.toContain('poster-rating');
+
+		const clip = render(PosterCard, {
+			props: { item: { ...item, library_kind: 'clips', rating: 7.4 } }
+		}).body;
+		expect(clip).not.toContain('poster-rating');
+
+		const episode = render(PosterCard, {
+			props: { item: { ...item, kind: 'episode', rating: 7.4 } }
+		}).body;
+		expect(episode).not.toContain('poster-rating');
+	});
+
 	it('marca discretamente los ítems vistos con texto accesible', () => {
 		const { body } = render(PosterCard, { props: { item: { ...item, watched: true } } });
 
