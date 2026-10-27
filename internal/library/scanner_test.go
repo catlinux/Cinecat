@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/catlinux/cinecat/internal/store"
@@ -69,6 +70,160 @@ func readMediaRow(t *testing.T, db *sql.DB, path string) mediaRow {
 		t.Fatalf("leer media_items %q: %v", path, err)
 	}
 	return row
+}
+
+func addScannerLibraryPath(t *testing.T, db *sql.DB, libraryID int64, path string) {
+	t.Helper()
+	if _, err := db.Exec(
+		`INSERT INTO library_paths (library_id, path) VALUES (?, ?)`, libraryID, path); err != nil {
+		t.Fatalf("añadir carpeta %q: %v", path, err)
+	}
+}
+
+func TestScannerVariasCarpetasYArchivoRetirado(t *testing.T) {
+	ctx := context.Background()
+	db := openTestDB(t)
+	rootA := t.TempDir()
+	rootB := t.TempDir()
+	fileA := filepath.Join(rootA, "A (2001).mkv")
+	fileA2 := filepath.Join(rootA, "A2 (2003).mkv")
+	fileB := filepath.Join(rootB, "B (2002).mkv")
+	writeFile(t, fileA)
+	writeFile(t, fileA2)
+	writeFile(t, fileB)
+
+	libraryID := createLibrary(t, db, rootA)
+	addScannerLibraryPath(t, db, libraryID, rootA)
+	addScannerLibraryPath(t, db, libraryID, rootB)
+
+	scanner := New(db)
+	res, err := scanner.Scan(ctx)
+	if err != nil {
+		t.Fatalf("Scan: %v", err)
+	}
+	if res.Files != 3 || res.Upserted != 3 {
+		t.Fatalf("resultado inesperado: %+v", res)
+	}
+	if err := os.Remove(fileA); err != nil {
+		t.Fatalf("retirar archivo: %v", err)
+	}
+	res, err = scanner.Scan(ctx)
+	if err != nil {
+		t.Fatalf("Scan tras retirar archivo: %v", err)
+	}
+	if res.Files != 2 {
+		t.Fatalf("archivos tras poda = %d, se esperaba 2", res.Files)
+	}
+	if count := countRows(t, &libraryTestServer{db: db}, `SELECT count(*) FROM media_items WHERE path = ?`, fileA); count != 0 {
+		t.Fatalf("el archivo ausente debe podarse: %d", count)
+	}
+	if count := countRows(t, &libraryTestServer{db: db}, `SELECT count(*) FROM media_items WHERE path = ?`, fileB); count != 1 {
+		t.Fatalf("el archivo de la otra carpeta debe conservarse: %d", count)
+	}
+}
+
+func TestScannerCarpetaNoDisponibleConservaFichasYProgreso(t *testing.T) {
+	ctx := context.Background()
+	db := openTestDB(t)
+	rootA := t.TempDir()
+	rootB := t.TempDir()
+	fileA := filepath.Join(rootA, "A (2001).mkv")
+	fileB := filepath.Join(rootB, "B (2002).mkv")
+	writeFile(t, fileA)
+	writeFile(t, fileB)
+
+	libraryID := createLibrary(t, db, rootA)
+	addScannerLibraryPath(t, db, libraryID, rootA)
+	addScannerLibraryPath(t, db, libraryID, rootB)
+	scanner := New(db)
+	if _, err := scanner.Scan(ctx); err != nil {
+		t.Fatalf("primer Scan: %v", err)
+	}
+
+	var itemID int64
+	if err := db.QueryRow(`SELECT id FROM media_items WHERE path = ?`, fileB).Scan(&itemID); err != nil {
+		t.Fatalf("leer ítem B: %v", err)
+	}
+	if _, err := db.Exec(`INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)`,
+		"ana", "x", "user"); err != nil {
+		t.Fatalf("crear usuario: %v", err)
+	}
+	anaID := progressUserID(t, db, "ana")
+	setWatchState(t, db, anaID, itemID)
+	setProgressRow(t, db, anaID, itemID, 30, 100, "2026-10-26T10:00:00Z")
+	if err := os.RemoveAll(rootB); err != nil {
+		t.Fatalf("retirar carpeta B: %v", err)
+	}
+
+	res, err := scanner.Scan(ctx)
+	if err != nil {
+		t.Fatalf("Scan sin carpeta B: %v", err)
+	}
+	foundWarning := false
+	for _, warning := range res.Warnings {
+		if strings.Contains(warning, rootB) && strings.Contains(warning, "se conservan sus fichas") {
+			foundWarning = true
+		}
+	}
+	if !foundWarning {
+		t.Fatalf("falta el aviso de carpeta no disponible: %v", res.Warnings)
+	}
+	server := &libraryTestServer{db: db}
+	if count := countRows(t, server, `SELECT count(*) FROM media_items WHERE id = ?`, itemID); count != 1 {
+		t.Fatalf("el ítem de la carpeta ausente debe conservarse: %d", count)
+	}
+	if count := countRows(t, server, `SELECT count(*) FROM watch_state WHERE media_item_id = ?`, itemID); count != 1 {
+		t.Fatalf("el visto debe conservarse: %d", count)
+	}
+	if count := countRows(t, server, `SELECT count(*) FROM playback_progress WHERE media_item_id = ?`, itemID); count != 1 {
+		t.Fatalf("el progreso debe conservarse: %d", count)
+	}
+
+	writeFile(t, fileB)
+	if _, err := scanner.Scan(ctx); err != nil {
+		t.Fatalf("Scan con carpeta B restaurada: %v", err)
+	}
+	if count := countRows(t, server, `SELECT count(*) FROM media_items WHERE id = ?`, itemID); count != 1 {
+		t.Fatalf("el ítem debe seguir al volver la carpeta: %d", count)
+	}
+}
+
+func TestScannerSaltaTiposNoImplementados(t *testing.T) {
+	ctx := context.Background()
+	db := openTestDB(t)
+	for _, kind := range []string{"clips", "music"} {
+		root := t.TempDir()
+		writeFile(t, filepath.Join(root, kind+".mkv"))
+		result, err := db.Exec(
+			`INSERT INTO libraries (path, name, kind) VALUES (?, ?, ?)`, root, kind, kind)
+		if err != nil {
+			t.Fatalf("crear biblioteca %s: %v", kind, err)
+		}
+		id, err := result.LastInsertId()
+		if err != nil {
+			t.Fatalf("id de biblioteca %s: %v", kind, err)
+		}
+		addScannerLibraryPath(t, db, id, root)
+	}
+
+	res, err := New(db).Scan(ctx)
+	if err != nil {
+		t.Fatalf("Scan: %v", err)
+	}
+	if res.Files != 0 {
+		t.Fatalf("las bibliotecas no implementadas no deben escanear archivos: %+v", res)
+	}
+	for _, kind := range []string{"clips", "music"} {
+		found := false
+		for _, warning := range res.Warnings {
+			if strings.Contains(warning, "tipo "+kind+" pendiente de implementar") {
+				found = true
+			}
+		}
+		if !found {
+			t.Fatalf("falta el aviso para %s: %v", kind, res.Warnings)
+		}
+	}
 }
 
 func TestScannerPueblaMediaItemsSinDuplicar(t *testing.T) {
@@ -180,5 +335,49 @@ func TestScannerBibliotecaInexistente(t *testing.T) {
 	}
 	if res.Libraries != 1 || res.Files != 0 || len(res.Warnings) != 1 {
 		t.Fatalf("resultado inesperado: %+v", res)
+	}
+}
+
+func TestScannerCarpetaVaciaConFichasNoSePoda(t *testing.T) {
+	ctx := context.Background()
+	db := openTestDB(t)
+	rootA := t.TempDir()
+	rootB := t.TempDir()
+	fileA := filepath.Join(rootA, "A (2001).mkv")
+	fileB := filepath.Join(rootB, "B (2002).mkv")
+	writeFile(t, fileA)
+	writeFile(t, fileB)
+
+	libraryID := createLibrary(t, db, rootA)
+	addScannerLibraryPath(t, db, libraryID, rootA)
+	addScannerLibraryPath(t, db, libraryID, rootB)
+	scanner := New(db)
+	if _, err := scanner.Scan(ctx); err != nil {
+		t.Fatalf("primer Scan: %v", err)
+	}
+
+	// Un disco sin montar deja su punto de montaje como carpeta vacía.
+	if err := os.Remove(fileB); err != nil {
+		t.Fatalf("vaciar carpeta B: %v", err)
+	}
+	res, err := scanner.Scan(ctx)
+	if err != nil {
+		t.Fatalf("Scan con carpeta B vacía: %v", err)
+	}
+	server := &libraryTestServer{db: db}
+	if count := countRows(t, server, `SELECT count(*) FROM media_items WHERE path = ?`, fileB); count != 1 {
+		t.Fatalf("la ficha de una carpeta vacía debe conservarse: %d", count)
+	}
+	found := false
+	for _, warning := range res.Warnings {
+		if strings.Contains(warning, rootB) && strings.Contains(warning, "está vacía pero tiene fichas") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("falta el aviso de carpeta vacía: %v", res.Warnings)
+	}
+	if count := countRows(t, server, `SELECT count(*) FROM media_items WHERE path = ?`, fileA); count != 1 {
+		t.Fatalf("la otra carpeta no debe verse afectada: %d", count)
 	}
 }

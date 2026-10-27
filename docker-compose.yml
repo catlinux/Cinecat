@@ -16,6 +16,7 @@ services:
     environment:
       CINECAT_DB_PATH: /data/cinecat.db
       CINECAT_RUN_DIR: /run/cinecat-update
+      CINECAT_MEDIA_ROOTS: ${CINECAT_MEDIA_ROOTS:-/media}
       CINECAT_TMDB_API_KEY: ${CINECAT_TMDB_API_KEY:-}
       CINECAT_OMDB_API_KEY: ${CINECAT_OMDB_API_KEY:-}
       CINECAT_SCAN_INTERVAL: ${CINECAT_SCAN_INTERVAL:-6h}

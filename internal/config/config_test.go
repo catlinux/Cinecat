@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -13,6 +14,7 @@ func TestLoadDefaults(t *testing.T) {
 	t.Setenv(EnvTMDBAPIKey, "")
 	t.Setenv(EnvOMDbAPIKey, "")
 	t.Setenv(EnvScanInterval, "")
+	t.Setenv(EnvMediaRoots, "")
 
 	cfg, err := Load("")
 	if err != nil {
@@ -29,6 +31,23 @@ func TestLoadDefaults(t *testing.T) {
 	}
 	if cfg.OMDbAPIKey != "" {
 		t.Fatalf("OMDbAPIKey = %q, se esperaba vacía por defecto", cfg.OMDbAPIKey)
+	}
+	if len(cfg.MediaRoots) != 1 || cfg.MediaRoots[0] != DefaultMediaRoot {
+		t.Fatalf("MediaRoots = %#v, se esperaba [%q]", cfg.MediaRoots, DefaultMediaRoot)
+	}
+}
+
+func TestLoadMediaRoots(t *testing.T) {
+	rootA := filepath.Join(t.TempDir(), "a")
+	rootB := filepath.Join(t.TempDir(), "b")
+	t.Setenv(EnvMediaRoots, strings.Join([]string{rootA, rootB}, string(os.PathListSeparator)))
+
+	cfg, err := Load("")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if len(cfg.MediaRoots) != 2 || cfg.MediaRoots[0] != rootA || cfg.MediaRoots[1] != rootB {
+		t.Fatalf("MediaRoots = %#v", cfg.MediaRoots)
 	}
 }
 

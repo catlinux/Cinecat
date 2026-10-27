@@ -178,6 +178,7 @@ func main() {
 	api := library.NewAPI(st.DB(), authSvc, playSvc, scanJob, tmdbClient)
 	api = api.WithSettings(settingsStore)
 	api = api.WithFileInspector(playSvc)
+	api = api.WithMediaRoots(cfg.MediaRoots)
 
 	updateAPI := update.NewAPI(
 		authSvc.Authenticate,

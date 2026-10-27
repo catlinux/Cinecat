@@ -48,9 +48,13 @@ func ensureSeries(ctx context.Context, db *sql.DB, libraryID int64, folder, titl
 	return id, nil
 }
 
+type sqlExecer interface {
+	ExecContext(context.Context, string, ...any) (sql.Result, error)
+}
+
 // deleteOrphanSeries elimina las series que se quedaron sin episodios. Las
 // corregidas a mano se conservan aunque no tengan archivos.
-func deleteOrphanSeries(ctx context.Context, db *sql.DB) error {
+func deleteOrphanSeries(ctx context.Context, db sqlExecer) error {
 	_, err := db.ExecContext(ctx, `
 		DELETE FROM series
 		 WHERE (match_status IS NULL OR match_status <> 'manual')
@@ -61,6 +65,27 @@ func deleteOrphanSeries(ctx context.Context, db *sql.DB) error {
 		return fmt.Errorf("library: borrar series huérfanas: %w", err)
 	}
 	return nil
+}
+
+func deleteEmptyAutomaticCollections(ctx context.Context, db sqlExecer) error {
+	_, err := db.ExecContext(ctx, `
+		DELETE FROM collections
+		 WHERE source = 'tmdb'
+		   AND NOT EXISTS (
+		       SELECT 1 FROM collection_items
+		        WHERE collection_items.collection_id = collections.id
+		   )`)
+	if err != nil {
+		return fmt.Errorf("library: borrar colecciones automáticas vacías: %w", err)
+	}
+	return nil
+}
+
+func cleanupOrphans(ctx context.Context, db sqlExecer) error {
+	if err := deleteOrphanSeries(ctx, db); err != nil {
+		return err
+	}
+	return deleteEmptyAutomaticCollections(ctx, db)
 }
 
 // BackfillSeriesSortKeys completa las claves de orden de las series insertadas

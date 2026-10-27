@@ -24,6 +24,7 @@ cp .env.deploy.example .env
 Edita `.env`:
 
 - `CINECAT_MEDIA_PATH`: ruta del host que se monta completa y en solo lectura en `/media`.
+- `CINECAT_MEDIA_ROOTS`: raíces visibles dentro del contenedor para elegir carpetas de biblioteca; por defecto `/media`.
 - `CINECAT_TMDB_API_KEY`: clave de TMDB para fichas completas; si falta, se puede usar OMDb solo para sinopsis y cartel de películas.
 - `CINECAT_OMDB_API_KEY`: opcional, respaldo sin TMDB.
 - `CINECAT_SCAN_INTERVAL`: intervalo automático; `0` lo desactiva.

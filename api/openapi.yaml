@@ -287,7 +287,9 @@ paths:
   /api/v1/libraries:
     get:
       summary: Lista las bibliotecas
-      description: Devuelve todas las bibliotecas dadas de alta, ordenadas por nombre.
+      description: |
+        Devuelve todas las bibliotecas dadas de alta, ordenadas por nombre, con
+        su tipo, sus carpetas y el número de ítems.
       security:
         - bearerAuth: []
       responses:
@@ -402,15 +404,245 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+    patch:
+      summary: Cambia el nombre de una biblioteca (solo administradores)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateLibraryRequest'
+      responses:
+        '200':
+          description: Biblioteca actualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Library'
+        '400':
+          description: Nombre no válido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: El usuario no tiene rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Biblioteca no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/libraries/{id}/paths:
+    post:
+      summary: Añade una carpeta a una biblioteca (solo administradores)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LibraryPathRequest'
+      responses:
+        '201':
+          description: Carpeta añadida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Library'
+        '400':
+          description: Ruta no válida, inexistente, fuera de las raíces o no es un directorio
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: El usuario no tiene rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Biblioteca no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: La carpeta ya está registrada o se solapa con otra
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/libraries/{id}/paths/{pathId}:
+    delete:
+      summary: Quita una carpeta de una biblioteca (solo administradores)
+      description: |
+        Borra de la base los ítems que cuelgan de la carpeta y limpia series y
+        colecciones huérfanas. No toca los archivos del disco. La última carpeta
+        de una biblioteca no se puede quitar.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - name: pathId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        '204':
+          description: Carpeta quitada
+        '400':
+          description: Es la única carpeta de la biblioteca
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: El usuario no tiene rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Biblioteca o carpeta no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/fs:
+    get:
+      summary: Navega por las carpetas permitidas del servidor (solo administradores)
+      description: |
+        Sin `path` devuelve las raíces permitidas. Con `path` devuelve solo
+        directorios, sin entradas ocultas ni `.cinecat-papelera`, con un máximo
+        de 1000. Las rutas se confinan a `CINECAT_MEDIA_ROOTS`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: path
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Raíces o contenido de una carpeta
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/FSRootsResponse'
+                  - $ref: '#/components/schemas/FSBrowseResponse'
+        '400':
+          description: Ruta relativa, con «..» o que no es un directorio
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Ruta fuera de las raíces permitidas o usuario sin rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ruta inexistente o no legible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/libraries/scan:
     post:
       summary: Inicia un escaneo en segundo plano (solo administradores)
       description: |
-        Recorre todas las bibliotecas dadas de alta, analiza los nombres de los
-        archivos de vídeo y actualiza `media_items` sin duplicar entradas. La
-        respuesta vuelve en cuanto arranca el escaneo; el progreso y el
-        resultado se consultan con `GET /api/v1/libraries/scan`. Si ya hay uno
-        en marcha, responde 409. Requiere una sesión con rol `admin`.
+        Recorre todas las carpetas de las bibliotecas de tipo `video`, analiza
+        los nombres de los archivos y actualiza `media_items` sin duplicar
+        entradas. Si una carpeta no está disponible, conserva sus fichas y avisa
+        en el resultado. La respuesta vuelve en cuanto arranca el escaneo; el
+        progreso y el resultado se consultan con `GET /api/v1/libraries/scan`.
+        Si ya hay uno en marcha, responde 409. Requiere una sesión con rol
+        `admin`.
       security:
         - bearerAuth: []
       responses:
@@ -3262,15 +3494,100 @@ components:
       required:
         - id
         - name
+        - kind
         - path
+        - paths
+        - item_count
       properties:
         id:
           type: integer
           format: int64
         name:
           type: string
+        kind:
+          type: string
+          enum: [video, clips, music]
         path:
           type: string
+          description: Carpeta principal, por compatibilidad con clientes antiguos.
+        paths:
+          type: array
+          items:
+            $ref: '#/components/schemas/LibraryPath'
+        item_count:
+          type: integer
+          format: int64
+      additionalProperties: false
+    LibraryPath:
+      type: object
+      required:
+        - id
+        - path
+      properties:
+        id:
+          type: integer
+          format: int64
+        path:
+          type: string
+      additionalProperties: false
+    UpdateLibraryRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+      additionalProperties: false
+    LibraryPathRequest:
+      type: object
+      required:
+        - path
+      properties:
+        path:
+          type: string
+      additionalProperties: false
+    FSEntry:
+      type: object
+      required:
+        - name
+        - path
+      properties:
+        name:
+          type: string
+        path:
+          type: string
+      additionalProperties: false
+    FSRootsResponse:
+      type: object
+      required:
+        - roots
+      properties:
+        roots:
+          type: array
+          items:
+            $ref: '#/components/schemas/FSEntry'
+      additionalProperties: false
+    FSBrowseResponse:
+      type: object
+      required:
+        - path
+        - parent
+        - entries
+        - truncated
+      properties:
+        path:
+          type: string
+        parent:
+          type: string
+          nullable: true
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/FSEntry'
+        truncated:
+          type: boolean
       additionalProperties: false
     LibrariesResponse:
       type: object
@@ -3286,13 +3603,23 @@ components:
       type: object
       required:
         - name
-        - path
       properties:
         name:
           type: string
+          minLength: 1
+          maxLength: 80
+        kind:
+          type: string
+          enum: [video, clips, music]
+          default: video
         path:
           type: string
-          description: Ruta existente y que sea un directorio en el servidor.
+          description: Formato antiguo de una sola carpeta. Se puede usar en lugar de `paths`.
+        paths:
+          type: array
+          items:
+            type: string
+          description: Carpetas existentes dentro de las raíces permitidas.
       additionalProperties: false
     ScanStarted:
       type: object

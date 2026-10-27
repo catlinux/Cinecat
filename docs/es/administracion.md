@@ -25,7 +25,15 @@ Solo los usuarios con rol `admin` pueden entrar en `/admin`. El servidor comprue
 3. Pulsa **Crear biblioteca**. La ruta debe existir y ser un directorio dentro del contenedor; por ejemplo `/media/Multimedia/Pelis`.
 4. Pulsa **Escanear todas las bibliotecas**. El escaneo sigue en segundo plano aunque cierres la página.
 
-La ruta se escribe a mano: no hay navegador de carpetas del servidor. El contenedor monta `CINECAT_MEDIA_PATH` completo y en solo lectura en `/media`; crea una biblioteca por cada subcarpeta real que quieras separar (películas, series, etc.).
+### Varias carpetas por biblioteca
+
+Una biblioteca puede agrupar varias carpetas, incluso de discos distintos. La primera carpeta se conserva como carpeta principal por compatibilidad; al quitar la principal, pasa a serlo la siguiente más antigua. Una biblioteca puede ser de tipo `video` (películas y series), `clips` (vídeos sin identificar) o `music` (música); de momento solo se escanea `video`, y los otros dos tipos se omiten con un aviso.
+
+El servidor permite añadir y quitar carpetas y ofrece un navegador confinado en `GET /api/v1/fs` (solo administradores). La pantalla de la web para usar ese navegador llegará en la siguiente tarea. Mientras tanto, la ruta se escribe a mano; el contenedor monta `CINECAT_MEDIA_PATH` completo y en solo lectura en `/media`.
+
+Las carpetas se validan contra `CINECAT_MEDIA_ROOTS`: una lista de raíces separadas por `:` en Linux y `;` en Windows (por defecto `/media`). Una ruta fuera de esas raíces, inexistente, que no sea un directorio, repetida o solapada con otra se rechaza. Quitar una carpeta borra sus fichas de la base de datos, pero no toca los archivos del disco.
+
+**Protección contra discos sin montar.** El escaneo solo borra fichas de las carpetas que ha recorrido con éxito. Si una carpeta no está disponible, o se recorre sin encontrar ni un archivo aunque la base tiene fichas suyas (lo que pasa con un disco sin montar, cuyo punto de montaje queda como carpeta vacía), conserva las fichas, con su visto y progreso, y lo avisa en el resultado del escaneo. Consecuencia: si vacías de verdad una carpeta entera, sus fichas no se borran solas; quita la carpeta de la biblioteca para eliminarlas.
 
 ## Escaneo e identificación
 
@@ -91,10 +99,11 @@ Leídas por el servidor:
 | `CINECAT_TMDB_API_KEY` | vacío | Activa TMDB; tiene prioridad sobre OMDb. |
 | `CINECAT_OMDB_API_KEY` | vacío | Activa OMDb solo si no hay TMDB. |
 | `CINECAT_SCAN_INTERVAL` | `6h` | Defecto inicial de `scan.interval`. |
+| `CINECAT_MEDIA_ROOTS` | `/media` | Raíces permitidas para las carpetas de biblioteca y el navegador; separadas por `:` en Linux y `;` en Windows. |
 | `CINECAT_ADMIN_PASSWORD` | vacío | Contraseña del `admin` creado en el primer arranque; si falta, se genera y se imprime una vez. |
 | `CINECAT_RUN_DIR` | `/run/cinecat-update` | Directorio compartido para las peticiones de actualización. |
 
-En Docker, además: `CINECAT_MEDIA_PATH` (ruta del host montada en `/media`), `CINECAT_API_PORT` (`8080`) y `CINECAT_WEB_PORT` (`8081`). `PUBLIC_API_URL` y `PROTOCOL_HEADER` son del contenedor web. No hay variables para la ruta de FFmpeg, CORS, usuarios ni límites de HLS.
+En Docker, además: `CINECAT_MEDIA_PATH` (ruta del host montada en `/media`), `CINECAT_MEDIA_ROOTS` (raíces visibles dentro del contenedor), `CINECAT_API_PORT` (`8080`) y `CINECAT_WEB_PORT` (`8081`). `PUBLIC_API_URL` y `PROTOCOL_HEADER` son del contenedor web. No hay variables para la ruta de FFmpeg, CORS, usuarios ni límites de HLS.
 
 ## Actualizar el servidor
 

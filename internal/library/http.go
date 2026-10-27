@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -34,6 +33,7 @@ type API struct {
 	fileInspector FileInspector
 	fileInfoCache *fileInfoCache
 	settingsStore *settings.Store
+	mediaRoots    []string
 }
 
 // NewAPI crea los handlers de la API de biblioteca.
@@ -50,6 +50,7 @@ func NewAPI(db *sql.DB, authSvc *auth.Service, playSvc *playback.Service, scanJo
 		tmdb:          tmdb,
 		fileInspector: inspector,
 		fileInfoCache: newFileInfoCache(),
+		mediaRoots:    defaultMediaRoots(),
 	}
 }
 
@@ -80,11 +81,15 @@ func (a *API) Register(mux *http.ServeMux) {
 	}
 	mux.Handle("GET /api/v1/libraries", a.requireSession(a.handleLibraries))
 	mux.Handle("POST /api/v1/libraries", a.requireAdmin(a.handleCreateLibrary))
+	mux.Handle("GET /api/v1/fs", a.requireAdmin(a.handleFS))
 	if a.scanJob != nil {
 		mux.Handle("POST /api/v1/libraries/scan", a.requireAdmin(a.handleScanLibraries))
 		mux.Handle("GET /api/v1/libraries/scan", a.requireAdmin(a.handleScanStatus))
 	}
+	mux.Handle("PATCH /api/v1/libraries/{id}", a.requireAdmin(a.handleUpdateLibrary))
 	mux.Handle("DELETE /api/v1/libraries/{id}", a.requireAdmin(a.handleDeleteLibrary))
+	mux.Handle("POST /api/v1/libraries/{id}/paths", a.requireAdmin(a.handleAddLibraryPath))
+	mux.Handle("DELETE /api/v1/libraries/{id}/paths/{pathId}", a.requireAdmin(a.handleDeleteLibraryPath))
 	mux.Handle("GET /api/v1/genres", a.requireSession(a.handleGenres))
 	mux.Handle("GET /api/v1/home", a.requireSession(a.handleHome))
 	mux.Handle("GET /api/v1/collections", a.requireSession(a.handleCollections))
@@ -170,137 +175,7 @@ func (a *API) requireRole(role string, next sessionHandler) http.Handler {
 	})
 }
 
-type libraryDTO struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
-	Path string `json:"path"`
-}
-
-type librariesResponse struct {
-	Libraries []libraryDTO `json:"libraries"`
-}
-
-func (a *API) handleLibraries(w http.ResponseWriter, r *http.Request) {
-	rows, err := a.db.QueryContext(r.Context(),
-		`SELECT id, name, path FROM libraries ORDER BY name COLLATE NOCASE, id`)
-	if err != nil {
-		log.Printf("library: listar bibliotecas: %v", err)
-		writeJSONError(w, http.StatusInternalServerError, "error interno")
-		return
-	}
-	defer rows.Close()
-
-	libraries := make([]libraryDTO, 0)
-	for rows.Next() {
-		var l libraryDTO
-		if err := rows.Scan(&l.ID, &l.Name, &l.Path); err != nil {
-			log.Printf("library: leer biblioteca: %v", err)
-			writeJSONError(w, http.StatusInternalServerError, "error interno")
-			return
-		}
-		libraries = append(libraries, l)
-	}
-	if err := rows.Err(); err != nil {
-		log.Printf("library: recorrer bibliotecas: %v", err)
-		writeJSONError(w, http.StatusInternalServerError, "error interno")
-		return
-	}
-
-	writeJSON(w, http.StatusOK, librariesResponse{Libraries: libraries})
-}
-
 const maxLibraryBody = 8 << 10 // 8 KiB
-
-type createLibraryRequest struct {
-	Name string `json:"name"`
-	Path string `json:"path"`
-}
-
-func (a *API) handleCreateLibrary(w http.ResponseWriter, r *http.Request) {
-	var req createLibraryRequest
-	if err := decodeJSONBody(w, r, &req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "petición no válida")
-		return
-	}
-
-	name := strings.TrimSpace(req.Name)
-	if name == "" {
-		writeJSONError(w, http.StatusBadRequest, "el nombre no puede estar vacío")
-		return
-	}
-	path := strings.TrimSpace(req.Path)
-	if path == "" {
-		writeJSONError(w, http.StatusBadRequest, "la ruta no puede estar vacía")
-		return
-	}
-	path = filepath.Clean(path)
-
-	info, err := os.Stat(path)
-	if err != nil {
-		writeJSONError(w, http.StatusBadRequest, "la ruta no existe o no es accesible")
-		return
-	}
-	if !info.IsDir() {
-		writeJSONError(w, http.StatusBadRequest, "la ruta no es un directorio")
-		return
-	}
-
-	var exists int
-	err = a.db.QueryRowContext(r.Context(),
-		`SELECT 1 FROM libraries WHERE path = ?`, path).Scan(&exists)
-	switch {
-	case err == nil:
-		writeJSONError(w, http.StatusConflict, "ya existe una biblioteca con esa ruta")
-		return
-	case !errors.Is(err, sql.ErrNoRows):
-		log.Printf("library: comprobar ruta de biblioteca: %v", err)
-		writeJSONError(w, http.StatusInternalServerError, "error interno")
-		return
-	}
-
-	res, err := a.db.ExecContext(r.Context(),
-		`INSERT INTO libraries (name, path) VALUES (?, ?)`, name, path)
-	if err != nil {
-		log.Printf("library: crear biblioteca: %v", err)
-		writeJSONError(w, http.StatusInternalServerError, "error interno")
-		return
-	}
-	id, err := res.LastInsertId()
-	if err != nil {
-		log.Printf("library: id de la biblioteca creada: %v", err)
-		writeJSONError(w, http.StatusInternalServerError, "error interno")
-		return
-	}
-
-	writeJSON(w, http.StatusCreated, libraryDTO{ID: id, Name: name, Path: path})
-}
-
-func (a *API) handleDeleteLibrary(w http.ResponseWriter, r *http.Request) {
-	id, ok := idFromPath(r)
-	if !ok {
-		writeJSONError(w, http.StatusNotFound, "biblioteca no encontrada")
-		return
-	}
-
-	res, err := a.db.ExecContext(r.Context(), `DELETE FROM libraries WHERE id = ?`, id)
-	if err != nil {
-		log.Printf("library: borrar biblioteca %d: %v", id, err)
-		writeJSONError(w, http.StatusInternalServerError, "error interno")
-		return
-	}
-	affected, err := res.RowsAffected()
-	if err != nil {
-		log.Printf("library: filas borradas de la biblioteca %d: %v", id, err)
-		writeJSONError(w, http.StatusInternalServerError, "error interno")
-		return
-	}
-	if affected == 0 {
-		writeJSONError(w, http.StatusNotFound, "biblioteca no encontrada")
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
 
 func (a *API) handleScanLibraries(w http.ResponseWriter, r *http.Request) {
 	// El escaneo debe sobrevivir a esta petición; no se le pasa r.Context().

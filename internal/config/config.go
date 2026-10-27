@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -24,6 +25,7 @@ const (
 	EnvTMDBAPIKey   = "CINECAT_TMDB_API_KEY"
 	EnvOMDbAPIKey   = "CINECAT_OMDB_API_KEY"
 	EnvScanInterval = "CINECAT_SCAN_INTERVAL"
+	EnvMediaRoots   = "CINECAT_MEDIA_ROOTS"
 )
 
 // Valores por defecto cuando no se configura otra cosa.
@@ -31,6 +33,7 @@ const (
 	DefaultListenAddr   = ":8080"
 	DefaultDatabasePath = "cinecat.db"
 	DefaultScanInterval = 6 * time.Hour
+	DefaultMediaRoot    = "/media"
 )
 
 // Config agrupa los ajustes de arranque del servidor.
@@ -48,6 +51,9 @@ type Config struct {
 	// ScanInterval es cada cuánto se escanea sola la biblioteca; 0 lo
 	// desactiva. En el archivo JSON se escribe como cadena de duración Go.
 	ScanInterval time.Duration `json:"-"`
+	// MediaRoots son las carpetas dentro de las que se pueden elegir rutas
+	// de biblioteca y navegar desde la administración.
+	MediaRoots []string `json:"-"`
 }
 
 // Default devuelve la configuración por defecto.
@@ -56,6 +62,7 @@ func Default() Config {
 		ListenAddr:   DefaultListenAddr,
 		DatabasePath: DefaultDatabasePath,
 		ScanInterval: DefaultScanInterval,
+		MediaRoots:   []string{DefaultMediaRoot},
 	}
 }
 
@@ -93,6 +100,17 @@ func Load(configPath string) (Config, error) {
 			return Config{}, fmt.Errorf("config: %s no es una duración válida: %w", EnvScanInterval, err)
 		}
 		cfg.ScanInterval = interval
+	}
+	if raw := os.Getenv(EnvMediaRoots); strings.TrimSpace(raw) != "" {
+		roots := make([]string, 0)
+		for _, root := range filepath.SplitList(raw) {
+			if root = strings.TrimSpace(root); root != "" {
+				roots = append(roots, root)
+			}
+		}
+		if len(roots) > 0 {
+			cfg.MediaRoots = roots
+		}
 	}
 
 	if err := cfg.validate(); err != nil {

@@ -77,23 +77,28 @@ type Result struct {
 	Warnings           []string
 }
 
-// Scan recorre todas las bibliotecas de la tabla libraries.
+// Scan recorre todas las bibliotecas de tipo vídeo. Cada biblioteca puede
+// tener varias carpetas; si una carpeta no está disponible no se podan sus
+// fichas y se avisa en el resultado.
 func (s *Scanner) Scan(ctx context.Context) (Result, error) {
 	var res Result
 
 	type library struct {
 		id   int64
+		name string
 		path string
+		kind string
 	}
 	var libraries []library
 
-	rows, err := s.db.QueryContext(ctx, `SELECT id, path FROM libraries ORDER BY id`)
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT id, name, path, kind FROM libraries ORDER BY id`)
 	if err != nil {
 		return res, fmt.Errorf("library: listar bibliotecas: %w", err)
 	}
 	for rows.Next() {
 		var l library
-		if err := rows.Scan(&l.id, &l.path); err != nil {
+		if err := rows.Scan(&l.id, &l.name, &l.path, &l.kind); err != nil {
 			rows.Close()
 			return res, fmt.Errorf("library: leer biblioteca: %w", err)
 		}
@@ -107,32 +112,76 @@ func (s *Scanner) Scan(ctx context.Context) (Result, error) {
 
 	for _, l := range libraries {
 		res.Libraries++
-		if err := s.scanLibrary(ctx, l.id, l.path, &res); err != nil {
+		if l.kind != "video" {
+			res.Warnings = append(res.Warnings,
+				fmt.Sprintf("%s: tipo %s pendiente de implementar", l.name, l.kind))
+			continue
+		}
+		paths, err := loadLibraryPathStrings(ctx, s.db, l.id, l.path)
+		if err != nil {
+			return res, fmt.Errorf("library: leer carpetas de %s: %w", l.name, err)
+		}
+		seriesIDs := map[string]int64{}
+		seen := make(map[string]bool)
+		scannedRoots := make([]string, 0, len(paths))
+		for _, root := range paths {
+			ok, err := s.scanLibraryPath(ctx, l.id, root, seriesIDs, seen, &res)
+			if err != nil {
+				return res, err
+			}
+			if ok {
+				scannedRoots = append(scannedRoots, filepath.Clean(root))
+			}
+		}
+		if err := s.pruneLibrary(ctx, l.id, seen, scannedRoots, &res); err != nil {
 			return res, err
 		}
+		if s.tmdb != nil {
+			ids, err := s.seriesIDsWithEpisodes(ctx, l.id)
+			if err != nil {
+				return res, err
+			}
+			for _, id := range ids {
+				s.enrichSeriesTMDB(ctx, id, &res)
+			}
+		}
 	}
-	if err := deleteOrphanSeries(ctx, s.db); err != nil {
+	if err := cleanupOrphans(ctx, s.db); err != nil {
 		return res, err
 	}
 	return res, nil
 }
 
-func (s *Scanner) scanLibrary(ctx context.Context, libraryID int64, root string, res *Result) error {
-	seriesIDs := map[string]int64{}
-
-	info, err := os.Stat(root)
+func (s *Scanner) scanLibraryPath(
+	ctx context.Context,
+	libraryID int64,
+	root string,
+	seriesIDs map[string]int64,
+	seen map[string]bool,
+	res *Result,
+) (bool, error) {
+	info, err := os.Lstat(root)
 	if err != nil {
-		res.Warnings = append(res.Warnings, fmt.Sprintf("%s: %v", root, err))
-		return nil
+		res.Warnings = append(res.Warnings,
+			fmt.Sprintf("La carpeta %s no está disponible; se conservan sus fichas", root))
+		return false, nil
+	}
+	if info.Mode()&os.ModeSymlink != 0 {
+		res.Warnings = append(res.Warnings,
+			fmt.Sprintf("La carpeta %s no está disponible; se conservan sus fichas", root))
+		return false, nil
 	}
 	if !info.IsDir() {
-		res.Warnings = append(res.Warnings, fmt.Sprintf("%s: no es un directorio", root))
-		return nil
+		res.Warnings = append(res.Warnings,
+			fmt.Sprintf("La carpeta %s no está disponible; se conservan sus fichas", root))
+		return false, nil
 	}
 
+	walkFailed := false
 	err = filepath.WalkDir(root, func(path string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			res.Warnings = append(res.Warnings, fmt.Sprintf("%s: %v", path, walkErr))
+			walkFailed = true
 			if d != nil && d.IsDir() {
 				return fs.SkipDir
 			}
@@ -165,6 +214,7 @@ func (s *Scanner) scanLibrary(ctx context.Context, libraryID int64, root string,
 		rel, err := filepath.Rel(root, path)
 		if err != nil {
 			res.Warnings = append(res.Warnings, fmt.Sprintf("%s: %v", path, err))
+			walkFailed = true
 			return nil
 		}
 
@@ -190,6 +240,7 @@ func (s *Scanner) scanLibrary(ctx context.Context, libraryID int64, root string,
 		if err := upsertMediaItem(ctx, s.db, libraryID, path, media, seriesID); err != nil {
 			return err
 		}
+		seen[filepath.Clean(path)] = true
 		res.Files++
 		res.Upserted++
 
@@ -204,17 +255,93 @@ func (s *Scanner) scanLibrary(ctx context.Context, libraryID int64, root string,
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("library: escanear %q: %w", root, err)
+		res.Warnings = append(res.Warnings, fmt.Sprintf("%s: %v", root, err))
+		walkFailed = true
+	}
+	if walkFailed {
+		return false, nil
+	}
+	return true, nil
+}
+
+func (s *Scanner) pruneLibrary(
+	ctx context.Context,
+	libraryID int64,
+	seen map[string]bool,
+	scannedRoots []string,
+	res *Result,
+) error {
+	if len(scannedRoots) == 0 {
+		return nil
+	}
+	// Un disco sin montar deja su punto de montaje como una carpeta vacía que
+	// se recorre «con éxito» y sin archivos: no se poda una carpeta de la que
+	// no se ha visto ni un solo archivo si la base tiene fichas suyas.
+	rootsWithFiles := make(map[string]bool, len(scannedRoots))
+	for path := range seen {
+		for _, root := range scannedRoots {
+			if pathWithin(root, path) {
+				rootsWithFiles[root] = true
+			}
+		}
+	}
+	emptyRoots := make(map[string]bool)
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT id, path FROM media_items WHERE library_id = ?`, libraryID)
+	if err != nil {
+		return fmt.Errorf("library: listar ítems para podar: %w", err)
+	}
+	ids := make([]int64, 0)
+	for rows.Next() {
+		var id int64
+		var path string
+		if err := rows.Scan(&id, &path); err != nil {
+			rows.Close()
+			return fmt.Errorf("library: leer ítem para podar: %w", err)
+		}
+		if !pathWithinAny(scannedRoots, path) || seen[filepath.Clean(path)] {
+			continue
+		}
+		skipped := false
+		for _, root := range scannedRoots {
+			if pathWithin(root, path) && !rootsWithFiles[root] {
+				emptyRoots[root] = true
+				skipped = true
+				break
+			}
+		}
+		if !skipped {
+			ids = append(ids, id)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return fmt.Errorf("library: recorrer ítems para podar: %w", err)
+	}
+	rows.Close()
+	for root := range emptyRoots {
+		res.Warnings = append(res.Warnings,
+			fmt.Sprintf("La carpeta %s está vacía pero tiene fichas; se conservan por si el disco no está montado", root))
+	}
+	if len(ids) == 0 {
+		return nil
 	}
 
-	if s.tmdb != nil {
-		ids, err := s.seriesIDsWithEpisodes(ctx, libraryID)
-		if err != nil {
-			return err
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("library: iniciar poda: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+	for _, id := range ids {
+		if _, err := tx.ExecContext(ctx, `DELETE FROM media_items WHERE id = ?`, id); err != nil {
+			return fmt.Errorf("library: borrar ítem %d: %w", id, err)
 		}
-		for _, id := range ids {
-			s.enrichSeriesTMDB(ctx, id, res)
-		}
+	}
+	if err := cleanupOrphans(ctx, tx); err != nil {
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("library: confirmar poda: %w", err)
 	}
 	return nil
 }

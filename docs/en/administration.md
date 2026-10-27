@@ -25,7 +25,15 @@ Only users with the `admin` role can open `/admin`. The server checks the role o
 3. Press **Crear biblioteca**. The path must exist and be a directory inside the container, for example `/media/Multimedia/Pelis`.
 4. Press **Escanear todas las bibliotecas**. The scan continues in the background even if you close the page.
 
-The path is typed by hand: there is no server folder browser. The container mounts `CINECAT_MEDIA_PATH` whole and read-only at `/media`; create one library per real subfolder you want to separate (movies, series, etc.).
+### Multiple folders per library
+
+A library can group several folders, even on different disks. The first folder is kept as the main folder for compatibility; if it is removed, the next oldest becomes the main one. A library can be `video` (movies and series), `clips` (unidentified videos) or `music`; for now only `video` is scanned, and the other two types are skipped with a warning.
+
+The server can add and remove folders and exposes a confined browser at `GET /api/v1/fs` (administrators only). The web screen for that browser will arrive in the next task. Until then, the path is typed by hand; the container mounts `CINECAT_MEDIA_PATH` whole and read-only at `/media`.
+
+Folders are validated against `CINECAT_MEDIA_ROOTS`: a list of roots separated by `:` on Linux and `;` on Windows (default `/media`). A path outside those roots, missing, not a directory, repeated or overlapping another one is rejected. Removing a folder deletes its records from the database but does not touch files on disk.
+
+**Protection against unmounted disks.** A scan only deletes entries from folders it traversed successfully. If a folder is unavailable, or is traversed without finding a single file although the database has entries for it (which is what an unmounted disk looks like, its mount point left as an empty folder), it keeps the entries, with their watched state and progress, and reports it in the scan result. Consequence: if you really empty a whole folder, its entries are not deleted automatically; remove the folder from the library to delete them.
 
 ## Scanning and identification
 
@@ -91,10 +99,11 @@ Read by the server:
 | `CINECAT_TMDB_API_KEY` | empty | Enables TMDB; takes precedence over OMDb. |
 | `CINECAT_OMDB_API_KEY` | empty | Enables OMDb only when TMDB is absent. |
 | `CINECAT_SCAN_INTERVAL` | `6h` | Initial default for `scan.interval`. |
+| `CINECAT_MEDIA_ROOTS` | `/media` | Allowed roots for library folders and the browser; separated by `:` on Linux and `;` on Windows. |
 | `CINECAT_ADMIN_PASSWORD` | empty | Password for the `admin` created on first start; if absent, one is generated and printed once. |
 | `CINECAT_RUN_DIR` | `/run/cinecat-update` | Shared directory for update requests. |
 
-Docker also uses `CINECAT_MEDIA_PATH` (host path mounted at `/media`), `CINECAT_API_PORT` (`8080`) and `CINECAT_WEB_PORT` (`8081`). `PUBLIC_API_URL` and `PROTOCOL_HEADER` belong to the web container. There are no variables for the FFmpeg path, CORS, users or HLS limits.
+Docker also uses `CINECAT_MEDIA_PATH` (host path mounted at `/media`), `CINECAT_MEDIA_ROOTS` (roots visible inside the container), `CINECAT_API_PORT` (`8080`) and `CINECAT_WEB_PORT` (`8081`). `PUBLIC_API_URL` and `PROTOCOL_HEADER` belong to the web container. There are no variables for the FFmpeg path, CORS, users or HLS limits.
 
 ## Updating the server
 

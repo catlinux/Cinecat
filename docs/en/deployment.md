@@ -24,6 +24,7 @@ cp .env.deploy.example .env
 Edit `.env`:
 
 - `CINECAT_MEDIA_PATH`: host path mounted whole and read-only at `/media`.
+- `CINECAT_MEDIA_ROOTS`: roots visible inside the container for choosing library folders; `/media` by default.
 - `CINECAT_TMDB_API_KEY`: TMDB key for complete metadata; without it, OMDb can be used for movie synopsis and poster only.
 - `CINECAT_OMDB_API_KEY`: optional, fallback without TMDB.
 - `CINECAT_SCAN_INTERVAL`: automatic interval; `0` disables it.

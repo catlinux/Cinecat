@@ -28,7 +28,7 @@ What is still missing, in detail and in order, is in [status](docs/en/status.md)
 - A TMDB key is optional, but without it there will be no complete TMDB metadata. If TMDB is absent, OMDb can be used for movie synopsis and poster only.
 - For deployment with a domain, Apache with `mod_proxy`, `mod_proxy_http` and `mod_headers`.
 
-Server variables (all optional): `CINECAT_CONFIG`, `CINECAT_LISTEN_ADDR` (`:8080`), `CINECAT_DB_PATH` (`cinecat.db`), `CINECAT_TMDB_API_KEY`, `CINECAT_OMDB_API_KEY`, `CINECAT_SCAN_INTERVAL` (`6h`), `CINECAT_ADMIN_PASSWORD` and `CINECAT_RUN_DIR` (`/run/cinecat-update`). Docker additionally uses `CINECAT_MEDIA_PATH`, `CINECAT_API_PORT` and `CINECAT_WEB_PORT`.
+Server variables (all optional): `CINECAT_CONFIG`, `CINECAT_LISTEN_ADDR` (`:8080`), `CINECAT_DB_PATH` (`cinecat.db`), `CINECAT_TMDB_API_KEY`, `CINECAT_OMDB_API_KEY`, `CINECAT_SCAN_INTERVAL` (`6h`), `CINECAT_MEDIA_ROOTS` (`/media`), `CINECAT_ADMIN_PASSWORD` and `CINECAT_RUN_DIR` (`/run/cinecat-update`). Docker additionally uses `CINECAT_MEDIA_PATH`, `CINECAT_API_PORT` and `CINECAT_WEB_PORT`.
 
 ## Installation and first start
 

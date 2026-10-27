@@ -155,6 +155,8 @@ func newTestServer(t *testing.T) *testServer {
 	scanJob := library.NewScanJob(library.New(st.DB()))
 	t.Cleanup(scanJob.Close)
 	api := library.NewAPI(st.DB(), authSvc, playSvc, scanJob, nil).WithSettings(settingsStore)
+	// Las pruebas crean sus carpetas en el directorio temporal del sistema.
+	api = api.WithMediaRoots([]string{os.TempDir(), "/media"})
 	server := httptest.NewServer(newHandler(authSvc, api))
 	t.Cleanup(server.Close)
 

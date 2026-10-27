@@ -28,7 +28,7 @@ Lo que queda por hacer, con detalle y orden, está en [estado](docs/es/estado.md
 - Una clave de TMDB es opcional, pero sin ella no habrá fichas completas de TMDB. Si no hay TMDB, se puede usar OMDb solo para sinopsis y cartel de películas.
 - Para el despliegue con dominio, Apache con `mod_proxy`, `mod_proxy_http` y `mod_headers`.
 
-Variables del servidor (todas opcionales): `CINECAT_CONFIG`, `CINECAT_LISTEN_ADDR` (`:8080`), `CINECAT_DB_PATH` (`cinecat.db`), `CINECAT_TMDB_API_KEY`, `CINECAT_OMDB_API_KEY`, `CINECAT_SCAN_INTERVAL` (`6h`), `CINECAT_ADMIN_PASSWORD` y `CINECAT_RUN_DIR` (`/run/cinecat-update`). En Docker, además, se usan `CINECAT_MEDIA_PATH`, `CINECAT_API_PORT` y `CINECAT_WEB_PORT`.
+Variables del servidor (todas opcionales): `CINECAT_CONFIG`, `CINECAT_LISTEN_ADDR` (`:8080`), `CINECAT_DB_PATH` (`cinecat.db`), `CINECAT_TMDB_API_KEY`, `CINECAT_OMDB_API_KEY`, `CINECAT_SCAN_INTERVAL` (`6h`), `CINECAT_MEDIA_ROOTS` (`/media`), `CINECAT_ADMIN_PASSWORD` y `CINECAT_RUN_DIR` (`/run/cinecat-update`). En Docker, además, se usan `CINECAT_MEDIA_PATH`, `CINECAT_API_PORT` y `CINECAT_WEB_PORT`.
 
 ## Instalación y puesta en marcha
 

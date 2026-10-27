@@ -56,13 +56,64 @@ func TestMigrateCreaTablas(t *testing.T) {
 
 	got := tables(t, ctx, s)
 	for _, name := range []string{
-		"schema_migrations", "users", "sessions", "libraries", "media_items", "playback_state",
-		"playback_progress", "collections", "collection_items", "series", "series_seasons",
-		"settings", "item_preferences",
+		"schema_migrations", "users", "sessions", "libraries", "library_paths", "media_items",
+		"playback_state", "playback_progress", "collections", "collection_items", "series",
+		"series_seasons", "settings", "item_preferences",
 	} {
 		if !got[name] {
 			t.Errorf("falta la tabla %q", name)
 		}
+	}
+}
+
+func TestMigracionLibraryPathsConDatosPrevios(t *testing.T) {
+	ctx := context.Background()
+	s, err := Open(ctx, filepath.Join(t.TempDir(), "cinecat.db"))
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := s.Close(); err != nil {
+			t.Errorf("Close: %v", err)
+		}
+	})
+
+	initial, err := migrations.ReadFile("migrations/0001_init.sql")
+	if err != nil {
+		t.Fatalf("leer migración inicial: %v", err)
+	}
+	if _, err := s.DB().ExecContext(ctx, string(initial)); err != nil {
+		t.Fatalf("aplicar esquema inicial: %v", err)
+	}
+	if _, err := s.DB().ExecContext(ctx,
+		`INSERT INTO libraries (path, name) VALUES ('/media/vieja', 'Vieja')`); err != nil {
+		t.Fatalf("crear biblioteca previa: %v", err)
+	}
+	migration, err := migrations.ReadFile("migrations/0015_library_paths.sql")
+	if err != nil {
+		t.Fatalf("leer migración 0015: %v", err)
+	}
+	if _, err := s.DB().ExecContext(ctx, string(migration)); err != nil {
+		t.Fatalf("aplicar migración 0015: %v", err)
+	}
+
+	var id int64
+	var kind, path string
+	if err := s.DB().QueryRowContext(ctx,
+		`SELECT id, kind, path FROM libraries WHERE name = 'Vieja'`).
+		Scan(&id, &kind, &path); err != nil {
+		t.Fatalf("leer biblioteca migrada: %v", err)
+	}
+	if kind != "video" || path != "/media/vieja" {
+		t.Fatalf("biblioteca migrada inesperada: kind=%q path=%q", kind, path)
+	}
+	var copied string
+	if err := s.DB().QueryRowContext(ctx,
+		`SELECT path FROM library_paths WHERE library_id = ?`, id).Scan(&copied); err != nil {
+		t.Fatalf("leer carpeta migrada: %v", err)
+	}
+	if copied != path {
+		t.Fatalf("carpeta migrada = %q, se esperaba %q", copied, path)
 	}
 }
 
