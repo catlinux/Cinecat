@@ -32,6 +32,72 @@ export function formatUploadSize(bytes: number): string {
 	return formatBytes(bytes);
 }
 
+export function isUploadVideoName(name: string): boolean {
+	return (UPLOAD_VIDEO_EXTENSIONS as readonly string[]).includes(uploadExtension(name));
+}
+
+export function isUploadSubtitleName(name: string): boolean {
+	return (UPLOAD_SUBTITLE_EXTENSIONS as readonly string[]).includes(uploadExtension(name));
+}
+
+export function uploadFileStem(name: string): string {
+	const dot = name.lastIndexOf('.');
+	return dot > 0 ? name.slice(0, dot) : name;
+}
+
+export function validUploadComponent(value: string): boolean {
+	return (
+		value !== '' &&
+		value.length <= 255 &&
+		!value.startsWith('.') &&
+		!value.includes('/') &&
+		!value.includes('\\') &&
+		!/[\u0000-\u001f]/.test(value)
+	);
+}
+
+export function subtitleMatchesVideo(subtitleName: string, videoName: string): boolean {
+	if (!isUploadSubtitleName(subtitleName) || !isUploadVideoName(videoName)) {
+		return false;
+	}
+	const subtitleStem = uploadFileStem(subtitleName).toLowerCase();
+	const videoStem = uploadFileStem(videoName).toLowerCase();
+	if (subtitleStem === videoStem) {
+		return true;
+	}
+	if (!subtitleStem.startsWith(`${videoStem}.`)) {
+		return false;
+	}
+	const suffix = subtitleStem.slice(videoStem.length + 1);
+	return /^[a-z]{2,3}$/.test(suffix);
+}
+
+export interface MovieFolderEntry {
+	name: string;
+	folder: string;
+}
+
+export function uploadSubdirForFile(
+	fileName: string,
+	createFolders: boolean,
+	videos: MovieFolderEntry[]
+): string {
+	if (!createFolders) {
+		return '';
+	}
+	if (isUploadVideoName(fileName)) {
+		const own = videos.find((video) => video.name === fileName);
+		return own?.folder ?? uploadFileStem(fileName);
+	}
+	if (isUploadSubtitleName(fileName)) {
+		const video = videos
+			.filter((item) => subtitleMatchesVideo(fileName, item.name))
+			.sort((left, right) => uploadFileStem(right.name).length - uploadFileStem(left.name).length)[0];
+		return video?.folder ?? '';
+	}
+	return '';
+}
+
 export function uploadExtension(name: string): string {
 	const dot = name.lastIndexOf('.');
 	return dot >= 0 ? name.slice(dot).toLowerCase() : '';

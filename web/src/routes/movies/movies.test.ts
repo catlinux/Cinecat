@@ -187,7 +187,20 @@ describe('carga de /movies', () => {
 		expect(result.clearHref).toBe('/movies');
 	});
 
-	it('solo envía unmatched si el usuario es administrador', async () => {
+	it('solo envía unmatched y pide destinos de subida si el usuario es administrador', async () => {
+		const targets = {
+			allowed: true,
+			roots: [
+				{
+					library_id: 1,
+					library_name: 'Películas',
+					library_kind: 'video',
+					path: '/media/peliculas',
+					movie_count: 4,
+					series_count: 0
+				}
+			]
+		};
 		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
 			const url = new URL(String(input));
 			if (url.pathname === '/api/v1/items' && url.searchParams.get('limit') === '1') {
@@ -199,12 +212,19 @@ describe('carga de /movies', () => {
 			if (url.pathname === '/api/v1/genres') {
 				return jsonResponse({ genres });
 			}
+			if (url.pathname === '/api/v1/uploads/targets') {
+				return jsonResponse(targets);
+			}
 			throw new Error(`URL inesperada: ${url}`);
 		});
 
 		const result = (await load(
 			event(fetchMock, '/movies?unmatched=1&sort=added', true) as never
-		)) as { unmatchedCount: number; filters: MovieFilters };
+		)) as {
+			unmatchedCount: number;
+			filters: MovieFilters;
+			uploadTargets: typeof targets;
+		};
 
 		const urls = requestedUrls(fetchMock);
 		const listUrl = urls.find(
@@ -218,6 +238,8 @@ describe('carga de /movies', () => {
 		expect(countUrl?.searchParams.get('unmatched')).toBe('true');
 		expect(result.unmatchedCount).toBe(4);
 		expect(result.filters.unmatched).toBe(true);
+		expect(result.uploadTargets).toEqual(targets);
+		expect(urls.some((url) => url.pathname === '/api/v1/uploads/targets')).toBe(true);
 	});
 
 	it('ignora unmatched para usuarios que no son admin', async () => {
@@ -239,6 +261,7 @@ describe('carga de /movies', () => {
 		const urls = requestedUrls(fetchMock);
 		expect(result.filters.unmatched).toBe(false);
 		expect(urls.every((url) => url.searchParams.get('unmatched') === null)).toBe(true);
+		expect(urls.some((url) => url.pathname === '/api/v1/uploads/targets')).toBe(false);
 	});
 
 	it('redirige a la última página si se pasa de rango', async () => {
@@ -322,6 +345,7 @@ function pageData(overrides: Record<string, unknown> = {}) {
 		clearHref: '/movies',
 		currentUrl: '/movies?page=2',
 		errorMessage: null,
+		uploadTargets: null,
 		...overrides
 	};
 }
@@ -394,6 +418,17 @@ describe('página /movies', () => {
 		expect(body).toContain('Colección');
 		expect(body).toContain('En una colección');
 		expect(body).toContain('Sin colección');
+	});
+
+	it('muestra «Subir película» solo al admin', () => {
+		const admin = render(MoviesPage, {
+			props: { data: pageData({ isAdmin: true }) }
+		}).body;
+		expect(admin).toContain('Subir película');
+		expect(admin).toContain('Crear una carpeta para cada película');
+
+		const user = render(MoviesPage, { props: { data: pageData() } }).body;
+		expect(user).not.toContain('Subir película');
 	});
 
 	it('muestra el enlace de sin identificar solo al admin', () => {

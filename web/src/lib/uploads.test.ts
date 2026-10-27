@@ -5,7 +5,13 @@ import {
 	buildUploadURL,
 	formatUploadSize,
 	isUploadableFileName,
-	uploadErrorMessage
+	isUploadSubtitleName,
+	isUploadVideoName,
+	subtitleMatchesVideo,
+	uploadErrorMessage,
+	uploadFileStem,
+	uploadSubdirForFile,
+	validUploadComponent
 } from './uploads';
 
 describe('utilidades de subida', () => {
@@ -72,5 +78,49 @@ describe('nombre de archivo de episodio', () => {
 		expect(buildEpisodeUploadName('Serie', 2, 3, 'Capitulo.vtt')).toBe(
 			'Serie S02E03.vtt'
 		);
+	});
+});
+
+describe('reparto de películas y subtítulos', () => {
+	it('reconoce vídeos, subtítulos y nombres base', () => {
+		expect(isUploadVideoName('Peli.MKV')).toBe(true);
+		expect(isUploadSubtitleName('Peli.ES.SRT')).toBe(true);
+		expect(uploadFileStem('Peli (2020).mkv')).toBe('Peli (2020)');
+		expect(uploadFileStem('Peli.es.srt')).toBe('Peli.es');
+	});
+
+	it('empareja subtítulos con el vídeo de la cola', () => {
+		expect(subtitleMatchesVideo('Peli.es.srt', 'Peli.mkv')).toBe(true);
+		expect(subtitleMatchesVideo('Peli.srt', 'Peli.mkv')).toBe(true);
+		expect(subtitleMatchesVideo('Peli.srt', 'Otra.mkv')).toBe(false);
+		expect(subtitleMatchesVideo('Peli.2020.es.srt', 'Peli.2020.mkv')).toBe(true);
+		expect(subtitleMatchesVideo('Peli.2020.es.srt', 'Peli.mkv')).toBe(false);
+		expect(subtitleMatchesVideo('Otra.srt', 'Peli.mkv')).toBe(false);
+	});
+
+	it('asigna carpeta a cada vídeo y a sus subtítulos', () => {
+		const videos = [
+			{ name: 'Peli.mkv', folder: 'Peli' },
+			{ name: 'Otra.mp4', folder: 'Otra carpeta' }
+		];
+		expect(uploadSubdirForFile('Peli.mkv', true, videos)).toBe('Peli');
+		expect(uploadSubdirForFile('Peli.es.srt', true, videos)).toBe('Peli');
+		expect(uploadSubdirForFile('Otra.srt', true, videos)).toBe('Otra carpeta');
+		expect(
+			uploadSubdirForFile('Peli.2020.es.srt', true, [
+				{ name: 'Peli.mkv', folder: 'Peli' },
+				{ name: 'Peli.2020.mkv', folder: 'Peli 2020' }
+			])
+		).toBe('Peli 2020');
+		expect(uploadSubdirForFile('Suelta.srt', true, videos)).toBe('');
+		expect(uploadSubdirForFile('Peli.mkv', false, videos)).toBe('');
+	});
+
+	it('valida nombres como la subida genérica', () => {
+		expect(validUploadComponent('Peli (2020)')).toBe(true);
+		expect(validUploadComponent('')).toBe(false);
+		expect(validUploadComponent('.oculta')).toBe(false);
+		expect(validUploadComponent('sub/peli')).toBe(false);
+		expect(validUploadComponent('sub\\peli')).toBe(false);
 	});
 });

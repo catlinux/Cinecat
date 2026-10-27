@@ -3205,6 +3205,12 @@ footer {
 	color: var(--naranja);
 }
 
+.movies-admin-actions {
+	display: flex;
+	justify-content: flex-end;
+	margin: -0.2rem 0 1rem;
+}
+
 .unmatched-link {
 	display: inline-block;
 	margin-top: 0.7rem;

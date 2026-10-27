@@ -1,6 +1,11 @@
 import { redirect } from '@sveltejs/kit';
 import { ApiError } from '$lib/api';
-import type { GenreCount, GenresResponse, ItemsResponse } from '$lib/api';
+import type {
+	GenreCount,
+	GenresResponse,
+	ItemsResponse,
+	UploadTargetsResponse
+} from '$lib/api';
 import { ConfigurationError, createApiClient } from '$lib/api-factory';
 import {
 	clearFiltersHref,
@@ -35,7 +40,8 @@ function emptyPage(
 		filterChips: filterChips(filters, currentUrl),
 		clearHref: clearFiltersHref(currentUrl),
 		currentUrl,
-		errorMessage: message
+		errorMessage: message,
+		uploadTargets: null as UploadTargetsResponse | null
 	};
 }
 
@@ -102,6 +108,17 @@ export const load: PageServerLoad = async ({ locals, fetch, url, parent }) => {
 		}
 	}
 
+	let uploadTargets: UploadTargetsResponse | null = null;
+	if (isAdmin) {
+		try {
+			uploadTargets = await createApiClient(fetch).getUploadTargets(token);
+		} catch (error) {
+			if (error instanceof ApiError && error.status === 401) {
+				redirect(303, '/login');
+			}
+		}
+	}
+
 	return {
 		items: items.items,
 		total: items.total,
@@ -115,6 +132,7 @@ export const load: PageServerLoad = async ({ locals, fetch, url, parent }) => {
 		filterChips: filterChips(filters, currentUrl),
 		clearHref: clearFiltersHref(currentUrl),
 		currentUrl,
-		errorMessage: null
+		errorMessage: null,
+		uploadTargets
 	};
 };

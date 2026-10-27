@@ -1,5 +1,6 @@
 <script lang="ts">
 	import LibraryFilters from '$lib/components/LibraryFilters.svelte';
+	import MovieUploadDialog from '$lib/components/MovieUploadDialog.svelte';
 	import Pagination from '$lib/components/Pagination.svelte';
 	import PosterCard from '$lib/components/PosterCard.svelte';
 	import type { PageData } from './$types';
@@ -30,6 +31,15 @@
 		currentUrl={data.currentUrl}
 		showCollection
 	/>
+
+	{#if data.isAdmin}
+		<div class="movies-admin-actions">
+			<MovieUploadDialog
+				roots={data.uploadTargets?.roots ?? []}
+				allowed={data.uploadTargets?.allowed ?? true}
+			/>
+		</div>
+	{/if}
 
 	{#if data.filterChips.length > 0}
 		<div class="filter-chips" aria-label="Filtros activos">
