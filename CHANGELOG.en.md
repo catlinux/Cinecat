@@ -7,6 +7,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+### Fixed
+
+- The `.cinecat-papelera` folder is created with 0775 permissions, like the rest of the library, instead of 0755 from the container umask.
+
 ## [0.21.0] - 2026-10-27
 
 ### Added

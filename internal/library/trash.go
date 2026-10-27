@@ -350,6 +350,11 @@ func (a *API) applyTrashMoves(plan trashPlan) error {
 	if info.Mode()&os.ModeSymlink != 0 {
 		return errTrashUnsafe
 	}
+	// MkdirAll aplica la umask del contenedor (0755); el grupo de los discos
+	// debe poder escribir igual que en el resto de la biblioteca.
+	if err := os.Chmod(trashDir, 0o775); err != nil {
+		log.Printf("library: papelera: no se pudieron fijar los permisos de %s: %v", trashDir, err)
+	}
 	applyConfiguredOwner(trashDir)
 	moved := make([]trashMove, 0, len(plan.Moves))
 	for _, move := range plan.Moves {
