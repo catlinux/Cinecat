@@ -208,31 +208,60 @@ describe('PosterCard', () => {
 });
 
 describe('indicador de colección', () => {
-	it('indica el nombre cuando la película está en una colección', () => {
+	it('muestra el nombre de la colección y el icono', () => {
 		const { body } = render(PosterCard, {
 			props: { item: { ...item, collections: [{ id: 5, name: 'La saga' }] } }
 		});
 
 		expect(body).toContain('poster-collections');
-		expect(body).toContain('title="En la colección La saga"');
-		expect(body).toContain('aria-label="En la colección La saga"');
+		expect(body).toContain('poster-collections-name');
+		expect(body).toContain('La saga');
+		expect(body).toContain('title="Colección: La saga"');
+		expect(body).toContain('aria-label="Colección: La saga"');
 	});
 
-	it('cuenta las colecciones y no aparece si no hay ninguna', () => {
-		const several = render(PosterCard, {
+	it('muestra «+N» y el title con todos los nombres', () => {
+		const { body } = render(PosterCard, {
 			props: {
 				item: {
 					...item,
 					collections: [
-						{ id: 5, name: 'Una' },
-						{ id: 6, name: 'Otra' }
+						{ id: 5, name: 'Saga Harry Potter' },
+						{ id: 6, name: 'Otra saga' }
 					]
 				}
 			}
-		}).body;
-		expect(several).toContain('title="En 2 colecciones"');
+		});
 
+		expect(body).toContain('Saga Harry Potter +1');
+		expect(body).toContain('title="Colecciones: Saga Harry Potter, Otra saga"');
+		expect(body).toContain('aria-label="Colecciones: Saga Harry Potter, Otra saga"');
+	});
+
+	it('no aparece sin colecciones, en clips ni en episodios', () => {
 		const none = render(PosterCard, { props: { item } }).body;
 		expect(none).not.toContain('poster-collections');
+
+		const clip = render(PosterCard, {
+			props: {
+				item: {
+					...item,
+					library_kind: 'clips',
+					collections: [{ id: 5, name: 'La saga' }]
+				}
+			}
+		}).body;
+		expect(clip).not.toContain('poster-collections');
+
+		const episode = render(PosterCard, {
+			props: {
+				item: {
+					...item,
+					kind: 'episode',
+					collections: [{ id: 5, name: 'La saga' }]
+				}
+			}
+		}).body;
+		expect(episode).not.toContain('poster-collections');
 	});
 });

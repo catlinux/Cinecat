@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.22.1] - 2026-10-28
+
+### Fixed
+
+- The collection indicator on posters now shows the collection name (with "+N" when there are several) and its tooltip works: before, the icon blocked the mouse and it was not clear which collection it was.
+
 ## [0.22.0] - 2026-10-27
 
 ### Added

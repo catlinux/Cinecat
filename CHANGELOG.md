@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.22.1] - 2026-10-28
+
+### Corregido
+
+- El indicador de colección de las carátulas ahora muestra el nombre de la colección (con «+N» si hay varias) y su tooltip funciona: antes el icono bloqueaba el ratón y no se veía de qué colección era.
+
 ## [0.22.0] - 2026-10-27
 
 ### Añadido

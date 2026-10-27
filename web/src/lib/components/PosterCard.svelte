@@ -43,10 +43,18 @@
 		!isEpisode && item.library_kind !== 'clips' ? formatScore(item.rating) : ''
 	);
 	const collections = $derived(item.collections ?? []);
-	const collectionLabel = $derived(
+	const collectionTitle = $derived(
 		collections.length === 1
-			? `En la colección ${collections[0].name}`
-			: `En ${collections.length} colecciones`
+			? `Colección: ${collections[0].name}`
+			: `Colecciones: ${collections.map((collection) => collection.name).join(', ')}`
+	);
+	const collectionShortLabel = $derived(
+		collections.length > 1
+			? `${collections[0].name} +${collections.length - 1}`
+			: (collections[0]?.name ?? '')
+	);
+	const showCollections = $derived(
+		item.kind === 'movie' && item.library_kind !== 'clips' && collections.length > 0
 	);
 </script>
 
@@ -95,11 +103,12 @@
 		class="poster-card"
 		href={`/items/${item.id}`}
 		style={`--poster-a: ${colors.from}; --poster-b: ${colors.to};`}
+		title={showCollections ? collectionTitle : undefined}
 	>
 		<div
 			class="poster-frame"
 			class:has-rating={Boolean(ratingText)}
-			class:has-collections={item.kind === 'movie' && item.library_kind !== 'clips' && collections.length > 0}
+			class:has-collections={showCollections}
 		>
 			{#if posterUrl}
 				<img class="poster-image" src={posterUrl} alt={`Cartel de ${item.title}`} loading="lazy" />
@@ -109,18 +118,19 @@
 				</div>
 			{/if}
 			<span class="poster-kind">{kindLabel(item.kind)}</span>
-			{#if item.kind === 'movie' && item.library_kind !== 'clips' && collections.length > 0}
+			{#if showCollections}
 				<span
 					class="poster-collections"
 					role="img"
-					title={collectionLabel}
-					aria-label={collectionLabel}
+					title={collectionTitle}
+					aria-label={collectionTitle}
 				>
 					<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
 						<rect x="8" y="3" width="12" height="16" rx="1.5" />
 						<rect x="4" y="6" width="12" height="16" rx="1.5" />
 						<path d="M6.5 10h7M6.5 13h7M6.5 16h4" />
 					</svg>
+					<span class="poster-collections-name">{collectionShortLabel}</span>
 				</span>
 			{/if}
 			{#if ratingText}
