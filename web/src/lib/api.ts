@@ -94,15 +94,45 @@ export interface ItemCollection {
 }
 
 export interface CastCredit {
+	id?: number;
 	name: string;
 	character: string;
 	photo_url: string;
 }
 
 export interface CrewCredit {
+	id?: number;
 	name: string;
 	job: string;
 	photo_url: string;
+}
+
+export interface Person {
+	id: number;
+	name: string;
+	biography: string;
+	birthday: string;
+	deathday: string;
+	place_of_birth: string;
+	photo_url: string;
+	known_for: string;
+}
+
+export interface PersonMedia {
+	type: 'movie' | 'series';
+	id?: number;
+	tmdb_id?: number;
+	title: string;
+	year: number | null;
+	poster_url: string | null;
+	rating: number | null;
+	roles: string[];
+}
+
+export interface PersonResponse {
+	person: Person;
+	in_library: PersonMedia[];
+	not_in_library: PersonMedia[];
 }
 
 export interface Credits {
@@ -137,6 +167,8 @@ export interface MediaItem {
 	genres: string[];
 	runtime_minutes: number | null;
 	rating: number | null;
+	trailer_url?: string | null;
+	trailer_language?: 'es' | 'en' | null;
 	directors: string[];
 	cast: string[];
 	credits?: Credits | null;
@@ -521,6 +553,8 @@ export interface Series {
 	episode_count: number;
 	watched_count: number;
 	rating?: number | null;
+	trailer_url?: string | null;
+	trailer_language?: 'es' | 'en' | null;
 	match_status: 'auto' | 'manual' | 'none' | null;
 	favorite?: boolean;
 	watchlist?: boolean;
@@ -598,6 +632,8 @@ export interface SeriesDetail {
 	backdrop_url: string | null;
 	genres: string[];
 	rating: number | null;
+	trailer_url?: string | null;
+	trailer_language?: 'es' | 'en' | null;
 	directors: string[];
 	cast: string[];
 	credits?: Credits | null;
@@ -955,6 +991,10 @@ export class ApiClient {
 
 	async getItem(id: number, token: string): Promise<MediaItem> {
 		return this.get<MediaItem>(`/api/v1/items/${id}`, token);
+	}
+
+	async getPerson(id: number, token: string): Promise<PersonResponse> {
+		return this.get<PersonResponse>(`/api/v1/people/${id}`, token);
 	}
 
 	async trashItem(id: number, token: string): Promise<TrashItem> {

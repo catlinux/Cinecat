@@ -45,11 +45,16 @@ describe('orden del reparto y del equipo', () => {
 		const rows = creditRows(
 			{
 				cast: [
-					{ name: 'Protagonista', character: 'Heroína', photo_url: 'https://images.example/p.jpg' }
+					{
+						id: 101,
+						name: 'Protagonista',
+						character: 'Heroína',
+						photo_url: 'https://images.example/p.jpg'
+					}
 				],
 				crew: [
-					{ name: 'Productora', job: 'Producer', photo_url: '' },
-					{ name: 'Directora', job: 'Director', photo_url: '' },
+					{ id: 102, name: 'Productora', job: 'Producer', photo_url: '' },
+					{ id: 103, name: 'Directora', job: 'Director', photo_url: '' },
 					{ name: 'Guionista', job: 'Writer', photo_url: '' },
 					{ name: 'Montadora', job: 'Editor', photo_url: '' },
 					{ name: 'Creadora', job: 'Creator', photo_url: '' },
@@ -69,13 +74,17 @@ describe('orden del reparto y del equipo', () => {
 			'Extra'
 		]);
 		expect(rows[0].subtitle).toBe('como Heroína');
+		expect(rows[0].id).toBe(101);
 		expect(rows[1].subtitle).toBe('Dirección');
+		expect(rows[1].id).toBe(103);
 	});
 
 	it('con nombres de respaldo pone el reparto antes que la dirección', () => {
 		const rows = creditRows(null, ['Actor', 'Actriz'], ['Director']);
 		expect(rows.map((row) => row.name)).toEqual(['Actor', 'Actriz', 'Director']);
 		expect(rows[2].subtitle).toBe('Dirección');
+		expect(rows[0].id).toBeNull();
+		expect(rows[2].id).toBeNull();
 	});
 
 	it('asigna prioridad a los oficios conocidos', () => {

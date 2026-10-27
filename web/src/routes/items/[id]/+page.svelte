@@ -428,6 +428,16 @@
 				{:else}
 					<a class="button" href={`/items/${item.id}/play`}>Reproducir</a>
 				{/if}
+				{#if isMovie && item.trailer_url}
+					<a
+						class="button button-secondary"
+						href={item.trailer_url}
+						target="_blank"
+						rel="noopener noreferrer"
+					>
+						{item.trailer_language === 'en' ? 'Ver tráiler (en inglés)' : 'Ver tráiler'}
+					</a>
+				{/if}
 				<form method="POST" action="?/watched" use:enhance>
 					<input type="hidden" name="watched" value={item.watched ? '0' : '1'} />
 					<button class="button button-secondary" type="submit" aria-pressed={item.watched}>

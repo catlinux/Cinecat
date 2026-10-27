@@ -9,6 +9,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ### Añadido
 
+- Página de persona y tráileres en la web: al pulsar un actor, director o miembro del equipo se abre su página (`/people/{id}`) con su ficha, lo que tienes en la biblioteca y, aparte, lo que ha hecho y no tienes. Botón «Ver tráiler» (YouTube, en castellano si existe; si no, en inglés) en las fichas de película y serie.
 - Personas y tráileres en el servidor: los créditos guardan el id de TMDB de cada persona, `GET /api/v1/people/{id}` devuelve su ficha con lo que hay en la biblioteca y lo que no (por separado), y películas y series traen `trailer_url` (YouTube, en castellano si existe; si no, en inglés). La lista de series incluye la puntuación. Migración 0019: el siguiente escaneo vuelve a pedir a TMDB las fichas para rellenarlo (tardará más de lo normal). La pantalla llega en la siguiente versión.
 - Puntuación de TMDB en una esquina de las carátulas de películas y series (por ejemplo «7,4»), solo cuando existe.
 - «Subir película» en Películas (solo administradores): sube una o varias películas, con sus subtítulos, a la carpeta de películas sin tener que elegirla; por defecto crea una carpeta por película.

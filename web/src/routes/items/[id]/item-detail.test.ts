@@ -248,6 +248,52 @@ describe('ficha de película', () => {
 		expect(body.indexOf('Actor 1')).toBeLessThan(body.indexOf('Francis Ford Coppola'));
 	});
 
+	it('muestra el tráiler de una película, con aviso si está en inglés', () => {
+		const spanish = renderPage(
+			makeItem({
+				trailer_url: 'https://www.youtube.com/watch?v=es',
+				trailer_language: 'es'
+			})
+		);
+		expect(spanish).toContain('Ver tráiler');
+		expect(spanish).toContain('https://www.youtube.com/watch?v=es');
+		expect(spanish).toContain('target="_blank"');
+		expect(spanish).toContain('rel="noopener noreferrer"');
+		expect(spanish).not.toContain('Ver tráiler (en inglés)');
+
+		const english = renderPage(
+			makeItem({
+				trailer_url: 'https://www.youtube.com/watch?v=en',
+				trailer_language: 'en'
+			})
+		);
+		expect(english).toContain('Ver tráiler (en inglés)');
+
+		const without = renderPage(makeItem());
+		expect(without).not.toContain('Ver tráiler');
+	});
+
+	it('no muestra tráiler en clips ni episodios', () => {
+		const clip = renderPage(
+			makeItem({
+				library_kind: 'clips',
+				trailer_url: 'https://www.youtube.com/watch?v=clip',
+				trailer_language: 'es'
+			}),
+			{ isAdmin: true }
+		);
+		expect(clip).not.toContain('Ver tráiler');
+
+		const episode = renderPage(
+			makeItem({
+				kind: 'episode',
+				trailer_url: 'https://www.youtube.com/watch?v=ep',
+				trailer_language: 'es'
+			})
+		);
+		expect(episode).not.toContain('Ver tráiler');
+	});
+
 	it('no avisa del idioma si la sinopsis está en castellano', () => {
 		const body = renderPage(makeItem({ overview_language: 'es-ES' }));
 

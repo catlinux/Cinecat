@@ -696,6 +696,42 @@ describe('render de la ficha de serie', () => {
 		expect(allWatched).toContain('Marcar serie como no vista');
 	});
 
+	it('muestra el tráiler de la serie y avisa si está en inglés', () => {
+		const spanish = render(SeriesPage, {
+			props: {
+				data: detailData({
+					series: {
+						...detail,
+						trailer_url: 'https://www.youtube.com/watch?v=es',
+						trailer_language: 'es'
+					}
+				}) as never
+			}
+		}).body;
+		expect(spanish).toContain('Ver tráiler');
+		expect(spanish).toContain('https://www.youtube.com/watch?v=es');
+		expect(spanish).toContain('target="_blank"');
+		expect(spanish).toContain('rel="noopener noreferrer"');
+
+		const english = render(SeriesPage, {
+			props: {
+				data: detailData({
+					series: {
+						...detail,
+						trailer_url: 'https://www.youtube.com/watch?v=en',
+						trailer_language: 'en'
+					}
+				}) as never
+			}
+		}).body;
+		expect(english).toContain('Ver tráiler (en inglés)');
+
+		const without = render(SeriesPage, {
+			props: { data: detailData() as never }
+		}).body;
+		expect(without).not.toContain('Ver tráiler');
+	});
+
 	it('avisa de serie sin identificar y sinopsis no castellana', () => {
 		const { body } = render(SeriesPage, {
 			props: {

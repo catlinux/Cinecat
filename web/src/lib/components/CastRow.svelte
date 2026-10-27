@@ -22,7 +22,12 @@
 		{#snippet children()}
 			{#each entries as entry (entry.key)}
 				<li class="row-fixed">
-					<PersonCard name={entry.name} photoUrl={entry.photo} subtitle={entry.subtitle} />
+					<PersonCard
+						name={entry.name}
+						photoUrl={entry.photo}
+						subtitle={entry.subtitle}
+						href={entry.id ? `/people/${entry.id}` : null}
+					/>
 				</li>
 			{/each}
 		{/snippet}

@@ -173,6 +173,16 @@
 			{#if playChoice}
 				<a class="button" href={`/items/${playChoice.item.id}/play`}>{playChoice.label}</a>
 			{/if}
+			{#if series.trailer_url}
+				<a
+					class="button button-secondary"
+					href={series.trailer_url}
+					target="_blank"
+					rel="noopener noreferrer"
+				>
+					{series.trailer_language === 'en' ? 'Ver tráiler (en inglés)' : 'Ver tráiler'}
+				</a>
+			{/if}
 			{#if series.episode_count > 0}
 				<form method="POST" action="?/watchedSeries" use:enhance>
 					<input type="hidden" name="watched" value={allWatched ? '0' : '1'} />

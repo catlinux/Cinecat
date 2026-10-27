@@ -86,3 +86,38 @@ describe('reparto y equipo', () => {
 		expect(body).not.toContain('Reparto y equipo');
 	});
 });
+
+describe('enlaces de personas', () => {
+	it('enlaza las personas que tienen id de TMDB', () => {
+		const body = render(CastRow, {
+			props: {
+				credits: {
+					cast: [
+						{
+							id: 3084,
+							name: 'Marlon Brando',
+							character: 'Vito Corleone',
+							photo_url: ''
+						}
+					],
+					crew: [{ id: 1776, name: 'Francis Ford Coppola', job: 'Director', photo_url: '' }]
+				}
+			}
+		}).body;
+
+		expect(body).toContain('href="/people/3084"');
+		expect(body).toContain('href="/people/1776"');
+		expect(body).toContain('como Vito Corleone');
+		expect(body).toContain('Dirección');
+	});
+
+	it('mantiene las tarjetas sin enlace cuando faltan ids', () => {
+		const body = render(CastRow, {
+			props: { cast: ['Actor sin id'], directors: ['Directora sin id'] }
+		}).body;
+
+		expect(body).not.toContain('/people/');
+		expect(body).toContain('Actor sin id');
+		expect(body).toContain('Directora sin id');
+	});
+});

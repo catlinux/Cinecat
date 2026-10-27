@@ -5,18 +5,20 @@
 	let {
 		name,
 		photoUrl = null,
-		subtitle = ''
+		subtitle = '',
+		href = null
 	}: {
 		name: string;
 		photoUrl?: string | null;
 		subtitle?: string;
+		href?: string | null;
 	} = $props();
 
 	const colors = $derived(posterColors(name));
 	const initials = $derived(personInitials(name));
 </script>
 
-<article class="person-card" style={`--person-a: ${colors.from}; --person-b: ${colors.to};`}>
+{#snippet cardContent()}
 	<div class="person-photo">
 		{#if photoUrl}
 			<img src={photoUrl} alt={name} loading="lazy" />
@@ -26,10 +28,28 @@
 	</div>
 	<h3>{name}</h3>
 	{#if subtitle}<p>{subtitle}</p>{/if}
-</article>
+{/snippet}
+
+{#if href}
+	<a
+		class="person-card person-card-link"
+		{href}
+		style={`--person-a: ${colors.from}; --person-b: ${colors.to};`}
+	>
+		{@render cardContent()}
+	</a>
+{:else}
+	<article
+		class="person-card"
+		style={`--person-a: ${colors.from}; --person-b: ${colors.to};`}
+	>
+		{@render cardContent()}
+	</article>
+{/if}
 
 <style>
 	.person-card {
+		display: block;
 		width: 7.5rem;
 		max-width: 7.5rem;
 	}
@@ -40,6 +60,16 @@
 		border-radius: 6px;
 		background: linear-gradient(145deg, var(--person-a), var(--person-b));
 	}
+	.person-card-link {
+		color: inherit;
+		text-decoration: none;
+	}
+
+	.person-card-link:focus-visible {
+		outline: 2px solid var(--naranja);
+		outline-offset: 3px;
+	}
+
 	.person-photo img {
 		display: block;
 		width: 100%;

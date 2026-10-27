@@ -9,6 +9,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ### Added
 
+- Person page and trailers on the web: clicking an actor, director or crew member opens their page (`/people/{id}`) with their profile, what you have in the library and, separately, what they have done that you do not have. "Ver tráiler" button (YouTube, in Spanish when available, otherwise in English) on movie and series pages.
 - People and trailers on the server: credits store each person's TMDB id, `GET /api/v1/people/{id}` returns their profile with what is in the library and what is not (separately), and movies and series carry `trailer_url` (YouTube, in Spanish when available, otherwise in English). The series list includes the rating. Migration 0019: the next scan asks TMDB again for the entries to fill this in (it will take longer than usual). The screen arrives in the next version.
 - TMDB rating in a corner of movie and series posters (for example "7,4"), only when available.
 - "Upload movie" in Movies (administrators only): uploads one or more movies, with their subtitles, to the movies folder without having to choose it; by default it creates one folder per movie.

@@ -32,6 +32,7 @@ export function rowScrollState(
 
 export interface CreditRow {
 	key: string;
+	id?: number | null;
 	name: string;
 	photo: string | null;
 	subtitle: string;
@@ -67,6 +68,7 @@ export function creditRows(
 			if (member.name.trim()) {
 				result.push({
 					key: `cast-${index}-${member.name}`,
+					id: member.id ?? null,
 					name: member.name,
 					photo: member.photo_url.trim() || null,
 					subtitle: member.character.trim() ? `como ${member.character}` : ''
@@ -76,7 +78,13 @@ export function creditRows(
 	} else {
 		for (const [index, name] of cast.entries()) {
 			if (name.trim()) {
-				result.push({ key: `cast-name-${index}-${name}`, name, photo: null, subtitle: '' });
+				result.push({
+					key: `cast-name-${index}-${name}`,
+					id: null,
+					name,
+					photo: null,
+					subtitle: ''
+				});
 			}
 		}
 	}
@@ -91,6 +99,7 @@ export function creditRows(
 			const member = entry.member;
 			result.push({
 				key: `crew-${entry.index}-${member.name}`,
+				id: member.id ?? null,
 				name: member.name,
 				photo: member.photo_url.trim() || null,
 				subtitle: jobLabel(member.job)
@@ -101,6 +110,7 @@ export function creditRows(
 			if (name.trim()) {
 				result.push({
 					key: `director-${index}-${name}`,
+					id: null,
 					name,
 					photo: null,
 					subtitle: 'Dirección'
