@@ -156,6 +156,8 @@ function portalData(overrides: Record<string, unknown> = {}) {
 		nextUp: [],
 		recent: [recentItem],
 		recentSeries: [recentSeries],
+		watchlist: [],
+		favorites: [],
 		errorMessage: null,
 		...overrides
 	};
@@ -510,5 +512,64 @@ describe('portal', () => {
 		expect(body).toContain('No se pudo cargar el portal.');
 		expect(body).toContain('Abrir cartelera');
 		expect(body).toContain('href="/series"');
+	});
+});
+
+describe('filas de listas personales del portal', () => {
+	const favoriteItem = { ...recentItem, id: 51, title: 'Favorita', favorite: true };
+	const favoriteClip = { ...clipContinue, id: 52, title: 'Vídeo favorito', favorite: true };
+	const favoriteSeries = { ...recentSeries, id: 53, title: 'Serie favorita', favorite: true };
+
+	it('muestra próximas a ver y favoritos mezclando ítems y series', () => {
+		const { body } = render(PortalPage, {
+			props: {
+				data: portalData({
+					watchlist: [
+						{ kind: 'item', item: { ...recentItem, id: 50, title: 'Próxima' } },
+						{ kind: 'series', series: { ...recentSeries, id: 54, title: 'Serie próxima' } }
+					],
+					favorites: [
+						{ kind: 'item', item: favoriteItem },
+						{ kind: 'item', item: favoriteClip },
+						{ kind: 'series', series: favoriteSeries }
+					]
+				})
+			}
+		});
+
+		expect(body).toContain('Próximas a ver');
+		expect(body).toContain('href="/watchlist"');
+		expect(body).toContain('Tus favoritos');
+		expect(body).toContain('href="/favorites"');
+		expect(body).toContain('Próxima');
+		expect(body).toContain('Serie próxima');
+		expect(body).toContain('Favorita');
+		expect(body).toContain('Vídeo favorito');
+		expect(body).toContain('Serie favorita');
+		expect(body).toContain('class="video-card');
+		expect(body).toContain('class="series-card');
+		expect(body.indexOf('Continuar viendo')).toBeLessThan(body.indexOf('Próximas a ver'));
+		expect(body.indexOf('Series añadidas recientemente')).toBeLessThan(body.indexOf('Tus favoritos'));
+	});
+
+	it('tolera listas ausentes y respeta show_series', () => {
+		const withoutLists = portalData({ watchlist: undefined, favorites: undefined });
+		const { body } = render(PortalPage, { props: { data: withoutLists } });
+		expect(body).not.toContain('Tus favoritos');
+		expect(body).not.toContain('Próximas a ver');
+
+		const hiddenSeries = render(PortalPage, {
+			props: {
+				data: portalData({
+					ui: { ...DEFAULT_PUBLIC_UI, show_series: false },
+					watchlist: [
+						{ kind: 'item', item: favoriteItem },
+						{ kind: 'series', series: favoriteSeries }
+					]
+				})
+			}
+		}).body;
+		expect(hiddenSeries).toContain('Favorita');
+		expect(hiddenSeries).not.toContain('Serie favorita');
 	});
 });

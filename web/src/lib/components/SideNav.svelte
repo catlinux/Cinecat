@@ -13,7 +13,15 @@
 		versionLabel
 	}: {
 		ui: PublicUI;
-		activeCategory?: 'movies' | 'collections' | 'series' | 'videos' | 'music' | null;
+		activeCategory?:
+			| 'movies'
+			| 'collections'
+			| 'series'
+			| 'videos'
+			| 'music'
+			| 'favorites'
+			| 'watchlist'
+			| null;
 		isHome?: boolean;
 		isAdmin?: boolean;
 		hasSession?: boolean;
@@ -76,6 +84,20 @@
 				</li>
 			{/if}
 		</ul>
+
+		{#if hasSession}
+			<div class="side-lists">
+				<a
+					href="/favorites"
+					aria-current={activeCategory === 'favorites' ? 'page' : undefined}>Favoritos</a
+				>
+				<a
+					href="/watchlist"
+					aria-current={activeCategory === 'watchlist' ? 'page' : undefined}
+					>Próximas a ver</a
+				>
+			</div>
+		{/if}
 
 		{#if isAdmin || hasSession}
 			<div class="side-account">
@@ -165,6 +187,35 @@
 		background: var(--tinte);
 		color: var(--granate);
 	}
+	.side-lists {
+		display: flex;
+		flex-direction: column;
+		gap: 0.1rem;
+		margin-top: 0.65rem;
+		padding-top: 0.65rem;
+		border-top: 1px solid var(--borde-suave);
+	}
+	.side-lists a {
+		display: flex;
+		align-items: center;
+		min-height: 40px;
+		padding: 0.35rem 0.4rem;
+		border-left: 3px solid transparent;
+		color: var(--texto-tenue);
+		font-size: 0.62rem;
+		font-weight: 600;
+		letter-spacing: 0.08em;
+		text-decoration: none;
+		text-transform: uppercase;
+	}
+	.side-lists a:hover {
+		color: var(--granate);
+	}
+	.side-lists a[aria-current='page'] {
+		border-left-color: var(--naranja);
+		background: var(--tinte);
+		color: var(--naranja);
+	}
 	.side-account {
 		display: flex;
 		flex-direction: column;
@@ -242,6 +293,25 @@
 		.side-links a[aria-current='page'] {
 			border-left-color: transparent;
 			border-bottom-color: var(--granate);
+			background: transparent;
+		}
+		.side-lists {
+			flex-direction: row;
+			flex-wrap: wrap;
+			gap: 0.15rem 0.55rem;
+			margin-top: 0.5rem;
+			padding-top: 0.4rem;
+		}
+		.side-lists a {
+			padding: 0.45rem 0.1rem;
+			border-left: 0;
+			border-bottom: 2px solid transparent;
+			font-size: 0.68rem;
+			letter-spacing: 0.12em;
+		}
+		.side-lists a[aria-current='page'] {
+			border-left-color: transparent;
+			border-bottom-color: var(--naranja);
 			background: transparent;
 		}
 		.side-account {

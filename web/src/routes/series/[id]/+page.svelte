@@ -3,6 +3,7 @@
 	import type { Candidate, ImageKind, ImageOptions, Series } from '$lib/api';
 	import CastRow from '$lib/components/CastRow.svelte';
 	import EpisodeRow from '$lib/components/EpisodeRow.svelte';
+	import ListToggle from '$lib/components/ListToggle.svelte';
 	import ImagePanel from '$lib/components/ImagePanel.svelte';
 	import MatchDialog from '$lib/components/MatchDialog.svelte';
 	import RowScroller from '$lib/components/RowScroller.svelte';
@@ -167,6 +168,16 @@
 						{allWatched ? 'Marcar serie como no vista' : 'Marcar serie como vista'}
 					</button>
 				</form>
+			{/if}
+			{#if series.favorite !== undefined || series.watchlist !== undefined}
+				<ListToggle kind="series" id={series.id} list="favorite" active={series.favorite ?? false} label="Favorito" />
+				<ListToggle
+					kind="series"
+					id={series.id}
+					list="watchlist"
+					active={series.watchlist ?? false}
+					label="Próximas a ver"
+				/>
 			{/if}
 		</div>
 

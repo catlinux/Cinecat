@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { MediaItem } from '$lib/api';
+	import ListToggle from './ListToggle.svelte';
 	import {
 		episodeCardSubtitle,
 		episodeImageURL,
@@ -39,6 +40,7 @@
 	const episodeSubtitle = $derived(isEpisode ? episodeCardSubtitle(item) : '');
 </script>
 
+<div class="list-card-wrap">
 {#if isEpisode}
 	<a
 		class="episode-card"
@@ -119,3 +121,7 @@
 		</div>
 	</a>
 {/if}
+	{#if item.favorite !== undefined || item.watchlist !== undefined}
+		<ListToggle kind="item" id={item.id} list="favorite" active={item.favorite ?? false} size="small" />
+	{/if}
+</div>

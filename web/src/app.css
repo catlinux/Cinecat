@@ -4732,3 +4732,34 @@ main.with-music-player {
 		padding-bottom: 14rem;
 	}
 }
+
+.list-nav {
+	padding-left: 0.35rem;
+	border-left: 1px solid var(--borde-suave);
+}
+
+.list-card-wrap {
+	position: relative;
+	min-width: 0;
+	height: 100%;
+}
+
+.list-card-wrap .list-toggle-form--small {
+	position: absolute;
+	top: 2.6rem;
+	right: 0.5rem;
+	z-index: 4;
+	opacity: 0;
+	transition: opacity 140ms ease;
+}
+
+.list-card-wrap:hover .list-toggle-form--small,
+.list-card-wrap:focus-within .list-toggle-form--small {
+	opacity: 1;
+}
+
+@media (hover: none) {
+	.list-card-wrap .list-toggle-form--small {
+		opacity: 1;
+	}
+}

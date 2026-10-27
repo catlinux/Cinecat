@@ -128,6 +128,8 @@ export interface MediaItem {
 	progress: PlaybackProgress | null;
 	preferences?: ItemPreferences | null;
 	collections: ItemCollection[];
+	favorite?: boolean;
+	watchlist?: boolean;
 	series_id: number | null;
 	series_title: string | null;
 	episode_title: string | null;
@@ -147,6 +149,8 @@ export interface Collection {
 	item_count: number;
 	source: CollectionSource;
 	edited: boolean;
+	favorite?: boolean;
+	watchlist?: boolean;
 }
 
 export interface CollectionsResponse {
@@ -189,6 +193,8 @@ export interface HomeResponse {
 	recent_series?: Series[];
 	has_clips?: boolean;
 	has_music?: boolean;
+	watchlist?: HomeListEntry[];
+	favorites?: HomeListEntry[];
 	counts: HomeCounts;
 }
 
@@ -494,6 +500,40 @@ export interface Series {
 	episode_count: number;
 	watched_count: number;
 	match_status: 'auto' | 'manual' | 'none' | null;
+	favorite?: boolean;
+	watchlist?: boolean;
+}
+
+export type UserListName = 'favorite' | 'watchlist';
+export type UserListKind = 'item' | 'series' | 'collection';
+export type ListsBlockKind = 'items' | 'series' | 'collections';
+
+export interface ListTotals {
+	items: number;
+	series: number;
+	collections: number;
+}
+
+export interface HomeListEntry {
+	kind: 'item' | 'series';
+	item?: MediaItem;
+	series?: Series;
+}
+
+export interface ListsResponse {
+	items: MediaItem[];
+	series: Series[];
+	collections: Collection[];
+	totals: ListTotals;
+	total?: number;
+	limit: number;
+	offset: number;
+}
+
+export interface ListsQuery {
+	kind?: ListsBlockKind;
+	limit?: number;
+	offset?: number;
 }
 
 export interface SeriesResponse {
@@ -547,6 +587,8 @@ export interface SeriesDetail {
 	season_count: number;
 	episode_count: number;
 	watched_count: number;
+	favorite?: boolean;
+	watchlist?: boolean;
 	seasons: SeriesSeason[];
 	next_episode: MediaItem | null;
 }
@@ -924,6 +966,41 @@ export class ApiClient {
 
 	async getHome(token: string): Promise<HomeResponse> {
 		return this.get<HomeResponse>('/api/v1/home', token);
+	}
+
+	async getLists(list: UserListName, query: ListsQuery, token: string): Promise<ListsResponse> {
+		const params = new URLSearchParams();
+		if (query.kind) {
+			params.set('kind', query.kind);
+		}
+		if (query.limit !== undefined) {
+			params.set('limit', String(query.limit));
+		}
+		if (query.offset !== undefined) {
+			params.set('offset', String(query.offset));
+		}
+		const suffix = params.toString() ? `?${params}` : '';
+		return this.get<ListsResponse>(`/api/v1/lists/${list}${suffix}`, token);
+	}
+
+	async setItemList(id: number, list: UserListName, on: boolean, token: string): Promise<void> {
+		await this.setList(`/api/v1/items/${id}/lists/${list}`, on, token);
+	}
+
+	async setSeriesList(id: number, list: UserListName, on: boolean, token: string): Promise<void> {
+		await this.setList(`/api/v1/series/${id}/lists/${list}`, on, token);
+	}
+
+	async setCollectionList(id: number, list: UserListName, on: boolean, token: string): Promise<void> {
+		await this.setList(`/api/v1/collections/${id}/lists/${list}`, on, token);
+	}
+
+	private async setList(path: string, on: boolean, token: string): Promise<void> {
+		if (on) {
+			await this.put<void>(path, undefined, token);
+			return;
+		}
+		await this.delete(path, token);
 	}
 
 	async getMusicArtists(query: MusicArtistsQuery, token: string): Promise<MusicArtistsResponse> {

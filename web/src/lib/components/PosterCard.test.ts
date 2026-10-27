@@ -155,6 +155,22 @@ describe('PosterCard', () => {
 		expect(withoutArt).toContain('Matrix');
 	});
 
+	it('muestra el botón de favorito como hermano del enlace', () => {
+		const { body } = render(PosterCard, {
+			props: { item: { ...item, favorite: true } }
+		});
+
+		expect(body).toContain('action="/lists"');
+		expect(body).toContain('aria-label="Quitar de favoritos"');
+		expect(body).toContain('aria-pressed="true"');
+		expect(body.indexOf('</a>')).toBeLessThan(body.indexOf('<form'));
+	});
+
+	it('omite el botón si el DTO no trae marcas', () => {
+		const { body } = render(PosterCard, { props: { item } });
+		expect(body).not.toContain('action="/lists"');
+	});
+
 	it('usa la misma paleta en cada render para el mismo título', () => {
 		const first = render(PosterCard, { props: { item } }).body;
 		const second = render(PosterCard, { props: { item } }).body;

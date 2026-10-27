@@ -2,7 +2,7 @@
 
 [English](../en/status.md) · [Volver al README](../../README.md)
 
-Versión actual: **0.19.1**. Esta página resume el estado real del código, no el plan inicial. Las versiones salen del [CHANGELOG](../../CHANGELOG.md).
+Versión actual: **0.20.0**. Esta página resume el estado real del código, no el plan inicial. Las versiones salen del [CHANGELOG](../../CHANGELOG.md).
 
 ## Qué hay hecho
 

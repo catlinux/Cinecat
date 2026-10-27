@@ -69,6 +69,14 @@ In **Música** you can switch between **Álbumes**, **Artistas** and **Pistas**,
 
 The music player is a fixed bar at the bottom that keeps playing while you browse the site. It shows the cover, title and artist, and lets you pause, skip, seek, change or mute the volume, enable shuffle and repeat (off, all or one), and open the **Cola** to remove tracks or clear it. The queue, volume, shuffle and repeat settings are remembered after a reload; playback is restored paused. If a track fails or its link has expired, it is retried once and then skipped with a notice. Playing a video pauses the music automatically, and it does not resume on its own. There are no new keyboard shortcuts for the bar: use its buttons, the system media controls and the playback buttons on each track.
 
+## Favorites and watchlist
+
+Each user has their own **Favorites** and **Watchlist**. You can mark movies, videos, series and collections from their pages with the **Favorito** and **Próximas a ver** buttons, or from the heart on their cards. On cards the heart appears on hover, on keyboard focus, or always on touch screens.
+
+Both lists live in the menu, below the categories. **Favoritos** keeps what you saved; **Próximas a ver** is your watch-later list. Each page separates Movies, Videos, Series and Collections and lets you page through each block. The portal shows the **Próximas a ver** and **Tus favoritos** rows when they have content.
+
+Lists are not shared between users. Marking a movie or video as watched removes it from **Próximas a ver** automatically (not from Favorites); finishing a whole series also removes it from that list. Marking it unwatched does not add it back: you have to add it again manually if you want it.
+
 ## Movie detail page
 
 The page shows the poster, title (and original title if different), year, runtime, genres, rating, tagline, synopsis, cast and crew, IMDb/TMDB links and the collections it belongs to. "Más como este" is at the end.

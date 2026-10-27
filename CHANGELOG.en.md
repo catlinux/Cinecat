@@ -7,8 +7,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-10-27
+
 ### Added
 
+- Favorites and "Watch next" on the web: heart and bookmark buttons on movie, video, series and collection pages and on cards (they also work without JavaScript), "Favorites" and "Watch next" pages with sections and pagination, menu entries (when signed in) and "Watch next" and "Your favorites" rows on the portal.
 - Favorites and "Watch next" on the server: each user marks and unmarks movies, videos, series and collections (`PUT`/`DELETE /api/v1/{items|series|collections}/{id}/lists/{list}`) and lists them with `GET /api/v1/lists/{list}`. Migration 0017. DTOs carry `favorite` and `watchlist`, and the home carries `watchlist` and `favorites`. Marking something as watched removes it from "Watch next" automatically (and a series once it is fully watched). The screen arrives in the next version.
 
 ## [0.19.1] - 2026-10-27

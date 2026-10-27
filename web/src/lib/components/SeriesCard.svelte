@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Series } from '$lib/api';
+	import ListToggle from './ListToggle.svelte';
 	import { formatSeriesCounts, formatSeriesProgress } from '$lib/series';
 	import { posterColors } from '$lib/poster-color';
 
@@ -13,6 +14,7 @@
 	);
 </script>
 
+<div class="list-card-wrap">
 <a
 	class="series-card"
 	href={`/series/${series.id}`}
@@ -44,3 +46,7 @@
 		<p>{formatSeriesCounts(series.season_count, series.episode_count)}</p>
 	</div>
 </a>
+{#if series.favorite !== undefined || series.watchlist !== undefined}
+	<ListToggle kind="series" id={series.id} list="favorite" active={series.favorite ?? false} size="small" />
+{/if}
+</div>

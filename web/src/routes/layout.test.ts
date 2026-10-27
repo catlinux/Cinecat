@@ -132,3 +132,49 @@ describe('load del layout', () => {
 		expect(result.hasClips).toBe(false);
 	});
 });
+
+describe('menú de listas personales', () => {
+	it('muestra Favoritos y Próximas a ver solo con sesión', () => {
+		const withSession = render(Layout, {
+			props: { data: layoutData({ activeCategory: 'favorites' }), children }
+		}).body;
+		expect(withSession).toContain('href="/favorites"');
+		expect(withSession).toContain('href="/watchlist"');
+		expect(withSession).toContain('aria-current="page"');
+		expect(withSession).toContain('Favoritos');
+
+		const withoutSession = render(Layout, {
+			props: { data: layoutData({ hasSession: false }), children }
+		}).body;
+		expect(withoutSession).not.toContain('href="/favorites"');
+		expect(withoutSession).not.toContain('href="/watchlist"');
+	});
+
+	it('marca la entrada activa en los dos layouts', () => {
+		for (const nav_layout of ['side', 'top'] as const) {
+			const body = render(Layout, {
+				props: {
+					data: layoutData({
+						activeCategory: 'watchlist',
+						ui: { ...DEFAULT_PUBLIC_UI, nav_layout }
+					}),
+					children
+				}
+			}).body;
+			expect(body).toContain('href="/watchlist"');
+			expect(body).toContain('aria-current="page"');
+		}
+	});
+});
+
+describe('load de listas en el layout', () => {
+	it('marca favorites y watchlist en activeCategory', async () => {
+		for (const [pathname, expected] of [
+			['/favorites', 'favorites'],
+			['/watchlist', 'watchlist']
+		] as const) {
+			const result = (await load(loadEvent(layoutFetch(), pathname) as never)) as any;
+			expect(result.activeCategory).toBe(expected);
+		}
+	});
+});

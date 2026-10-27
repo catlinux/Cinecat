@@ -240,3 +240,36 @@ describe('ApiClient de música', () => {
 		}
 	});
 });
+
+describe('ApiClient de listas', () => {
+	it('consulta listas y marca ítems, series y colecciones', async () => {
+		const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+			if (init?.method === 'PUT' || init?.method === 'DELETE') {
+				return new Response(null, { status: 204 });
+			}
+			return jsonResponse({
+				items: [],
+				series: [],
+				collections: [],
+				totals: { items: 0, series: 0, collections: 0 },
+				limit: 10,
+				offset: 5
+			});
+		});
+		const client = new ApiClient({ baseUrl: 'http://api.test', fetch: fetchMock });
+
+		await client.getLists('favorite', { kind: 'items', limit: 10, offset: 5 }, 'token');
+		await client.setItemList(2, 'favorite', true, 'token');
+		await client.setSeriesList(3, 'watchlist', false, 'token');
+		await client.setCollectionList(4, 'favorite', true, 'token');
+
+		expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
+			'http://api.test/api/v1/lists/favorite?kind=items&limit=10&offset=5',
+			'http://api.test/api/v1/items/2/lists/favorite',
+			'http://api.test/api/v1/series/3/lists/watchlist',
+			'http://api.test/api/v1/collections/4/lists/favorite'
+		]);
+		expect(fetchMock.mock.calls[1][1]?.method).toBe('PUT');
+		expect(fetchMock.mock.calls[2][1]?.method).toBe('DELETE');
+	});
+});

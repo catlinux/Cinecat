@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Collection } from '$lib/api';
+	import ListToggle from './ListToggle.svelte';
 	import { formatCollectionCount } from '$lib/collections';
 	import { posterColors } from '$lib/poster-color';
 
@@ -8,6 +9,7 @@
 	const colors = $derived(posterColors(collection.name));
 </script>
 
+<div class="list-card-wrap">
 <a
 	class="collection-card"
 	href={`/collections/${collection.id}`}
@@ -31,3 +33,7 @@
 		<p>{formatCollectionCount(collection.item_count)}</p>
 	</div>
 </a>
+{#if collection.favorite !== undefined || collection.watchlist !== undefined}
+	<ListToggle kind="collection" id={collection.id} list="favorite" active={collection.favorite ?? false} size="small" />
+{/if}
+</div>

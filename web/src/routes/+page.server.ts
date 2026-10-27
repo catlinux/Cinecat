@@ -49,6 +49,8 @@ export const load: PageServerLoad = async ({ locals, fetch, url }) => {
 			nextUp: home.next_up ?? [],
 			recent: home.recent_movies ?? [],
 			recentSeries: home.recent_series ?? [],
+			watchlist: home.watchlist ?? [],
+			favorites: home.favorites ?? [],
 			errorMessage: null
 		};
 	} catch (error) {
@@ -74,6 +76,8 @@ export const load: PageServerLoad = async ({ locals, fetch, url }) => {
 			nextUp: [],
 			recent: [],
 			recentSeries: [],
+			watchlist: [],
+			favorites: [],
 			errorMessage:
 				error instanceof ConfigurationError
 					? error.message

@@ -69,6 +69,14 @@ En **Música** puedes cambiar entre **Álbumes**, **Artistas** y **Pistas**, bus
 
 El reproductor de música es una barra fija en la parte inferior que sigue sonando al navegar por la web. Muestra la portada, el título y el artista, permite pausar, avanzar o retroceder, mover el progreso, cambiar el volumen o silenciar, activar el aleatorio y repetir (no, todas o una), y abrir la **Cola** para quitar pistas o vaciarla. La cola, el volumen, el aleatorio y el repetir se recuerdan al recargar; la reproducción se restaura en pausa. Si una pista falla o ha caducado su enlace, se reintenta una vez y, si sigue fallando, se salta con un aviso. Al reproducir un vídeo, la música se pausa automáticamente y no se reanuda sola. No hay atajos nuevos para la barra: usa sus botones, los controles multimedia del sistema y los botones de reproducción de las pistas.
 
+## Favoritos y próximas a ver
+
+Cada usuario tiene sus propias listas de **Favoritos** y **Próximas a ver**. Puedes marcar películas, vídeos, series y colecciones desde sus fichas, con los botones **Favorito** y **Próximas a ver**, o desde el corazón de sus tarjetas. En las tarjetas el corazón aparece al pasar el ratón, al enfocar la tarjeta o siempre en pantallas táctiles.
+
+Las dos listas están en el menú, debajo de las categorías. **Favoritos** reúne lo que has guardado; **Próximas a ver** es tu lista para más tarde. Cada página separa Películas, Vídeos, Series y Colecciones, y permite paginar cada bloque. En el portal aparecen las filas **Próximas a ver** y **Tus favoritos** cuando tienen contenido.
+
+Las listas no se comparten entre usuarios. Cuando marcas una película o un vídeo como visto, el servidor lo quita automáticamente de **Próximas a ver** (no de Favoritos); cuando terminas una serie completa, también desaparece de esa lista. Volver a marcarlo como no visto no lo añade de nuevo: tendrás que marcarlo manualmente si quieres recuperarlo.
+
 ## La ficha de una película
 
 La ficha muestra el cartel, el título (y el original si es distinto), año, duración, géneros, nota, lema, sinopsis, reparto y equipo, enlaces a IMDb/TMDB y las colecciones a las que pertenece. Al final está **Más como este**.

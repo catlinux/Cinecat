@@ -77,6 +77,14 @@ describe('tarjeta de vídeo', () => {
 		expect(body).toContain('Continúas por 30 s');
 	});
 
+	it('muestra el corazón sin meterlo dentro del enlace', () => {
+		const { body } = render(VideoCard, { props: { item: video({ favorite: true }) } });
+
+		expect(body).toContain('action="/lists"');
+		expect(body).toContain('aria-label="Quitar de favoritos"');
+		expect(body.indexOf('</a>')).toBeLessThan(body.indexOf('<form'));
+	});
+
 	it('escapa el título', () => {
 		const { body } = render(VideoCard, {
 			props: { item: video({ title: '<script>alert(1)</script>' }) }

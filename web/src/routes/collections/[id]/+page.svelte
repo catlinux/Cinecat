@@ -1,5 +1,6 @@
 <script lang="ts">
 	import CollectionAdmin from '$lib/components/CollectionAdmin.svelte';
+	import ListToggle from '$lib/components/ListToggle.svelte';
 	import PosterCard from '$lib/components/PosterCard.svelte';
 	import {
 		firstUnwatched,
@@ -60,11 +61,23 @@
 				· {formatViewedCount(viewed, collection.items.length)}
 			{/if}
 		</p>
-		{#if playItem}
-			<a class="button" href={`/items/${playItem.id}/play`}>
-				{pending ? 'Reproducir la primera sin ver' : 'Reproducir la primera'}
-			</a>
-		{/if}
+		<div class="detail-actions">
+			{#if playItem}
+				<a class="button" href={`/items/${playItem.id}/play`}>
+					{pending ? 'Reproducir la primera sin ver' : 'Reproducir la primera'}
+				</a>
+			{/if}
+			{#if collection.favorite !== undefined || collection.watchlist !== undefined}
+				<ListToggle kind="collection" id={collection.id} list="favorite" active={collection.favorite ?? false} label="Favorito" />
+				<ListToggle
+					kind="collection"
+					id={collection.id}
+					list="watchlist"
+					active={collection.watchlist ?? false}
+					label="Próximas a ver"
+				/>
+			{/if}
+		</div>
 	</div>
 </section>
 

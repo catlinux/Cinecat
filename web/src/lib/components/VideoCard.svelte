@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { MediaItem } from '$lib/api';
+	import ListToggle from './ListToggle.svelte';
 	import { posterColors } from '$lib/poster-color';
 	import { formatProgressTime, progressPercent } from '$lib/progress';
 
@@ -15,6 +16,7 @@
 	);
 </script>
 
+<div class="list-card-wrap">
 <a
 	class="video-card"
 	href={`/items/${item.id}`}
@@ -56,6 +58,10 @@
 		{/if}
 	</div>
 </a>
+{#if item.favorite !== undefined || item.watchlist !== undefined}
+	<ListToggle kind="item" id={item.id} list="favorite" active={item.favorite ?? false} size="small" />
+{/if}
+</div>
 
 <style>
 	.video-card {
@@ -168,4 +174,5 @@
 		color: var(--texto-apagado);
 		font-size: 0.74rem;
 	}
+
 </style>

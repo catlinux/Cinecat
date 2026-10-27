@@ -10,18 +10,32 @@ import { webVersion } from '$lib/version';
 export const load: LayoutServerLoad = async ({ locals, fetch, url }) => {
 	const pathname = url?.pathname ?? '';
 	const isHome = pathname === '/';
-	const activeCategory: 'movies' | 'collections' | 'series' | 'videos' | 'music' | null =
-		pathname === '/music' || pathname.startsWith('/music/')
-			? 'music'
-			: pathname === '/videos' || pathname.startsWith('/videos/')
-				? 'videos'
-				: pathname === '/movies' || pathname.startsWith('/movies/') || pathname.startsWith('/items/')
-					? 'movies'
-					: pathname === '/collections' || pathname.startsWith('/collections/')
-						? 'collections'
-						: pathname === '/series' || pathname.startsWith('/series/')
-							? 'series'
-							: null;
+	const activeCategory:
+		| 'movies'
+		| 'collections'
+		| 'series'
+		| 'videos'
+		| 'music'
+		| 'favorites'
+		| 'watchlist'
+		| null =
+		pathname === '/favorites'
+			? 'favorites'
+			: pathname === '/watchlist'
+				? 'watchlist'
+				: pathname === '/music' || pathname.startsWith('/music/')
+					? 'music'
+					: pathname === '/videos' || pathname.startsWith('/videos/')
+						? 'videos'
+						: pathname === '/movies' ||
+							  pathname.startsWith('/movies/') ||
+							  pathname.startsWith('/items/')
+							? 'movies'
+							: pathname === '/collections' || pathname.startsWith('/collections/')
+								? 'collections'
+								: pathname === '/series' || pathname.startsWith('/series/')
+									? 'series'
+									: null;
 	let serverVersion: string | null = null;
 	let serverCommit: string | null = null;
 	try {

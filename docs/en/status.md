@@ -2,7 +2,7 @@
 
 [Español](../es/estado.md) · [Back to README](../../README.en.md)
 
-Current version: **0.19.1**. This page describes the real state of the code, not the original plan. Versions come from the [CHANGELOG](../../CHANGELOG.en.md).
+Current version: **0.20.0**. This page describes the real state of the code, not the original plan. Versions come from the [CHANGELOG](../../CHANGELOG.en.md).
 
 ## What already exists
 
@@ -42,7 +42,7 @@ Current version: **0.19.1**. This page describes the real state of the code, not
 | Web interface | Login, httpOnly session, logout and password change | ✅ 0.2.0 / 0.3.5 | Logout is on `/login`. |
 | Web interface | Portal, movies, series and collections with search, filters, sorting and pagination | ✅ 0.11.0 / 0.15.0 | Columns × rows per page; letter, genre and watched filters on movies. |
 | Web interface | Light/dark/system themes, side or top navigation and responsive layout | ✅ 0.2.0 / 0.14.0 | Theme preference stored in the browser. |
-| Web interface | Favorites and watchlist | 🟡 | server done; screen pending (F2). |
+| Web interface | Favorites and watchlist | ✅ 0.20.0 | Cards, pages and portal rows. |
 | Web interface | Global search and profiles | ⬜ | Not implemented. |
 | Administration | Summary, libraries, scan, settings, correction and images | ✅ 0.11.0 / 0.12.0 | Settings apply without a restart. |
 | Administration | Users, sessions, devices, activity and backups | ⬜ | "Users" appears as "Soon"; there is no user CRUD. |

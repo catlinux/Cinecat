@@ -96,6 +96,22 @@
 							>
 						{/if}
 					</nav>
+					{#if data.hasSession}
+						<nav class="category-nav list-nav" aria-label="Listas">
+							<a
+								href="/favorites"
+								class:category-active={data.activeCategory === 'favorites'}
+								aria-current={data.activeCategory === 'favorites' ? 'page' : undefined}
+								>Favoritos</a
+							>
+							<a
+								href="/watchlist"
+								class:category-active={data.activeCategory === 'watchlist'}
+								aria-current={data.activeCategory === 'watchlist' ? 'page' : undefined}
+								>Próximas a ver</a
+							>
+						</nav>
+					{/if}
 					{#if data.isAdmin}
 						<a class="account-link" href="/admin">Administración</a>
 					{/if}

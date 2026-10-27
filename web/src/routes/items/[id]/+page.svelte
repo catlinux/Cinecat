@@ -15,6 +15,7 @@
 	import RowScroller from '$lib/components/RowScroller.svelte';
 	import FilePanel from '$lib/components/FilePanel.svelte';
 	import ImagePanel from '$lib/components/ImagePanel.svelte';
+	import ListToggle from '$lib/components/ListToggle.svelte';
 	import MatchDialog from '$lib/components/MatchDialog.svelte';
 	import PlaybackOptions from '$lib/components/PlaybackOptions.svelte';
 	import {
@@ -189,6 +190,16 @@
 						{item.watched ? 'Marcada como vista · Desmarcar' : 'Marcar como visto'}
 					</button>
 				</form>
+				{#if item.favorite !== undefined || item.watchlist !== undefined}
+					<ListToggle kind="item" id={item.id} list="favorite" active={item.favorite ?? false} label="Favorito" />
+					<ListToggle
+						kind="item"
+						id={item.id}
+						list="watchlist"
+						active={item.watchlist ?? false}
+						label="Próximas a ver"
+					/>
+				{/if}
 			</div>
 
 			{#if playbackOptions}
@@ -271,6 +282,16 @@
 						{item.watched ? 'Marcada como vista · Desmarcar' : 'Marcar como visto'}
 					</button>
 				</form>
+				{#if item.favorite !== undefined || item.watchlist !== undefined}
+					<ListToggle kind="item" id={item.id} list="favorite" active={item.favorite ?? false} label="Favorito" />
+					<ListToggle
+						kind="item"
+						id={item.id}
+						list="watchlist"
+						active={item.watchlist ?? false}
+						label="Próximas a ver"
+					/>
+				{/if}
 			</div>
 
 			{#if playbackOptions}
@@ -382,6 +403,16 @@
 						{item.watched ? 'Marcada como vista · Desmarcar' : 'Marcar como visto'}
 					</button>
 				</form>
+				{#if item.favorite !== undefined || item.watchlist !== undefined}
+					<ListToggle kind="item" id={item.id} list="favorite" active={item.favorite ?? false} label="Favorito" />
+					<ListToggle
+						kind="item"
+						id={item.id}
+						list="watchlist"
+						active={item.watchlist ?? false}
+						label="Próximas a ver"
+					/>
+				{/if}
 			</div>
 
 			{#if playbackOptions}
