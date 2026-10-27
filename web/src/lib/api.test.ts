@@ -25,6 +25,28 @@ describe('ApiClient', () => {
 		expect(init.body).toBe(JSON.stringify({ username: 'ana', password: 'secreta' }));
 	});
 
+	it('reenvía la IP del cliente al hacer login si se indica', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(
+			jsonResponse({ token: 'token-123', expires_at: '2026-10-26T12:00:00Z' })
+		);
+		const client = new ApiClient({ baseUrl: 'http://api.test', fetch: fetchMock });
+
+		await client.login({ username: 'ana', password: 'secreta' }, '203.0.113.7');
+
+		expect(fetchMock.mock.calls[0][1].headers['X-Forwarded-For']).toBe('203.0.113.7');
+	});
+
+	it('no envía X-Forwarded-For si la IP está vacía', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(
+			jsonResponse({ token: 'token-123', expires_at: '2026-10-26T12:00:00Z' })
+		);
+		const client = new ApiClient({ baseUrl: 'http://api.test', fetch: fetchMock });
+
+		await client.login({ username: 'ana', password: 'secreta' }, '  ');
+
+		expect(fetchMock.mock.calls[0][1].headers['X-Forwarded-For']).toBeUndefined();
+	});
+
 	it('convierte un 401 en ApiError con estado', async () => {
 		const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ error: 'credenciales' }, 401));
 		const client = new ApiClient({ baseUrl: 'http://api.test', fetch: fetchMock });

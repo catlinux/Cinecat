@@ -123,8 +123,9 @@ Read by the server:
 | `CINECAT_MEDIA_ROOTS` | `/media` | Allowed roots for library folders and the browser; separated by `:` on Linux and `;` on Windows. |
 | `CINECAT_ADMIN_PASSWORD` | empty | Password for the `admin` created on first start; if absent, one is generated and printed once. |
 | `CINECAT_RUN_DIR` | `/run/cinecat-update` | Shared directory for update requests. |
+| `CINECAT_TRUSTED_PROXIES` | loopback and private networks | Networks from which `X-Forwarded-For` is accepted; comma-separated CIDR or IP list. |
 
-Docker also uses `CINECAT_MEDIA_PATH` (host path mounted at `/media`), `CINECAT_MEDIA_ROOTS` (roots visible inside the container), `CINECAT_API_PORT` (`8080`) and `CINECAT_WEB_PORT` (`8081`). `PUBLIC_API_URL` and `PROTOCOL_HEADER` belong to the web container. There are no variables for the FFmpeg path, CORS, users or HLS limits.
+Docker also uses `CINECAT_MEDIA_PATH` (host path mounted at `/media`), `CINECAT_MEDIA_ROOTS` (roots visible inside the container), `CINECAT_API_PORT` (`8080`) and `CINECAT_WEB_PORT` (`8081`). The web container uses `ADDRESS_HEADER=X-Forwarded-For` and `XFF_DEPTH=1` (number of trusted proxies in front of the web app); `PUBLIC_API_URL` and `PROTOCOL_HEADER` also belong to the web container. There are no variables for the FFmpeg path, CORS, users or HLS limits.
 
 ## Updating the server
 
@@ -135,7 +136,7 @@ Docker also uses `CINECAT_MEDIA_PATH` (host path mounted at `/media`), `CINECAT_
 
 ## Security limitations
 
-- Login lockout is keyed by username, not IP: a known account can be temporarily locked.
+- Login lockout counts failures per user+IP pair and adds a per-IP limit, but it still lives in process memory and depends on Apache and the web app forwarding the real IP correctly.
 - There are no per-library permissions: any authenticated user sees the whole catalogue.
 - There is no screen to create users or revoke sessions.
 - The server sends no CORS headers; the Apache deployment works by sharing the origin.

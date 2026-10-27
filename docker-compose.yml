@@ -21,6 +21,7 @@ services:
       CINECAT_OMDB_API_KEY: ${CINECAT_OMDB_API_KEY:-}
       CINECAT_SCAN_INTERVAL: ${CINECAT_SCAN_INTERVAL:-6h}
       CINECAT_ADMIN_PASSWORD: ${CINECAT_ADMIN_PASSWORD:-}
+      CINECAT_TRUSTED_PROXIES: ${CINECAT_TRUSTED_PROXIES:-}
 
   web:
     build:
@@ -32,6 +33,10 @@ services:
     environment:
       PUBLIC_API_URL: ""
       PROTOCOL_HEADER: x-forwarded-proto
+      # Apache añade X-Forwarded-For; XFF_DEPTH es el número de proxies de
+      # confianza que hay delante de la web (1 = solo Apache).
+      ADDRESS_HEADER: X-Forwarded-For
+      XFF_DEPTH: "1"
     depends_on:
       - servidor
 

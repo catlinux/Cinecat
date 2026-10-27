@@ -8,7 +8,6 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 
 ## 🔴 Bloqueante para uso multiusuario
 
-- **Bloqueo de login por nombre de usuario.** `internal/auth` cuenta los fallos por `username`; cinco fallos bloquean esa cuenta 15 minutos. Cualquiera que conozca un nombre puede bloquearla. Hay que combinar usuario+IP o añadir un límite por IP.
 - **No se pueden crear usuarios.** No hay endpoint ni pantalla para crear, listar, cambiar rol, restablecer contraseña o borrar usuarios. Solo existe el `admin` inicial y `--hash-password`.
 - **No hay permisos por biblioteca.** Cualquier usuario autenticado ve todas las bibliotecas, ítems, series y colecciones. La tabla `libraries` no tiene propietario ni ACL.
 
@@ -29,6 +28,8 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 
 ## 🟢 Más adelante
 
+- 🟢 **Bloqueo de login compartido entre varias instancias del servidor** (hoy es memoria del proceso).
+- 🟢 **Aviso al administrador tras muchos intentos fallidos.**
 - 🟢 **Purgar miniaturas de ítems que ya no existen.**
 - **Complementos**, todavía en diseño.
 - **DLNA/UPnP**, todavía en diseño.

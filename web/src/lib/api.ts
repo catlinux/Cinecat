@@ -713,6 +713,7 @@ interface RequestOptions {
 	body?: unknown;
 	token?: string;
 	empty?: boolean;
+	headers?: Record<string, string>;
 }
 
 // Cliente tipado contra api/openapi.yaml. Los tipos se escriben a mano para no
@@ -726,10 +727,12 @@ export class ApiClient {
 		this.fetchImpl = options.fetch ?? globalThis.fetch.bind(globalThis);
 	}
 
-	async login(credentials: LoginRequest): Promise<LoginResponse> {
+	async login(credentials: LoginRequest, clientIP = ''): Promise<LoginResponse> {
+		const ip = clientIP.trim();
 		return this.request<LoginResponse>('/api/v1/auth/login', {
 			method: 'POST',
-			body: credentials
+			body: credentials,
+			headers: ip ? { 'X-Forwarded-For': ip } : undefined
 		});
 	}
 
@@ -1263,7 +1266,10 @@ export class ApiClient {
 	}
 
 	private async request<T>(path: string, options: RequestOptions): Promise<T> {
-		const headers: Record<string, string> = { Accept: 'application/json' };
+		const headers: Record<string, string> = {
+			Accept: 'application/json',
+			...(options.headers ?? {})
+		};
 		if (options.body !== undefined) {
 			headers['Content-Type'] = 'application/json';
 		}

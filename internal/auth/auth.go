@@ -12,6 +12,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math"
+	"net/netip"
 	"strconv"
 	"strings"
 	"sync"
@@ -34,10 +36,17 @@ const (
 const (
 	// DefaultSessionTTL es la vida de una sesión recién creada.
 	DefaultSessionTTL = 24 * time.Hour
-	// DefaultMaxAttempts es el número de fallos seguidos que bloquea el login.
+	// DefaultMaxAttempts es el número de fallos seguidos que bloquea una
+	// pareja usuario+IP.
 	DefaultMaxAttempts = 5
+	// DefaultMaxAttemptsPerIP es el máximo de fallos desde una sola IP, con
+	// cualquier usuario, antes de bloquearla.
+	DefaultMaxAttemptsPerIP = 20
 	// DefaultLockDuration es lo que dura el bloqueo temporal.
 	DefaultLockDuration = 15 * time.Minute
+	// maxAttemptEntries acota el mapa en memoria aunque lleguen nombres e IPs
+	// inventados.
+	maxAttemptEntries = 10000
 	// tokenBytes es la entropía del token de sesión (256 bits).
 	tokenBytes = 32
 )
@@ -65,14 +74,17 @@ type User struct {
 
 // Service agrupa las operaciones de autenticación sobre una base de datos.
 type Service struct {
-	db           *sql.DB
-	now          func() time.Time
-	sessionTTL   time.Duration
-	maxAttempts  int
-	lockDuration time.Duration
+	db            *sql.DB
+	now           func() time.Time
+	sessionTTL    time.Duration
+	maxAttempts   int
+	maxIPAttempts int
+	lockDuration  time.Duration
+	trusted       []netip.Prefix
 
-	mu       sync.Mutex
-	attempts map[string]*attempt
+	mu         sync.Mutex
+	attempts   map[string]*attempt
+	ipAttempts map[string]*attempt
 }
 
 type attempt struct {
@@ -115,19 +127,44 @@ func WithLockout(maxAttempts int, d time.Duration) Option {
 	}
 }
 
+// WithIPLockout cambia el umbral y la duración del bloqueo por IP. La
+// duración es la misma que la del bloqueo por pareja.
+func WithIPLockout(maxAttempts int, d time.Duration) Option {
+	return func(s *Service) {
+		if maxAttempts > 0 {
+			s.maxIPAttempts = maxAttempts
+		}
+		if d > 0 {
+			s.lockDuration = d
+		}
+	}
+}
+
+// WithTrustedProxies sustituye las redes desde las que se acepta
+// X-Forwarded-For. Una lista vacía desactiva la confianza en la cabecera.
+func WithTrustedProxies(prefixes []netip.Prefix) Option {
+	return func(s *Service) {
+		s.trusted = append([]netip.Prefix(nil), prefixes...)
+	}
+}
+
 // New crea el servicio de autenticación. Las sesiones duran 24 horas y, si
 // quedan menos de 12, se renuevan en cada uso (caducidad deslizante). Tras 5
-// intentos fallidos seguidos para un mismo nombre de usuario, el login se
-// bloquea 15 minutos. El bloqueo vive en memoria del proceso y se pierde al
-// reiniciar, algo asumible en un servidor personal.
+// intentos fallidos seguidos para una misma pareja usuario+IP, el login de esa
+// pareja se bloquea 15 minutos; además, 20 fallos desde una IP bloquean todas
+// las peticiones de esa IP. El bloqueo vive en memoria del proceso y se pierde
+// al reiniciar, algo asumible en un servidor personal.
 func New(db *sql.DB, opts ...Option) *Service {
 	s := &Service{
-		db:           db,
-		now:          time.Now,
-		sessionTTL:   DefaultSessionTTL,
-		maxAttempts:  DefaultMaxAttempts,
-		lockDuration: DefaultLockDuration,
-		attempts:     make(map[string]*attempt),
+		db:            db,
+		now:           time.Now,
+		sessionTTL:    DefaultSessionTTL,
+		maxAttempts:   DefaultMaxAttempts,
+		maxIPAttempts: DefaultMaxAttemptsPerIP,
+		lockDuration:  DefaultLockDuration,
+		trusted:       DefaultTrustedProxies(),
+		attempts:      make(map[string]*attempt),
+		ipAttempts:    make(map[string]*attempt),
 	}
 	for _, opt := range opts {
 		opt(s)
@@ -214,13 +251,23 @@ func parseHash(encodedHash string) (hashParams, []byte, []byte, error) {
 	return params, salt, key, nil
 }
 
-// Login comprueba las credenciales y, si son correctas, crea una sesión y
-// devuelve el token en claro (que no se guarda) y su caducidad.
+// Login comprueba las credenciales sin IP de cliente. Se conserva para los
+// llamadores que no pasan por HTTP; equivale a una IP desconocida.
 func (s *Service) Login(ctx context.Context, username, password string) (string, time.Time, error) {
-	key := normalizeUsername(username)
+	return s.LoginFrom(ctx, username, password, "")
+}
+
+// LoginFrom comprueba las credenciales contando los fallos por pareja
+// usuario+IP y por IP. Un login correcto limpia solo la pareja.
+func (s *Service) LoginFrom(ctx context.Context, username, password, clientIP string) (string, time.Time, error) {
+	key := loginPairKey(username, clientIP)
+	ipKey := ""
+	if strings.TrimSpace(clientIP) != "" {
+		ipKey = normalizeClientIP(clientIP)
+	}
 	now := s.now()
 
-	if s.isLocked(key, now) {
+	if s.isLockedFor(key, ipKey, now) {
 		return "", time.Time{}, ErrAccountLocked
 	}
 
@@ -230,7 +277,7 @@ func (s *Service) Login(ctx context.Context, username, password string) (string,
 		// Mismo coste que una verificación real, para no delatar por tiempo si
 		// el usuario existe.
 		_, _ = VerifyPassword(dummyHash(), password)
-		s.registerFailure(key, now)
+		s.registerFailureFor(key, ipKey, now)
 		return "", time.Time{}, ErrInvalidCredentials
 	case err != nil:
 		return "", time.Time{}, err
@@ -241,7 +288,7 @@ func (s *Service) Login(ctx context.Context, username, password string) (string,
 		return "", time.Time{}, err
 	}
 	if !valid {
-		s.registerFailure(key, now)
+		s.registerFailureFor(key, ipKey, now)
 		return "", time.Time{}, ErrInvalidCredentials
 	}
 	s.resetFailures(key)
@@ -376,40 +423,34 @@ func (s *Service) findUser(ctx context.Context, username string) (User, string, 
 }
 
 func (s *Service) isLocked(key string, now time.Time) bool {
+	return s.isLockedFor(key, "", now)
+}
+
+func (s *Service) isLockedFor(key, ipKey string, now time.Time) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	a, ok := s.attempts[key]
-	if !ok {
-		return false
-	}
-	if now.Before(a.lockedUntil) {
+	s.pruneLocked(now)
+	if entryLocked(s.attempts[key], now) {
 		return true
 	}
-	if !a.lockedUntil.IsZero() {
-		// El bloqueo ya expiró: se empieza de cero.
-		delete(s.attempts, key)
-	}
-	return false
+	return ipKey != "" && entryLocked(s.ipAttempts[ipKey], now)
 }
 
 func (s *Service) registerFailure(key string, now time.Time) {
+	s.registerFailureFor(key, "", now)
+}
+
+func (s *Service) registerFailureFor(key, ipKey string, now time.Time) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.prune(now)
-
-	a, ok := s.attempts[key]
-	if !ok {
-		a = &attempt{}
-		s.attempts[key] = a
+	s.pruneLocked(now)
+	registerAttempt(s.attempts, key, now, s.maxAttempts, s.lockDuration)
+	if ipKey != "" {
+		registerAttempt(s.ipAttempts, ipKey, now, s.maxIPAttempts, s.lockDuration)
 	}
-	a.count++
-	a.last = now
-	if a.count >= s.maxAttempts {
-		a.count = 0
-		a.lockedUntil = now.Add(s.lockDuration)
-	}
+	s.trimLocked()
 }
 
 func (s *Service) resetFailures(key string) {
@@ -418,21 +459,110 @@ func (s *Service) resetFailures(key string) {
 	delete(s.attempts, key)
 }
 
-// prune evita que el mapa de intentos crezca sin límite con nombres de usuario
-// inventados.
-func (s *Service) prune(now time.Time) {
-	if len(s.attempts) < 1024 {
+func registerAttempt(entries map[string]*attempt, key string, now time.Time, limit int, duration time.Duration) {
+	if key == "" {
 		return
 	}
-	for key, a := range s.attempts {
-		if now.Sub(a.last) > s.lockDuration && !now.Before(a.lockedUntil) {
+	entry, ok := entries[key]
+	if !ok {
+		entry = &attempt{}
+		entries[key] = entry
+	}
+	entry.count++
+	entry.last = now
+	if entry.count >= limit {
+		entry.count = 0
+		entry.lockedUntil = now.Add(duration)
+	}
+}
+
+func entryLocked(entry *attempt, now time.Time) bool {
+	return entry != nil && now.Before(entry.lockedUntil)
+}
+
+// prune elimina entradas caducadas. Se conserva como método para las pruebas
+// y para no exponer el bloqueo interno.
+func (s *Service) prune(now time.Time) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.pruneLocked(now)
+}
+
+func (s *Service) pruneLocked(now time.Time) {
+	for key, entry := range s.attempts {
+		if entryExpired(entry, now, s.lockDuration) {
 			delete(s.attempts, key)
 		}
+	}
+	for key, entry := range s.ipAttempts {
+		if entryExpired(entry, now, s.lockDuration) {
+			delete(s.ipAttempts, key)
+		}
+	}
+}
+
+func entryExpired(entry *attempt, now time.Time, duration time.Duration) bool {
+	if entry == nil {
+		return true
+	}
+	if now.Before(entry.lockedUntil) {
+		return false
+	}
+	return !now.Before(entry.last.Add(duration))
+}
+
+// trimLocked impone el tope duro de memoria. Cuando se supera, descarta las
+// entradas con actividad más antigua de cualquiera de los dos mapas.
+func (s *Service) trimLocked() {
+	for len(s.attempts)+len(s.ipAttempts) > maxAttemptEntries {
+		var oldestMap map[string]*attempt
+		var oldestKey string
+		var oldest time.Time
+		found := false
+		for _, entries := range []map[string]*attempt{s.attempts, s.ipAttempts} {
+			for key, entry := range entries {
+				if !found || entry.last.Before(oldest) {
+					oldestMap = entries
+					oldestKey = key
+					oldest = entry.last
+					found = true
+				}
+			}
+		}
+		if !found {
+			return
+		}
+		delete(oldestMap, oldestKey)
 	}
 }
 
 func normalizeUsername(username string) string {
 	return strings.ToLower(strings.TrimSpace(username))
+}
+
+const unknownClientIP = "sin-ip"
+
+func normalizeClientIP(clientIP string) string {
+	clientIP = strings.TrimSpace(clientIP)
+	if clientIP == "" {
+		return unknownClientIP
+	}
+	if address, ok := parseClientIP(clientIP); ok {
+		return address.String()
+	}
+	return clientIP
+}
+
+func loginPairKey(username, clientIP string) string {
+	return normalizeUsername(username) + "\x00" + normalizeClientIP(clientIP)
+}
+
+func (s *Service) retryAfterSeconds() int {
+	seconds := int(math.Ceil(s.lockDuration.Seconds()))
+	if seconds < 1 {
+		return 1
+	}
+	return seconds
 }
 
 func newToken() (string, error) {

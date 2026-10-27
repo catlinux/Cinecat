@@ -107,7 +107,7 @@ func main() {
 		}
 	}
 
-	authSvc := auth.New(st.DB())
+	authSvc := auth.New(st.DB(), auth.WithTrustedProxies(cfg.TrustedProxies))
 	playSvc, err := playback.New(playback.Options{
 		Settings: func() playback.TranscodeSettings {
 			return playback.TranscodeSettings{

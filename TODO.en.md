@@ -8,7 +8,6 @@ This file contains only work that is still open. Published work is in the [CHANG
 
 ## 🔴 Blocking for multi-user use
 
-- **Login lockout by username.** `internal/auth` counts failures per `username`; five failures lock that account for 15 minutes. Anyone who knows a username can lock it. Combine username+IP or add a per-IP limit.
 - **Users cannot be created.** There is no endpoint or screen to create, list, change role, reset password or delete users. Only the initial `admin` and `--hash-password` exist.
 - **No per-library permissions.** Any authenticated user sees every library, item, series and collection. The `libraries` table has no owner or ACL.
 
@@ -29,6 +28,8 @@ This file contains only work that is still open. Published work is in the [CHANG
 
 ## 🟢 Later
 
+- 🟢 **Share login lockout between several server instances** (today it is process memory).
+- 🟢 **Notify the administrator after many failed attempts.**
 - 🟢 **Purge thumbnails for items that no longer exist.**
 - **Plugins**, still at the design stage.
 - **DLNA/UPnP**, still at the design stage.

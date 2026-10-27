@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -76,9 +77,11 @@ func (s *Service) LoginHandler() http.Handler {
 			return
 		}
 
-		token, expiresAt, err := s.Login(r.Context(), req.Username, req.Password)
+		clientIP := ClientIP(r, s.trusted)
+		token, expiresAt, err := s.LoginFrom(r.Context(), req.Username, req.Password, clientIP)
 		switch {
 		case errors.Is(err, ErrAccountLocked):
+			w.Header().Set("Retry-After", strconv.Itoa(s.retryAfterSeconds()))
 			writeError(w, http.StatusTooManyRequests, "demasiados intentos fallidos; inténtalo más tarde")
 		case errors.Is(err, ErrInvalidCredentials):
 			writeError(w, http.StatusUnauthorized, "usuario o contraseña incorrectos")

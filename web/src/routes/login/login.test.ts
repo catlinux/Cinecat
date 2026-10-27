@@ -23,6 +23,7 @@ function fakeEvent(options: {
 	username?: string;
 	password?: string;
 	token?: string | null;
+	clientIP?: string | null;
 }) {
 	const get = vi.fn(() => options.token ?? undefined);
 	const set = vi.fn();
@@ -38,7 +39,16 @@ function fakeEvent(options: {
 		params: {},
 		route: { id: '/login' },
 		setHeaders: vi.fn(),
-		getClientAddress: () => '127.0.0.1',
+		...(options.clientIP === null
+			? {}
+			: {
+					getClientAddress: () => {
+						if (options.clientIP === 'throw') {
+							throw new Error('sin dirección');
+						}
+						return options.clientIP ?? '127.0.0.1';
+					}
+				}),
 		isDataRequest: false,
 		isSubRequest: false,
 		platform: undefined
@@ -82,6 +92,7 @@ describe('acción de login', () => {
 
 		expect(fetchMock).toHaveBeenCalledTimes(1);
 		expect(fetchMock.mock.calls[0][0]).toBe('http://api.test/api/v1/auth/login');
+		expect(fetchMock.mock.calls[0][1].headers['X-Forwarded-For']).toBe('127.0.0.1');
 		expect(set).toHaveBeenCalledTimes(1);
 		const [name, value, options] = set.mock.calls[0];
 		expect(name).toBe('cinecat_session');
@@ -140,6 +151,75 @@ describe('acción de login', () => {
 		expect(result.data.message).toContain('Demasiados intentos fallidos');
 		expect(result.data.message).toContain('Espera unos minutos');
 		expect(set).not.toHaveBeenCalled();
+	});
+
+	it('sigue funcionando si getClientAddress no está disponible', async () => {
+		const fetchMock = apiError(401);
+		const { event } = fakeEvent({
+			fetchImpl: fetchMock,
+			username: 'ana',
+			password: 'incorrecta',
+			clientIP: 'throw'
+		});
+
+		const result = (await login(event as never)) as { status: number };
+		expect(result.status).toBe(401);
+		expect(fetchMock.mock.calls[0][1].headers['X-Forwarded-For']).toBeUndefined();
+	});
+
+	it('el quinto fallo muestra el bloqueo y una IP distinta puede entrar', async () => {
+		let attempts = 0;
+		const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+			const headers = init?.headers as Record<string, string>;
+			if (headers['X-Forwarded-For'] === '203.0.113.8') {
+				return new Response(JSON.stringify({ token: 'token-bea', expires_at: '2026-10-26T12:00:00Z' }), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			}
+			attempts++;
+			if (attempts >= 5) {
+				return new Response(JSON.stringify({ error: 'bloqueado' }), {
+					status: 429,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			}
+			return new Response(JSON.stringify({ error: 'credenciales' }), {
+				status: 401,
+				headers: { 'Content-Type': 'application/json' }
+			});
+		});
+
+		for (let index = 0; index < 4; index++) {
+			const { event } = fakeEvent({
+				fetchImpl: fetchMock as never,
+				username: 'ana',
+				password: 'mala',
+				clientIP: '203.0.113.7'
+			});
+			const result = (await login(event as never)) as { status: number };
+			expect(result.status).toBe(401);
+		}
+		const fifth = fakeEvent({
+			fetchImpl: fetchMock as never,
+			username: 'ana',
+			password: 'mala',
+			clientIP: '203.0.113.7'
+		});
+		const blocked = (await login(fifth.event as never)) as {
+			status: number;
+			data: { message: string };
+		};
+		expect(blocked.status).toBe(429);
+		expect(blocked.data.message).toContain('Demasiados intentos');
+
+		const other = fakeEvent({
+			fetchImpl: fetchMock as never,
+			username: 'bea',
+			password: 'Clave-segura-2',
+			clientIP: '203.0.113.8'
+		});
+		await expect(login(other.event as never)).rejects.toMatchObject({ status: 303, location: '/' });
 	});
 
 	it('valida los campos vacíos sin llamar a la API', async () => {

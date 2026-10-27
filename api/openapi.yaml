@@ -15,8 +15,9 @@ paths:
       summary: Inicia sesión
       description: |
         Comprueba usuario y contraseña y devuelve un token de sesión de vida
-        corta. Tras varios intentos fallidos seguidos, responde 429 con un
-        bloqueo temporal.
+        corta. Los fallos se cuentan por usuario y dirección IP, con un límite
+        adicional por IP; al superarlos responde 429 con un bloqueo temporal y
+        la cabecera `Retry-After`.
       requestBody:
         required: true
         content:
@@ -43,7 +44,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '429':
-          description: Demasiados intentos fallidos
+          description: Demasiados intentos fallidos para este usuario e IP, o para esta IP
+          headers:
+            Retry-After:
+              description: Segundos que conviene esperar antes de volver a intentarlo.
+              schema:
+                type: integer
+                minimum: 1
           content:
             application/json:
               schema:

@@ -15,6 +15,7 @@ func TestLoadDefaults(t *testing.T) {
 	t.Setenv(EnvOMDbAPIKey, "")
 	t.Setenv(EnvScanInterval, "")
 	t.Setenv(EnvMediaRoots, "")
+	t.Setenv(EnvTrustedProxies, "")
 
 	cfg, err := Load("")
 	if err != nil {
@@ -34,6 +35,47 @@ func TestLoadDefaults(t *testing.T) {
 	}
 	if len(cfg.MediaRoots) != 1 || cfg.MediaRoots[0] != DefaultMediaRoot {
 		t.Fatalf("MediaRoots = %#v, se esperaba [%q]", cfg.MediaRoots, DefaultMediaRoot)
+	}
+	if len(cfg.TrustedProxies) == 0 {
+		t.Fatal("TrustedProxies no puede quedar vacío por defecto")
+	}
+}
+
+func TestLoadTrustedProxiesDesdeEntorno(t *testing.T) {
+	t.Setenv(EnvConfigFile, "")
+	t.Setenv(EnvTrustedProxies, "127.0.0.1, 10.0.0.0/8, 2001:db8::1")
+	cfg, err := Load("")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if len(cfg.TrustedProxies) != 3 {
+		t.Fatalf("TrustedProxies = %#v", cfg.TrustedProxies)
+	}
+	if cfg.TrustedProxies[0].String() != "127.0.0.1/32" {
+		t.Fatalf("IP suelta = %s, se esperaba /32", cfg.TrustedProxies[0])
+	}
+	if cfg.TrustedProxies[1].String() != "10.0.0.0/8" {
+		t.Fatalf("CIDR = %s", cfg.TrustedProxies[1])
+	}
+	if cfg.TrustedProxies[2].String() != "2001:db8::1/128" {
+		t.Fatalf("IPv6 suelta = %s", cfg.TrustedProxies[2])
+	}
+
+	for _, invalid := range []string{"no-es-ip", "10.0.0.0/99", ","} {
+		t.Setenv(EnvTrustedProxies, invalid)
+		if _, err := Load(""); err == nil {
+			t.Fatalf("%q debe dar un error de configuración", invalid)
+		}
+	}
+}
+
+func TestParseTrustedProxiesVacioUsaDefectos(t *testing.T) {
+	prefixes, err := ParseTrustedProxies("  ")
+	if err != nil {
+		t.Fatalf("ParseTrustedProxies: %v", err)
+	}
+	if len(prefixes) == 0 {
+		t.Fatal("la lista vacía debe devolver los valores por defecto")
 	}
 }
 

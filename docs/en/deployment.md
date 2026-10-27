@@ -29,6 +29,7 @@ Edit `.env`:
 - `CINECAT_OMDB_API_KEY`: optional, fallback without TMDB.
 - `CINECAT_SCAN_INTERVAL`: automatic interval; `0` disables it.
 - `CINECAT_ADMIN_PASSWORD`: password for `admin` on first start.
+- `CINECAT_TRUSTED_PROXIES`: trusted networks for `X-Forwarded-For`; loopback and private networks by default.
 - `CINECAT_API_PORT` and `CINECAT_WEB_PORT`: only if 8080/8081 are taken.
 
 ```sh
@@ -56,6 +57,14 @@ RequestHeader set X-Forwarded-Proto "https"
 ```
 
 Reload Apache. Without that header the session cookie is not marked `Secure`.
+
+### Real client IP and login lockout
+
+Login lockout counts failures per user+IP pair, so the API needs the real IP rather than the web container's IP. Apache's `mod_proxy_http` adds `X-Forwarded-For` by itself (the `ProxyAddHeaders` directive, on by default), so you normally do not need to configure anything in the vhost. Do not turn it off or overwrite it with `RequestHeader set`.
+
+If a CDN or another proxy sits in front of Apache, do not overwrite the chain: let each proxy append to it and set `XFF_DEPTH` to the number of trusted proxies in front of the web app. The web container already uses `ADDRESS_HEADER=X-Forwarded-For` and `XFF_DEPTH=1` in `docker-compose.yml`; with Apache alone that value is correct, and with one extra proxy it must be `2`.
+
+The server only accepts `X-Forwarded-For` when the direct connection comes from a network in `CINECAT_TRUSTED_PROXIES` (loopback and private networks by default, which includes the Docker network). If you change the web container network or put the API behind another network, add its CIDR to that variable. You can check that Apache forwards the header in the Apache or API logs; do not assume your specific configuration already does it without checking.
 
 ## Libraries and first scan
 

@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,13 +20,14 @@ import (
 // Variables de entorno reconocidas. Las claves de API y demás secretos se
 // pasan por aquí o por el archivo de configuración local, nunca por el código.
 const (
-	EnvConfigFile   = "CINECAT_CONFIG"
-	EnvListenAddr   = "CINECAT_LISTEN_ADDR"
-	EnvDatabasePath = "CINECAT_DB_PATH"
-	EnvTMDBAPIKey   = "CINECAT_TMDB_API_KEY"
-	EnvOMDbAPIKey   = "CINECAT_OMDB_API_KEY"
-	EnvScanInterval = "CINECAT_SCAN_INTERVAL"
-	EnvMediaRoots   = "CINECAT_MEDIA_ROOTS"
+	EnvConfigFile     = "CINECAT_CONFIG"
+	EnvListenAddr     = "CINECAT_LISTEN_ADDR"
+	EnvDatabasePath   = "CINECAT_DB_PATH"
+	EnvTMDBAPIKey     = "CINECAT_TMDB_API_KEY"
+	EnvOMDbAPIKey     = "CINECAT_OMDB_API_KEY"
+	EnvScanInterval   = "CINECAT_SCAN_INTERVAL"
+	EnvMediaRoots     = "CINECAT_MEDIA_ROOTS"
+	EnvTrustedProxies = "CINECAT_TRUSTED_PROXIES"
 )
 
 // Valores por defecto cuando no se configura otra cosa.
@@ -54,15 +56,18 @@ type Config struct {
 	// MediaRoots son las carpetas dentro de las que se pueden elegir rutas
 	// de biblioteca y navegar desde la administración.
 	MediaRoots []string `json:"-"`
+	// TrustedProxies son las redes desde las que se acepta X-Forwarded-For.
+	TrustedProxies []netip.Prefix `json:"-"`
 }
 
 // Default devuelve la configuración por defecto.
 func Default() Config {
 	return Config{
-		ListenAddr:   DefaultListenAddr,
-		DatabasePath: DefaultDatabasePath,
-		ScanInterval: DefaultScanInterval,
-		MediaRoots:   []string{DefaultMediaRoot},
+		ListenAddr:     DefaultListenAddr,
+		DatabasePath:   DefaultDatabasePath,
+		ScanInterval:   DefaultScanInterval,
+		MediaRoots:     []string{DefaultMediaRoot},
+		TrustedProxies: defaultTrustedProxies(),
 	}
 }
 
@@ -100,6 +105,13 @@ func Load(configPath string) (Config, error) {
 			return Config{}, fmt.Errorf("config: %s no es una duración válida: %w", EnvScanInterval, err)
 		}
 		cfg.ScanInterval = interval
+	}
+	if raw := strings.TrimSpace(os.Getenv(EnvTrustedProxies)); raw != "" {
+		proxies, err := ParseTrustedProxies(raw)
+		if err != nil {
+			return Config{}, fmt.Errorf("config: %s: %w", EnvTrustedProxies, err)
+		}
+		cfg.TrustedProxies = proxies
 	}
 	if raw := os.Getenv(EnvMediaRoots); strings.TrimSpace(raw) != "" {
 		roots := make([]string, 0)
@@ -160,6 +172,66 @@ func (c *Config) mergeFile(path string) error {
 		c.ScanInterval = interval
 	}
 	return nil
+}
+
+var defaultTrustedProxyCIDRs = []string{
+	"127.0.0.0/8",
+	"::1/128",
+	"10.0.0.0/8",
+	"172.16.0.0/12",
+	"192.168.0.0/16",
+	"fc00::/7",
+}
+
+// DefaultTrustedProxies devuelve una copia de los rangos de confianza por
+// defecto del servidor.
+func DefaultTrustedProxies() []netip.Prefix {
+	return defaultTrustedProxies()
+}
+
+func defaultTrustedProxies() []netip.Prefix {
+	prefixes := make([]netip.Prefix, 0, len(defaultTrustedProxyCIDRs))
+	for _, raw := range defaultTrustedProxyCIDRs {
+		prefix, err := netip.ParsePrefix(raw)
+		if err == nil {
+			prefixes = append(prefixes, prefix.Masked())
+		}
+	}
+	return prefixes
+}
+
+// ParseTrustedProxies acepta una lista separada por comas de CIDR o de IP
+// sueltas. Una IP suelta se convierte en /32 o /128.
+func ParseTrustedProxies(raw string) ([]netip.Prefix, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return defaultTrustedProxies(), nil
+	}
+	prefixes := make([]netip.Prefix, 0)
+	for _, item := range strings.Split(raw, ",") {
+		item = strings.TrimSpace(item)
+		if item == "" {
+			continue
+		}
+		if prefix, err := netip.ParsePrefix(item); err == nil {
+			prefixes = append(prefixes, prefix.Masked())
+			continue
+		}
+		address, err := netip.ParseAddr(item)
+		if err != nil {
+			return nil, fmt.Errorf("el valor %q no es una IP ni un CIDR válido", item)
+		}
+		address = address.Unmap()
+		bits := 128
+		if address.Is4() {
+			bits = 32
+		}
+		prefixes = append(prefixes, netip.PrefixFrom(address, bits))
+	}
+	if len(prefixes) == 0 {
+		return nil, fmt.Errorf("la lista no contiene ninguna IP ni CIDR")
+	}
+	return prefixes, nil
 }
 
 func (c Config) validate() error {

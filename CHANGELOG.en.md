@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.19.1] - 2026-10-27
+
+### Security
+
+- Failed-login lockout can no longer be used to lock someone else's account: attempts are counted per user + client IP pair, with a separate limit of 20 failures per IP. The web passes the real IP to the API (`X-Forwarded-For`, with `ADDRESS_HEADER` and `XFF_DEPTH=1` on the web container) and the API only trusts that header when the direct connection comes from a trusted proxy (`CINECAT_TRUSTED_PROXIES`, loopback and private networks by default). The lockout answers 429 with `Retry-After`, does not reveal whether the user exists and the in-memory map is capped.
+
 ## [0.19.0] - 2026-10-27
 
 ### Added

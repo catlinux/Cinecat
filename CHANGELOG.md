@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.19.1] - 2026-10-27
+
+### Seguridad
+
+- El bloqueo de login por intentos fallidos ya no permite bloquear la cuenta de otra persona: se cuenta por pareja usuario + IP del cliente, con un límite aparte de 20 fallos por IP. La web pasa la IP real a la API (`X-Forwarded-For`, con `ADDRESS_HEADER` y `XFF_DEPTH=1` en el contenedor web) y la API solo se fía de esa cabecera si la conexión directa viene de un proxy de confianza (`CINECAT_TRUSTED_PROXIES`, por defecto loopback y redes privadas). El bloqueo responde 429 con `Retry-After`, no revela si el usuario existe y el mapa en memoria tiene tope.
+
 ## [0.19.0] - 2026-10-27
 
 ### Añadido

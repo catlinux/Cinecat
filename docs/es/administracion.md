@@ -123,8 +123,9 @@ Leídas por el servidor:
 | `CINECAT_MEDIA_ROOTS` | `/media` | Raíces permitidas para las carpetas de biblioteca y el navegador; separadas por `:` en Linux y `;` en Windows. |
 | `CINECAT_ADMIN_PASSWORD` | vacío | Contraseña del `admin` creado en el primer arranque; si falta, se genera y se imprime una vez. |
 | `CINECAT_RUN_DIR` | `/run/cinecat-update` | Directorio compartido para las peticiones de actualización. |
+| `CINECAT_TRUSTED_PROXIES` | loopback y redes privadas | Redes desde las que se acepta `X-Forwarded-For`; lista separada por comas de CIDR o IP. |
 
-En Docker, además: `CINECAT_MEDIA_PATH` (ruta del host montada en `/media`), `CINECAT_MEDIA_ROOTS` (raíces visibles dentro del contenedor), `CINECAT_API_PORT` (`8080`) y `CINECAT_WEB_PORT` (`8081`). `PUBLIC_API_URL` y `PROTOCOL_HEADER` son del contenedor web. No hay variables para la ruta de FFmpeg, CORS, usuarios ni límites de HLS.
+En Docker, además: `CINECAT_MEDIA_PATH` (ruta del host montada en `/media`), `CINECAT_MEDIA_ROOTS` (raíces visibles dentro del contenedor), `CINECAT_API_PORT` (`8080`) y `CINECAT_WEB_PORT` (`8081`). El contenedor web usa `ADDRESS_HEADER=X-Forwarded-For` y `XFF_DEPTH=1` (número de proxies de confianza delante de la web); `PUBLIC_API_URL` y `PROTOCOL_HEADER` también son del contenedor web. No hay variables para la ruta de FFmpeg, CORS, usuarios ni límites de HLS.
 
 ## Actualizar el servidor
 
@@ -135,7 +136,7 @@ En Docker, además: `CINECAT_MEDIA_PATH` (ruta del host montada en `/media`), `C
 
 ## Limitaciones de seguridad
 
-- El bloqueo de login es por nombre de usuario, no por IP: se puede bloquear temporalmente una cuenta conocida.
+- El bloqueo de login cuenta por pareja usuario+IP y añade un límite por IP, pero sigue en memoria del proceso y depende de que Apache y la web reenvíen bien la IP real.
 - No hay permisos por biblioteca: cualquier usuario autenticado ve todo el catálogo.
 - No hay pantalla para crear usuarios ni para revocar sesiones.
 - El servidor no envía CORS; el despliegue con Apache funciona por compartir origen.

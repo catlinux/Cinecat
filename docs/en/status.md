@@ -2,7 +2,7 @@
 
 [Español](../es/estado.md) · [Back to README](../../README.en.md)
 
-Current version: **0.19.0**. This page describes the real state of the code, not the original plan. Versions come from the [CHANGELOG](../../CHANGELOG.en.md).
+Current version: **0.19.1**. This page describes the real state of the code, not the original plan. Versions come from the [CHANGELOG](../../CHANGELOG.en.md).
 
 ## What already exists
 
@@ -69,7 +69,7 @@ The order comes from the plans in `.agents/plans`; no dates or committed version
 
 ## Known limitations and risks
 
-- **Login lockout by username:** five failures lock that account for 15 minutes; the counter is in memory and there is no per-IP limit. Someone can temporarily lock another known account.
+- **Login lockout:** failures are counted per user+IP pair, with an additional per-IP limit; it depends on the proxy forwarding `X-Forwarded-For` correctly and on `CINECAT_TRUSTED_PROXIES`. The counter still lives in process memory.
 - **No CORS:** the server sends no `Access-Control-*` headers. The intended deployment works because Apache serves `/api/` and the web app under the same origin.
 - **No per-library permissions:** any authenticated user can see every library, item, series and collection. This is a risk for multi-user use.
 - **No user creation:** only the initial `admin` and the `--hash-password` flag exist; there is no user screen or endpoint.

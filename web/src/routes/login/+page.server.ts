@@ -8,10 +8,17 @@ export const load: PageServerLoad = ({ locals }) => {
 };
 
 export const actions: Actions = {
-	login: async ({ request, cookies, url, fetch }) => {
+	login: async ({ request, cookies, url, fetch, getClientAddress }) => {
 		const form = await request.formData();
 		const username = String(form.get('username') ?? '').trim();
 		const password = String(form.get('password') ?? '');
+		let clientIP = '';
+		try {
+			clientIP = getClientAddress() || '';
+		} catch {
+			// En algunos despliegues o pruebas no hay dirección de cliente disponible.
+			clientIP = '';
+		}
 
 		if (!username || !password) {
 			return fail(400, { username, message: 'Escribe tu usuario y contraseña.' });
@@ -20,7 +27,7 @@ export const actions: Actions = {
 		const api = createApiClient(fetch);
 
 		try {
-			const session = await api.login({ username, password });
+			const session = await api.login({ username, password }, clientIP);
 			setSessionCookie(cookies, session.token, session.expires_at, url.protocol === 'https:');
 		} catch (error) {
 			const status = typeof error === 'object' && error !== null && 'status' in error

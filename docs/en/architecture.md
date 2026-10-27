@@ -76,14 +76,14 @@ Error responses use `{error}` or `{message}` depending on the endpoint; common c
 - **Argon2id** passwords; 24 h sessions with sliding renewal; 32-byte token with only its hash stored.
 - `admin` and `user` roles; admin endpoints check the role on the server.
 - Session cookie `httpOnly`, `SameSite=Lax` and `Secure` when received over HTTPS.
-- Lockout after five failed attempts and login messages that do not reveal whether the user exists.
+- Lockout after five failed attempts per user+IP pair, with an additional limit of 20 failures per IP, and login messages that do not reveal whether the user exists. The IP comes from `RemoteAddr`; `X-Forwarded-For` is only accepted from the ranges in `CINECAT_TRUSTED_PROXIES`.
 - Playback URLs signed with HMAC-SHA256, 8-hour TTL and a per-process key.
 - Path validation inside the library and scanning without following symlinks.
 - No telemetry. Outgoing connections go to TMDB, OMDb and GitHub only when relevant.
 
 ### Known limits
 
-- Login lockout is keyed by username, not IP; it can be used to temporarily lock an account.
+- Login lockout lives in process memory and is not shared across instances; if the proxy does not forward the IP or the trusted ranges are wrong, it falls back to the direct origin.
 - There is no CORS: the deployment relies on Apache unifying the origin.
 - There are no per-library permissions: any authenticated user sees the whole catalogue.
 - There is no user creation or session revocation from the web app.
