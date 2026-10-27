@@ -239,7 +239,7 @@ func (a *API) handleItems(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userID := sessionUserID(r)
-	where, args, err := itemFilters(r, userID)
+	where, args, err := itemFilters(r, userID, a.collectionMin())
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return

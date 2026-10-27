@@ -7,6 +7,7 @@ export const MOVIE_SORTS = ['title', 'year', 'added'] as const;
 export type MovieSort = (typeof MOVIE_SORTS)[number];
 
 export type WatchedFilter = 'true' | 'false' | null;
+export type CollectionFilter = 'any' | 'none' | null;
 
 export interface MovieFilters {
 	q: string;
@@ -16,11 +17,13 @@ export interface MovieFilters {
 	sort: MovieSort;
 	watched: WatchedFilter;
 	unmatched: boolean;
+	collection: CollectionFilter;
 }
 
-export type LibraryFilterState = Omit<MovieFilters, 'field' | 'watched'> & {
+export type LibraryFilterState = Omit<MovieFilters, 'field' | 'watched' | 'collection'> & {
 	field?: SearchField;
 	watched?: WatchedFilter;
+	collection?: CollectionFilter;
 };
 
 export interface FilterChip {
@@ -54,6 +57,11 @@ export function readMovieFilters(url: URL, isAdmin: boolean): MovieFilters {
 	const unmatched = isAdmin && (unmatchedRaw === '1' || unmatchedRaw === 'true');
 
 	const genreRaw = (url.searchParams.get('genre') ?? '').trim();
+	const collectionRaw = (url.searchParams.get('collection') ?? '').trim().toLowerCase();
+	const collection: CollectionFilter =
+		collectionRaw === 'any' || collectionRaw === 'none'
+			? (collectionRaw as CollectionFilter)
+			: null;
 
 	return {
 		q,
@@ -62,7 +70,8 @@ export function readMovieFilters(url: URL, isAdmin: boolean): MovieFilters {
 		genre: genreRaw || null,
 		sort,
 		watched,
-		unmatched
+		unmatched,
+		collection
 	};
 }
 
@@ -91,6 +100,9 @@ export function movieApiQuery(
 	}
 	if (filters.unmatched) {
 		params.set('unmatched', 'true');
+	}
+	if (filters.collection) {
+		params.set('collection', filters.collection);
 	}
 	return params;
 }
@@ -148,6 +160,13 @@ export function filterChips(filters: MovieFilters, currentUrl: string): FilterCh
 			href: mutateHref(currentUrl, { unmatched: null })
 		});
 	}
+	if (filters.collection) {
+		chips.push({
+			key: 'collection',
+			label: filters.collection === 'any' ? 'En una colección' : 'Sin colección',
+			href: mutateHref(currentUrl, { collection: null })
+		});
+	}
 	return chips;
 }
 
@@ -158,7 +177,8 @@ export function clearFiltersHref(currentUrl: string): string {
 		letter: null,
 		genre: null,
 		watched: null,
-		unmatched: null
+		unmatched: null,
+		collection: null
 	});
 }
 

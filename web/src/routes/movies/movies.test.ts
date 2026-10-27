@@ -57,7 +57,8 @@ const filters: MovieFilters = {
 	genre: null,
 	sort: 'title',
 	watched: null,
-	unmatched: false
+	unmatched: false,
+	collection: null
 };
 
 const genres: GenreCount[] = [
@@ -154,6 +155,36 @@ describe('carga de /movies', () => {
 			'genre',
 			'watched'
 		]);
+	});
+
+	it('traduce el filtro de colección y lo conserva al limpiar', async () => {
+		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+			const url = new URL(String(input));
+			if (url.pathname === '/api/v1/items') {
+				return jsonResponse({ items: [item], total: 1, limit: 48, offset: 0 });
+			}
+			if (url.pathname === '/api/v1/genres') {
+				return jsonResponse({ genres });
+			}
+			throw new Error(`URL inesperada: ${url}`);
+		});
+
+		const result = (await load(
+			event(fetchMock, '/movies?collection=none&q=matrix', false) as never
+		)) as {
+			filters: MovieFilters;
+			filterChips: Array<{ key: string; label: string }>;
+			clearHref: string;
+		};
+
+		const itemsUrl = requestedUrls(fetchMock).find((url) => url.pathname === '/api/v1/items');
+		expect(itemsUrl?.searchParams.get('collection')).toBe('none');
+		expect(result.filters.collection).toBe('none');
+		expect(result.filterChips.map((chip) => chip.key)).toContain('collection');
+		expect(result.filterChips.find((chip) => chip.key === 'collection')?.label).toBe(
+			'Sin colección'
+		);
+		expect(result.clearHref).toBe('/movies');
 	});
 
 	it('solo envía unmatched si el usuario es administrador', async () => {
@@ -356,6 +387,13 @@ describe('página /movies', () => {
 
 		expect(body).toContain('No se pudo cargar la cartelera.');
 		expect(body).toContain('role="alert"');
+	});
+
+	it('muestra el filtro de colección en la cartelera', () => {
+		const { body } = render(MoviesPage, { props: { data: pageData() } });
+		expect(body).toContain('Colección');
+		expect(body).toContain('En una colección');
+		expect(body).toContain('Sin colección');
 	});
 
 	it('muestra el enlace de sin identificar solo al admin', () => {

@@ -1344,6 +1344,11 @@ export class ApiClient {
 		return this.get<CollectionDetail>(`/api/v1/collections/${id}`, token);
 	}
 
+	async getAllCollections(token: string): Promise<Collection[]> {
+		const response = await this.get<CollectionsResponse>('/api/v1/collections?all=1', token);
+		return response.collections ?? [];
+	}
+
 	async createCollection(name: string, overview: string, token: string): Promise<Collection> {
 		return this.post<Collection>('/api/v1/collections', { name, overview }, token);
 	}

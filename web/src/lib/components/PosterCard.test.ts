@@ -206,3 +206,33 @@ describe('PosterCard', () => {
 		expect(second).toContain(`--poster-a: ${color}`);
 	});
 });
+
+describe('indicador de colección', () => {
+	it('indica el nombre cuando la película está en una colección', () => {
+		const { body } = render(PosterCard, {
+			props: { item: { ...item, collections: [{ id: 5, name: 'La saga' }] } }
+		});
+
+		expect(body).toContain('poster-collections');
+		expect(body).toContain('title="En la colección La saga"');
+		expect(body).toContain('aria-label="En la colección La saga"');
+	});
+
+	it('cuenta las colecciones y no aparece si no hay ninguna', () => {
+		const several = render(PosterCard, {
+			props: {
+				item: {
+					...item,
+					collections: [
+						{ id: 5, name: 'Una' },
+						{ id: 6, name: 'Otra' }
+					]
+				}
+			}
+		}).body;
+		expect(several).toContain('title="En 2 colecciones"');
+
+		const none = render(PosterCard, { props: { item } }).body;
+		expect(none).not.toContain('poster-collections');
+	});
+});

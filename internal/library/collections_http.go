@@ -90,12 +90,16 @@ type collectionOrderRequest struct {
 }
 
 func (a *API) handleCollections(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	if raw := strings.TrimSpace(query.Get("all")); raw == "1" || strings.EqualFold(raw, "true") {
+		a.handleAllCollections(w, r)
+		return
+	}
 	limit, offset, err := collectionPagination(r)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	query := r.URL.Query()
 	q := strings.TrimSpace(query.Get("q"))
 	sortOrder := strings.TrimSpace(query.Get("sort"))
 	if sortOrder == "" {
@@ -175,6 +179,67 @@ func (a *API) handleCollections(w http.ResponseWriter, r *http.Request) {
 		Total:       total,
 		Limit:       limit,
 		Offset:      offset,
+	})
+}
+
+// handleAllCollections devuelve todas las colecciones activas para el selector
+// de administración, incluidas las automáticas ocultas y las manuales vacías.
+func (a *API) handleAllCollections(w http.ResponseWriter, r *http.Request) {
+	user, ok := sessionUserFromRequest(r)
+	if !ok || user.Role != "admin" {
+		writeJSONError(w, http.StatusForbidden, "se requiere rol de administrador")
+		return
+	}
+
+	where := "c.deleted = 0"
+	args := make([]any, 0, 1)
+	if q := strings.TrimSpace(r.URL.Query().Get("q")); q != "" {
+		where += ` AND LOWER(c.name) LIKE LOWER(?) ESCAPE '\'`
+		args = append(args, likePattern(q))
+	}
+	queryArgs := append([]any{sessionUserID(r), sessionUserID(r)}, args...)
+	rows, err := a.db.QueryContext(r.Context(), `
+		SELECT c.id, c.name, c.overview, `+collectionPosterExpr+`, c.backdrop_url,
+		       `+collectionItemCountExpr+`, c.source, c.edited,
+		       EXISTS (SELECT 1 FROM collection_lists cl_favorite
+		                WHERE cl_favorite.user_id = ?
+		                  AND cl_favorite.collection_id = c.id
+		                  AND cl_favorite.list = 'favorite'),
+		       EXISTS (SELECT 1 FROM collection_lists cl_watchlist
+		                WHERE cl_watchlist.user_id = ?
+		                  AND cl_watchlist.collection_id = c.id
+		                  AND cl_watchlist.list = 'watchlist')
+		  FROM collections c
+		 WHERE `+where+`
+		 ORDER BY c.name COLLATE NOCASE, c.id`, queryArgs...)
+	if err != nil {
+		log.Printf("library: listar todas las colecciones: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
+	defer rows.Close()
+
+	collections := make([]collectionDTO, 0)
+	for rows.Next() {
+		collection, err := scanCollection(rows.Scan)
+		if err != nil {
+			log.Printf("library: leer colección: %v", err)
+			writeJSONError(w, http.StatusInternalServerError, "error interno")
+			return
+		}
+		collections = append(collections, collection)
+	}
+	if err := rows.Err(); err != nil {
+		log.Printf("library: recorrer todas las colecciones: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, collectionsResponse{
+		Collections: collections,
+		Total:       int64(len(collections)),
+		Limit:       len(collections),
+		Offset:      0,
 	})
 }
 

@@ -643,4 +643,87 @@ func TestItemCollectionsYFiltro(t *testing.T) {
 	if status, body := libraryHTTPGet(t, ts.URL+"/api/v1/items?collection_id=no", ts.token); status != http.StatusBadRequest {
 		t.Fatalf("filtro inválido: código = %d, cuerpo = %s", status, body)
 	}
+
+	status, body = libraryHTTPGet(t, ts.URL+"/api/v1/items?collection=any&limit=200", ts.token)
+	if status != http.StatusOK {
+		t.Fatalf("filtro any: código = %d, cuerpo = %s", status, body)
+	}
+	var anyList itemsResponse
+	if err := json.Unmarshal(body, &anyList); err != nil {
+		t.Fatalf("filtro any: %v", err)
+	}
+	if anyList.Total != 2 || len(anyList.Items) != 2 ||
+		anyList.Items[0].ID != a || anyList.Items[1].ID != b {
+		t.Fatalf("filtro any inesperado: %+v", anyList)
+	}
+
+	status, body = libraryHTTPGet(t, ts.URL+"/api/v1/items?collection=none&limit=200", ts.token)
+	if status != http.StatusOK {
+		t.Fatalf("filtro none: código = %d, cuerpo = %s", status, body)
+	}
+	var noneList itemsResponse
+	if err := json.Unmarshal(body, &noneList); err != nil {
+		t.Fatalf("filtro none: %v", err)
+	}
+	if noneList.Total != 1 || len(noneList.Items) != 1 || noneList.Items[0].ID != d {
+		t.Fatalf("filtro none inesperado: %+v", noneList)
+	}
+
+	if status, body := libraryHTTPGet(t, ts.URL+"/api/v1/items?collection=otra", ts.token); status != http.StatusBadRequest {
+		t.Fatalf("filtro de colección inválido: código = %d, cuerpo = %s", status, body)
+	}
+
+	episode := collectionHTTPMovie(t, ts, "Episodio", 2004, "", KindEpisode)
+	for _, value := range []string{"any", "none"} {
+		status, body = libraryHTTPGet(t, ts.URL+"/api/v1/items?kind=episode&collection="+value, ts.token)
+		if status != http.StatusOK {
+			t.Fatalf("filtro %s en episodios: código = %d, cuerpo = %s", value, status, body)
+		}
+		var episodes itemsResponse
+		if err := json.Unmarshal(body, &episodes); err != nil {
+			t.Fatalf("filtro %s en episodios: %v", value, err)
+		}
+		if episodes.Total != 1 || len(episodes.Items) != 1 || episodes.Items[0].ID != episode {
+			t.Fatalf("el filtro no debe afectar a episodios (%s): %+v", value, episodes)
+		}
+	}
+}
+
+func TestCollectionsListAllAdmin(t *testing.T) {
+	ts := newLibraryHTTPTestServer(t)
+	movie := collectionHTTPMovie(t, ts, "Única", 2000, "", KindMovie)
+	hidden := collectionHTTPSeed(t, ts.db, "Alfa oculta", "tmdb", 910, "", 0, 0)
+	manual := collectionHTTPSeed(t, ts.db, "Zeta manual", "manual", nil, "", 0, 0)
+	deleted := collectionHTTPSeed(t, ts.db, "Borrada", "manual", nil, "", 0, 1)
+	collectionHTTPMember(t, ts.db, hidden, movie, nil, 0)
+
+	status, body := libraryHTTPGet(t, ts.URL+"/api/v1/collections?all=1", ts.token)
+	if status != http.StatusOK {
+		t.Fatalf("listar todas: código = %d, cuerpo = %s", status, body)
+	}
+	var response collectionsResponse
+	if err := json.Unmarshal(body, &response); err != nil {
+		t.Fatalf("listar todas: %v", err)
+	}
+	if response.Total != 2 || len(response.Collections) != 2 {
+		t.Fatalf("colecciones inesperadas: %+v", response)
+	}
+	if response.Collections[0].ID != hidden || response.Collections[0].ItemCount != 1 ||
+		response.Collections[0].Source != "tmdb" {
+		t.Fatalf("primera colección inesperada: %+v", response.Collections[0])
+	}
+	if response.Collections[1].ID != manual || response.Collections[1].ItemCount != 0 ||
+		response.Collections[1].Source != "manual" {
+		t.Fatalf("segunda colección inesperada: %+v", response.Collections[1])
+	}
+	for _, collection := range response.Collections {
+		if collection.ID == deleted {
+			t.Fatal("las colecciones borradas no deben aparecer")
+		}
+	}
+
+	status, body = libraryHTTPGet(t, ts.URL+"/api/v1/collections?all=1", nonAdminToken(t, ts))
+	if status != http.StatusForbidden {
+		t.Fatalf("all=1 sin admin: código = %d, cuerpo = %s", status, body)
+	}
 }

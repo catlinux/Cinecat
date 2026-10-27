@@ -11,9 +11,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 - Personas y tráileres en el servidor: los créditos guardan el id de TMDB de cada persona, `GET /api/v1/people/{id}` devuelve su ficha con lo que hay en la biblioteca y lo que no (por separado), y películas y series traen `trailer_url` (YouTube, en castellano si existe; si no, en inglés). La lista de series incluye la puntuación. Migración 0019: el siguiente escaneo vuelve a pedir a TMDB las fichas para rellenarlo (tardará más de lo normal). La pantalla llega en la siguiente versión.
 - Puntuación de TMDB en una esquina de las carátulas de películas y series (por ejemplo «7,4»), solo cuando existe.
+- Colecciones: icono discreto en la carátula de las películas que están en una colección, filtro «Colección: En una / Sin colección» en Películas y, en la ficha, «Gestionar colecciones» (solo administradores) para añadir la película a una colección existente, crear una nueva con ella o quitarla; quitarla de una colección de TMDB la excluye para que el escaneo no la vuelva a añadir. `GET /api/v1/collections?all=1` (administradores) lista también las colecciones ocultas o vacías y `GET /api/v1/items` admite `collection=any|none`.
 
 ### Corregido
 
+- Reproducción según el códec real y lo que admite el navegador, no según la extensión: un MP4 en H.265 (o en H.264 de 10 bits, o con audio AC-3) ya no se envía directo a un navegador que no puede reproducirlo; se convierte. La web detecta una vez si el navegador admite H.265 y lo recuerda en la cookie `cinecat_caps`.
 - La carpeta `.cinecat-papelera` se crea con permisos 0775, como el resto de la biblioteca, en lugar de 0755 por la umask del contenedor.
 
 ## [0.21.0] - 2026-10-27

@@ -11,9 +11,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 - People and trailers on the server: credits store each person's TMDB id, `GET /api/v1/people/{id}` returns their profile with what is in the library and what is not (separately), and movies and series carry `trailer_url` (YouTube, in Spanish when available, otherwise in English). The series list includes the rating. Migration 0019: the next scan asks TMDB again for the entries to fill this in (it will take longer than usual). The screen arrives in the next version.
 - TMDB rating in a corner of movie and series posters (for example "7,4"), only when available.
+- Collections: a discreet icon on the poster of movies that belong to a collection, a "Collection: In one / None" filter in Movies and, on the movie page, "Manage collections" (administrators only) to add the movie to an existing collection, create a new one with it or remove it; removing it from a TMDB collection excludes it so the scan does not add it back. `GET /api/v1/collections?all=1` (administrators) also lists hidden or empty collections and `GET /api/v1/items` accepts `collection=any|none`.
 
 ### Fixed
 
+- Playback is decided by the real codec and what the browser supports, not by the extension: an H.265 MP4 (or 10-bit H.264, or with AC-3 audio) is no longer sent directly to a browser that cannot play it; it is converted. The web app detects once whether the browser supports H.265 and remembers it in the `cinecat_caps` cookie.
 - The `.cinecat-papelera` folder is created with 0775 permissions, like the rest of the library, instead of 0755 from the container umask.
 
 ## [0.21.0] - 2026-10-27

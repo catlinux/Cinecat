@@ -11,6 +11,7 @@
 		action = '/movies',
 		showField = true,
 		showWatched = true,
+		showCollection = false,
 		searchPlaceholder = 'Título, actor, directora…'
 	}: {
 		filters: LibraryFilterState;
@@ -21,6 +22,7 @@
 		action?: string;
 		showField?: boolean;
 		showWatched?: boolean;
+		showCollection?: boolean;
 		searchPlaceholder?: string;
 	} = $props();
 
@@ -94,6 +96,17 @@
 				{/each}
 			</select>
 		</label>
+
+		{#if showCollection}
+			<label class="filter-field">
+				<span>Colección</span>
+				<select name="collection">
+					<option value="" selected={!filters.collection}>Todas</option>
+					<option value="any" selected={filters.collection === 'any'}>En una colección</option>
+					<option value="none" selected={filters.collection === 'none'}>Sin colección</option>
+				</select>
+			</label>
+		{/if}
 
 		<label class="filter-field">
 			<span>Orden</span>

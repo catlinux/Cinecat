@@ -9,6 +9,7 @@
 		PlayResponse
 	} from '$lib/api';
 	import CastRow from '$lib/components/CastRow.svelte';
+	import CollectionManageDialog from '$lib/components/CollectionManageDialog.svelte';
 	import ConfirmActionDialog from '$lib/components/ConfirmActionDialog.svelte';
 	import EpisodeNav from '$lib/components/EpisodeNav.svelte';
 	import ItemFacts from '$lib/components/ItemFacts.svelte';
@@ -45,6 +46,9 @@
 		message?: string;
 		candidates?: Candidate[];
 		search?: MatchSearch;
+		collectionPanel?: boolean;
+		collectionName?: string;
+		collectionOverview?: string;
 	}
 
 	let { data, form }: { data: PageData; form?: ActionForm | null } = $props();
@@ -84,6 +88,9 @@
 	const imageOptions = $derived(actionForm?.imageOptions ?? null);
 	const imageListKind = $derived(actionForm?.imageKind ?? null);
 	const imagePanelOpen = $derived(Boolean(data.imagenes || actionForm?.imagePanel));
+	const collectionPanelOpen = $derived(
+		Boolean(data.collectionOpen || actionForm?.collectionPanel)
+	);
 	const fileInfo = $derived(
 		(data.fileInfo ?? { error: 'failed' }) as FileInfoResult | Promise<FileInfoResult>
 	);
@@ -477,14 +484,28 @@
 				<ItemFacts {item} />
 			{/if}
 
-			{#if item.collections.length > 0}
+			{#if isMovie && (item.collections.length > 0 || data.isAdmin)}
 				<section class="item-collections">
-					<p class="kicker">Forma parte de</p>
-					<ul>
-						{#each item.collections as collection (collection.id)}
-							<li><a href={`/collections/${collection.id}`}>{collection.name}</a></li>
-						{/each}
-					</ul>
+					<p class="kicker">
+						{item.collections.length > 0 ? 'Forma parte de' : 'Colecciones'}
+					</p>
+					{#if item.collections.length > 0}
+						<ul>
+							{#each item.collections as collection (collection.id)}
+								<li><a href={`/collections/${collection.id}`}>{collection.name}</a></li>
+							{/each}
+						</ul>
+					{/if}
+					{#if data.isAdmin}
+						<CollectionManageDialog
+							itemID={item.id}
+							collections={item.collections}
+							options={data.collectionOptions ?? []}
+							open={collectionPanelOpen}
+							defaultName={actionForm?.collectionName ?? ''}
+							defaultOverview={actionForm?.collectionOverview ?? ''}
+						/>
+					{/if}
 				</section>
 			{/if}
 

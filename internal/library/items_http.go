@@ -312,7 +312,7 @@ func floatPointer(v sql.NullFloat64) *float64 {
 	return &value
 }
 
-func itemFilters(r *http.Request, userID int64) (string, []any, error) {
+func itemFilters(r *http.Request, userID int64, minCollectionItems ...int) (string, []any, error) {
 	query := r.URL.Query()
 	// Los clips viven en media_items como kind=movie; el listado de películas
 	// solo debe ver los ítems de bibliotecas de vídeo.
@@ -416,6 +416,34 @@ func itemFilters(r *http.Request, userID int64) (string, []any, error) {
 		clauses = append(clauses,
 			`EXISTS (SELECT 1 FROM collection_items cf WHERE cf.media_item_id = media_items.id AND cf.collection_id = ? AND cf.excluded = 0)`)
 		args = append(args, id)
+	}
+
+	// any usa la visibilidad del DTO; none exige que no haya ninguna
+	// pertenencia activa, aunque la colección automática esté oculta.
+	if raw := strings.TrimSpace(query.Get("collection")); raw != "" {
+		switch raw {
+		case "any":
+			clauses = append(clauses, `(kind <> 'movie' OR EXISTS (
+				SELECT 1 FROM collection_items cf
+				JOIN collections c ON c.id = cf.collection_id
+				WHERE cf.media_item_id = media_items.id
+				  AND cf.excluded = 0
+				  AND c.deleted = 0
+				  AND (c.source = 'manual' OR (
+				        SELECT count(*) FROM collection_items cc
+				         WHERE cc.collection_id = c.id AND cc.excluded = 0
+				  ) >= ?)))`)
+			args = append(args, collectionMinimum(minCollectionItems...))
+		case "none":
+			clauses = append(clauses, `(kind <> 'movie' OR NOT EXISTS (
+				SELECT 1 FROM collection_items cf
+				JOIN collections c ON c.id = cf.collection_id
+				WHERE cf.media_item_id = media_items.id
+				  AND cf.excluded = 0
+				  AND c.deleted = 0))`)
+		default:
+			return "", nil, errors.New("collection debe ser any o none")
+		}
 	}
 
 	if raw := strings.TrimSpace(query.Get("in_progress")); raw != "" {

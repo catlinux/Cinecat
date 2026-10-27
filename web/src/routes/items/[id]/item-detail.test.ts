@@ -129,6 +129,45 @@ describe('carga de la ficha', () => {
 		expect(result.corregir).toBe(false);
 	});
 
+	it('carga todas las colecciones para el selector solo si es admin y película', async () => {
+		const urls: URL[] = [];
+		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+			const url = new URL(String(input));
+			urls.push(url);
+			if (url.pathname === '/api/v1/items/7') {
+				return jsonResponse(makeItem());
+			}
+			if (url.pathname === '/api/v1/collections' && url.searchParams.get('all') === '1') {
+				return jsonResponse({
+					collections: [
+						{ id: 5, name: 'La saga', source: 'manual', item_count: 2 },
+						{ id: 6, name: 'Otra', source: 'tmdb', item_count: 1 }
+					],
+					total: 2,
+					limit: 2,
+					offset: 0
+				});
+			}
+			return jsonResponse({ error: 'no disponible' }, 503);
+		});
+
+		const admin = (await load(
+			loadEvent(fetchMock, '/items/7?colecciones=1', true) as never
+		)) as { collectionOptions: Array<{ id: number }>; collectionOpen: boolean };
+		expect(admin.collectionOptions.map((collection) => collection.id)).toEqual([5, 6]);
+		expect(admin.collectionOpen).toBe(true);
+		expect(
+			urls.some(
+				(url) =>
+					url.pathname === '/api/v1/collections' && url.searchParams.get('all') === '1'
+			)
+		).toBe(true);
+
+		urls.length = 0;
+		await load(loadEvent(fetchMock, '/items/7?colecciones=1', false) as never);
+		expect(urls.some((url) => url.pathname === '/api/v1/collections')).toBe(false);
+	});
+
 	it('devuelve 404 si el ítem no existe', async () => {
 		const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ error: 'no existe' }, 404));
 
@@ -277,6 +316,34 @@ describe('ficha de película', () => {
 		expect(watched).toContain('Marcada como vista · Desmarcar');
 		expect(watched).toContain('aria-pressed="true"');
 		expect(watched).toContain('name="watched" value="0"');
+	});
+
+	it('permite gestionar las colecciones solo a administradores de películas', () => {
+		const admin = renderPage(makeItem({ collections: [{ id: 5, name: 'La saga' }] }), {
+			isAdmin: true
+		});
+		expect(admin).toContain('Gestionar colecciones');
+		expect(admin).toContain('action="?/collectionAdd"');
+		expect(admin).toContain('action="?/collectionRemove"');
+		expect(admin).toContain('action="?/collectionCreate"');
+		expect(admin).toContain('Crear y añadir');
+
+		const user = renderPage(makeItem({ collections: [{ id: 5, name: 'La saga' }] }), {
+			isAdmin: false
+		});
+		expect(user).not.toContain('Gestionar colecciones');
+
+		const clip = renderPage(
+			makeItem({
+				library_kind: 'clips',
+				collections: [{ id: 5, name: 'La saga' }]
+			}),
+			{ isAdmin: true }
+		);
+		expect(clip).not.toContain('Gestionar colecciones');
+
+		const episode = renderPage(makeItem({ kind: 'episode' }), { isAdmin: true });
+		expect(episode).not.toContain('Gestionar colecciones');
 	});
 
 	it('se ve bien cuando la película no está identificada', () => {
@@ -569,6 +636,98 @@ describe('acciones de la ficha', () => {
 		expect(parsed.pathname).toBe('/api/v1/items/7/candidates');
 		expect(parsed.searchParams.get('q')).toBe('El Padrino');
 		expect(parsed.searchParams.get('year')).toBe('1972');
+	});
+
+	it('añade y quita películas de colecciones', async () => {
+		const addFetch = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+		const add = (await actions.collectionAdd!(
+			actionEvent(addFetch, 'collectionAdd', { collection_id: '5' }) as never
+		)) as { success?: boolean; collectionPanel?: boolean; message?: string };
+		expect(add.success).toBe(true);
+		expect(add.collectionPanel).toBe(true);
+		expect(add.message).toContain('añadida');
+		let [url, init] = addFetch.mock.calls[0];
+		expect(url).toBe('http://api.test/api/v1/collections/5/items');
+		expect(init.method).toBe('POST');
+		expect(JSON.parse(init.body)).toEqual({ media_item_id: 7 });
+
+		const removeFetch = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+		const remove = (await actions.collectionRemove!(
+			actionEvent(removeFetch, 'collectionRemove', { collection_id: '5' }) as never
+		)) as { success?: boolean; message?: string };
+		expect(remove.success).toBe(true);
+		expect(remove.message).toContain('quitada');
+		[url, init] = removeFetch.mock.calls[0];
+		expect(url).toBe('http://api.test/api/v1/collections/5/items/7');
+		expect(init.method).toBe('DELETE');
+	});
+
+	it('crea una colección y añade la película', async () => {
+		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+			const url = new URL(String(input));
+			if (url.pathname === '/api/v1/collections' && url.search) {
+				return jsonResponse({});
+			}
+			if (url.pathname === '/api/v1/collections') {
+				return jsonResponse(
+					{ id: 12, name: 'Nueva saga', source: 'manual', item_count: 0 },
+					201
+				);
+			}
+			if (url.pathname === '/api/v1/collections/12/items') {
+				return new Response(null, { status: 204 });
+			}
+			throw new Error(`URL inesperada: ${url}`);
+		});
+
+		const result = (await actions.collectionCreate!(
+			actionEvent(fetchMock, 'collectionCreate', {
+				name: '  Nueva saga  ',
+				overview: 'Una sinopsis'
+			}) as never
+		)) as { success?: boolean; message?: string };
+		expect(result.success).toBe(true);
+		expect(result.message).toContain('Nueva saga');
+		const [createURL, createInit] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+		expect(createURL).toBe('http://api.test/api/v1/collections');
+		expect(createInit.method).toBe('POST');
+		expect(JSON.parse(String(createInit.body))).toEqual({
+			name: 'Nueva saga',
+			overview: 'Una sinopsis'
+		});
+		const [addURL, addInit] = fetchMock.mock.calls[1] as unknown as [string, RequestInit];
+		expect(addURL).toBe('http://api.test/api/v1/collections/12/items');
+		expect(addInit.method).toBe('POST');
+		expect(JSON.parse(String(addInit.body))).toEqual({ media_item_id: 7 });
+	});
+
+	it('traduce los errores al gestionar colecciones', async () => {
+		const forbidden = vi.fn().mockResolvedValue(jsonResponse({ error: 'no admin' }, 403));
+		const result = (await actions.collectionAdd!(
+			actionEvent(forbidden, 'collectionAdd', { collection_id: '5' }) as never
+		)) as { status: number; data: { collectionPanel: boolean; message: string } };
+		expect(result.status).toBe(403);
+		expect(result.data.collectionPanel).toBe(true);
+		expect(result.data.message).toContain('administradores');
+
+		const invalid = vi.fn();
+		const invalidResult = (await actions.collectionAdd!(
+			actionEvent(invalid, 'collectionAdd', { collection_id: 'no' }) as never
+		)) as { status: number; data: { message: string } };
+		expect(invalidResult.status).toBe(400);
+		expect(invalidResult.data.message).toContain('Elige');
+		expect(invalid).not.toHaveBeenCalled();
+	});
+
+	it('valida el nombre antes de crear una colección', async () => {
+		const fetchMock = vi.fn();
+		const result = (await actions.collectionCreate!(
+			actionEvent(fetchMock, 'collectionCreate', { name: '   ' }) as never
+		)) as { status: number; data: { collectionPanel: boolean; message: string } };
+		expect(result.status).toBe(400);
+		expect(result.data.collectionPanel).toBe(true);
+		expect(result.data.message).toContain('nombre');
+		expect(fetchMock).not.toHaveBeenCalled();
 	});
 
 	it('traduce los errores de permisos y de TMDB', async () => {

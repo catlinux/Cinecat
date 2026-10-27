@@ -28,6 +28,7 @@
 		isAdmin={data.isAdmin}
 		unmatchedCount={data.unmatchedCount}
 		currentUrl={data.currentUrl}
+		showCollection
 	/>
 
 	{#if data.filterChips.length > 0}

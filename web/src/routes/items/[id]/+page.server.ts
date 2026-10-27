@@ -2,6 +2,7 @@ import { error, fail, redirect } from '@sveltejs/kit';
 import { ApiError } from '$lib/api';
 import type {
 	Candidate,
+	Collection,
 	FileInfoError,
 	FileInfoResult,
 	ImageKind,
@@ -47,12 +48,25 @@ export const load: PageServerLoad = async ({ params, locals, fetch, url, parent,
 			item.kind === 'movie' && !isClip
 				? api.getSimilarItems(id, 12, token).then((response) => response.items).catch(() => null)
 				: null;
+		const canManageCollections = isAdmin && item.kind === 'movie' && !isClip;
+		let collectionOptions: Collection[] = [];
+		if (canManageCollections) {
+			try {
+				collectionOptions = await api.getAllCollections(token);
+			} catch (err) {
+				if (err instanceof ApiError && err.status === 401) {
+					redirect(303, '/login');
+				}
+			}
+		}
 		const episodeNavigation = await loadEpisodeNavigation(api, item, token);
 		return {
 			item,
 			isAdmin,
 			corregir: isAdmin && !isClip && url.searchParams.get('corregir') === '1',
 			imagenes: isAdmin && !isClip && url.searchParams.get('imagenes') === '1',
+			collectionOpen: canManageCollections && url.searchParams.get('colecciones') === '1',
+			collectionOptions,
 			fileInfo,
 			playbackOptions,
 			similarItems,
@@ -187,6 +201,41 @@ function imageFailure(cause: unknown) {
 		}
 	}
 	return fail(502, { imagePanel: true, message: 'No se pudo consultar TMDB' });
+}
+
+function collectionFailure(cause: unknown) {
+	if (cause instanceof ApiError) {
+		if (cause.status === 401) {
+			redirect(303, '/login');
+		}
+		if (cause.status === 400) {
+			return fail(400, {
+				collectionPanel: true,
+				message: cause.message || 'Datos de la colección no válidos.'
+			});
+		}
+		if (cause.status === 403) {
+			return fail(403, {
+				collectionPanel: true,
+				message: 'Solo los administradores pueden gestionar colecciones.'
+			});
+		}
+		if (cause.status === 404) {
+			return fail(404, {
+				collectionPanel: true,
+				message: 'La película o la colección ya no existe.'
+			});
+		}
+	}
+	return fail(502, {
+		collectionPanel: true,
+		message: 'No se pudo actualizar la colección. Inténtalo de nuevo.'
+	});
+}
+
+function collectionIDFromForm(form: FormData): number | null {
+	const value = Number(String(form.get('collection_id') ?? ''));
+	return Number.isInteger(value) && value > 0 ? value : null;
 }
 
 export const actions: Actions = {
@@ -454,6 +503,103 @@ export const actions: Actions = {
 			success: true,
 			imagePanel: true,
 			message: kind === 'poster' ? 'Cartel restaurado.' : 'Fondo restaurado.'
+		};
+	},
+
+	collectionAdd: async ({ request, locals, fetch, params }) => {
+		const token = requireSessionToken(locals);
+		const id = itemID(params);
+		if (id === null) {
+			return fail(404, { collectionPanel: true, message: 'Ítem no encontrado.' });
+		}
+		const form = await request.formData();
+		const collectionID = collectionIDFromForm(form);
+		if (collectionID === null) {
+			return fail(400, { collectionPanel: true, message: 'Elige una colección.' });
+		}
+		try {
+			await createApiClient(fetch).addCollectionItem(collectionID, id, token);
+		} catch (err) {
+			return collectionFailure(err);
+		}
+		return {
+			success: true,
+			collectionPanel: true,
+			message: 'Película añadida a la colección.'
+		};
+	},
+
+	collectionRemove: async ({ request, locals, fetch, params }) => {
+		const token = requireSessionToken(locals);
+		const id = itemID(params);
+		if (id === null) {
+			return fail(404, { collectionPanel: true, message: 'Ítem no encontrado.' });
+		}
+		const form = await request.formData();
+		const collectionID = collectionIDFromForm(form);
+		if (collectionID === null) {
+			return fail(400, { collectionPanel: true, message: 'Colección no válida.' });
+		}
+		try {
+			await createApiClient(fetch).removeCollectionItem(collectionID, id, token);
+		} catch (err) {
+			return collectionFailure(err);
+		}
+		return {
+			success: true,
+			collectionPanel: true,
+			message: 'Película quitada de la colección.'
+		};
+	},
+
+	collectionCreate: async ({ request, locals, fetch, params }) => {
+		const token = requireSessionToken(locals);
+		const id = itemID(params);
+		if (id === null) {
+			return fail(404, { collectionPanel: true, message: 'Ítem no encontrado.' });
+		}
+		const form = await request.formData();
+		const name = String(form.get('name') ?? '').trim();
+		const overview = String(form.get('overview') ?? '').trim();
+		if (!name) {
+			return fail(400, {
+				collectionPanel: true,
+				collectionName: name,
+				collectionOverview: overview,
+				message: 'Escribe un nombre para la colección.'
+			});
+		}
+		if ([...name].length > 120) {
+			return fail(400, {
+				collectionPanel: true,
+				collectionName: name,
+				collectionOverview: overview,
+				message: 'El nombre no puede superar los 120 caracteres.'
+			});
+		}
+
+		const api = createApiClient(fetch);
+		let collection: Collection;
+		try {
+			collection = await api.createCollection(name, overview, token);
+		} catch (err) {
+			return collectionFailure(err);
+		}
+		try {
+			await api.addCollectionItem(collection.id, id, token);
+		} catch (err) {
+			if (err instanceof ApiError && err.status === 401) {
+				redirect(303, '/login');
+			}
+			return fail(502, {
+				collectionPanel: true,
+				message: `Se creó «${collection.name}», pero no se pudo añadir la película.`
+			});
+		}
+		return {
+			success: true,
+			collectionPanel: true,
+			message: `Colección «${collection.name}» creada con la película.`
 		};
 	}
 };
