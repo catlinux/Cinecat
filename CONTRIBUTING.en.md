@@ -2,7 +2,7 @@
 
 [Versión en español](CONTRIBUTING.md)
 
-Cinecat is in the **design phase**: for now there is only documentation. Suggestions, corrections and comments on the documents are welcome through *issues*. Code *pull requests* are not accepted yet.
+Cinecat's server and web client are in active development. Suggestions, corrections and comments on the documents are welcome through *issues*. Code *pull requests* are not accepted without prior agreement with the maintainer.
 
 ## Project rules
 

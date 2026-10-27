@@ -1,48 +1,68 @@
 # TODO
 
-[English version](TODO.en.md)
+[English version](TODO.en.md) · [Estado del proyecto](docs/es/estado.md)
 
 Prioridades: 🔴 bloqueante · 🟠 próxima fase · 🟢 más adelante.
 
-## Antes de escribir código
-- 🟠 Activar en GitHub los avisos de seguridad privados (private vulnerability reporting).
-- 🔴 El bloqueo por intentos fallidos de login (`internal/auth`) se indexa por nombre de usuario, no por IP: cualquiera puede bloquear la cuenta de otro usuario legítimo enviando 5 logins fallidos con su `username`. Revisar antes de exponer el servidor a internet (por ejemplo, combinando usuario+IP o añadiendo límite por IP).
-- 🟠 No hay todavía forma de crear usuarios (ni endpoint ni comando); para probar el login hay que insertar el usuario y su hash argon2id directamente en la base de datos.
-- 🟠 El escaneo por API (`POST /api/v1/libraries/scan`) es síncrono: con bibliotecas grandes la petición puede tardar mucho. La versión asíncrona con progreso queda pendiente.
-- 🟠 Series y episodios siguen sin sinopsis ni cartel: OMDb se consulta solo para películas y el cliente TMDB (`internal/metadata/tmdb.go`) queda sin conectar para el futuro.
-- El TTL de caché de TMDB (7 días, `internal/metadata`) es un valor de partida sin verificar contra los términos vigentes de la API: revisar antes de producción.
-- 🟠 Los endpoints `GET /api/v1/libraries|items` no filtran por rol ni por biblioteca: cualquier usuario autenticado ve todo. La arquitectura prevé permisos por biblioteca (Fase 3+); implementar antes de un uso multiusuario real.
-- 🟠 La clave gratuita de OMDb permite 1000 peticiones/día: el primer escaneo completo de una biblioteca grande puede agotar la cuota. Los ítems sin metadatos se reintentan en escaneos posteriores (hay caché negativa en disco).
-- `internal/metadata` (TMDB) sigue sin conectarse a los endpoints ni al escaneo; de momento `media_items.tmdb_id` solo se rellena a mano.
-- Pequeña duplicación: `bearerToken()` está repetida en `internal/auth/http.go` e `internal/library/http.go`; se podría extraer a un sitio común cuando haya un tercer consumidor.
-- 🟠 Los tests HLS se saltan con `t.Skip()` sin `ffmpeg`/`ffprobe` en PATH (como en el PC Windows). Se pueden ejecutar en el contenedor de producción compilando el binario de tests para Linux (`GOOS=linux go test -c ./internal/playback`) y lanzándolo junto a los `.go` del paquete. Falta automatizarlo en CI.
-- 🟠 La generación HLS es progresiva: Cinecat escribe una playlist VOD completa con `ENDLIST` desde el principio y relanza FFmpeg en el segmento pedido al saltar. Si no se puede leer la duración del contenedor (algunos AVI antiguos), se cae a la playlist `event` de FFmpeg y el cliente la trata como contenido en directo; falta un método alternativo para calcular la duración en ese caso.
-- 🟠 Todo el HLS se recodifica por software (libx264 `veryfast`), incluso los MKV H.264 que podrían copiarse: en SD va a unas 20 veces tiempo real en el Xeon E3-1225 v5, pero en 1080p/HEVC puede ir justo. Pendiente: copiar el vídeo cuando ya sea H.264 8 bits (exige cortar los segmentos en sus keyframes reales) y usar Quick Sync/VAAPI (el servidor tiene `/dev/dri`, pero no se pasa al contenedor).
-- 🟠 FFmpeg no se frena: tras un salto genera hasta el final del vídeo aunque nadie lo pida (en SD, ~1 GB en `/tmp` del contenedor por película, que se borra tras 1 h sin uso). Jellyfin lo frena cuando va muy por delante; valorar si hace falta.
-- 🟢 Con dos audios (por ejemplo castellano e inglés) se usa siempre el primero; falta poder elegir pista.
-- El análisis de keyframes de `internal/playback/probe.go` ya no se usa (todo el HLS se recodifica); se conserva para cuando vuelva el remux sin recodificar.
-- 🟠 La API de `/api/v1/items/{id}/play` sigue devolviendo `mode: "remux"` aunque el servidor transcodifique el vídeo para HLS; para el cliente el resultado sigue siendo HLS. Exponer un modo `transcode` es una mejora pendiente.
-- 🟠 El HLS solo lleva vídeo y audio; los subtítulos se descartan (se abordarán en la Fase 3, según el diseño de reproducción).
-- El cliente web (`web/`) decide la cookie `Secure` según `event.url.protocol`; el despliegue Docker (`docker-compose.yml`, ver [despliegue](docs/es/despliegue.md)) ya pasa `PROTOCOL_HEADER=x-forwarded-proto` al contenedor `web`, y el vhost de Apache (`deploy/video.warcrafted.com.conf`) fija esa misma cabecera. Resuelto para este despliegue; revisar si algún día se sirve sin ese proxy.
-- El reproductor web usa hls.js para el remux, que descarga la playlist y los segmentos por XHR contra `PUBLIC_API_URL`; el despliegue Docker evita el problema de CORS sirviendo servidor y cliente bajo el mismo origen (el Apache del Debian enruta `/api/*` al servidor Go y el resto al cliente web, con `PUBLIC_API_URL` vacío). El servidor Go sigue sin enviar cabeceras CORS: si algún día se despliega sin ese proxy unificando el origen, habrá que añadirlas.
+Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en el [CHANGELOG](CHANGELOG.md); el estado completo, en [estado](docs/es/estado.md).
 
-## Riesgos conocidos, aceptados
-- Existe una app Android inactiva desde 2015 llamada «CineCat» (F-Droid, catálogo de cine catalán con datos de la Generalitat; sin registro de marca). Mismo nombre, ámbito distinto. Se mantiene el nombre Cinecat; riesgo de confusión menor, sin acción pendiente.
+## 🔴 Bloqueante para uso multiusuario
 
-## Producto
-- 🟠 Servidor mínimo: biblioteca, identificación de películas y series, metadatos en `es-ES`.
-- 🟠 Motor de decisión de reproducción (directa / remux / transcodificación).
-- 🟠 Cliente web con inicio de sesión.
-- 🟠 Clientes Android y Android TV.
-- 🟢 Fotos y presentaciones.
-- 🟢 Contenido de internet y televisión en directo (solo si se decide).
-- 🟢 Segmentos de intro/créditos, descargas sin conexión, sincronizar reproducción entre dispositivos.
-- 🟢 Otras plataformas (Apple, televisores Samsung/LG).
+- **Bloqueo de login por nombre de usuario.** `internal/auth` cuenta los fallos por `username`; cinco fallos bloquean esa cuenta 15 minutos. Cualquiera que conozca un nombre puede bloquearla. Hay que combinar usuario+IP o añadir un límite por IP.
+- **No se pueden crear usuarios.** No hay endpoint ni pantalla para crear, listar, cambiar rol, restablecer contraseña o borrar usuarios. Solo existe el `admin` inicial y `--hash-password`.
+- **No hay permisos por biblioteca.** Cualquier usuario autenticado ve todas las bibliotecas, ítems, series y colecciones. La tabla `libraries` no tiene propietario ni ACL.
 
-## Documentación
-- 🟠 Guía de usuario y glosario «para tontos» cuando exista algo que probar.
-- 🟠 Código de conducta.
-- 🟢 Capturas de pantalla del cliente web.
+## 🟠 Próxima fase
+
+- **Favoritos y «próximas a ver».** Tablas y endpoints, corazón/marcador en tarjetas y fichas, páginas propias y filas en el portal.
+- **Colecciones desde la ficha de película** (añadir, quitar y crear sin salir de la ficha).
+- **Identificar colecciones en TMDB:** búsqueda manual, sinopsis y «faltan en tu biblioteca».
+- **Bibliotecas con varias carpetas** y **navegador de carpetas** para elegir rutas desde la web.
+- **Subida y borrado de archivos con papelera:** retención, restauración, permisos de escritura y aviso de límites del proxy.
+- **Usuarios y perfil:** CRUD de usuarios, perfil propio, personalización del portal, sesiones abiertas e historial.
+- **Sesiones, dispositivos, actividad y copias de seguridad** en administración.
+- **Subtítulos subidos por el usuario:** requiere diseño previo; hoy solo se leen incrustados de texto o archivos `.srt`/`.vtt`/`.ass` junto al vídeo.
+- **Reproducción avanzada:** copiar vídeo cuando ya sea H.264 8 bits, Quick Sync/VAAPI, perfiles por dispositivo, HDR/10 bits, desentrelazado, subtítulos de imagen y audio no soportado.
+- **Tests HLS reales y CI:** los tests se saltan sin `ffmpeg`/`ffprobe`; no hay flujo automático que los ejecute en Linux.
+- **Revisar el TTL de 7 días de TMDB** contra los términos vigentes antes de dar por buena la caché de producción.
+- **Exponer un modo de reproducción `transcode`** en la API; hoy el HLS recodificado sigue anunciándose como `remux`.
+
+## 🟢 Más adelante
+
+- **Complementos**, todavía en diseño.
+- **DLNA/UPnP**, todavía en diseño.
+- **Tipos de biblioteca** distintos de vídeo (música, fotos u otros) cuando se aborde el modelo.
+- **Clientes Android y Android TV.** No hay código ni plan detallado; el cliente web es el único terminado.
+- Fotos y presentaciones, televisión en directo y contenido de internet, segmentos de intro/créditos, descargas sin conexión y sincronización entre dispositivos.
+- Otras plataformas (Apple, televisores Samsung/LG).
+
+## Descartado y por qué
+
+- **Caddy como proxy propio:** se descartó en 0.3.1; el Apache del host ya gestiona los vhosts y HTTPS.
+- **Remux sin recodificar y segmentos fMP4:** se descartaron; los contenedores reales y los timestamps hacían inviable el remux fiable. Todo HLS se recodifica a H.264 + AAC estéreo.
+- **OMDb como fuente principal:** TMDB pasó a ser la fuente principal en 0.11.0; OMDb queda como respaldo si no hay clave de TMDB.
+- **Que el contenedor se actualice a sí mismo:** no tiene acceso a Docker; la orden la ejecuta un servicio de systemd del host.
+- **FilmAffinity y scraping:** no hay API oficial; no se usa.
+- **Segmentar AVI copiando el códec:** descartado por timestamps poco fiables; los AVI se transcodifican siempre.
+- **`ui.page_size`:** sustituido por columnas × filas en 0.15.0.
+
+## Riesgos aceptados
+
+- Existe una app Android inactiva desde 2015 llamada «CineCat» (F-Droid, catálogo de cine catalán; sin marca registrada). Se mantiene el nombre Cinecat; riesgo de confusión menor.
+- **Sin CORS:** el servidor no envía cabeceras `Access-Control-*`; el despliegue depende de que Apache sirva la API y la web bajo el mismo origen.
+- **Medios en solo lectura:** `/media` se monta `:ro`; no se puede subir, borrar ni mover desde la aplicación.
+- **Solo software:** la transcodificación usa libx264; no hay aceleración por hardware ni copia H.264.
+- **Caché y cuotas:** el TTL de TMDB es un valor de partida y OMDb tiene cuota diaria; TMDB exige atribución (falta la pantalla «Acerca de»).
+- **Series corregidas a mano:** el escaneo no las vuelve a tocar; si faltan temporadas o episodios, no se rellenan solos.
+- **URLs de reproducción:** duran 8 horas, no están ligadas al usuario y dejan de valer al reiniciar el servidor.
+- **Actualizador automático:** solo funciona si el servicio del host está instalado; el repositorio no puede comprobar su estado en un servidor concreto.
+
+## Documentación abierta
+
+- Código de conducta.
+- Activar los avisos privados de seguridad en GitHub; `SECURITY.md` ya los ofrece como canal.
+- Capturas de pantalla del cliente web y sustitución del enlace privado a la maqueta; las hará la tarea D2.
 
 ## Mantenimiento de documentos
+
 - Mantener sincronizadas las versiones en español e inglés de cada documento.

@@ -1,54 +1,56 @@
 # Metadata
 
-[Español](../es/metadatos.md) · [Back to README](../../README.en.md)
+[Español](../es/metadatos.md) · [Back to README](../../README.en.md) · [Status](status.md)
 
-> Status: **design**. The terms of each source were checked on 2026-10-24 and **must be reviewed** before implementation, because they may change.
-
-## Principle
-
-We do not create our own database: we use existing ones, in **Spanish (Spain, `es-ES`)**.
+Cinecat does not build its own database: it uses TMDB as the main source and, when there is no TMDB key, OMDb as a movie fallback. Interface text and proper names remain in Spanish.
 
 ## Sources
 
-| Source | Use | Relevant terms |
+| Source | Actual use | Notes |
 |---|---|---|
-| **TMDB** | Main source for movies and series: titles, synopses, cast, posters, backdrops, certifications by country. | Free for **non-commercial** use, with attribution (logo and notice) and a time limit on keeping cached data. Commercial use needs a license. |
-| **TheTVDB** | Supplement for series (episodes, translations). | Free for small projects with attribution, or through a per-user subscription. It reserves the right to change terms. |
-| **Fanart.tv** | Extra artwork (logos, backdrops). | Requires a project key; the personal key is optional. |
-| **TVmaze** | Optional for series schedules. | Data under CC BY-SA 4.0 (share-alike). |
-| **OMDb** | Optional for ratings. | Daily limit on the free plan. |
+| **TMDB** | Movies and series: title, original title, synopsis, cast, crew, genres, rating, posters, backdrops, stills, seasons, episodes and collections. | Main source since 0.11.0. The key is set with `CINECAT_TMDB_API_KEY`. |
+| **OMDb** | Movies only: synopsis and poster. | Fallback when there is no TMDB key. It has a daily quota. Not used for series or identification. |
+| TheTVDB, Fanart.tv, TVmaze | Not integrated. | They were documented as possible sources, but no code uses them. |
+| FilmAffinity | Not used. | No official API, and no scraping. |
 
-FilmAffinity is **not** used: it has no official API and could only be obtained by scraping the website.
+## Identification
 
-## File identification
+- **Movies:** variants of the file and folder title are generated, searched on TMDB and scored by word overlap, year and saga rules. The default threshold is `0.75`, configured through `metadata.match_threshold`.
+- **Series:** the series is the top-level folder. It is identified with TMDB, then seasons and episodes are requested. A folder that is directly the library root does not create a series, because there is no top-level folder.
+- **States:** `auto` (identified by the scan), `manual` (corrected by an administrator), `none` ("not this one") or empty (unidentified and retried). The scan does not touch `manual` or `none`.
+- **Correction:** an administrator can search candidates, pick one, mark "not this one" or return to automatic. For series, correction requests seasons and episodes again.
 
-1. Try to read **local metadata** if present (for example `.nfo` files and artwork next to the video).
-2. Parse the **file and folder names** to extract title, year, season and episode (with a name-parsing library, chosen in Phase 0 by license and quality).
-3. Search TMDB with that title and year, in `es-ES`.
-4. If in doubt, offer the user a **manual fix** (pick the right result) and remember it.
+Local `.nfo` files are not read and age certifications are not used: those features are not implemented.
 
-## Language and image strategy
+## Language
 
-A known problem on other servers is that, when an image is missing in the main language, the title ends up with no poster or one without text. In Cinecat the server picks the priority **itself**:
+`metadata.language` accepts `es-ES`, `es-MX` and `en-US`, with `es-ES` by default. It affects new requests; it does not rewrite saved records.
 
-1. Poster in `es-ES`.
-2. Poster in generic Spanish.
-3. Poster in English.
-4. Poster with no language.
+For synopses, if the preferred language has no text, variants are tried: for Spanish, the other variant, `es` and `en-US`; for English, `en-US`; for others, the base language and `en-US`. The web app shows "Sinopsis no disponible en castellano" when the stored synopsis does not start with `es`.
 
-Images are requested from the source in several languages at once and this order is applied; the user will be able to change it.
+## Images
+
+- Poster priority: `es-ES` → generic Spanish → English → no language; within each language, the highest vote.
+- Common sizes: poster `w500`, lists `w342`/`w780`, backdrops `w780`/`w1280`, stills `w300` and season poster `w342`.
+- Manual images are locked against scans. If the `tmdb_id` changes, they are unlocked.
+- If a season was queried and TMDB had no poster, an empty marker is stored to avoid repeating the request.
+
+## Cast and crew
+
+TMDB returns cast and crew; up to 30 cast credits and up to 12 crew credits are stored in a fixed order. The page shows character, photo and name; when the photo is missing, initials are used. Series also store credits.
 
 ## Cache
 
-- Needed data and images are stored locally to work offline.
-- They are **refreshed** periodically, respecting each source's retention limit (TMDB: check the current period before implementing).
+- **TMDB:** raw responses and images in `<database directory>/cache/tmdb`; 7-day TTL. 404 responses are cached too so failed searches are not repeated. The cache key excludes `api_key`.
+- **OMDb:** 30-day disk cache in the user's cache directory; failed searches are also stored.
+- The 7-day TMDB TTL is a starting value and has not been checked against current terms; review it before production.
+
+## Collections
+
+TMDB provides `belongs_to_collection`. Cinecat creates or updates the collection, respects collections the user deleted or edited, and only shows automatic collections that reach `ui.collection_min_items` (2 by default). Manual collections are not touched by TMDB.
 
 ## Attribution
 
-- "About" screen with the official TMDB logo, unaltered, and the notice: *This product uses the TMDB API but is not endorsed or certified by TMDB.*
-- The TMDB logo must be less prominent than Cinecat's.
-- Credits for the other sources in [CREDITS.md](../../CREDITS.md).
+This product uses the TMDB API but is not endorsed or certified by TMDB.
 
-## Age ratings
-
-**Spain's** certifications will be used when the source provides them, to filter by profile (for example, a children's profile).
+Attribution and the logo should appear on the "About" screen when it exists; today the web app has no "About" screen. Source and dependency credits are in [CREDITS.md](../../CREDITS.md).

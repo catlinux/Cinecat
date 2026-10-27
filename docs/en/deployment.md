@@ -1,84 +1,112 @@
 # Docker deployment
 
-[Versión en español](../es/despliegue.md) · [Back to README](../../README.md)
+[Español](../es/despliegue.md) · [Back to README](../../README.en.md) · [Updates](updates.md)
 
-Cinecat is deployed with Docker Compose: two containers (Go server, web client), each published only on `127.0.0.1` of the Debian box. The Apache already installed on that machine acts as the reverse proxy for both and handles HTTPS, just like its other vhosts.
+Cinecat is deployed with Docker Compose: one container for the Go server and one for the web client, published only on `127.0.0.1`. The Debian host's Apache acts as reverse proxy, handles HTTPS and routes `/api/` and `/healthz` to the server.
 
 ## Requirements
 
-- Docker and Docker Compose (the `docker compose` plugin, not the old standalone `docker-compose`).
-- Apache with `mod_proxy`, `mod_proxy_http` and `mod_headers` enabled (`a2enmod proxy proxy_http headers`), already running with other vhosts.
-- Your video library folder accessible on the machine running Docker.
+- Docker with the `docker compose` plugin.
+- Git and repository access.
+- Apache with `mod_proxy`, `mod_proxy_http` and `mod_headers`.
+- For the automatic updater: `sqlite3`, `curl`, `python3`, `flock`, the user in the `docker` group and linger enabled.
 
-## 1. Bring up the containers
+## New server
 
 ```sh
-git clone git@github-catlinux:catlinux/Cinecat.git
-cd Cinecat
+sudo mkdir -p /opt/cinecat
+sudo chown "$USER":"$USER" /opt/cinecat
+git clone https://github.com/catlinux/Cinecat.git /opt/cinecat
+cd /opt/cinecat
 cp .env.deploy.example .env
 ```
 
-Edit `.env` and set at least `CINECAT_MEDIA_PATH` (the real path to the disk or folder containing your libraries, e.g. `/media` if that's where the disk with `Multimedia/Pelis` and `Multimedia/Series` inside it is mounted). The `CINECAT_API_PORT`/`CINECAT_WEB_PORT` ports (8080/8081 by default) only need changing if you already use them for something else on that Debian box.
+Edit `.env`:
+
+- `CINECAT_MEDIA_PATH`: host path mounted whole and read-only at `/media`.
+- `CINECAT_TMDB_API_KEY`: TMDB key for complete metadata; without it, OMDb can be used for movie synopsis and poster only.
+- `CINECAT_OMDB_API_KEY`: optional, fallback without TMDB.
+- `CINECAT_SCAN_INTERVAL`: automatic interval; `0` disables it.
+- `CINECAT_ADMIN_PASSWORD`: password for `admin` on first start.
+- `CINECAT_API_PORT` and `CINECAT_WEB_PORT`: only if 8080/8081 are taken.
 
 ```sh
+mkdir -p run
 docker compose up -d --build
 docker compose logs servidor
 ```
 
-The first startup creates the `admin` user. If you didn't set `CINECAT_ADMIN_PASSWORD` in `.env`, the generated password appears **once** in that log: copy it before it scrolls away.
+The first start creates the `admin` user. If you did not set a password, it appears once in the log: copy it before it is lost. The server listens on `http://127.0.0.1:8080` and the web app on `http://127.0.0.1:8081`, reachable only from the Debian machine.
 
-At this point the server already answers at `http://127.0.0.1:8080` and the web client at `http://127.0.0.1:8081`, but only from the machine itself: the next step is the Apache vhost that makes them reachable from outside.
-
-## 2. Apache vhost
-
-The repository's `deploy/video.warcrafted.com.conf` already has the configuration for `video.warcrafted.com`. Copy it to `sites-available` and enable it:
+## Apache and HTTPS
 
 ```sh
 sudo cp deploy/video.warcrafted.com.conf /etc/apache2/sites-available/
 sudo a2ensite video.warcrafted.com.conf
 sudo apache2ctl configtest
 sudo systemctl reload apache2
-```
-
-For HTTPS, use certbot just like with your other vhosts (it adds the `:443` block and the redirect automatically):
-
-```sh
 sudo certbot --apache -d video.warcrafted.com
 ```
 
-Certbot copies the `ProxyPass` directives into the new `:443` block, but doesn't update the `X-Forwarded-Proto` header. Edit `/etc/apache2/sites-available/video.warcrafted.com-le-ssl.conf` (or whatever file certbot created) and change, inside `<VirtualHost *:443>`:
+Certbot copies the `ProxyPass` directives into the `:443` block but does not change `X-Forwarded-Proto`. Inside the HTTPS block, keep:
 
 ```apache
 RequestHeader set X-Forwarded-Proto "https"
 ```
 
-then reload Apache (`sudo systemctl reload apache2`). If you skip this, the session cookie won't be marked `Secure` over HTTPS.
+Reload Apache. Without that header the session cookie is not marked `Secure`.
 
-Open `https://video.warcrafted.com/`. Log in as `admin` and create a library for each real folder inside `CINECAT_MEDIA_PATH` (Docker mounts it as `/media` inside the container). For example, with `Multimedia/Pelis` and `Multimedia/Series` inside the mounted disk:
+## Libraries and first scan
 
-- "Películas" library → path `/media/Multimedia/Pelis`
-- "Series" library → path `/media/Multimedia/Series`
+Open the web app, sign in and go to **Administración → Bibliotecas**. Create one library per real folder inside the mount:
 
-Trigger a scan for each one from the interface itself, or with:
+- `/media/Multimedia/Pelis` for movies;
+- `/media/Multimedia/Series` for series.
 
-```sh
-curl -X POST https://video.warcrafted.com/api/v1/libraries/scan -H "Authorization: Bearer <your token>"
-```
+Press **Escanear todas las bibliotecas**. The scan continues in the background and the panel shows progress; you can close the page. The container cannot delete or upload files because `/media` is mounted `:ro`.
 
-(the scan walks every registered library in a single call, no need to repeat it per library).
+## Updating
 
-## Applying a new version
-
-Whenever there are changes to try out:
+Manual:
 
 ```sh
+cd /opt/cinecat
 ./scripts/actualizar.sh
 ```
 
-It runs `git pull`, rebuilds the images and restarts the containers. The database (`cinecat_data` volume) is untouched: your library, users and registered libraries survive across updates. The Apache vhost doesn't change unless `deploy/video.warcrafted.com.conf` itself changes in a commit (then it needs to be copied over and Apache reloaded by hand again).
+It runs `git pull --ff-only`, rebuilds the images and starts them; the database and libraries are kept. The first time you want to update from Administration → System, install the host service:
 
-## What this deployment doesn't cover yet
+```sh
+cd /opt/cinecat
+./scripts/instalar-actualizador.sh
+```
 
-- **TMDB metadata**: `internal/metadata` isn't wired into the server yet; you'll see titles parsed from filenames, with no posters or synopses.
-- **Per-IP login lockout**: the failed-attempt limit is keyed by username, not IP (see `TODO.md`). Review before relying on this alone for security with the domain already exposed to the internet.
-- **Backups**: the `cinecat_data` volume holds the SQLite database; back it up periodically (`docker run --rm -v cinecat_data:/data -v $(pwd):/backup debian tar czf /backup/cinecat-db.tar.gz /data`) if losing registered users and libraries would matter to you.
+The installer checks requirements, creates the user systemd units and warns if linger or Docker access is missing. Details, backups and recovery are in [updates](updates.md).
+
+## Backups
+
+The SQLite database lives in the `cinecat_data` volume. A hot copy:
+
+```sh
+mkdir -p "$HOME/cinecat-backups"
+docker cp cinecat-servidor-1:/data/cinecat.db "$HOME/cinecat-backups/cinecat.db"
+docker cp cinecat-servidor-1:/data/cinecat.db-wal "$HOME/cinecat-backups/cinecat.db-wal" 2>/dev/null || true
+docker cp cinecat-servidor-1:/data/cinecat.db-shm "$HOME/cinecat-backups/cinecat.db-shm" 2>/dev/null || true
+sqlite3 "$HOME/cinecat-backups/cinecat.db" "VACUUM INTO '$HOME/cinecat-backups/cinecat-copy.db'"
+```
+
+The automatic updater already makes a copy before each update and keeps the last 10 in `~/cinecat-backups/`.
+
+## Changing domain or server
+
+1. Copy the repository and `.env`; keep the `cinecat_data` volume or restore a database copy.
+2. Copy the vhost, change `ServerName` and run certbot for the new domain.
+3. Set `CINECAT_MEDIA_PATH` to the new host's real path.
+4. Start the containers and check `/healthz`, `/api/v1/system/version` and the web app.
+
+## Deployment limits
+
+- The Go server listens on plain HTTP on localhost; Apache provides TLS.
+- There is no CORS: the web app and API must share an origin through the proxy.
+- The automatic updater needs the host service; without it, the web app reports that it is not installed.
+- TMDB/OMDb quotas and the TMDB cache TTL should be reviewed before heavy use.

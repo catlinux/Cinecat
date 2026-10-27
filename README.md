@@ -1,51 +1,89 @@
 # Cinecat
 
-> Servidor y clientes propios (web, Android y Android TV) para tu biblioteca multimedia: elige el mejor códec (H.265/H.264), reproducción directa o transcodificación, y metadatos en español.
+> Servidor y clientes propios (web, Android y Android TV) para tu biblioteca multimedia: fichas en castellano, reproducción directa o HLS y una interfaz con personalidad propia.
 
 **Idiomas / Languages:** Español · [English](README.en.md)
 
-**Estado:** servidor mínimo funcional (Fase 1 completa), sin clientes todavía. Versión `0.1.0`.
+**Estado:** servidor y cliente web implementados; clientes Android y Android TV sin empezar. Versión `0.16.3`.
 
----
+Cinecat es para quien guarda su propia biblioteca de vídeo en casa y quiere una interfaz cuidada, control sobre la reproducción y metadatos en español sin depender de un servicio externo. No es un clon: reutiliza lo que es legal de otros proyectos, con créditos, y escribe lo demás desde cero.
 
-## ¿Qué es Cinecat?
+## Qué hay ya
 
-Cinecat es un proyecto para reproducir **tus propios vídeos** (los de tu servidor doméstico) desde la televisión, el ordenador, el móvil y la tableta, con una interfaz propia, cuidada y práctica, y con un servidor que decide por sí solo la mejor forma de reproducir cada vídeo en cada dispositivo.
+- **Biblioteca y escaneo:** bibliotecas locales, análisis de nombres de películas, series, temporadas y episodios, escaneo manual y automático en segundo plano, información técnica del archivo con `ffprobe`.
+- **Identificación y fichas:** TMDB en castellano; OMDb como respaldo si no hay clave de TMDB; estados automático, manual y «no es ninguna»; búsqueda, filtros por letra, género, visionado y orden; reparto y equipo con fotos, sinopsis, carteles, fondos y enlaces a IMDb/TMDB.
+- **Series:** ficha por carpeta, temporadas y episodios con título, sinopsis e imagen, siguiente episodio, visionado por episodio, temporada o serie, y corrección manual.
+- **Colecciones:** sagas automáticas de TMDB y colecciones manuales, con edición, orden, cartel y fondo.
+- **Reproducción:** directa para MP4/M4V; HLS para el resto, recodificado a H.264 + AAC estéreo, con saltos, pistas de audio, subtítulos de texto como WebVTT, calidades y preferencias por usuario y película.
+- **Interfaz web:** portal con «Continuar viendo», «Siguiente episodio» y «Añadido recientemente», cartelera, series y colecciones con búsqueda y filtros, fichas completas, reproductor propio con atajos, temas claro/oscuro/sistema y menú lateral o superior.
+- **Administración:** resumen, bibliotecas, escaneo con progreso, ajustes en caliente, corrección de fichas, imágenes y actualizaciones desde Sistema.
+- **Actualizaciones:** el servidor comprueba etiquetas y notas; «Actualizar ahora» deja la orden a un servicio de systemd del host que copia la base, actualiza, comprueba y revierte si falla. Ver [actualizaciones](docs/es/actualizaciones.md).
 
-Nace porque las soluciones existentes funcionan, pero su interfaz y algunas decisiones de reproducción no encajan con lo que queremos. Cinecat no pretende ser un clon: aprovecha lo mejor del software libre que ya existe (siempre con sus créditos y respetando sus licencias) y construye encima algo propio.
+Lo que queda por hacer, con detalle y orden, está en [estado](docs/es/estado.md).
 
-## Objetivos
+## Requisitos
 
-- **Servidor propio** que indexa tu biblioteca, obtiene portadas e información de bases de datos abiertas y sirve el vídeo.
-- **Clientes propios:** web (PC, móvil y tableta, también desde fuera de casa) y apps para **Android** y **Android TV**.
-- **Reproducción óptima:** cada dispositivo declara qué sabe descodificar y el servidor elige entre reproducción directa, cambio de contenedor o transcodificación, prefiriendo **H.265** y con **H.264** como alternativa. Ver [reproducción](docs/es/reproduccion.md).
-- **Metadatos en español de España** a partir de bases de datos ya existentes (no creamos la nuestra). Ver [metadatos](docs/es/metadatos.md).
-- **Acceso seguro** con usuarios y contraseña, y PIN para perfiles. Ver [arquitectura](docs/es/arquitectura.md).
-- **Interfaz con personalidad propia**, nada de plantillas genéricas.
+- Docker y Docker Compose.
+- El contenedor del servidor ya incluye FFmpeg; no hace falta instalarlo en el host.
+- Una clave de TMDB es opcional, pero sin ella no habrá fichas completas de TMDB. Si no hay TMDB, se puede usar OMDb solo para sinopsis y cartel de películas.
+- Para el despliegue con dominio, Apache con `mod_proxy`, `mod_proxy_http` y `mod_headers`.
 
-## Fuera de alcance por ahora
+Variables del servidor (todas opcionales): `CINECAT_CONFIG`, `CINECAT_LISTEN_ADDR` (`:8080`), `CINECAT_DB_PATH` (`cinecat.db`), `CINECAT_TMDB_API_KEY`, `CINECAT_OMDB_API_KEY`, `CINECAT_SCAN_INTERVAL` (`6h`), `CINECAT_ADMIN_PASSWORD` y `CINECAT_RUN_DIR` (`/run/cinecat-update`). En Docker, además, se usan `CINECAT_MEDIA_PATH`, `CINECAT_API_PORT` y `CINECAT_WEB_PORT`.
 
-Televisión en directo y contenido de internet. Fotos y presentaciones llegarán en versiones posteriores. Otras plataformas distintas de web, Android y Android TV, también más adelante.
+## Instalación y puesta en marcha
+
+```sh
+git clone https://github.com/catlinux/Cinecat.git
+cd Cinecat
+cp .env.deploy.example .env
+# Edita .env: al menos CINECAT_MEDIA_PATH y, si quieres, las claves de TMDB/OMDb.
+docker compose up -d --build
+docker compose logs servidor
+```
+
+El primer arranque crea el usuario `admin`. Si no fijaste `CINECAT_ADMIN_PASSWORD`, la contraseña generada aparece una sola vez en ese log. Los contenedores escuchan solo en `127.0.0.1`; el vhost de Apache y HTTPS se explican en [despliegue](docs/es/despliegue.md).
+
+## Actualizar
+
+Actualización manual:
+
+```sh
+./scripts/actualizar.sh
+```
+
+Actualización desde Administración → Sistema, con copia previa de la base y vuelta atrás automática si la versión nueva no arranca; requiere instalar una vez el servicio del host:
+
+```sh
+./scripts/instalar-actualizador.sh
+```
+
+Los detalles, requisitos de systemd/linger, copias y recuperación manual están en [actualizaciones](docs/es/actualizaciones.md).
 
 ## Dirección visual
 
-**Elegida: «Marquesina».** Cine clásico con aire actual y luminoso: rojo granate y crema muy claro, acentos dorados y naranjas, tipografía serif de carácter (Fraunces) para los títulos. Carteles propios ilustrados (ninguno es una foto real) con escenas e iluminación variadas para dar colorido a la biblioteca.
+**«Marquesina»**: cine clásico con aire actual y luminoso. Granate y crema claro, acentos dorados y naranjas, serif Fraunces para los títulos y carteles ilustrados propios; nunca fotos de terceros. La web usa tipografías empaquetadas localmente y temas claro, oscuro o según el sistema.
 
-Maqueta de referencia: [artboard "Marquesina" en Claude](https://claude.ai/artifact/J2o3AdQxPbN9woGjUfWQFk) (enlace privado del mantenedor; se sustituirá por capturas en `docs/` cuando haya interfaz real).
+## Capturas
+
+<!-- capturas: pendiente de D2 -->
 
 ## Documentación
 
 | Tema | Español | English |
 |---|---|---|
-| Visión y decisiones | [vision](docs/es/vision.md) | [vision](docs/en/vision.md) |
+| Estado y lo que falta | [estado](docs/es/estado.md) | [status](docs/en/status.md) |
+| Guía de usuario | [guía de usuario](docs/es/guia-de-usuario.md) | [user guide](docs/en/user-guide.md) |
+| Administración | [administración](docs/es/administracion.md) | [administration](docs/en/administration.md) |
+| Visión y decisiones | [visión](docs/es/vision.md) | [vision](docs/en/vision.md) |
 | Arquitectura y seguridad | [arquitectura](docs/es/arquitectura.md) | [architecture](docs/en/architecture.md) |
-| Reproducción y códecs | [reproduccion](docs/es/reproduccion.md) | [playback](docs/en/playback.md) |
+| Reproducción y códecs | [reproducción](docs/es/reproduccion.md) | [playback](docs/en/playback.md) |
 | Metadatos | [metadatos](docs/es/metadatos.md) | [metadata](docs/en/metadata.md) |
-| Licencias y créditos | [licencias-y-creditos](docs/es/licencias-y-creditos.md) | [licenses-and-credits](docs/en/licenses-and-credits.md) |
-| Hoja de ruta | [hoja-de-ruta](docs/es/hoja-de-ruta.md) | [roadmap](docs/en/roadmap.md) |
+| Actualizaciones | [actualizaciones](docs/es/actualizaciones.md) | [updates](docs/en/updates.md) |
 | Despliegue con Docker | [despliegue](docs/es/despliegue.md) | [deployment](docs/en/deployment.md) |
+| Hoja de ruta | [hoja de ruta](docs/es/hoja-de-ruta.md) | [roadmap](docs/en/roadmap.md) |
+| Licencias y créditos | [licencias y créditos](docs/es/licencias-y-creditos.md) | [licenses and credits](docs/en/licenses-and-credits.md) |
 
-Otros: [CHANGELOG](CHANGELOG.md) · [TODO](TODO.md) · [Cómo contribuir](CONTRIBUTING.md) · [Seguridad](SECURITY.md) · [Créditos](CREDITS.md) · [Autores](AUTHORS)
+Otros: [CHANGELOG](CHANGELOG.md) · [Tareas abiertas](TODO.md) · [Cómo contribuir](CONTRIBUTING.md) · [Seguridad](SECURITY.md) · [Créditos](CREDITS.md) · [Autores](AUTHORS)
 
 ## Licencia
 

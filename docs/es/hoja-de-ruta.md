@@ -1,53 +1,41 @@
 # Hoja de ruta
 
-[English](../en/roadmap.md) · [Volver al README](../../README.md)
+[English](../en/roadmap.md) · [Volver al README](../../README.md) · [Estado](estado.md)
 
-> Plan orientativo. Cada fase termina con una revisión antes de pasar a la siguiente. Versionado `x.y.z`.
+La versión actual es **0.16.3**. El detalle de funciones, versiones y límites está en [estado](estado.md); esta página solo resume las fases.
 
-## Fase 0: preparación (`0.0.x`)
+## Fase 0: preparación (`0.0.x`) — hecha
 
-- Documentación inicial bilingüe (**hecho en `0.0.1`**).
-- Comprobar el nombre, decidir la pila tecnológica, convención de commits y dirección de diseño. Licencia ya decidida (GPL-3.0 con atribución).
-- Crear `CLAUDE.md` y la estructura del repositorio de código.
+Documentación bilingüe, nombre, pila tecnológica, licencia GPL-3.0 con atribución y dirección visual «Marquesina».
 
-## Fase 1: servidor mínimo (`0.1.0`)
+## Fase 1: servidor mínimo (`0.1.0`) — hecha
 
-- Escaneo de biblioteca y análisis de nombres de archivo.
-- Metadatos en `es-ES` (TMDB) y caché de imágenes.
-- Usuarios, sesiones y API versionada con contrato OpenAPI.
-- Reproducción directa y HLS (MPEG-TS, recodificado a H.264 + AAC estéreo, con saltos).
-- Pruebas automáticas con vídeos de prueba generados con FFmpeg.
+Servidor Go, SQLite y migraciones, autenticación con argon2id, escaneo, analizador de nombres, contrato OpenAPI y reproducción directa/HLS inicial.
 
-## Fase 2: cliente web (`0.2.0`)
+## Fase 2: cliente web (`0.2.0`) — hecha, con ajustes posteriores
 
-- Inicio de sesión, perfiles con PIN, biblioteca, ficha de película o serie.
-- Reproductor con subtítulos, selección de audio y capítulos.
-- Diseño propio, claro y oscuro, adaptable a móvil y tableta.
-- Acceso seguro desde fuera de casa (guía de HTTPS y VPN).
+Login y sesión, biblioteca, ficha, reproductor, temas claro/oscuro y accesibilidad. Los perfiles con PIN no se incluyeron; la cuenta actual permite cambiar la contraseña, no crear perfiles.
 
-## Fase 3: decisión de reproducción avanzada (`0.3.0`)
+## Fase 3: reproducción avanzada (`0.8.0`–`0.13.0`) — parcial
 
-- Perfiles de capacidades por dispositivo y preferencia de descodificación.
-- Transcodificación parcial y completa, con aceleración por hardware opcional.
-- Casos especiales: 10 bits, HDR, subtítulos de imagen, audio no soportado.
+Se implementaron la transcodificación de respaldo, la segmentación progresiva, los saltos, la supervisión de FFmpeg, los controles propios, audio, subtítulos de texto y preferencias. La decisión por capacidades del dispositivo, H.265, hardware, HDR, subtítulos de imagen y ABR siguen fuera.
 
-## Fase 4: Android y Android TV (`0.4.0`)
+## Fase 3b: fichas, series y administración (`0.11.0`–`0.16.0`) — hecha
 
-- App Android con reproductor nativo y alternativa por software.
-- Interfaz de televisión pensada para el mando.
-- Descarga sin conexión (si se decide).
+TMDB, fichas completas, colecciones, series, ajustes en caliente, panel de administración, actualizaciones desde la web y servicio actualizador del host.
 
-## Fase 5: pulido y primera versión estable (`1.0.0`)
+## Próximas tandas
 
-- Revisión de seguridad y de licencias.
-- Documentación de usuario y glosario «para tontos».
-- Empaquetado y despliegue (Docker, paquete Debian).
+El orden acordado es: favoritos y próximas a ver; colecciones desde la ficha e identificación de colecciones; bibliotecas con varias carpetas y navegador; subida/borrado con papelera; usuarios y perfil; sesiones, dispositivos, actividad y copias; subtítulos subidos; complementos; DLNA/UPnP; tipos de biblioteca; clientes Android y Android TV. El detalle está en [estado](estado.md).
 
-## Después
+## Fase 4: Android y Android TV — sin empezar
 
-- Fotos y presentaciones.
-- Segmentos de intro/créditos.
-- Contenido de internet y televisión en directo (solo si se decide).
-- Otras plataformas.
+Kotlin + Jetpack Compose + Media3/ExoPlayer, con libmpv opcional. No hay código ni plan detallado. La web es el único cliente terminado.
 
-Detalle de tareas en [TODO.md](../../TODO.md).
+## Fase 5: primera versión estable (`1.0.0`) — futura
+
+Revisión de seguridad y licencias, documentación de usuario, empaquetado y despliegue reproducible. No hay fecha.
+
+## Fuera de alcance por ahora
+
+Televisión en directo y contenido de internet; fotos y presentaciones; plataformas distintas de web, Android y Android TV. Se valorarán más adelante.

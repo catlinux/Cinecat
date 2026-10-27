@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.16.3] - 2026-10-27
+
+### Cambiado
+
+- Documentación puesta al día en castellano e inglés: README reescrito, nuevas páginas de estado (qué hay hecho y qué falta), guía de usuario y administración (con la tabla completa de ajustes), y revisión de arquitectura, reproducción, metadatos, despliegue, hoja de ruta y TODO contra el código.
+
 ## [0.16.2] - 2026-10-27
 
 ### Corregido

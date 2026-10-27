@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.16.3] - 2026-10-27
+
+### Changed
+
+- Documentation brought up to date in Spanish and English: rewritten README, new status page (what is done and what is missing), user guide and administration guide (with the full settings table), and architecture, playback, metadata, deployment, roadmap and TODO reviewed against the code.
+
 ## [0.16.2] - 2026-10-27
 
 ### Fixed

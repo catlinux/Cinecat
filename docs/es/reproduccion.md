@@ -1,79 +1,73 @@
 # Reproducción y códecs
 
-[English](../en/playback.md) · [Volver al README](../../README.md)
+[English](../en/playback.md) · [Volver al README](../../README.md) · [Estado](estado.md)
 
-> Estado: **diseño**. Las cifras son orientativas y deben medirse en la práctica.
+La reproducción está implementada para la web con dos caminos: **directa** para MP4/M4V y **HLS** para el resto. La decisión por capacidades del dispositivo, H.265 y la aceleración por hardware siguen siendo diseño futuro.
 
-## Idea central
+## Decisión actual
 
-Cada dispositivo **declara qué sabe hacer** y el servidor **elige la forma más barata** de reproducir cada vídeo sin perder calidad ni fluidez.
-
-## Perfil de capacidades del cliente
-
-Al conectarse, el cliente envía un perfil con, entre otros:
-
-- códecs de vídeo que descodifica (H.264, H.265, VP9, AV1…), perfiles y niveles, 10 bits, HDR;
-- códecs de audio (AAC, AC3, EAC3, Opus, DTS…) y canales;
-- contenedores y formatos de subtítulos que soporta;
-- resolución máxima y ancho de banda disponible;
-- **preferencia de descodificación:** por hardware del dispositivo, por software del dispositivo o delegada en el servidor.
-
-Cómo obtenerlo: en Android, consultando los códecs del sistema; en el navegador, con las APIs de capacidades de medios y comprobaciones de formato.
-
-## Cadena de decisión
-
-1. **Reproducción directa:** el cliente entiende vídeo, audio, contenedor y subtítulos. El servidor solo envía el archivo (con soporte de saltos en la línea de tiempo). Coste de servidor casi nulo.
-2. **Cambio de contenedor (remux):** el vídeo es compatible pero el contenedor no (por ejemplo MKV en un navegador). El servidor reempaqueta al vuelo a HLS sin recodificar vídeo. *Hoy no se usa: ver abajo.*
-3. **Transcodificación parcial:** el vídeo se copia y solo se convierte el audio (por ejemplo DTS a AAC/AC3).
-4. **Transcodificación completa:** el servidor recodifica el vídeo (con aceleración por hardware si existe) y adapta resolución y tasa de bits.
-
-**Lo implementado hoy:** MP4/M4V se sirven directamente; el resto (MKV, AVI, MOV, TS, M2TS) se sirve por HLS **recodificado siempre** a H.264 (libx264 `veryfast`, CRF 20, hasta 1080p) y AAC **estéreo**, con keyframes cada 6 s y segmentos MPEG-TS de 6 s. La biblioteca real es casi toda DivX/MPEG-4 con audio AC-3 5.1 o MP3, que ningún navegador reproduce por MSE, y el AAC 5.1 tampoco lo aceptan, por eso se baja a estéreo. El resto de la cadena de perfiles por dispositivo que describe este documento (remux, transcodificación parcial, hardware, subtítulos) sigue siendo diseño de futuro.
-
-**Saltos en la línea de tiempo.** La playlist es un VOD completo desde la primera petición. FFmpeg arranca con la primera petición de segmento, en ese segmento. Si luego se pide uno a más de 4 segmentos (24 s) por delante de lo generado, o un hueco hacia atrás, el servidor detiene FFmpeg y lo relanza en el segmento pedido (`-ss` + `-start_number`), como Jellyfin. Para que los segmentos de procesos distintos encajen, todas las marcas de tiempo de salida llevan un desplazamiento fijo de 10 s (`-output_ts_offset`): así el segmento N empieza siempre en el mismo instante, lo genere el proceso que lo genere. Un segmento se da por completo cuando aparece en la playlist de su proceso (`ffmpeg.m3u8`); al relanzar se borran el que quedó a medias y los que el nuevo proceso va a reescribir.
-
-El servidor **prefiere H.265** cuando el cliente lo soporta (menos espacio y ancho de banda) y **recurre a H.264** cuando no.
-
-## Quién descodifica
-
-| Situación | Decisión |
+| Situación | Modo |
 |---|---|
-| Móvil o tableta potente con descodificador H.265 por hardware | Reproducción directa; descodifica el propio aparato. |
-| Televisor flojo o sin soporte del códec | El servidor transcodifica (H.264) y el televisor solo muestra. |
-| Cliente capaz pero con descodificación por hardware fallida | El usuario puede forzar software en el cliente (por ejemplo libmpv) o delegar en el servidor. |
-| Ancho de banda limitado (fuera de casa) | Transcodificación con tasa de bits adaptada. |
+| `.mp4` o `.m4v` | Reproducción directa: se sirve el archivo con soporte de rangos HTTP. |
+| `.mkv`, `.avi`, `.mov`, `.ts`, `.m2ts` | HLS: se recodifica a H.264 + AAC estéreo y se sirve por segmentos. |
+| Cualquier otra extensión | 415; el contenedor no se admite. |
 
-La preferencia puede fijarse por dispositivo y por usuario.
+La decisión se basa en la extensión. No se comprueban los códecs reales del archivo ni las capacidades del navegador antes de elegir. La API sigue llamando `remux` al modo HLS aunque recodifique.
 
-## Navegadores y H.265
+## HLS: cómo funciona
 
-No se puede dar por hecho. A fecha 2026-10-24, según las fuentes consultadas:
+- Vídeo: `libx264` con preset y CRF configurables, `yuv420p`, escala hasta la altura máxima configurada.
+- Audio: una pista, AAC estéreo a 160 kbps.
+- Keyframes forzados cada 6 s y segmentos MPEG-TS de 6 s.
+- `-output_ts_offset` fijo de 10 s para que los segmentos de procesos distintos encajen.
+- La playlist es un VOD completo si `ffprobe` conoce la duración. Si no, se usa la playlist `event` de FFmpeg y los saltos lejanos no son rápidos.
+- FFmpeg no arranca al pedir la playlist: arranca con la primera petición de segmento, en el punto pedido.
+- Si se pide un segmento más de 24 s por delante de lo generado, o un hueco hacia atrás, el servidor reinicia FFmpeg en ese segmento (`-ss` + `-start_number`).
+- Un segmento se considera completo cuando aparece en la playlist del proceso; al reiniciar se descartan el que quedó a medias y los que se van a reescribir.
 
-- Chrome admite H.265 con **descodificación por hardware**; en Linux depende de la GPU y de la configuración.
-- Firefox lo admite con hardware en Windows (desde 134), macOS (136) y Linux (137), con limitaciones iniciales de contenedor.
-- Los resultados reales varían entre equipos.
+## Límites de procesos
 
-Por eso el cliente web **comprueba** si puede reproducir el vídeo y el servidor **cae a H.264** cuando no. Mientras no exista la decisión por capacidades del cliente, el HLS se recodifica siempre a H.264.
+| Límite | Valor |
+|---|---|
+| Espera de la playlist inicial | 20 s |
+| Espera de un segmento | 2 min |
+| Vida máxima de un proceso | 4 h |
+| Parada por inactividad | 90 s sin peticiones |
+| Segmentos generados por delante | 20 (~2 min) |
+| Transcodificaciones simultáneas | `playback.max_transcodes`, 2 por defecto |
+| Limpieza de trabajos HLS | 1 h sin uso, revisión cada 15 min |
 
-## Casos que obligan a transcodificar
+Si se alcanza el máximo de transcodificaciones, se detiene el trabajo con más tiempo sin peticiones. Los procesos van con prioridad baja y número de hilos limitado.
 
-- Vídeo de 10 bits en dispositivos que solo aceptan 8 bits.
-- HDR / Dolby Vision en pantallas SDR (conversión a SDR con *tone mapping* si FFmpeg lo permite).
-- Subtítulos de imagen (PGS/VobSub) en clientes que no los muestran (se «queman» en el vídeo).
-- Audio no soportado (DTS, TrueHD).
+## Audio, subtítulos y calidad
 
-## Subtítulos, audio y capítulos
+- **Audio:** se elige por posición en la lista de pistas de `ffprobe`. La preferencia del usuario y de la película se guarda en `item_preferences`.
+- **Subtítulos:** se leen pistas de texto incrustadas y archivos externos `.srt`, `.vtt` o `.ass` junto al vídeo, con sufijos de idioma y `forced`. Se convierten a WebVTT. Las pistas de imagen (PGS/VobSub) no se admiten y el HLS no lleva una representación separada de subtítulos.
+- **Calidad:** en HLS se ofrecen `auto`, 480p, 720p, 1080p (sin superar la altura original ni `playback.max_height`) y `original`. `original` no copia el archivo original: limita la recodificación a la altura original. En directa solo hay `original`.
+- **Preferencias:** audio, subtítulo y calidad por usuario y película; el reproductor las guarda y recarga en el segundo actual al cambiarlas.
 
-- Subtítulos de texto: se envían como texto y los pinta el cliente (con soporte de estilos cuando sea posible).
-- Subtítulos de imagen: se muestran si el cliente puede, o se queman en el vídeo.
-- Selección de pista de audio y subtítulos por idioma, con recuerdo de la elección.
-- Capítulos y marcas en la línea de tiempo.
+## Reproductor web
 
-## Sesiones
+- `<video>` nativo para reproducción directa; hls.js 1.7.3 para HLS.
+- Controles propios: play/pausa, ±10 s, barra de progreso, volumen, silencio, velocidad (0,5×–2×), audio, subtítulos, calidad, imagen en imagen, pantalla completa y siguiente episodio.
+- Atajos: `Espacio`/`K`, `J`/`L` o flechas, `M`, `F`, `C`, `,`/`.`, `0`–`9` y `Esc`. El detalle está en la [guía de usuario](guia-de-usuario.md).
+- El progreso se envía cada 15 s y al salir; al 90 % se marca como visto y se borra el progreso. Si quedan 15 s o menos, no se reanuda.
+- Al terminar un episodio con siguiente, aparece una cuenta atrás de 8 s.
 
-- Control de **transcodificaciones simultáneas** para no saturar el servidor.
-- Limpieza de archivos temporales.
-- Registro de por qué se eligió cada modo (útil para depurar y para mostrarlo al usuario).
+## URLs firmadas
 
-## Relación con Reduvid
+- HMAC-SHA256 con una clave aleatoria de 32 bytes por proceso.
+- TTL por defecto: 8 horas.
+- La firma cubre el identificador y la caducidad; no está ligada al usuario. Cualquiera con la URL puede usarla hasta que expire.
+- Al reiniciar el servidor cambia la clave y las URLs anteriores dejan de valer.
 
-Convertir antes los vídeos con [Reduvid](https://github.com/catlinux/reduvid) a un formato compatible reduce la necesidad de transcodificar en el servidor.
+## Qué falta para la reproducción avanzada
+
+- Perfiles de capacidades por dispositivo y elección entre directa, copia y transcodificación.
+- Copiar el vídeo cuando ya es H.264 8 bits, con corte en keyframes reales.
+- Aceleración por hardware (Quick Sync/VAAPI); el servidor tiene `/dev/dri`, pero no se pasa al contenedor.
+- H.265, HDR/10 bits con tone mapping, desentrelazado, audio multicanal o passthrough y subtítulos de imagen.
+- ABR y playlist maestra con varias calidades.
+- Un modo de API `transcode` explícito.
+
+El orden de estas mejoras está en [estado](estado.md). La relación con Reduvid se mantiene: convertir antes los archivos con [Reduvid](https://github.com/catlinux/reduvid) reduce la necesidad de transcodificar.

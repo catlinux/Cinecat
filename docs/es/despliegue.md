@@ -1,84 +1,112 @@
 # Despliegue con Docker
 
-[English](../en/deployment.md) · [Volver al README](../../README.md)
+[English](../en/deployment.md) · [Volver al README](../../README.md) · [Actualizaciones](actualizaciones.md)
 
-Cinecat se despliega con Docker Compose: dos contenedores (servidor Go, cliente web), cada uno publicado solo en `127.0.0.1` del Debian. El Apache ya instalado en esa máquina hace de proxy inverso hacia ambos y gestiona HTTPS, igual que con sus otros vhosts.
+Cinecat se despliega con Docker Compose: un contenedor para el servidor Go y otro para el cliente web, publicados solo en `127.0.0.1`. El Apache del Debian hace de proxy inverso, gestiona HTTPS y enruta `/api/` y `/healthz` al servidor.
 
 ## Requisitos
 
-- Docker y Docker Compose (plugin `docker compose`, no el antiguo `docker-compose`).
-- Apache con `mod_proxy`, `mod_proxy_http` y `mod_headers` activados (`a2enmod proxy proxy_http headers`), ya en marcha con otros vhosts.
-- La carpeta de tu biblioteca de vídeos accesible en el equipo donde corre Docker.
+- Docker con el plugin `docker compose`.
+- Git y acceso al repositorio.
+- Apache con `mod_proxy`, `mod_proxy_http` y `mod_headers`.
+- Para el actualizador automático: `sqlite3`, `curl`, `python3`, `flock`, usuario en el grupo `docker` y linger activo.
 
-## 1. Levantar los contenedores
+## Servidor nuevo
 
 ```sh
-git clone git@github-catlinux:catlinux/Cinecat.git
-cd Cinecat
+sudo mkdir -p /opt/cinecat
+sudo chown "$USER":"$USER" /opt/cinecat
+git clone https://github.com/catlinux/Cinecat.git /opt/cinecat
+cd /opt/cinecat
 cp .env.deploy.example .env
 ```
 
-Edita `.env` y pon al menos `CINECAT_MEDIA_PATH` (la ruta real del disco o carpeta que contiene tus bibliotecas, p. ej. `/media` si ahí tienes montado el disco con `Multimedia/Pelis` y `Multimedia/Series` dentro). Los puertos `CINECAT_API_PORT`/`CINECAT_WEB_PORT` (por defecto 8080/8081) solo hace falta cambiarlos si ya los usas para otra cosa en ese Debian.
+Edita `.env`:
+
+- `CINECAT_MEDIA_PATH`: ruta del host que se monta completa y en solo lectura en `/media`.
+- `CINECAT_TMDB_API_KEY`: clave de TMDB para fichas completas; si falta, se puede usar OMDb solo para sinopsis y cartel de películas.
+- `CINECAT_OMDB_API_KEY`: opcional, respaldo sin TMDB.
+- `CINECAT_SCAN_INTERVAL`: intervalo automático; `0` lo desactiva.
+- `CINECAT_ADMIN_PASSWORD`: contraseña del `admin` del primer arranque.
+- `CINECAT_API_PORT` y `CINECAT_WEB_PORT`: solo si 8080/8081 están ocupados.
 
 ```sh
+mkdir -p run
 docker compose up -d --build
 docker compose logs servidor
 ```
 
-El primer arranque crea el usuario `admin`. Si no fijaste `CINECAT_ADMIN_PASSWORD` en `.env`, la contraseña generada aparece **una sola vez** en ese log: cópiala antes de que se pierda de vista.
+El primer arranque crea el usuario `admin`. Si no fijaste contraseña, aparece una sola vez en el log: cópiala antes de que se pierda. El servidor queda en `http://127.0.0.1:8080` y la web en `http://127.0.0.1:8081`, accesibles solo desde el propio Debian.
 
-En este punto el servidor ya responde en `http://127.0.0.1:8080` y el cliente web en `http://127.0.0.1:8081`, pero solo desde la propia máquina: el siguiente paso es el vhost de Apache que los hace accesibles desde fuera.
-
-## 2. Vhost de Apache
-
-El archivo `deploy/video.warcrafted.com.conf` del repositorio ya trae la configuración para `video.warcrafted.com`. Cópialo a `sites-available` y actívalo:
+## Apache y HTTPS
 
 ```sh
 sudo cp deploy/video.warcrafted.com.conf /etc/apache2/sites-available/
 sudo a2ensite video.warcrafted.com.conf
 sudo apache2ctl configtest
 sudo systemctl reload apache2
-```
-
-Para HTTPS, usa certbot igual que con tus otros vhosts (añade el bloque `:443` y el redirect automáticamente):
-
-```sh
 sudo certbot --apache -d video.warcrafted.com
 ```
 
-Certbot copia las directivas `ProxyPass` al nuevo bloque `:443`, pero no actualiza la cabecera `X-Forwarded-Proto`. Edita `/etc/apache2/sites-available/video.warcrafted.com-le-ssl.conf` (o el archivo que certbot haya creado) y cambia, dentro del bloque `<VirtualHost *:443>`:
+Certbot copia los `ProxyPass` al bloque `:443`, pero no cambia `X-Forwarded-Proto`. Dentro del bloque HTTPS, deja:
 
 ```apache
 RequestHeader set X-Forwarded-Proto "https"
 ```
 
-y recarga Apache (`sudo systemctl reload apache2`). Si no lo haces, la cookie de sesión no se marcará `Secure` en HTTPS.
+Recarga Apache. Sin esa cabecera la cookie de sesión no se marca `Secure`.
 
-Abre `https://video.warcrafted.com/`. Inicia sesión como `admin` y crea una biblioteca por cada carpeta real que tengas dentro de `CINECAT_MEDIA_PATH` (Docker la monta como `/media` dentro del contenedor). Por ejemplo, con `Multimedia/Pelis` y `Multimedia/Series` dentro del disco montado:
+## Bibliotecas y primer escaneo
 
-- Biblioteca «Películas» → ruta `/media/Multimedia/Pelis`
-- Biblioteca «Series» → ruta `/media/Multimedia/Series`
+Abre la web, inicia sesión y ve a **Administración → Bibliotecas**. Crea una biblioteca por cada carpeta real dentro del montaje:
 
-Lanza el escaneo de cada una desde la propia interfaz, o con:
+- `/media/Multimedia/Pelis` para películas;
+- `/media/Multimedia/Series` para series.
 
-```sh
-curl -X POST https://video.warcrafted.com/api/v1/libraries/scan -H "Authorization: Bearer <tu token>"
-```
+Pulsa **Escanear todas las bibliotecas**. El escaneo sigue en segundo plano y el panel muestra el progreso; puedes cerrar la página. El contenedor no puede borrar ni subir archivos porque `/media` se monta `:ro`.
 
-(el escaneo recorre todas las bibliotecas dadas de alta en una sola llamada, no hace falta repetirlo por biblioteca).
+## Actualizar
 
-## Aplicar una versión nueva
-
-Cada vez que haya cambios que probar:
+Manual:
 
 ```sh
+cd /opt/cinecat
 ./scripts/actualizar.sh
 ```
 
-Hace `git pull`, reconstruye las imágenes y reinicia los contenedores. La base de datos (volumen `cinecat_data`) no se toca: tu biblioteca, usuarios y bibliotecas dadas de alta se conservan entre actualizaciones. El vhost de Apache no cambia salvo que el archivo `deploy/video.warcrafted.com.conf` se modifique en un commit (entonces hay que volver a copiarlo y recargar Apache a mano).
+Hace `git pull --ff-only`, reconstruye las imágenes y levanta; la base de datos y las bibliotecas se conservan. La primera vez que quieras actualizar desde Administración → Sistema, instala el servicio del host:
 
-## Qué no cubre todavía este despliegue
+```sh
+cd /opt/cinecat
+./scripts/instalar-actualizador.sh
+```
 
-- **Metadatos de TMDB**: `internal/metadata` no está conectado al servidor; verás títulos extraídos del nombre de archivo, sin carteles ni sinopsis.
-- **Bloqueo de login por IP**: el límite de intentos fallidos se indexa por usuario, no por IP (ver `TODO.md`). Revisar antes de depender solo de esto para seguridad con el dominio ya expuesto a internet.
-- **Copias de seguridad**: el volumen `cinecat_data` guarda la base de datos SQLite; haz copia periódica de ese volumen (`docker run --rm -v cinecat_data:/data -v $(pwd):/backup debian tar czf /backup/cinecat-db.tar.gz /data`) si te importa no perder usuarios y bibliotecas dadas de alta.
+El instalador comprueba requisitos, crea las unidades de systemd de usuario y avisa si falta linger o el acceso a Docker. Los detalles, copias y recuperación están en [actualizaciones](actualizaciones.md).
+
+## Copias de seguridad
+
+La base SQLite vive en el volumen `cinecat_data`. Una copia en caliente:
+
+```sh
+mkdir -p "$HOME/cinecat-backups"
+docker cp cinecat-servidor-1:/data/cinecat.db "$HOME/cinecat-backups/cinecat.db"
+docker cp cinecat-servidor-1:/data/cinecat.db-wal "$HOME/cinecat-backups/cinecat.db-wal" 2>/dev/null || true
+docker cp cinecat-servidor-1:/data/cinecat.db-shm "$HOME/cinecat-backups/cinecat.db-shm" 2>/dev/null || true
+sqlite3 "$HOME/cinecat-backups/cinecat.db" "VACUUM INTO '$HOME/cinecat-backups/cinecat-copia.db'"
+```
+
+El actualizador automático ya hace una copia antes de cada actualización y conserva las 10 últimas en `~/cinecat-backups/`.
+
+## Cambiar de dominio o de servidor
+
+1. Copia el repositorio y el `.env`; conserva el volumen `cinecat_data` o restaura una copia de la base.
+2. Copia el vhost, cambia `ServerName` y ejecuta certbot para el dominio nuevo.
+3. Ajusta `CINECAT_MEDIA_PATH` a la ruta real del nuevo host.
+4. Levanta los contenedores y comprueba `/healthz`, `/api/v1/system/version` y la web.
+
+## Límites del despliegue
+
+- El servidor Go escucha HTTP plano en localhost; TLS lo pone Apache.
+- No hay CORS: la web y la API deben compartir origen a través del proxy.
+- El actualizador automático necesita el servicio del host; sin él, la web avisa de que no está instalado.
+- La cuota de TMDB/OMDb y el TTL de caché de TMDB deben revisarse antes de un uso intensivo.

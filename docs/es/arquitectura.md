@@ -1,62 +1,108 @@
 # Arquitectura y seguridad
 
-[English](../en/architecture.md) · [Volver al README](../../README.md)
+[English](../en/architecture.md) · [Volver al README](../../README.md) · [Estado](estado.md)
 
-> Estado: **propuesta de diseño**. Nada de esto está implementado.
+Cinecat tiene un servidor Go, un cliente web SvelteKit y un despliegue Docker con Apache delante. Las apps Android y Android TV forman parte de la visión, pero todavía no existen. Esta página describe lo que hay construido y separa con claridad lo que aún no está.
 
-## Visión general
+## Vista general
 
 ```
- ┌────────────┐   ┌──────────────┐   ┌──────────────────┐
- │ Cliente web│   │ App Android │   │ App Android TV   │
- └─────┬──────┘   └──────┬───────┘   └────────┬─────────┘
-       │      HTTPS · API REST versionada       │
-       └──────────────────┬─────────────────────┘
-                   ┌──────▼───────┐
-                   │   Servidor   │── FFmpeg (externo)
-                   │   Cinecat    │── Base de datos local
-                   └──────┬───────┘── Caché de imágenes
-                          │
-                 Biblioteca de vídeo (disco)
-                 Fuentes de metadatos (TMDB, ...)
+ Navegador / clientes futuros
+            │ HTTPS
+            ▼
+ ┌─────────────────────┐
+ │ Apache del host     │  /api/ y /healthz → servidor
+ │ (vhost + TLS)       │  resto            → web
+ └───────┬─────────────┘
+         │ 127.0.0.1
+   ┌─────▼──────┐      ┌──────────────┐
+   │  servidor  │      │ contenedor   │
+   │  Go :8080  │      │ web :3000    │
+   └──┬───┬───┬─┘      └──────────────┘
+      │   │   └── FFmpeg/ffprobe (imagen del servidor)
+      │   └────── SQLite + caché TMDB (/data)
+      └────────── biblioteca de vídeo (/media, solo lectura)
 ```
+
+El servidor de actualizaciones no vive dentro de los contenedores: el servidor Go escribe `run/update-request.json` y un servicio de systemd del host ejecuta el trabajo. Ver [actualizaciones](actualizaciones.md).
 
 ## Componentes
 
-- **Servidor:** escanea la biblioteca, identifica títulos, descarga y cachea metadatos, gestiona usuarios y sesiones, decide la forma de reproducción y sirve el vídeo. Orquesta **FFmpeg** como herramienta externa (no se distribuye en el repositorio).
-- **Cliente web:** PC, móvil y tableta. Reproduce con HLS y APIs del navegador.
-- **App Android y Android TV:** reproductor nativo con descodificación por hardware cuando exista, y alternativa por software. La interfaz de televisión se diseña para el mando (navegación por foco).
-- **API:** REST, versionada y documentada con OpenAPI (contrato primero). Los clientes se escriben contra el contrato.
-- **Base de datos:** local y simple al principio (por ejemplo SQLite).
+- **Servidor Go (`cmd/cinecatd`):** API REST, autenticación, escaneo, identificación, metadatos, colecciones, series, progreso, ajustes y preparación de la reproducción.
+- **Cliente web (`web/`):** SvelteKit + TypeScript + Svelte 5, con sesión en cookie `httpOnly`; nunca guarda el token de la API en JavaScript. Usa hls.js para HLS y `<video>` nativo para reproducción directa.
+- **Base de datos SQLite:** migraciones embebidas, `STRICT`, WAL, claves foráneas y `busy_timeout`. Vive en el volumen `cinecat_data`.
+- **Caché de TMDB:** junto a la base de datos (`/data/cache/tmdb` en Docker), con respuestas crudas y TTL de 7 días.
+- **FFmpeg/ffprobe:** herramienta externa instalada en la imagen del servidor; no se distribuye en el repositorio. Se invoca siempre con listas de argumentos, sin shell.
+- **Apache del host:** proxy inverso y TLS. Enruta `/api/` y `/healthz` al servidor y el resto al cliente web, de modo que navegador y API comparten origen.
 
-## Pila tecnológica (decidida)
+## Flujo de datos
 
-| Parte | Elección | Nota |
-|---|---|---|
-| Servidor | **Go** | Binario único, despliegue sencillo en Debian y Docker, concurrencia nativa para gestionar procesos FFmpeg, mantenimiento cómodo en solitario. |
-| Web | **TypeScript + SvelteKit** + hls.js | Menos JavaScript de cliente que un framework más pesado (importante para TV y móviles modestos), rutas y SSR sencillos. hls.js ya verificado como Apache-2.0. Diseño propio «Marquesina», sin plantillas genéricas. |
-| Android / Android TV | **Kotlin + Jetpack Compose** (con Compose for TV) + **Media3/ExoPlayer**, libmpv opcional como alternativa de descodificación por software | Un único código base Compose para Android y Android TV. Media3 ya verificado como Apache-2.0; comprobar la licencia de libmpv según la compilación antes de integrarlo. |
+1. Se crea una biblioteca con una ruta del contenedor (`/media/...`).
+2. El escaneo recorre los archivos de vídeo, analiza nombres y carpetas y hace *upsert* en `media_items`.
+3. Las películas y series se identifican con TMDB (o OMDb como respaldo de películas) y se guardan fichas, reparto, imágenes y colecciones.
+4. La web lee la API con la cookie de sesión; el servidor traduce la cookie a un token Bearer interno.
+5. Al reproducir, el servidor decide reproducción directa o HLS y devuelve una URL firmada. El navegador pide el archivo o la playlist y los segmentos.
+6. El progreso, el visionado y las preferencias se guardan por usuario en SQLite.
+
+## Modelo de datos principal
+
+| Tabla | Contenido |
+|---|---|
+| `users`, `sessions` | Usuarios, roles y sesiones; solo se guarda el hash SHA-256 del token. |
+| `libraries` | Nombre y ruta de cada biblioteca. |
+| `media_items` | Películas y episodios, ruta, título, metadatos, TMDB, estado de identificación, imágenes, créditos y serie/temporada/episodio. |
+| `series`, `series_seasons` | Series y temporadas; los episodios son filas de `media_items`. |
+| `collections`, `collection_items` | Colecciones automáticas/manuales, miembros, orden y exclusiones. |
+| `watch_state`, `playback_progress` | Visto y posición por usuario. |
+| `item_preferences` | Audio, subtítulo y calidad por usuario y película. |
+| `settings` | Ajustes tipados persistidos; los valores efectivos están en memoria. |
+
+## API y contrato
+
+La API está versionada bajo `/api/v1/` y documentada en [api/openapi.yaml](../../api/openapi.yaml). Los grupos principales son autenticación, bibliotecas, ítems, series, colecciones, ajustes, sistema/actualización y streaming firmado. `GET /healthz` existe además como comprobación de salud.
+
+Las respuestas de error usan `{error}` o `{message}` según el endpoint; los códigos habituales son 401 sin sesión, 403 sin rol, 400 de validación, 404, 409 de conflicto, 415 de contenedor no admitido, 502 de dependencia externa y 503 de FFmpeg o actualización no disponible.
+
+## Reproducción
+
+- **Directa:** `.mp4` y `.m4v` se sirven con `http.ServeContent`, con soporte de rangos.
+- **HLS:** el resto de extensiones se recodifica a H.264 + AAC estéreo y se sirve por segmentos MPEG-TS de 6 s. La playlist es VOD si se conoce la duración; si no, se usa la playlist `event` de FFmpeg.
+- **Control:** máximo de transcodificaciones simultáneas, procesos con prioridad baja, parada por inactividad y límite de segmentos por delante. Ver [reproducción](reproduccion.md).
 
 ## Seguridad
 
-La plataforma puede quedar expuesta a internet, así que se diseña con estas reglas:
+### Implementado
 
-1. **HTTPS obligatorio** fuera de la red local. Se documenta el uso de un proxy inverso (por ejemplo Caddy) y la alternativa de una VPN (Tailscale/WireGuard) para uso personal.
-2. **Autenticación:** usuario y contraseña con *hash* robusto (argon2id o similar), sesiones con *tokens* de vida corta y renovables, y cierre de sesión que invalida el *token*.
-3. **Protección frente a fuerza bruta:** límite de intentos, bloqueo temporal y avisos.
-4. **PIN:** un PIN corto **no** es suficiente por sí solo para el acceso remoto. Se usa para cambiar de perfil dentro de un dispositivo ya autenticado (por ejemplo, el televisor). Para el acceso remoto, contraseña fuerte y, más adelante, segundo factor (TOTP o passkey).
-5. **URLs de reproducción firmadas** y de corta duración. Nunca contraseñas ni *tokens* permanentes en la URL.
-6. **Roles:** administrador y usuarios; permisos por biblioteca.
-7. **Registro de auditoría** de inicios de sesión y acciones administrativas.
-8. **Sin telemetría.** Conexiones salientes solo a las fuentes de metadatos configuradas.
-9. **Procesos externos seguros:** FFmpeg se invoca con argumentos en lista, nunca por concatenación de texto ni con intérprete de órdenes.
-10. **Dependencias:** revisión de licencias y de vulnerabilidades conocidas.
+- Contraseñas con **argon2id**; sesiones de 24 h con renovación deslizante; token de 32 bytes y solo su hash en la base.
+- Roles `admin` y `user`; los endpoints de administración comprueban el rol en el servidor.
+- Cookie de sesión `httpOnly`, `SameSite=Lax` y `Secure` cuando llega por HTTPS.
+- Bloqueo tras cinco intentos fallidos y mensajes de login que no distinguen usuario inexistente de contraseña incorrecta.
+- URLs de reproducción firmadas con HMAC-SHA256, TTL de 8 horas y clave por proceso.
+- Validación de rutas dentro de la biblioteca y escaneo sin seguir enlaces simbólicos.
+- Sin telemetría. Las conexiones salientes son a TMDB, OMDb y GitHub solo cuando corresponde.
 
-Ver también [SECURITY.md](../../SECURITY.md).
+### Límites conocidos
 
-## Despliegue previsto
+- El bloqueo de login se indexa por usuario, no por IP; puede usarse para bloquear temporalmente una cuenta.
+- No hay CORS: el despliegue depende de que Apache una el origen.
+- No hay permisos por biblioteca: cualquier usuario autenticado ve todo el catálogo.
+- No hay creación de usuarios ni revocación de sesiones desde la web.
+- `/media` se monta en solo lectura; no hay subida ni borrado de archivos.
+- Las URLs de reproducción no están ligadas al usuario y dejan de valer al reiniciar el servidor.
 
-- Servidor en Debian (nativo o contenedor Docker).
-- FFmpeg instalado en el sistema.
-- Aceleración por hardware del servidor (VAAPI, NVENC, QSV) como opción avanzada.
-- Imagen de contenedor: si algún día incluye FFmpeg, revisar las obligaciones de licencia.
+El detalle y el orden de mejora están en [estado](estado.md) y [tareas abiertas](../../TODO.md).
+
+## Pila tecnológica
+
+| Parte | Elección | Estado |
+|---|---|---|
+| Servidor | Go, SQLite, FFmpeg externo | Implementado. |
+| Web | TypeScript + SvelteKit + hls.js | Implementado. |
+| Android / Android TV | Kotlin + Jetpack Compose + Media3/ExoPlayer, libmpv opcional | Decidido, sin código. |
+| Despliegue | Docker Compose + Apache del host | Implementado. |
+
+## Decisiones de seguridad
+
+La plataforma puede exponerse a internet, así que HTTPS, contraseñas fuertes y una superficie mínima son requisitos. El PIN de perfiles y los permisos por biblioteca siguen siendo objetivos de diseño; no deben confundirse con funciones ya disponibles.
+
+Ver también [SECURITY.md](../../SECURITY.md) y [licencias y créditos](licencias-y-creditos.md).

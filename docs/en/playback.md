@@ -1,79 +1,73 @@
 # Playback and codecs
 
-[Español](../es/reproduccion.md) · [Back to README](../../README.en.md)
+[Español](../es/reproduccion.md) · [Back to README](../../README.en.md) · [Status](status.md)
 
-> Status: **design**. Figures are indicative and must be measured in practice.
+Playback is implemented for the web with two paths: **direct** for MP4/M4V and **HLS** for everything else. Per-device capability decisions, H.265 and hardware acceleration are still future design.
 
-## Core idea
+## Current decision
 
-Each device **declares what it can do** and the server **picks the cheapest way** to play each video without losing quality or smoothness.
-
-## Client capability profile
-
-On connecting, the client sends a profile including, among others:
-
-- video codecs it decodes (H.264, H.265, VP9, AV1…), profiles and levels, 10-bit, HDR;
-- audio codecs (AAC, AC3, EAC3, Opus, DTS…) and channels;
-- containers and subtitle formats it supports;
-- maximum resolution and available bandwidth;
-- **decoding preference:** device hardware, device software, or delegated to the server.
-
-How to obtain it: on Android, by querying the system codecs; in the browser, with the media capabilities APIs and format checks.
-
-## Decision chain
-
-1. **Direct play:** the client understands video, audio, container and subtitles. The server just sends the file (with seek support). Almost no server cost.
-2. **Remux:** the video is compatible but the container is not (for example MKV in a browser). The server repackages on the fly to HLS without re-encoding video. *Not used today: see below.*
-3. **Partial transcoding:** the video is copied and only the audio is converted (for example DTS to AAC/AC3).
-4. **Full transcoding:** the server re-encodes the video (with hardware acceleration if available) and adapts resolution and bitrate.
-
-**Implemented today:** MP4/M4V are served directly; everything else (MKV, AVI, MOV, TS, M2TS) is served over HLS, **always re-encoded** to H.264 (libx264 `veryfast`, CRF 20, up to 1080p) and **stereo** AAC, with keyframes every 6 s and 6 s MPEG-TS segments. The real library is almost all DivX/MPEG-4 with AC-3 5.1 or MP3 audio, which no browser plays through MSE, and 5.1 AAC is not accepted either, hence the stereo downmix. The rest of the device-profile chain described in this document (remux, partial transcoding, hardware, subtitles) is still future design.
-
-**Seeking.** The playlist is a complete VOD from the first request. FFmpeg starts on the first segment request, at that segment. If a segment more than 4 segments (24 s) ahead of what has been produced is requested later, or a gap behind it, the server stops FFmpeg and restarts it at the requested segment (`-ss` + `-start_number`), as Jellyfin does. So that segments from different processes fit together, all output timestamps carry a fixed 10 s offset (`-output_ts_offset`): segment N always starts at the same instant, whichever process produced it. A segment is considered complete once it appears in its process playlist (`ffmpeg.m3u8`); on restart, the half-written one and those the new process will rewrite are deleted.
-
-The server **prefers H.265** when the client supports it (less space and bandwidth) and **falls back to H.264** when it does not.
-
-## Who decodes
-
-| Situation | Decision |
+| Situation | Mode |
 |---|---|
-| Powerful phone or tablet with a hardware H.265 decoder | Direct play; the device itself decodes. |
-| Weak TV or no codec support | The server transcodes (H.264) and the TV just displays. |
-| Capable client whose hardware decoding fails | The user can force software on the client (for example libmpv) or delegate to the server. |
-| Limited bandwidth (away from home) | Transcoding with an adapted bitrate. |
+| `.mp4` or `.m4v` | Direct play: the file is served with HTTP range support. |
+| `.mkv`, `.avi`, `.mov`, `.ts`, `.m2ts` | HLS: re-encoded to H.264 + stereo AAC and served in segments. |
+| Any other extension | 415; the container is not supported. |
 
-The preference can be set per device and per user.
+The decision is based on the extension. The file's real codecs and the browser's capabilities are not checked before choosing. The API still calls the HLS mode `remux` even though it re-encodes.
 
-## Browsers and H.265
+## HLS: how it works
 
-It cannot be taken for granted. As of 2026-10-24, according to the sources consulted:
+- Video: `libx264` with configurable preset and CRF, `yuv420p`, scaled up to the configured maximum height.
+- Audio: one track, stereo AAC at 160 kbps.
+- Forced keyframes every 6 s and 6 s MPEG-TS segments.
+- A fixed 10 s `-output_ts_offset` so segments from different processes fit together.
+- The playlist is a complete VOD when `ffprobe` knows the duration. Otherwise FFmpeg's `event` playlist is used and long seeks are not fast.
+- FFmpeg does not start when the playlist is requested: it starts on the first segment request, at the requested point.
+- If a segment more than 24 s ahead of what has been generated is requested, or a gap behind it, the server restarts FFmpeg at that segment (`-ss` + `-start_number`).
+- A segment is complete when it appears in its process playlist; on restart, the half-written one and those about to be rewritten are discarded.
 
-- Chrome supports H.265 with **hardware decoding**; on Linux it depends on the GPU and setup.
-- Firefox supports it with hardware on Windows (since 134), macOS (136) and Linux (137), with initial container limitations.
-- Real-world results vary between machines.
+## Process limits
 
-That is why the web client **checks** whether it can play the video and the server **falls back to H.264** when it cannot. Until the client-capability decision exists, HLS is always re-encoded to H.264.
+| Limit | Value |
+|---|---|
+| Initial playlist wait | 20 s |
+| Segment wait | 2 min |
+| Maximum process lifetime | 4 h |
+| Idle stop | 90 s without requests |
+| Segments generated ahead | 20 (~2 min) |
+| Simultaneous transcodes | `playback.max_transcodes`, 2 by default |
+| HLS job cleanup | 1 h unused, checked every 15 min |
 
-## Cases that force transcoding
+When the transcode limit is reached, the job with the longest idle time is stopped. Processes run at low priority with a limited number of threads.
 
-- 10-bit video on devices that only accept 8-bit.
-- HDR / Dolby Vision on SDR screens (conversion to SDR with tone mapping if FFmpeg allows it).
-- Image subtitles (PGS/VobSub) on clients that cannot show them (burned into the video).
-- Unsupported audio (DTS, TrueHD).
+## Audio, subtitles and quality
 
-## Subtitles, audio and chapters
+- **Audio:** chosen by position in the `ffprobe` track list. The user's and movie's preference is stored in `item_preferences`.
+- **Subtitles:** embedded text tracks and external `.srt`, `.vtt` or `.ass` files next to the video, with language and `forced` suffixes. They are converted to WebVTT. Image tracks (PGS/VobSub) are not supported and HLS has no separate subtitle rendition.
+- **Quality:** HLS offers `auto`, 480p, 720p, 1080p (never above the original height or `playback.max_height`) and `original`. `original` does not copy the original file: it limits re-encoding to the original height. Direct play has only `original`.
+- **Preferences:** audio, subtitle and quality per user and movie; the player saves them and reloads at the current second when changed.
 
-- Text subtitles: sent as text and rendered by the client (with style support when possible).
-- Image subtitles: shown if the client can, or burned into the video.
-- Audio and subtitle track selection by language, remembering the choice.
-- Chapters and timeline markers.
+## Web player
 
-## Sessions
+- Native `<video>` for direct play; hls.js 1.7.3 for HLS.
+- Custom controls: play/pause, ±10 s, progress bar, volume, mute, speed (0.5×–2×), audio, subtitles, quality, picture-in-picture, fullscreen and next episode.
+- Shortcuts: `Space`/`K`, `J`/`L` or arrows, `M`, `F`, `C`, `,`/`.`, `0`–`9` and `Esc`. Details are in the [user guide](user-guide.md).
+- Progress is sent every 15 s and on exit; at 90 % it is marked watched and progress is cleared. If 15 s or less remain, it does not resume.
+- When an episode ends and there is a next one, an 8-second countdown appears.
 
-- Control of **simultaneous transcodes** so the server is not overloaded.
-- Cleanup of temporary files.
-- Log of why each mode was chosen (useful for debugging and for showing it to the user).
+## Signed URLs
 
-## Relationship with Reduvid
+- HMAC-SHA256 with a random 32-byte key per process.
+- Default TTL: 8 hours.
+- The signature covers the identifier and expiry; it is not bound to the user. Anyone with the URL can use it until it expires.
+- Restarting the server changes the key, so previous URLs stop working.
 
-Converting videos beforehand with [Reduvid](https://github.com/catlinux/reduvid) to a compatible format reduces the need for transcoding on the server.
+## What advanced playback still needs
+
+- Per-device capability profiles and a choice between direct play, copy and transcoding.
+- Copying video when it is already 8-bit H.264, cutting at real keyframes.
+- Hardware acceleration (Quick Sync/VAAPI); the server has `/dev/dri`, but it is not passed to the container.
+- H.265, HDR/10-bit with tone mapping, deinterlacing, multichannel audio or passthrough, and image subtitles.
+- ABR and a master playlist with several qualities.
+- An explicit `transcode` API mode.
+
+The improvement order is in [status](status.md). The Reduvid relationship still stands: converting files beforehand with [Reduvid](https://github.com/catlinux/reduvid) reduces the need for server transcoding.
