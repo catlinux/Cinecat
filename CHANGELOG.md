@@ -7,6 +7,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Cambiado
+
+- Administración → Sistema: «Actualizar ahora» abre ahora un cuadro de confirmación (con «Cancelar» y «Actualizar ahora») en lugar de un desplegable con un segundo botón. Sin JavaScript se conserva el respaldo de dos pasos.
+
 ## [0.20.0] - 2026-10-27
 
 ### Añadido

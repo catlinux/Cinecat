@@ -7,6 +7,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+### Changed
+
+- Administration → System: "Update now" now opens a confirmation dialog (with "Cancel" and "Update now") instead of a collapsible with a second button. Without JavaScript the two-step fallback is kept.
+
 ## [0.20.0] - 2026-10-27
 
 ### Added

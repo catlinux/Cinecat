@@ -53,13 +53,34 @@ describe('panel de actualizaciones', () => {
 		expect(html).not.toContain('<script>alert("no")</script>');
 	});
 
-	it('pide confirmación antes de aplicar', () => {
+	it('pide confirmación en un diálogo antes de aplicar', () => {
 		const html = body({ info: info() });
+		expect(html).toContain('<dialog');
+		expect(html).toContain('class="update-dialog"');
+		expect(html).not.toMatch(/<dialog[^>]* open/);
+		expect(html).toContain('aria-labelledby="update-dialog-title"');
+		expect(html).toContain('aria-describedby="update-dialog-description"');
+		expect(html).toContain('Actualizar a la versión v0.16.0');
 		expect(html).toContain('Se hará una copia de la base de datos');
 		expect(html).toContain('¿Continuar?');
+		expect(html).toContain('Cancelar');
 		expect(html).toContain('action="?/applyUpdate"');
 		expect(html).toContain('name="tag"');
 		expect(html).toContain('value="v0.16.0"');
+		expect(html).toContain('<noscript>');
+		expect(html).toContain('update-fallback-toggle');
+		expect(html).not.toContain('<summary class="button"');
+	});
+
+	it('sirve el botón oculto y el formulario de dos pasos sin JavaScript', () => {
+		const html = body({ info: info() });
+		expect(html).toContain('class="button update-js-trigger"');
+		expect(html).toContain('type="button" hidden=""');
+		expect(html).toContain('aria-haspopup="dialog"');
+		expect(html).toContain('aria-controls="update-dialog"');
+		expect(html).toContain('<noscript><details class="update-confirm update-fallback">');
+		expect(html).toContain('<summary class="update-fallback-toggle">Actualizar ahora</summary>');
+		expect(html).toContain('<dialog');
 	});
 
 	it('explica cómo instalar el actualizador si no está disponible', () => {

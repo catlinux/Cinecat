@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { onMount } from 'svelte';
+	import type { SubmitFunction } from '@sveltejs/kit';
 	import type { UpdateInfo } from '$lib/api';
 	import { formatDateTime } from '$lib/media';
 	import {
@@ -44,6 +45,12 @@
 	let pollTimer: ReturnType<typeof setTimeout> | null = null;
 	let clockTimer: ReturnType<typeof setInterval> | null = null;
 	let reloadTimer: ReturnType<typeof setTimeout> | null = null;
+	let dialogEl: HTMLDialogElement | null = $state(null);
+	let openButton: HTMLButtonElement | null = $state(null);
+	let cancelButton: HTMLButtonElement | null = $state(null);
+	let jsReady = $state(false);
+	let submitting = $state(false);
+	let dialogOpen = $state(false);
 
 	const currentInfo = $derived(live ?? form?.updateInfo ?? info);
 	const current = $derived(currentInfo?.current || currentVersion || '—');
@@ -75,6 +82,7 @@
 	});
 
 	onMount(() => {
+		jsReady = true;
 		if (initialPollError) {
 			restarting = true;
 			pollFailures = 1;
@@ -227,6 +235,106 @@
 		}
 	}
 
+	function openDialog(): void {
+		if (!dialogEl || submitting) {
+			return;
+		}
+		submitting = false;
+		dialogOpen = true;
+		try {
+			if (typeof dialogEl.showModal === 'function') {
+				dialogEl.showModal();
+			}
+		} catch {
+			// El atributo open deja el diálogo disponible si showModal no funciona.
+		}
+		queueMicrotask(() => cancelButton?.focus());
+	}
+
+	function closeDialog(): void {
+		if (!dialogEl) {
+			return;
+		}
+		dialogOpen = false;
+		if (typeof dialogEl.close === 'function' && dialogEl.open) {
+			dialogEl.close();
+		}
+		openButton?.focus();
+	}
+
+	function handleDialogClose(): void {
+		dialogOpen = false;
+		openButton?.focus();
+	}
+
+	function handleDialogCancel(event: Event): void {
+		event.preventDefault();
+		closeDialog();
+	}
+
+	function handleDialogClick(event: MouseEvent): void {
+		if (event.target === dialogEl) {
+			closeDialog();
+		}
+	}
+
+	function dialogFocusables(): HTMLElement[] {
+		if (!dialogEl) {
+			return [];
+		}
+		return Array.from(
+			dialogEl.querySelectorAll<HTMLElement>(
+				'button:not([disabled]), [href], input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+			)
+		).filter((element) => !element.hasAttribute('hidden'));
+	}
+
+	function handleDialogKeydown(event: KeyboardEvent): void {
+		if (event.key === 'Escape') {
+			event.preventDefault();
+			closeDialog();
+			return;
+		}
+		if (event.key !== 'Tab') {
+			return;
+		}
+		const focusable = dialogFocusables();
+		if (focusable.length === 0) {
+			return;
+		}
+		const first = focusable[0];
+		const last = focusable[focusable.length - 1];
+		if (event.shiftKey && document.activeElement === first) {
+			event.preventDefault();
+			last.focus();
+		} else if (!event.shiftKey && document.activeElement === last) {
+			event.preventDefault();
+			first.focus();
+		}
+	}
+
+	function handleApplySubmit(event: SubmitEvent): void {
+		event.preventDefault();
+		if (submitting) {
+			return;
+		}
+		submitting = true;
+		closeDialog();
+	}
+
+	const applyUpdateEnhance: SubmitFunction = () => {
+		submitting = true;
+		closeDialog();
+		return async ({ update }) => {
+			try {
+				await update();
+			} finally {
+				submitting = false;
+				openButton?.focus();
+			}
+		};
+	};
+
 	function reloadPage(): void {
 		window.location.reload();
 	}
@@ -271,19 +379,74 @@
 	{/if}
 
 	{#if available && applySupported && !showTracking}
-		<details class="update-confirm">
-			<summary class="button">Actualizar ahora</summary>
-			<div class="update-confirm-body">
-				<p>
+		<button
+			class="button update-js-trigger"
+			type="button"
+			hidden={!jsReady}
+			disabled={submitting}
+			aria-haspopup="dialog"
+			aria-controls="update-dialog"
+			bind:this={openButton}
+			onclick={openDialog}>Actualizar ahora</button
+		>
+
+		<dialog
+			bind:this={dialogEl}
+			id="update-dialog"
+			class="update-dialog"
+			open={dialogOpen}
+			aria-labelledby="update-dialog-title"
+			aria-describedby="update-dialog-description"
+			aria-modal="true"
+			oncancel={handleDialogCancel}
+			onclose={handleDialogClose}
+			onclick={handleDialogClick}
+			onkeydown={handleDialogKeydown}
+		>
+			<div class="update-dialog-body">
+				<h2 id="update-dialog-title">Actualizar a la versión {latest}</h2>
+				<p id="update-dialog-description">
 					Se hará una copia de la base de datos, se reiniciará el servidor durante unos
 					minutos y, si algo falla, se vuelve a la versión anterior. ¿Continuar?
 				</p>
-				<form method="POST" action="?/applyUpdate" use:enhance>
-					<input type="hidden" name="tag" value={latest} />
-					<button class="button" type="submit">Actualizar ahora</button>
-				</form>
+				<div class="update-dialog-actions">
+					<button
+						class="button button-secondary"
+						type="button"
+						bind:this={cancelButton}
+						onclick={closeDialog}>Cancelar</button
+					>
+					<form
+						class="update-dialog-form"
+						method="POST"
+						action="?/applyUpdate"
+						use:enhance={applyUpdateEnhance}
+						onsubmit={handleApplySubmit}
+					>
+						<input type="hidden" name="tag" value={latest} />
+						<button class="button" type="submit" disabled={submitting}>
+							Actualizar ahora
+						</button>
+					</form>
+				</div>
 			</div>
-		</details>
+		</dialog>
+
+		<noscript hidden={jsReady}>
+			<details class="update-confirm update-fallback">
+				<summary class="update-fallback-toggle">Actualizar ahora</summary>
+				<div class="update-confirm-body">
+					<p>
+						Se hará una copia de la base de datos, se reiniciará el servidor durante unos
+						minutos y, si algo falla, se vuelve a la versión anterior. ¿Continuar?
+					</p>
+					<form method="POST" action="?/applyUpdate">
+						<input type="hidden" name="tag" value={latest} />
+						<button class="button" type="submit">Actualizar ahora</button>
+					</form>
+				</div>
+			</details>
+		</noscript>
 	{/if}
 
 	{#if showInstallHelp}
