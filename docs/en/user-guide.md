@@ -77,6 +77,16 @@ Both lists live in the menu, below the categories. **Favoritos** keeps what you 
 
 Lists are not shared between users. Marking a movie or video as watched removes it from **Próximas a ver** automatically (not from Favorites); finishing a whole series also removes it from that list. Marking it unwatched does not add it back: you have to add it again manually if you want it.
 
+## People, ratings and trailers
+
+On movie and series posters, a badge in the top right corner shows the TMDB rating (for example, "7,4"). An icon in the bottom left corner marks that the movie is in a collection; in Movies you can filter by **In a collection** or **No collection** to find the ones that were not grouped automatically.
+
+On the detail page, cast and crew are links: clicking a person opens their page with **En tu biblioteca** (their movies and series you have, with their role) and, separately, **No la tienes** (the rest of their filmography, informational only). If the entry has a trailer, **Ver tráiler** appears and opens YouTube in another tab: in Spanish when it exists, otherwise in English. Entries from before this version have neither links nor trailer until the scan requests them again from TMDB.
+
+## Uploading content (administrators)
+
+With uploads enabled (see [administration](administration.md#uploading-files-and-trash)), administrators see discreet buttons: **Crear nueva serie** in Series, **Nueva temporada** on a series page, **Subir capítulo** on each season and **Subir película** in Movies. You do not choose folders: Cinecat stores everything in the right place and names episodes like `Series S01E05`. The web app detects season and episode in the file name and you can correct them before uploading. From a movie page, **Gestionar colecciones** lets you add it to a collection, create a new one with it or remove it.
+
 ## Movie detail page
 
 The page shows the poster, title (and original title if different), year, runtime, genres, rating, tagline, synopsis, cast and crew, IMDb/TMDB links and the collections it belongs to. "Más como este" is at the end.

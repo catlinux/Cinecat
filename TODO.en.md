@@ -13,8 +13,6 @@ This file contains only work that is still open. Published work is in the [CHANG
 
 ## 🟠 Next phase
 
-- **Favorites and watchlist.** Tables and endpoints, heart/bookmark on cards and detail pages, dedicated pages and rows on the portal.
-- **Collections from a movie page** (add, remove and create without leaving the page).
 - **Identify collections on TMDB:** manual search, synopsis and "missing from your library".
 - **Libraries with multiple folders** and a **folder browser** to choose paths from the web.
 - **Users and profile:** user CRUD, own profile, portal customisation, open sessions and history.

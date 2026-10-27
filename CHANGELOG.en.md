@@ -7,6 +7,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-10-27
+
 ### Added
 
 - Person page and trailers on the web: clicking an actor, director or crew member opens their page (`/people/{id}`) with their profile, what you have in the library and, separately, what they have done that you do not have. "Ver tráiler" button (YouTube, in Spanish when available, otherwise in English) on movie and series pages.

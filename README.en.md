@@ -4,7 +4,7 @@
 
 **Languages / Idiomas:** [Español](README.md) · English
 
-**Status:** server and web client implemented; Android and Android TV clients not started. Version `0.21.0`.
+**Status:** server and web client implemented; Android and Android TV clients not started. Version `0.22.0`.
 
 Cinecat is for people who keep their own video library at home and want a carefully designed interface, control over playback and Spanish-language metadata without depending on an external service. It is not a clone: it reuses what is legal from other projects, with credits, and writes the rest from scratch.
 

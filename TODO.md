@@ -13,8 +13,6 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 
 ## 🟠 Próxima fase
 
-- **Favoritos y «próximas a ver».** Tablas y endpoints, corazón/marcador en tarjetas y fichas, páginas propias y filas en el portal.
-- **Colecciones desde la ficha de película** (añadir, quitar y crear sin salir de la ficha).
 - **Identificar colecciones en TMDB:** búsqueda manual, sinopsis y «faltan en tu biblioteca».
 - **Bibliotecas con varias carpetas** y **navegador de carpetas** para elegir rutas desde la web.
 - **Usuarios y perfil:** CRUD de usuarios, perfil propio, personalización del portal, sesiones abiertas e historial.

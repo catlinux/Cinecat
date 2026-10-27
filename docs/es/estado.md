@@ -33,7 +33,11 @@ Versión actual: **0.20.0**. Esta página resume el estado real del código, no 
 | Series | Corregir ficha o imágenes de una serie | ✅ 0.11.0 | Solo administradores. |
 | Colecciones | Colecciones automáticas de sagas de TMDB | ✅ 0.11.0 | Una colección automática solo se muestra si alcanza `ui.collection_min_items`. |
 | Colecciones | Crear, editar, borrar, ordenar y elegir cartel/fondo | ✅ 0.11.0 | Colecciones manuales y cambios respetados en colecciones automáticas. |
-| Colecciones | Gestionar colecciones desde la ficha de una película | ⬜ | Hoy se gestionan desde la página de la colección. |
+| Colecciones | Gestionar colecciones desde la ficha de una película | ✅ 0.22.0 | Añadir, crear y quitar; icono en la carátula y filtro «Sin colección». |
+| Interfaz web | Puntuación de TMDB en las carátulas | ✅ 0.22.0 | Película y serie. |
+| Interfaz web | Página de persona y botón «Ver tráiler» | ✅ 0.22.0 | Lo que tienes y lo que no; tráiler de YouTube en castellano si existe. |
+| Servidor y biblioteca | Subidas guiadas de series, temporadas, capítulos y películas | ✅ 0.22.0 | Solo administradores; mismos requisitos que la subida genérica. |
+| Reproducción | Decisión por códec real y capacidades del navegador | ✅ 0.22.0 | H.265 directo solo si el navegador lo admite. |
 | Reproducción | Reproducción directa de MP4/M4V | ✅ 0.1.0 | Sirve el archivo con soporte de rangos HTTP. |
 | Reproducción | HLS para MKV, AVI, MOV, TS y M2TS | ✅ 0.12.0 | Recodifica a H.264 + AAC estéreo, segmentos MPEG-TS de 6 s, saltos y límites de procesos. |
 | Reproducción | Audio, subtítulos de texto y calidad | ✅ 0.13.0 | Subtítulos incrustados de texto y `.srt`/`.vtt`/`.ass` como WebVTT; preferencias por usuario y película. |
@@ -57,7 +61,7 @@ Versión actual: **0.20.0**. Esta página resume el estado real del código, no 
 El orden sale de los planes de `.agents/plans`; no hay fechas ni versiones comprometidas.
 
 1. **Favoritos y próximas a ver:** API, tarjetas y páginas.
-2. **Colecciones desde la ficha de película** y **búsqueda/identificación manual de colecciones en TMDB**, con «faltan en tu biblioteca».
+2. **Búsqueda/identificación manual de colecciones en TMDB**, con «faltan en tu biblioteca».
 3. **Usuarios** (crear, rol, restablecer contraseña, borrar) y **perfil** con personalización del portal.
 4. **Sesiones/dispositivos, actividad y copias de seguridad** desde administración.
 5. **Subtítulos subidos por el usuario** y diseño de subtítulos que hoy no se admiten.

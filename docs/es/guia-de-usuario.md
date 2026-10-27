@@ -77,6 +77,16 @@ Las dos listas están en el menú, debajo de las categorías. **Favoritos** reú
 
 Las listas no se comparten entre usuarios. Cuando marcas una película o un vídeo como visto, el servidor lo quita automáticamente de **Próximas a ver** (no de Favoritos); cuando terminas una serie completa, también desaparece de esa lista. Volver a marcarlo como no visto no lo añade de nuevo: tendrás que marcarlo manualmente si quieres recuperarlo.
 
+## Personas, puntuaciones y tráileres
+
+En las carátulas de películas y series, una insignia en la esquina superior derecha muestra la puntuación de TMDB (por ejemplo, «7,4»). Un icono en la esquina inferior izquierda indica que la película está en una colección; en Películas puedes filtrar por **En una colección** o **Sin colección** para encontrar las que no se han agrupado solas.
+
+En la ficha, el reparto y el equipo son enlaces: al pulsar a una persona se abre su página con **En tu biblioteca** (sus películas y series que tienes, con su papel) y, aparte, **No la tienes** (el resto de su filmografía, solo informativa). Si la ficha tiene tráiler, aparece **Ver tráiler**, que abre YouTube en otra pestaña: en castellano si existe y, si no, en inglés. Las fichas anteriores a esta versión no tienen ni enlaces ni tráiler hasta que el escaneo las vuelve a pedir a TMDB.
+
+## Subir contenido (administradores)
+
+Con la subida activada (ver [administración](administracion.md#subir-archivos-y-papelera)), los administradores ven botones discretos: **Crear nueva serie** en Series, **Nueva temporada** en la ficha de una serie, **Subir capítulo** en cada temporada y **Subir película** en Películas. No hay que elegir carpetas: Cinecat guarda cada cosa en su sitio y nombra los capítulos como `Serie S01E05`. La web detecta temporada y episodio en el nombre del archivo y puedes corregirlos antes de subir. Desde la ficha de una película, **Gestionar colecciones** permite añadirla a una colección, crear una nueva con ella o quitarla.
+
 ## La ficha de una película
 
 La ficha muestra el cartel, el título (y el original si es distinto), año, duración, géneros, nota, lema, sinopsis, reparto y equipo, enlaces a IMDb/TMDB y las colecciones a las que pertenece. Al final está **Más como este**.

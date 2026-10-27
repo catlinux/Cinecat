@@ -7,6 +7,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.22.0] - 2026-10-27
+
 ### Añadido
 
 - Página de persona y tráileres en la web: al pulsar un actor, director o miembro del equipo se abre su página (`/people/{id}`) con su ficha, lo que tienes en la biblioteca y, aparte, lo que ha hecho y no tienes. Botón «Ver tráiler» (YouTube, en castellano si existe; si no, en inglés) en las fichas de película y serie.

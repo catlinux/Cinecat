@@ -33,7 +33,11 @@ Current version: **0.20.0**. This page describes the real state of the code, not
 | Series | Correct series metadata or images | ✅ 0.11.0 | Administrators only. |
 | Collections | Automatic collections from TMDB sagas | ✅ 0.11.0 | Automatic collection shown only when it reaches `ui.collection_min_items`. |
 | Collections | Create, edit, delete, order and choose poster/backdrop | ✅ 0.11.0 | Manual collections and user edits preserved on automatic collections. |
-| Collections | Manage collections from a movie page | ⬜ | Managed from the collection page today. |
+| Collections | Manage collections from a movie page | ✅ 0.22.0 | Add, create and remove; poster icon and "No collection" filter. |
+| Web interface | TMDB rating on posters | ✅ 0.22.0 | Movies and series. |
+| Web interface | Person page and "Ver tráiler" button | ✅ 0.22.0 | What you have and what you do not; YouTube trailer in Spanish when available. |
+| Server and library | Guided uploads of series, seasons, episodes and movies | ✅ 0.22.0 | Administrators only; same requirements as the generic upload. |
+| Playback | Decision by real codec and browser capabilities | ✅ 0.22.0 | H.265 direct only when the browser supports it. |
 | Playback | Direct play for MP4/M4V | ✅ 0.1.0 | Serves the file with HTTP range support. |
 | Playback | HLS for MKV, AVI, MOV, TS and M2TS | ✅ 0.12.0 | Re-encoded to H.264 + stereo AAC, 6 s MPEG-TS segments, seeking and process limits. |
 | Playback | Audio, text subtitles and quality | ✅ 0.13.0 | Embedded text and `.srt`/`.vtt`/`.ass` as WebVTT; per-user, per-movie preferences. |
@@ -58,7 +62,7 @@ Current version: **0.20.0**. This page describes the real state of the code, not
 The order comes from the plans in `.agents/plans`; no dates or committed versions.
 
 1. **Favorites and watchlist:** API, cards and pages.
-2. **Collections from a movie page** and **manual TMDB collection search/identification**, with "missing from your library".
+2. **Manual TMDB collection search/identification**, with "missing from your library".
 3. **Users** (create, role, reset password, delete) and a **profile** with portal customisation.
 4. **Sessions/devices, activity and backups** from administration.
 5. **User-uploaded subtitles** and a design for the subtitle types not supported today.
