@@ -14,7 +14,7 @@ Para cerrar sesión, entra en `/login` y pulsa «Cerrar sesión». La sesión se
 
 ## El portal
 
-El portal es la página de inicio. Arriba verás el nombre del servidor, el eslogan y el texto de bienvenida que haya configurado el administrador. Después aparecen tres accesos: **Películas**, **Colecciones** y **Series**, con el número de títulos de cada uno.
+El portal es la página de inicio. Arriba verás el nombre del servidor, el eslogan y el texto de bienvenida que haya configurado el administrador. Después aparecen los accesos a **Películas**, **Colecciones**, **Series** y, si existe una biblioteca de Vídeos con contenido, **Vídeos**.
 
 Debajo se muestran, solo si tienen contenido:
 
@@ -26,7 +26,7 @@ Las filas se pueden desplazar con las flechas `‹` y `›`; con el dedo o el tr
 
 ## Navegar por la biblioteca
 
-El menú puede estar a la izquierda (**lateral**) o arriba (**superior**), según lo configure el administrador. Contiene **Inicio**, **Películas**, **Colecciones**, **Series**, **Mi cuenta** y, si eres administrador, **Administración**.
+El menú puede estar a la izquierda (**lateral**) o arriba (**superior**), según lo configure el administrador. Contiene **Inicio**, **Películas**, **Colecciones**, **Series**, **Vídeos** cuando hay una biblioteca de ese tipo con contenido, **Mi cuenta** y, si eres administrador, **Administración**.
 
 ### Películas
 
@@ -55,6 +55,12 @@ Si eres administrador, dentro de una colección aparece «Gestionar colección»
 
 Los botones de visionado permiten marcar un episodio, una temporada o la serie completa como vistos. El botón principal de la serie cambia según tu progreso: «Empezar», «Continuar» o «Volver a ver». Si eres administrador, al final de la ficha aparecen **Cambiar imagen** y **Corregir ficha**.
 
+### Vídeos
+
+La sección **Vídeos** aparece en el menú cuando existe una biblioteca de tipo Vídeos con contenido. Para crearla, entra en **Administración → Bibliotecas**, elige el tipo «Vídeos (videoclips, conciertos…)», añade sus carpetas y lanza el escaneo.
+
+Este tipo no identifica los archivos ni descarga carátulas de TMDB u OMDb: el título sale del nombre del archivo. Al abrir la sección verás las carpetas de la biblioteca, con el número de vídeos que contienen (incluidas sus subcarpetas). Dentro de una carpeta, las subcarpetas aparecen primero y después los vídeos en tarjetas apaisadas con una portada de respaldo generada; las migas de pan permiten volver a cualquier nivel. Puedes reproducir o continuar un vídeo, marcarlo como visto y cambiar audio, subtítulos o calidad. Todavía no hay miniaturas de fotograma.
+
 ## La ficha de una película
 
 La ficha muestra el cartel, el título (y el original si es distinto), año, duración, géneros, nota, lema, sinopsis, reparto y equipo, enlaces a IMDb/TMDB y las colecciones a las que pertenece. Al final está **Más como este**.
@@ -68,6 +74,10 @@ La ficha muestra el cartel, el título (y el original si es distinto), año, dur
 ## La ficha de un episodio
 
 La ficha del episodio muestra la miga de pan `Series › Serie › Temporada N › Episodio N`, el título, la sinopsis, la duración, el reparto y los datos del archivo. Puedes marcar el episodio como visto, continuar donde lo dejaste y pasar al **Episodio anterior** o **Siguiente episodio**.
+
+## La ficha de un vídeo
+
+La ficha de un vídeo de la sección Vídeos es mínima: el título, **Volver a Vídeos**, reproducir o continuar, marcar como visto, las opciones de reproducción y el panel del archivo. No muestra sinopsis, reparto, colecciones, enlaces a IMDb/TMDB, «Más como este», «Corregir ficha» ni «Cambiar imagen», porque estos vídeos no se identifican.
 
 ## Reproducir
 

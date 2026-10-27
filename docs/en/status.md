@@ -13,7 +13,7 @@ Current version: **0.17.0**. This page describes the real state of the code, not
 | Server and library | Manual and automatic background scans | ✅ 0.11.0 | Scan returns 202/409 and reports progress; scheduled by `scan.interval` and at startup. |
 | Server and library | Technical file details through `ffprobe` | ✅ 0.11.0 | Container, size, tracks, subtitles and playback mode. |
 | Server and library | Multiple folders per library and folder browser | ✅ 0.17.0 | Música is not scanned yet |
-| Server and library | Vídeos library (unidentified), folder browsing | 🟡 | server done; web screen missing |
+| Server and library | Vídeos library (unidentified), folder browsing | ✅ 0.18.0 | no frame thumbnails yet |
 | Server and library | Upload or delete files with a trash bin | ⬜ | `/media` is mounted read-only. |
 | Identification and metadata | TMDB as the main Spanish-language source, with cache | ✅ 0.11.0 | OMDb is a fallback when TMDB is absent; OMDb only fills movie synopsis and poster. |
 | Identification and metadata | Automatic identification, manual correction and "not this one" | ✅ 0.11.0 | `match_status`: `auto`, `manual`, `none` or empty; configurable threshold. |

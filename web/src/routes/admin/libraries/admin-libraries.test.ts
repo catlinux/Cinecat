@@ -523,9 +523,10 @@ describe('página de administración', () => {
 		expect(body).toContain('/mnt/otro-disco/peliculas');
 		expect(body).toContain('Películas y series');
 		expect(body).toContain('120 fichas');
-		expect(body).toContain('Vídeos · Próximamente');
+		expect(body).toContain('Vídeos (videoclips, conciertos…)');
+		expect(body).not.toContain('Vídeos · Próximamente');
 		expect(body).toContain('Música · Próximamente');
-		expect(body).toContain('disabled');
+		expect(body).toContain('Sin identificación: el título sale del nombre del archivo');
 		expect(body).toContain('Nueva biblioteca');
 		expect(body).toContain('Añadir otra carpeta');
 		expect(body).toContain('Elegir…');
@@ -564,10 +565,12 @@ describe('página de administración', () => {
 		expect(body).toContain('name="paths"');
 	});
 
-	it('muestra el aviso de que Vídeos y Música aún no se escanean', () => {
+	it('explica que Vídeos no se identifica y que Música sigue pendiente', () => {
 		const { body } = render(AdminPage, { props: { data: { libraries } } });
 
-		expect(body).toContain('Los tipos Vídeos y Música aún no se escanean.');
+		expect(body).toContain('Sin identificación: el título sale del nombre del archivo');
+		expect(body).toContain('se navega por carpetas');
+		expect(body).toContain('Música sigue pendiente.');
 	});
 });
 

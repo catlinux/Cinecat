@@ -14,7 +14,7 @@ To sign out, open `/login` and press "Cerrar sesión". The session is stored in 
 
 ## The portal
 
-The portal is the home page. At the top you see the server name, tagline and welcome text configured by the administrator. Then come three entry points: **Películas**, **Colecciones** and **Series**, with the number of titles in each.
+The portal is the home page. At the top you see the server name, tagline and welcome text configured by the administrator. Then come the entry points for **Películas**, **Colecciones**, **Series** and, when a Vídeos library has content, **Vídeos**.
 
 Below, only when they have content:
 
@@ -26,7 +26,7 @@ Rows can be scrolled with the `‹` and `›` arrows; you can also swipe with a 
 
 ## Browsing the library
 
-The menu can be on the left (**lateral**) or at the top (**superior**), depending on the administrator's setting. It contains **Inicio**, **Películas**, **Colecciones**, **Series**, **Mi cuenta** and, for administrators, **Administración**.
+The menu can be on the left (**lateral**) or at the top (**superior**), depending on the administrator's setting. It contains **Inicio**, **Películas**, **Colecciones**, **Series**, **Vídeos** when a library of that type has content, **Mi cuenta** and, for administrators, **Administración**.
 
 ### Movies
 
@@ -55,6 +55,12 @@ Administrators see "Gestionar colección" inside a collection to change its name
 
 The watched buttons mark an episode, a season or the whole series as watched. The main series button changes with your progress: "Empezar", "Continuar" or "Volver a ver". Administrators also see **Cambiar imagen** and **Corregir ficha** at the end of the series page.
 
+### Vídeos
+
+The **Vídeos** section appears in the menu when a Vídeos library has content. To create one, open **Administración → Bibliotecas**, choose the "Vídeos (videoclips, conciertos…)" type, add its folders and run a scan.
+
+This type does not identify files or download posters from TMDB or OMDb: the title comes from the file name. Opening the section shows the library folders with the number of videos they contain (including subfolders). Inside a folder, subfolders come first and then the videos as landscape cards with a generated fallback cover; the breadcrumbs let you go back to any level. You can play or continue a video, mark it as watched and change audio, subtitles or quality. There are no frame thumbnails yet.
+
 ## Movie detail page
 
 The page shows the poster, title (and original title if different), year, runtime, genres, rating, tagline, synopsis, cast and crew, IMDb/TMDB links and the collections it belongs to. "Más como este" is at the end.
@@ -68,6 +74,10 @@ The page shows the poster, title (and original title if different), year, runtim
 ## Episode detail page
 
 The episode page shows the breadcrumb `Series › Serie › Temporada N › Episodio N`, the title, synopsis, runtime, cast and file details. You can mark the episode as watched, continue where you left off and go to the **Episodio anterior** or **Siguiente episodio**.
+
+## Video detail page
+
+The page for a video in the Vídeos section is minimal: title, **Volver a Vídeos**, play or continue, mark as watched, playback options and the file panel. It does not show synopsis, cast, collections, IMDb/TMDB links, "Más como este", "Corregir ficha" or "Cambiar imagen", because these videos are not identified.
 
 ## Playback
 

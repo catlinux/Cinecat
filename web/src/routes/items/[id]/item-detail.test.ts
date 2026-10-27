@@ -149,6 +149,41 @@ describe('carga de la ficha', () => {
 
 		await expect(load(loadEvent(fetchMock) as never)).rejects.toMatchObject({ status: 502 });
 	});
+
+	it('no pide similares ni paneles de identificación para un clip', async () => {
+		const clip = makeItem({
+			library_kind: 'clips',
+			tmdb_id: null,
+			poster_url: null,
+			overview: null,
+			original_title: null,
+			imdb_id: null,
+			match_status: 'none'
+		});
+		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+			const url = new URL(String(input));
+			if (url.pathname === '/api/v1/items/7') {
+				return jsonResponse(clip);
+			}
+			if (url.pathname.endsWith('/similar')) {
+				throw new Error('no se debe pedir similar');
+			}
+			return jsonResponse({ error: 'no disponible' }, 503);
+		});
+
+		const result = (await load(loadEvent(fetchMock, '/items/7?corregir=1', true) as never)) as {
+			similarItems: MediaItem[] | null;
+			corregir: boolean;
+			imagenes: boolean;
+		};
+
+		expect(result.similarItems).toBeNull();
+		expect(result.corregir).toBe(false);
+		expect(result.imagenes).toBe(false);
+		expect(fetchMock.mock.calls.map(([url]) => String(url)).some((url) => url.includes('/similar'))).toBe(
+			false
+		);
+	});
 });
 
 describe('ficha de película', () => {
@@ -273,6 +308,46 @@ describe('ficha de película', () => {
 		expect(body).not.toContain('Dirección');
 		expect(body).not.toContain('Reparto');
 		expect(body).not.toContain('Ficha en IMDb');
+	});
+
+	it('muestra la ficha mínima de un clip y oculta identificación, reparto y similares', () => {
+		const body = renderPage(
+			makeItem({
+				library_kind: 'clips',
+				title: 'Concierto de verano',
+				overview: 'No debería mostrarse',
+				poster_url: null,
+				backdrop_url: null,
+				tmdb_id: null,
+				imdb_id: null,
+				genres: [],
+				directors: [],
+				cast: ['No debería mostrarse'],
+				collections: [{ id: 5, name: 'No debería mostrarse' }],
+				match_status: 'none'
+			}),
+			{
+				isAdmin: true,
+				corregir: true,
+				similarItems: [makeItem({ id: 99, title: 'Similar oculta' })]
+			}
+		);
+
+		expect(body).toContain('Concierto de verano');
+		expect(body).toContain('← Volver a Vídeos');
+		expect(body).toContain('href="/videos"');
+		expect(body).toContain('Reproducir');
+		expect(body).toContain('Marcar como visto');
+		expect(body).toContain('Archivo');
+		expect(body).not.toContain('No debería mostrarse');
+		expect(body).not.toContain('Sin identificar');
+		expect(body).not.toContain('Reparto y equipo');
+		expect(body).not.toContain('Más como este');
+		expect(body).not.toContain('Forma parte de');
+		expect(body).not.toContain('Corregir ficha');
+		expect(body).not.toContain('Cambiar imagen');
+		expect(body).not.toContain('Ficha en IMDb');
+		expect(body).not.toContain('Ficha en TMDB');
 	});
 
 	it('muestra el reparto del episodio y mantiene la ficha sencilla', () => {

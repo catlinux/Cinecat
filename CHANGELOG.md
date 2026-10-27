@@ -9,7 +9,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ### Añadido
 
-- Bibliotecas de tipo «Vídeos» (`clips`) en el servidor: se escanean sin identificación ni conexiones externas (el título sale del nombre del archivo), no se mezclan con películas, búsqueda, colecciones ni contadores, y se navegan por carpetas con `GET /api/v1/libraries/{id}/browse`. El ítem expone `library_kind` y el portal `has_clips`. La pantalla web llega en la siguiente versión.
+- Bibliotecas de tipo «Vídeos» (`clips`), pensadas para videoclips y conciertos: se escanean sin identificación ni conexiones externas (el título sale del nombre del archivo), no se mezclan con películas, búsqueda, colecciones ni contadores, y se navegan por carpetas con `GET /api/v1/libraries/{id}/browse`. El ítem expone `library_kind` y el portal `has_clips`.
+- Sección «Vídeos» en la web: entrada en el menú (si hay vídeos), navegación por carpetas con migas de pan y paginación, tarjetas con progreso y marca de visto, ficha mínima (sin reparto ni corrección de ficha) y categoría en el portal. El tipo «Vídeos» se puede elegir al crear una biblioteca.
 
 ## [0.17.0] - 2026-10-27
 

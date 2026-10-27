@@ -98,6 +98,7 @@ export interface ItemPreferences {
 export interface MediaItem {
 	id: number;
 	library_id: number;
+	library_kind?: LibraryKind;
 	path: string;
 	title: string;
 	file_title: string;
@@ -186,7 +187,61 @@ export interface HomeResponse {
 	next_up: MediaItem[];
 	recent_movies: MediaItem[];
 	recent_series?: Series[];
+	has_clips?: boolean;
 	counts: HomeCounts;
+}
+
+export interface VideoRoot {
+	id: number;
+	name: string;
+	item_count: number;
+}
+
+export interface VideoRootsResponse {
+	roots: VideoRoot[];
+}
+
+export interface VideoBreadcrumb {
+	name: string;
+	path: string;
+}
+
+export interface VideoFolder {
+	name: string;
+	path: string;
+	item_count: number;
+}
+
+export interface VideoLibraryRef {
+	id: number;
+	name: string;
+}
+
+export interface VideoRootRef {
+	id: number;
+	name: string;
+}
+
+export interface VideoBrowseResponse {
+	library: VideoLibraryRef;
+	root: VideoRootRef;
+	path: string;
+	parent: string | null;
+	crumbs: VideoBreadcrumb[];
+	folders: VideoFolder[];
+	items: MediaItem[];
+	total: number;
+	limit: number;
+	offset: number;
+}
+
+export type VideoBrowseResult = VideoRootsResponse | VideoBrowseResponse;
+
+export interface VideoBrowseQuery {
+	root?: number;
+	path?: string;
+	limit?: number;
+	offset?: number;
 }
 
 export interface Candidate {
@@ -627,6 +682,28 @@ export class ApiClient {
 	async browseFS(path: string | null | undefined, token: string): Promise<FSResponse> {
 		const suffix = path ? `?path=${encodeURIComponent(path)}` : '';
 		return this.get<FSResponse>(`/api/v1/fs${suffix}`, token);
+	}
+
+	async browseVideoLibrary(
+		id: number,
+		query: VideoBrowseQuery,
+		token: string
+	): Promise<VideoBrowseResult> {
+		const params = new URLSearchParams();
+		if (query.root !== undefined) {
+			params.set('root', String(query.root));
+		}
+		if (query.path) {
+			params.set('path', query.path);
+		}
+		if (query.limit !== undefined) {
+			params.set('limit', String(query.limit));
+		}
+		if (query.offset !== undefined) {
+			params.set('offset', String(query.offset));
+		}
+		const suffix = params.toString() ? `?${params}` : '';
+		return this.get<VideoBrowseResult>(`/api/v1/libraries/${id}/browse${suffix}`, token);
 	}
 
 	async startScan(token: string): Promise<ScanStarted> {

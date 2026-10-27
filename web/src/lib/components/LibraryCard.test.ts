@@ -44,6 +44,12 @@ describe('tarjeta de biblioteca', () => {
 		expect(html).toContain('action="?/delete"');
 	});
 
+	it('muestra el tipo Vídeos en una biblioteca de clips', () => {
+		const html = body({ library: { ...library, kind: 'clips', name: 'Vídeos' } });
+
+		expect(html).toContain('Vídeos');
+	});
+
 	it('conserva el nombre y la ruta escritos tras un error', () => {
 		const html = body({
 			library,

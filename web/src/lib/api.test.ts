@@ -164,4 +164,26 @@ describe('ApiClient', () => {
 			Authorization: 'Bearer token-123'
 		});
 	});
+
+	it('navega por las carpetas de una biblioteca de vídeos', async () => {
+		const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
+			jsonResponse({ roots: [] })
+		);
+		const client = new ApiClient({ baseUrl: 'http://api.test', fetch: fetchMock });
+
+		await client.browseVideoLibrary(7, {}, 'token-123');
+		await client.browseVideoLibrary(
+			7,
+			{ root: 3, path: 'Pelis/Sub', limit: 12, offset: 24 },
+			'token-123'
+		);
+
+		expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
+			'http://api.test/api/v1/libraries/7/browse',
+			'http://api.test/api/v1/libraries/7/browse?root=3&path=Pelis%2FSub&limit=12&offset=24'
+		]);
+		expect(fetchMock.mock.calls[0][1]?.headers).toMatchObject({
+			Authorization: 'Bearer token-123'
+		});
+	});
 });

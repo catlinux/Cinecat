@@ -35,6 +35,7 @@
 			isHome={data.isHome ?? false}
 			isAdmin={data.isAdmin}
 			hasSession={data.hasSession}
+			hasClips={data.hasClips}
 			{versionLabel}
 		/>
 	{/if}
@@ -74,6 +75,13 @@
 								href="/series"
 								class:category-active={data.activeCategory === 'series'}
 								aria-current={data.activeCategory === 'series' ? 'page' : undefined}>Series</a
+							>
+						{/if}
+						{#if data.hasClips}
+							<a
+								href="/videos"
+								class:category-active={data.activeCategory === 'videos'}
+								aria-current={data.activeCategory === 'videos' ? 'page' : undefined}>Vídeos</a
 							>
 						{/if}
 					</nav>

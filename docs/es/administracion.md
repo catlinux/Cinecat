@@ -21,7 +21,7 @@ Solo los usuarios con rol `admin` pueden entrar en `/admin`. El servidor comprue
 ## Crear una biblioteca
 
 1. Abre **Administración → Bibliotecas**.
-2. En «Nueva biblioteca», escribe un **Nombre** y elige el **Tipo**. La pantalla actual solo permite «Películas y series»; el servidor ya admite «Vídeos» (ver más abajo) y «Música» sigue pendiente.
+2. En «Nueva biblioteca», escribe un **Nombre** y elige el **Tipo**: «Películas y series» o «Vídeos (videoclips, conciertos…)». «Música» sigue pendiente.
 3. Escribe la ruta de la primera carpeta o pulsa **Elegir…** para navegar por las carpetas del servidor. Con **Añadir otra carpeta** puedes añadir más; todas se guardan en la misma biblioteca.
 4. Pulsa **Crear biblioteca**. Las rutas deben existir y ser directorios dentro de las raíces permitidas; por ejemplo `/media/Multimedia/Pelis`.
 5. En la tarjeta de cada biblioteca puedes **Renombrar**, **Añadir carpeta**, **Quitar** una carpeta, **Escanear** o **Borrar biblioteca**. Al borrar hay que escribir el nombre para confirmar.
@@ -36,7 +36,7 @@ Una biblioteca puede agrupar varias carpetas, incluso de discos distintos. La pr
 
 Una biblioteca de tipo `clips` recorre sus carpetas igual que una de películas, pero no identifica nada: no consulta TMDB ni OMDb, no deduce año, no crea series ni colecciones y no pide metadatos externos. El título sale del nombre del archivo, cambiando `_` y `.` por espacios; por ejemplo, `2019-08-15_Cumple.de.Ana.mp4` se muestra como «2019-08-15 Cumple de Ana».
 
-Los vídeos de estas bibliotecas no se mezclan con las películas en listados, búsquedas, filtros, recomendaciones, colecciones, recuentos del portal ni del resumen de administración. Sí conservan visto, progreso, preferencias y reproducción, y pueden aparecer en «Continuar viendo». La API permite navegar por sus carpetas y subcarpetas con `GET /api/v1/libraries/{id}/browse`; la pantalla web de Vídeos llegará en la siguiente tarea. El tipo Música sigue pendiente.
+Los vídeos de estas bibliotecas no se mezclan con las películas en listados, búsquedas, filtros, recomendaciones, colecciones, recuentos del portal ni del resumen de administración. Sí conservan visto, progreso, preferencias y reproducción, y pueden aparecer en «Continuar viendo». La sección **Vídeos** de la web permite navegar por sus carpetas y subcarpetas, abrir una ficha mínima y reproducirlos. El tipo Música sigue pendiente.
 
 El botón **Elegir…** abre un navegador de carpetas del servidor. Muestra las raíces permitidas, permite bajar por las subcarpetas, subir con **Subir**, moverse con las migas de pan y confirmar con **Elegir esta carpeta**. Solo lista directorios, no sigue enlaces que salgan de las raíces y limita el listado a 1000 entradas. También puedes escribir la ruta a mano sin usar JavaScript. El contenedor monta `CINECAT_MEDIA_PATH` completo y en solo lectura en `/media`.
 

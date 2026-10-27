@@ -25,6 +25,7 @@ function layoutData(serverVersion: string | null, serverCommit: string | null = 
 	return {
 		hasSession: false,
 		isAdmin: false,
+		hasClips: false,
 		isHome: false,
 		activeCategory: null,
 		serverVersion,
@@ -140,6 +141,20 @@ describe('carga de la versión del servidor', () => {
 
 		expect(result.activeCategory).toBe('series');
 	});
+
+	it('marca Vídeos como categoría activa en sus rutas', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(
+			jsonResponse({ server: '999.0.0', commit: '', built_at: '' })
+		);
+
+		const result = (await load({
+			locals: { sessionToken: null },
+			fetch: fetchMock,
+			url: new URL('http://localhost/videos/4')
+		} as never)) as { activeCategory: string | null };
+
+		expect(result.activeCategory).toBe('videos');
+	});
 });
 
 describe('carga de los ajustes públicos', () => {
@@ -197,6 +212,62 @@ describe('carga de los ajustes públicos', () => {
 		expect(result.ui.tagline).toBe(DEFAULT_PUBLIC_UI.tagline);
 		expect(result.isAdmin).toBe(true);
 		expect(result.activeCategory).toBe('movies');
+	});
+
+	it('activa Vídeos en el layout solo si hay bibliotecas de clips con vídeos', async () => {
+		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+			const path = new URL(String(input)).pathname;
+			if (path === '/api/v1/system/version') {
+				return jsonResponse({ server: '999.0.0', commit: '', built_at: '' });
+			}
+			if (path === '/api/v1/settings/public') {
+				return jsonResponse({});
+			}
+			if (path === '/api/v1/auth/me') {
+				return jsonResponse({ role: 'user' });
+			}
+			if (path === '/api/v1/libraries') {
+				return jsonResponse({
+					libraries: [
+						{ id: 4, name: 'Vídeos', kind: 'clips', item_count: 2 },
+						{ id: 5, name: 'Vacía', kind: 'clips', item_count: 0 }
+					]
+				});
+			}
+			throw new Error(`URL inesperada: ${path}`);
+		});
+
+		const result = (await load({
+			locals: { sessionToken: 'token-123' },
+			fetch: fetchMock,
+			url: new URL('http://localhost/movies')
+		} as never)) as { hasClips: boolean };
+
+		expect(result.hasClips).toBe(true);
+	});
+
+	it('tolera que falle el listado de bibliotecas al calcular hasClips', async () => {
+		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+			const path = new URL(String(input)).pathname;
+			if (path === '/api/v1/system/version') {
+				return jsonResponse({ server: '999.0.0', commit: '', built_at: '' });
+			}
+			if (path === '/api/v1/settings/public') {
+				return jsonResponse({});
+			}
+			if (path === '/api/v1/auth/me') {
+				return jsonResponse({ role: 'user' });
+			}
+			return jsonResponse({ error: 'fallo' }, 502);
+		});
+
+		const result = (await load({
+			locals: { sessionToken: 'token-123' },
+			fetch: fetchMock,
+			url: new URL('http://localhost/')
+		} as never)) as { hasClips: boolean };
+
+		expect(result.hasClips).toBe(false);
 	});
 
 	it('vuelve a los valores por defecto si falla la API de ajustes', async () => {
@@ -396,6 +467,48 @@ describe('interfaz configurable', () => {
 		expect(body).not.toContain('href="/collections"');
 		expect(body).not.toContain('href="/series"');
 		expect(body).toContain('href="/movies"');
+	});
+
+	it('muestra Vídeos en el menú lateral solo si hay clips', () => {
+		const withClips = render(Layout, {
+			props: {
+				data: { ...layoutData(null), hasClips: true, activeCategory: 'videos' },
+				children
+			}
+		}).body;
+		expect(withClips).toContain('href="/videos"');
+		expect(withClips).toContain('Vídeos');
+		expect(withClips).toContain('aria-current="page"');
+
+		const withoutClips = render(Layout, {
+			props: { data: layoutData(null), children }
+		}).body;
+		expect(withoutClips).not.toContain('href="/videos"');
+	});
+
+	it('muestra Vídeos en el menú superior solo si hay clips', () => {
+		const withClips = render(Layout, {
+			props: {
+				data: {
+					...layoutData(null),
+					hasClips: true,
+					activeCategory: 'videos',
+					ui: uiWith({ nav_layout: 'top' })
+				},
+				children
+			}
+		}).body;
+		expect(withClips).toContain('class="marquee"');
+		expect(withClips).toContain('href="/videos"');
+		expect(withClips).toContain('aria-current="page"');
+
+		const withoutClips = render(Layout, {
+			props: {
+				data: { ...layoutData(null), ui: uiWith({ nav_layout: 'top' }) },
+				children
+			}
+		}).body;
+		expect(withoutClips).not.toContain('href="/videos"');
 	});
 
 	it('solo muestra Administración a los administradores y Mi cuenta con sesión', () => {

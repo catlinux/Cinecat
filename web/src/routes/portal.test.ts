@@ -61,6 +61,31 @@ const continueItem: MediaItem = {
 	}
 };
 
+const clipContinue: MediaItem = {
+	...continueItem,
+	id: 30,
+	library_id: 4,
+	library_kind: 'clips',
+	title: 'Concierto de verano',
+	file_title: 'Concierto de verano',
+	year: null,
+	tmdb_id: null,
+	overview: null,
+	poster_url: null,
+	original_title: null,
+	imdb_id: null,
+	tagline: null,
+	genres: [],
+	runtime_minutes: null,
+	rating: null,
+	directors: [],
+	cast: [],
+	backdrop_url: null,
+	overview_language: null,
+	match_status: 'none',
+	match_score: null
+};
+
 const nextEpisode: MediaItem = {
 	...recentItem,
 	id: 11,
@@ -98,6 +123,7 @@ function homeResponse(overrides: Record<string, unknown> = {}) {
 		next_up: [],
 		recent_movies: [recentItem],
 		recent_series: [recentSeries],
+		has_clips: false,
 		counts: { movies: 42, episodes: 2, series: 5 },
 		...overrides
 	};
@@ -124,6 +150,7 @@ function portalData(overrides: Record<string, unknown> = {}) {
 		moviesTotal: 42,
 		collectionsTotal: 7,
 		seriesTotal: 5,
+		hasClips: false,
 		continueWatching: [continueItem],
 		nextUp: [],
 		recent: [recentItem],
@@ -158,6 +185,7 @@ describe('carga del portal', () => {
 			moviesTotal: number;
 			collectionsTotal: number | null;
 			seriesTotal: number | null;
+			hasClips: boolean;
 			continueWatching: MediaItem[];
 			nextUp: MediaItem[];
 			recent: MediaItem[];
@@ -168,6 +196,7 @@ describe('carga del portal', () => {
 		expect(result.moviesTotal).toBe(42);
 		expect(result.collectionsTotal).toBe(7);
 		expect(result.seriesTotal).toBe(5);
+		expect(result.hasClips).toBe(false);
 		expect(result.continueWatching).toHaveLength(1);
 		expect(result.nextUp).toEqual([]);
 		expect(result.recent).toHaveLength(1);
@@ -322,6 +351,21 @@ describe('portal', () => {
 			body.indexOf('Películas añadidas recientemente')
 		);
 		expect(body).not.toContain('Siguiente episodio');
+	});
+
+	it('añade la categoría Vídeos y usa VideoCard en Continuar viendo', () => {
+		const withClips = render(PortalPage, {
+			props: {
+				data: portalData({ hasClips: true, continueWatching: [clipContinue] })
+			}
+		}).body;
+
+		expect(withClips).toContain('href="/videos"');
+		expect(withClips).toContain('Videoclips y conciertos');
+		expect(withClips).toContain('Concierto de verano');
+		expect(withClips).toContain('class="video-card');
+		expect(withClips).toContain('href="/items/30"');
+		expect((withClips.match(/class="portal-category(?:\s|")/g) ?? []).length).toBe(4);
 	});
 
 	it('aplica el nombre, el título y la introducción de los ajustes', () => {

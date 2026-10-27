@@ -271,6 +271,7 @@ function pageData(overrides: Record<string, unknown> = {}) {
 	return {
 		hasSession: true,
 		isAdmin: false,
+		hasClips: false,
 		isHome: false,
 		activeCategory: 'movies' as const,
 		serverVersion: null,

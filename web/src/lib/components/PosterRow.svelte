@@ -2,6 +2,7 @@
 	import type { MediaItem } from '$lib/api';
 	import PosterCard from './PosterCard.svelte';
 	import RowScroller from './RowScroller.svelte';
+	import VideoCard from './VideoCard.svelte';
 
 	let {
 		title,
@@ -22,8 +23,12 @@
 	<RowScroller {title} {kicker} {href}>
 		{#snippet children()}
 			{#each items as item (item.id)}
-				<li class:row-wide={item.kind === 'episode'}>
-					<PosterCard {item} posterUrl={item.poster_url} />
+				<li class:row-wide={item.kind === 'episode' || item.library_kind === 'clips'}>
+					{#if item.library_kind === 'clips'}
+						<VideoCard {item} />
+					{:else}
+						<PosterCard {item} posterUrl={item.poster_url} />
+					{/if}
 				</li>
 			{/each}
 		{/snippet}

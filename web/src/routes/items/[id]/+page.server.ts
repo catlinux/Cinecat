@@ -32,6 +32,7 @@ export const load: PageServerLoad = async ({ params, locals, fetch, url, parent 
 	try {
 		const api = createApiClient(fetch);
 		const item = await api.getItem(id, token);
+		const isClip = item.library_kind === 'clips';
 		const fileInfo: Promise<FileInfoResult> = api.getFileInfo(id, token).then(
 			(data) => ({ data }),
 			(cause) => ({ error: fileInfoError(cause) })
@@ -39,16 +40,16 @@ export const load: PageServerLoad = async ({ params, locals, fetch, url, parent 
 		const playbackOptions: Promise<PlayResponse | null> = api
 			.getPlay(id, {}, token)
 			.catch(() => null);
-		const similarItems: Promise<MediaItem[] | null> =
-			item.kind === 'movie'
+		const similarItems: Promise<MediaItem[] | null> | null =
+			item.kind === 'movie' && !isClip
 				? api.getSimilarItems(id, 12, token).then((response) => response.items).catch(() => null)
-				: Promise.resolve(null);
+				: null;
 		const episodeNavigation = await loadEpisodeNavigation(api, item, token);
 		return {
 			item,
 			isAdmin,
-			corregir: isAdmin && url.searchParams.get('corregir') === '1',
-			imagenes: isAdmin && url.searchParams.get('imagenes') === '1',
+			corregir: isAdmin && !isClip && url.searchParams.get('corregir') === '1',
+			imagenes: isAdmin && !isClip && url.searchParams.get('imagenes') === '1',
 			fileInfo,
 			playbackOptions,
 			similarItems,

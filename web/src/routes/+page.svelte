@@ -15,7 +15,7 @@
 		description: string;
 		kicker: string;
 		href: string | null;
-		art: 'movies' | 'collections' | 'series';
+		art: 'movies' | 'collections' | 'series' | 'videos';
 		count: number | null;
 	};
 
@@ -48,7 +48,20 @@
 			href: '/series',
 			art: 'series',
 			count: data.seriesTotal
-		}
+		},
+		...(data.hasClips
+			? [
+					{
+						id: 'videos',
+						title: 'Vídeos',
+						description: 'Videoclips y conciertos, ordenados por carpetas.',
+						kicker: 'Videoclips',
+						href: '/videos',
+						art: 'videos' as const,
+						count: null
+					}
+				]
+			: [])
 	]);
 
 	const movieCount = $derived(

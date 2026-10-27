@@ -21,7 +21,7 @@ Only users with the `admin` role can open `/admin`. The server checks the role o
 ## Creating a library
 
 1. Open **Administración → Bibliotecas**.
-2. Under "Nueva biblioteca", enter a **Nombre** and choose the **Tipo**. The current screen only allows "Películas y series"; the server already supports "Vídeos" (see below) and "Música" is still pending.
+2. Under "Nueva biblioteca", enter a **Nombre** and choose the **Tipo**: "Películas y series" or "Vídeos (videoclips, conciertos…)". "Música" is still pending.
 3. Type the first folder path or press **Elegir…** to browse the server folders. With **Añadir otra carpeta** you can add more; all of them are stored in the same library.
 4. Press **Crear biblioteca**. The paths must exist and be directories inside the allowed roots; for example `/media/Multimedia/Pelis`.
 5. On each library card you can **Renombrar**, **Añadir carpeta**, **Quitar** a folder, **Escanear** or **Borrar biblioteca**. To delete one you must type its name to confirm.
@@ -36,7 +36,7 @@ A library can group several folders, even on different disks. The first folder i
 
 A `clips` library walks its folders like a movie library, but identifies nothing: it does not query TMDB or OMDb, does not infer a year, does not create series or collections and makes no external metadata requests. The title comes from the file name, replacing `_` and `.` with spaces; for example, `2019-08-15_Cumple.de.Ana.mp4` is shown as "2019-08-15 Cumple de Ana".
 
-Videos from these libraries are not mixed with movies in listings, searches, filters, recommendations, collections, portal counts or the administration summary. They keep watched state, progress, preferences and playback, and can appear in "Continue watching". The API can browse their folders and subfolders with `GET /api/v1/libraries/{id}/browse`; the Vídeos web screen will arrive in the next task. The Música type is still pending.
+Videos from these libraries are not mixed with movies in listings, searches, filters, recommendations, collections, portal counts or the administration summary. They keep watched state, progress, preferences and playback, and can appear in "Continue watching". The **Vídeos** section of the web app lets you browse their folders and subfolders, open a minimal detail page and play them. The Música type is still pending.
 
 The **Elegir…** button opens a server folder browser. It shows the allowed roots, lets you go down into subfolders, go up with **Subir**, move through the breadcrumbs and confirm with **Elegir esta carpeta**. It only lists directories, does not follow links that leave the roots and limits the listing to 1000 entries. You can also type the path by hand without JavaScript. The container mounts `CINECAT_MEDIA_PATH` whole and read-only at `/media`.
 

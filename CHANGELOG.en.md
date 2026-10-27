@@ -9,7 +9,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ### Added
 
-- "Videos" (`clips`) library type on the server: scanned without identification or outbound connections (the title comes from the file name), kept apart from movies, search, collections and counters, and browsed by folders with `GET /api/v1/libraries/{id}/browse`. Items expose `library_kind` and the home exposes `has_clips`. The web screen arrives in the next version.
+- "Videos" (`clips`) library type, meant for music videos and concerts: scanned without identification or outbound connections (the title comes from the file name), kept apart from movies, search, collections and counters, and browsed by folders with `GET /api/v1/libraries/{id}/browse`. Items expose `library_kind` and the home exposes `has_clips`.
+- "Videos" section on the web: menu entry (when there are videos), folder browsing with breadcrumbs and pagination, cards with progress and watched mark, a minimal detail page (no cast or metadata correction) and a portal category. The "Videos" type can be chosen when creating a library.
 
 ## [0.17.0] - 2026-10-27
 

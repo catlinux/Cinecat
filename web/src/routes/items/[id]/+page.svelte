@@ -56,7 +56,8 @@
 	const progressValue = $derived(
 		progress ? progressPercent(progress.position_seconds, progress.duration_seconds) : 0
 	);
-	const isMovie = $derived(item.kind === 'movie');
+	const isClip = $derived(item.library_kind === 'clips');
+	const isMovie = $derived(item.kind === 'movie' && !isClip);
 	const isEpisode = $derived(item.kind === 'episode');
 	const colors = $derived(posterColors(item.title));
 	const meta = $derived(formatMovieMeta(item));
@@ -236,6 +237,75 @@
 					<a class="text-link" href={`${seriesHref}?corregir=1`}>Corregir la serie</a>
 				</p>
 			{/if}
+		</div>
+	</section>
+{:else if isClip}
+	<a class="back" href="/videos">← Volver a Vídeos</a>
+
+	<section class="detail clip-detail">
+		<div
+			class="clip-detail-art"
+			style={`--poster-a: ${colors.from}; --poster-b: ${colors.to};`}
+			aria-hidden="true"
+		>
+			<span class="clip-detail-play">▶</span>
+			<span class="clip-detail-title">{item.title}</span>
+		</div>
+
+		<div class="detail-info">
+			<p class="kicker">Vídeo</p>
+			<h1>{item.title}</h1>
+
+			<div class="detail-actions">
+				{#if hasProgress}
+					<a class="button" href={`/items/${item.id}/play`}>Continuar · {progressLabel}</a>
+					<a class="button button-secondary" href={`/items/${item.id}/play?t=0`}>
+						Desde el principio
+					</a>
+				{:else}
+					<a class="button" href={`/items/${item.id}/play`}>Reproducir</a>
+				{/if}
+				<form method="POST" action="?/watched" use:enhance>
+					<input type="hidden" name="watched" value={item.watched ? '0' : '1'} />
+					<button class="button button-secondary" type="submit" aria-pressed={item.watched}>
+						{item.watched ? 'Marcada como vista · Desmarcar' : 'Marcar como visto'}
+					</button>
+				</form>
+			</div>
+
+			{#if playbackOptions}
+				{#if playbackOptions instanceof Promise}
+					{#await playbackOptions then playback}
+						{#if playback}<PlaybackOptions options={playback} />{/if}
+					{/await}
+				{:else}
+					<PlaybackOptions options={playbackOptions} />
+				{/if}
+			{/if}
+
+			{#if hasProgress}
+				<div
+					class="detail-progress"
+					role="progressbar"
+					aria-label={`Progreso de ${item.title}`}
+					aria-valuemin="0"
+					aria-valuemax="100"
+					aria-valuenow={progressValue}
+				>
+					<span style={`width: ${progressValue}%`}></span>
+				</div>
+			{/if}
+
+			{#if actionForm?.message}
+				<p
+					class={actionForm.success ? 'success' : 'error'}
+					role={actionForm.success ? 'status' : 'alert'}
+				>
+					{actionForm.message}
+				</p>
+			{/if}
+
+			<FilePanel result={fileInfo} />
 		</div>
 	</section>
 {:else}

@@ -10,14 +10,16 @@ import { webVersion } from '$lib/version';
 export const load: LayoutServerLoad = async ({ locals, fetch, url }) => {
 	const pathname = url?.pathname ?? '';
 	const isHome = pathname === '/';
-	const activeCategory: 'movies' | 'collections' | 'series' | null =
-		pathname === '/movies' || pathname.startsWith('/movies/') || pathname.startsWith('/items/')
-			? 'movies'
-			: pathname === '/collections' || pathname.startsWith('/collections/')
-				? 'collections'
-				: pathname === '/series' || pathname.startsWith('/series/')
-					? 'series'
-					: null;
+	const activeCategory: 'movies' | 'collections' | 'series' | 'videos' | null =
+		pathname === '/videos' || pathname.startsWith('/videos/')
+			? 'videos'
+			: pathname === '/movies' || pathname.startsWith('/movies/') || pathname.startsWith('/items/')
+				? 'movies'
+				: pathname === '/collections' || pathname.startsWith('/collections/')
+					? 'collections'
+					: pathname === '/series' || pathname.startsWith('/series/')
+						? 'series'
+						: null;
 	let serverVersion: string | null = null;
 	let serverCommit: string | null = null;
 	try {
@@ -34,6 +36,7 @@ export const load: LayoutServerLoad = async ({ locals, fetch, url }) => {
 		return {
 			hasSession: false,
 			isAdmin: false,
+			hasClips: false,
 			isHome,
 			activeCategory,
 			serverVersion,
@@ -58,9 +61,20 @@ export const load: LayoutServerLoad = async ({ locals, fetch, url }) => {
 		isAdmin = false;
 	}
 
+	let hasClips = false;
+	try {
+		const libraries = await createApiClient(fetch).listLibraries(locals.sessionToken);
+		hasClips = (libraries.libraries ?? []).some(
+			(library) => library.kind === 'clips' && (library.item_count ?? 0) > 0
+		);
+	} catch {
+		hasClips = false;
+	}
+
 	return {
 		hasSession: true,
 		isAdmin,
+		hasClips,
 		isHome,
 		activeCategory,
 		serverVersion,

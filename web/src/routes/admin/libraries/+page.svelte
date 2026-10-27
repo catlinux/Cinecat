@@ -266,7 +266,10 @@
 						</option>
 					{/each}
 				</select>
-				<small class="admin-note">Los tipos Vídeos y Música aún no se escanean.</small>
+				<small class="admin-note">
+					Sin identificación: el título sale del nombre del archivo y se navega por carpetas.
+					Música sigue pendiente.
+				</small>
 			</label>
 
 			<fieldset class="new-path-list">

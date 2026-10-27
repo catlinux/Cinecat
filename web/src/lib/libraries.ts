@@ -41,7 +41,7 @@ export const LIBRARY_KIND_LABELS: Record<LibraryKind, string> = {
 
 export const LIBRARY_KIND_OPTIONS: LibraryKindOption[] = [
 	{ value: 'video', label: 'Películas y series', disabled: false },
-	{ value: 'clips', label: 'Vídeos', disabled: true },
+	{ value: 'clips', label: 'Vídeos (videoclips, conciertos…)', disabled: false },
 	{ value: 'music', label: 'Música', disabled: true }
 ];
 
