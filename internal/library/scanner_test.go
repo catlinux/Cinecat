@@ -188,41 +188,37 @@ func TestScannerCarpetaNoDisponibleConservaFichasYProgreso(t *testing.T) {
 	}
 }
 
-func TestScannerSaltaTiposNoImplementados(t *testing.T) {
+func TestScannerSaltaMusica(t *testing.T) {
 	ctx := context.Background()
 	db := openTestDB(t)
-	for _, kind := range []string{"clips", "music"} {
-		root := t.TempDir()
-		writeFile(t, filepath.Join(root, kind+".mkv"))
-		result, err := db.Exec(
-			`INSERT INTO libraries (path, name, kind) VALUES (?, ?, ?)`, root, kind, kind)
-		if err != nil {
-			t.Fatalf("crear biblioteca %s: %v", kind, err)
-		}
-		id, err := result.LastInsertId()
-		if err != nil {
-			t.Fatalf("id de biblioteca %s: %v", kind, err)
-		}
-		addScannerLibraryPath(t, db, id, root)
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "music.mkv"))
+	result, err := db.Exec(
+		`INSERT INTO libraries (path, name, kind) VALUES (?, ?, 'music')`, root, "music")
+	if err != nil {
+		t.Fatalf("crear biblioteca music: %v", err)
 	}
+	id, err := result.LastInsertId()
+	if err != nil {
+		t.Fatalf("id de biblioteca music: %v", err)
+	}
+	addScannerLibraryPath(t, db, id, root)
 
 	res, err := New(db).Scan(ctx)
 	if err != nil {
 		t.Fatalf("Scan: %v", err)
 	}
 	if res.Files != 0 {
-		t.Fatalf("las bibliotecas no implementadas no deben escanear archivos: %+v", res)
+		t.Fatalf("música no debe escanearse todavía: %+v", res)
 	}
-	for _, kind := range []string{"clips", "music"} {
-		found := false
-		for _, warning := range res.Warnings {
-			if strings.Contains(warning, "tipo "+kind+" pendiente de implementar") {
-				found = true
-			}
+	found := false
+	for _, warning := range res.Warnings {
+		if strings.Contains(warning, "tipo music pendiente de implementar") {
+			found = true
 		}
-		if !found {
-			t.Fatalf("falta el aviso para %s: %v", kind, res.Warnings)
-		}
+	}
+	if !found {
+		t.Fatalf("falta el aviso para music: %v", res.Warnings)
 	}
 }
 

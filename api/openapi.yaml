@@ -632,17 +632,98 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/libraries/{id}/browse:
+    get:
+      summary: Navega por las carpetas de una biblioteca de vídeos
+      description: |
+        Solo para bibliotecas de tipo `clips`. Sin `root`, devuelve las carpetas
+        de la biblioteca como entradas de primer nivel, sin rutas absolutas. Con
+        `root` (id de una carpeta de la biblioteca) y `path` relativa, devuelve
+        las subcarpetas que contienen vídeos y los ítems de la carpeta actual.
+        Se calcula a partir de la base de datos, no recorre el disco.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - name: root
+          in: query
+          required: false
+          description: Identificador de la carpeta raíz dentro de la biblioteca.
+          schema:
+            type: integer
+            format: int64
+        - name: path
+          in: query
+          required: false
+          description: Ruta relativa a la raíz; vacía para la raíz.
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Carpetas de la biblioteca o contenido de una carpeta
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ClipRootsResponse'
+                  - $ref: '#/components/schemas/ClipBrowseResponse'
+        '400':
+          description: root no válido o ruta absoluta, con «..» o componentes vacíos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: La biblioteca no existe, no es de tipo clips o la carpeta no existe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/libraries/scan:
     post:
       summary: Inicia un escaneo en segundo plano (solo administradores)
       description: |
-        Recorre todas las carpetas de las bibliotecas de tipo `video`, analiza
-        los nombres de los archivos y actualiza `media_items` sin duplicar
-        entradas. Si una carpeta no está disponible, conserva sus fichas y avisa
-        en el resultado. La respuesta vuelve en cuanto arranca el escaneo; el
-        progreso y el resultado se consultan con `GET /api/v1/libraries/scan`.
-        Si ya hay uno en marcha, responde 409. Requiere una sesión con rol
-        `admin`.
+        Recorre todas las carpetas de las bibliotecas de tipo `video` y `clips`,
+        analiza los nombres de los archivos y actualiza `media_items` sin
+        duplicar entradas. Las bibliotecas `video` pueden identificarse con
+        metadatos externos; las de `clips` nunca hacen peticiones a TMDB ni OMDb
+        y guardan el título a partir del nombre del archivo. La música todavía
+        se omite con un aviso. Si una carpeta no está disponible, conserva sus
+        fichas y avisa en el resultado. La respuesta vuelve en cuanto arranca el
+        escaneo; el progreso y el resultado se consultan con
+        `GET /api/v1/libraries/scan`. Si ya hay uno en marcha, responde 409.
+        Requiere una sesión con rol `admin`.
       security:
         - bearerAuth: []
       responses:
@@ -702,8 +783,9 @@ paths:
     get:
       summary: Lista los géneros con su número de ítems
       description: |
-        Devuelve los géneros de los ítems del tipo indicado, ordenados por
-        nombre, con el número de ítems distintos de cada uno. Requiere sesión.
+        Devuelve los géneros de los ítems de bibliotecas `video` del tipo
+        indicado, ordenados por nombre, con el número de ítems distintos de cada
+        uno. Los clips no se incluyen. Requiere sesión.
       security:
         - bearerAuth: []
       parameters:
@@ -1172,7 +1254,9 @@ paths:
     get:
       summary: Lista los ítems de las bibliotecas
       description: |
-        Devuelve las entradas de `media_items` con paginación simple. Los
+        Devuelve las entradas de `media_items` de bibliotecas de tipo `video`
+        con paginación simple. Los clips de bibliotecas `clips` no aparecen en
+        este listado: se navegan con `GET /api/v1/libraries/{id}/browse`. Los
         filtros se pueden combinar. Sin `sort`, el orden es estable por `id`.
       security:
         - bearerAuth: []
@@ -1378,7 +1462,8 @@ paths:
         dirección, colección, reparto, año y nota. Solo se consideran
         candidatas con cartel y que compartan al menos un género, una
         persona de la dirección o un actor del reparto principal. No consulta
-        servicios externos. Requiere sesión y que el ítem sea una película.
+        servicios externos ni incluye clips. Requiere sesión y que el ítem sea
+        una película.
       security:
         - bearerAuth: []
       parameters:
@@ -3530,6 +3615,133 @@ components:
         path:
           type: string
       additionalProperties: false
+    ClipRoot:
+      type: object
+      required:
+        - id
+        - name
+        - item_count
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+          description: Último componente de la carpeta, desambiguado con el padre si hace falta.
+        item_count:
+          type: integer
+          format: int64
+      additionalProperties: false
+    ClipRootsResponse:
+      type: object
+      required:
+        - roots
+      properties:
+        roots:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClipRoot'
+      additionalProperties: false
+    ClipLibraryRef:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+      additionalProperties: false
+    ClipRootRef:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+      additionalProperties: false
+    ClipBreadcrumb:
+      type: object
+      required:
+        - name
+        - path
+      properties:
+        name:
+          type: string
+        path:
+          type: string
+          description: Ruta relativa a la raíz; vacía para la raíz.
+      additionalProperties: false
+    ClipFolder:
+      type: object
+      required:
+        - name
+        - path
+        - item_count
+      properties:
+        name:
+          type: string
+        path:
+          type: string
+          description: Ruta relativa a la raíz.
+        item_count:
+          type: integer
+          format: int64
+          description: Vídeos de la carpeta y sus subcarpetas.
+      additionalProperties: false
+    ClipBrowseResponse:
+      type: object
+      required:
+        - library
+        - root
+        - path
+        - parent
+        - crumbs
+        - folders
+        - items
+        - total
+        - limit
+        - offset
+      properties:
+        library:
+          $ref: '#/components/schemas/ClipLibraryRef'
+        root:
+          $ref: '#/components/schemas/ClipRootRef'
+        path:
+          type: string
+          description: Ruta relativa a la raíz; vacía para la raíz.
+        parent:
+          type: string
+          nullable: true
+          description: Ruta relativa de la carpeta padre; null en la raíz.
+        crumbs:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClipBreadcrumb'
+        folders:
+          type: array
+          description: Subcarpetas inmediatas que contienen vídeos.
+          items:
+            $ref: '#/components/schemas/ClipFolder'
+        items:
+          type: array
+          description: Vídeos de la carpeta actual; la ruta de cada ítem es relativa a la raíz.
+          items:
+            $ref: '#/components/schemas/MediaItem'
+        total:
+          type: integer
+          format: int64
+        limit:
+          type: integer
+        offset:
+          type: integer
+      additionalProperties: false
     UpdateLibraryRequest:
       type: object
       required:
@@ -4063,6 +4275,7 @@ components:
         - next_up
         - recent_movies
         - recent_series
+        - has_clips
         - counts
       properties:
         continue:
@@ -4085,6 +4298,9 @@ components:
           description: Las 20 últimas series con episodios, por fecha de alta descendente.
           items:
             $ref: '#/components/schemas/Series'
+        has_clips:
+          type: boolean
+          description: Hay alguna biblioteca de tipo clips con vídeos.
         counts:
           $ref: '#/components/schemas/HomeCounts'
       additionalProperties: false
@@ -4552,6 +4768,7 @@ components:
       required:
         - id
         - library_id
+        - library_kind
         - path
         - title
         - file_title
@@ -4594,6 +4811,10 @@ components:
         library_id:
           type: integer
           format: int64
+        library_kind:
+          type: string
+          enum: [video, clips, music]
+          description: Tipo de la biblioteca; los clips usan `clips` aunque su `kind` interno sea `movie`.
         path:
           type: string
         title:

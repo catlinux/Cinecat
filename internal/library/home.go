@@ -18,6 +18,7 @@ type homeResponse struct {
 	NextUp       []mediaItemDTO  `json:"next_up"`
 	RecentMovies []mediaItemDTO  `json:"recent_movies"`
 	RecentSeries []seriesListDTO `json:"recent_series"`
+	HasClips     bool            `json:"has_clips"`
 	Counts       homeCounts      `json:"counts"`
 }
 
@@ -52,6 +53,7 @@ func (a *API) handleHome(w http.ResponseWriter, r *http.Request) {
 		  LEFT JOIN playback_progress pp
 		    ON pp.media_item_id = media_items.id AND pp.user_id = ?
 		 WHERE media_items.kind = 'movie'
+		   AND `+videoLibraryClause("media_items")+`
 		 ORDER BY media_items.id DESC
 		 LIMIT 20`, user.ID, user.ID)
 	if err != nil {
@@ -76,11 +78,24 @@ func (a *API) handleHome(w http.ResponseWriter, r *http.Request) {
 
 	var counts homeCounts
 	if err := a.db.QueryRowContext(r.Context(), `
-		SELECT COALESCE(SUM(CASE WHEN kind = 'movie' THEN 1 ELSE 0 END), 0),
-		       COALESCE(SUM(CASE WHEN kind = 'episode' THEN 1 ELSE 0 END), 0),
-		       (SELECT count(*) FROM series)
+		SELECT COALESCE(SUM(CASE WHEN kind = 'movie' AND `+videoLibraryClause("media_items")+` THEN 1 ELSE 0 END), 0),
+		       COALESCE(SUM(CASE WHEN kind = 'episode' AND `+videoLibraryClause("media_items")+` THEN 1 ELSE 0 END), 0),
+		       (SELECT count(*) FROM series s
+		         JOIN libraries l ON l.id = s.library_id AND l.kind = 'video')
 		  FROM media_items`).Scan(&counts.Movies, &counts.Episodes, &counts.Series); err != nil {
 		log.Printf("library: contar ítems del portal: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
+
+	var hasClips int
+	if err := a.db.QueryRowContext(r.Context(), `
+		SELECT EXISTS (
+			SELECT 1 FROM libraries l
+			 WHERE l.kind = 'clips'
+			   AND EXISTS (SELECT 1 FROM media_items mi WHERE mi.library_id = l.id)
+		)`).Scan(&hasClips); err != nil {
+		log.Printf("library: comprobar bibliotecas de vídeos: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
 		return
 	}
@@ -90,6 +105,7 @@ func (a *API) handleHome(w http.ResponseWriter, r *http.Request) {
 		NextUp:       nextUp,
 		RecentMovies: recentMovies,
 		RecentSeries: recentSeries,
+		HasClips:     hasClips != 0,
 		Counts:       counts,
 	})
 }
@@ -108,6 +124,7 @@ func queryHomeNextUp(
 			  JOIN watch_state ws
 			    ON ws.media_item_id = mi.id AND ws.user_id = ?
 			 WHERE mi.series_id IS NOT NULL
+			   AND `+videoLibraryClause("mi")+`
 			 GROUP BY mi.series_id
 		),
 		in_progress AS (
@@ -116,12 +133,14 @@ func queryHomeNextUp(
 			  JOIN playback_progress pp
 			    ON pp.media_item_id = mi.id AND pp.user_id = ?
 			 WHERE mi.series_id IS NOT NULL
+			   AND `+videoLibraryClause("mi")+`
 		),
 		next_episode AS (
 			SELECT watched.series_id, watched.activity,
 			       (SELECT mi.id
 			          FROM media_items mi
 			         WHERE mi.series_id = watched.series_id
+			           AND `+videoLibraryClause("mi")+`
 			           AND NOT EXISTS (
 			               SELECT 1 FROM watch_state w2
 			                WHERE w2.media_item_id = mi.id AND w2.user_id = ?)

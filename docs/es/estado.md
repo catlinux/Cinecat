@@ -12,7 +12,8 @@ Versión actual: **0.17.0**. Esta página resume el estado real del código, no 
 | Servidor y biblioteca | Bibliotecas locales, alta y borrado | ✅ 0.1.2 | Una ruta por biblioteca; el borrado limpia sus ítems. |
 | Servidor y biblioteca | Escaneo manual y automático en segundo plano | ✅ 0.11.0 | El escaneo responde 202/409 y muestra progreso; se programa cada `scan.interval` y al arrancar. |
 | Servidor y biblioteca | Ficha técnica del archivo con `ffprobe` | ✅ 0.11.0 | Contenedor, tamaño, pistas, subtítulos y modo de reproducción. |
-| Servidor y biblioteca | Varias carpetas por biblioteca y navegador de carpetas | ✅ 0.17.0 | los tipos Vídeos y Música aún no se escanean |
+| Servidor y biblioteca | Varias carpetas por biblioteca y navegador de carpetas | ✅ 0.17.0 | Música aún no se escanea |
+| Servidor y biblioteca | Biblioteca de Vídeos (sin identificar), navegación por carpetas | 🟡 | servidor hecho; falta la pantalla |
 | Servidor y biblioteca | Subir o borrar archivos con papelera | ⬜ | `/media` se monta en solo lectura. |
 | Identificación y metadatos | TMDB como fuente principal en castellano, con caché | ✅ 0.11.0 | OMDb queda como respaldo si no hay TMDB; OMDb solo rellena sinopsis y cartel de películas. |
 | Identificación y metadatos | Identificación automática, corrección manual y «no es ninguna» | ✅ 0.11.0 | `match_status`: `auto`, `manual`, `none` o vacío; umbral configurable. |

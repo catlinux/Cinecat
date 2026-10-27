@@ -29,6 +29,9 @@ func TestHomeBaseVacia(t *testing.T) {
 	if home.Counts.Movies != 0 || home.Counts.Episodes != 0 || home.Counts.Series != 0 {
 		t.Fatalf("contadores inesperados: %+v", home.Counts)
 	}
+	if home.HasClips {
+		t.Fatal("home vacío no debe indicar clips")
+	}
 
 	if status, body := libraryHTTPGet(t, ts.URL+"/api/v1/home", ""); status != http.StatusUnauthorized {
 		t.Fatalf("sin sesión: código = %d, cuerpo = %s", status, body)

@@ -18,6 +18,7 @@ import (
 type mediaItemDTO struct {
 	ID                int64               `json:"id"`
 	LibraryID         int64               `json:"library_id"`
+	LibraryKind       string              `json:"library_kind"`
 	Path              string              `json:"path"`
 	Title             string              `json:"title"`
 	FileTitle         string              `json:"file_title"`
@@ -87,7 +88,8 @@ const mediaItemColumns = `
 	   FROM series s WHERE s.id = media_items.series_id),
 	episode_title, still_url, credits,
 	(SELECT s.poster_url FROM series s WHERE s.id = media_items.series_id),
-	(SELECT s.backdrop_url FROM series s WHERE s.id = media_items.series_id)`
+	(SELECT s.backdrop_url FROM series s WHERE s.id = media_items.series_id),
+	(SELECT l.kind FROM libraries l WHERE l.id = media_items.library_id)`
 
 const watchedColumn = `, CASE WHEN ws.user_id IS NULL THEN 0 ELSE 1 END`
 
@@ -151,6 +153,8 @@ func loadItemCollections(
 		SELECT ci.media_item_id, c.id, c.name
 		  FROM collection_items ci
 		  JOIN collections c ON c.id = ci.collection_id
+		  JOIN media_items mi ON mi.id = ci.media_item_id
+		  JOIN libraries l ON l.id = mi.library_id AND l.kind = 'video'
 		 WHERE ci.media_item_id IN (`+placeholders+`)
 		   AND ci.excluded = 0
 		   AND c.deleted = 0
@@ -184,7 +188,7 @@ func scanItem(scan func(dest ...any) error) (mediaItemDTO, error) {
 	var overview, posterURL, originalTitle, imdbID, tagline sql.NullString
 	var genres, directors, castNames, backdropURL, overviewLanguage, matchStatus sql.NullString
 	var seriesTitle, episodeTitle, stillURL, credits sql.NullString
-	var seriesPosterURL, seriesBackdropURL sql.NullString
+	var seriesPosterURL, seriesBackdropURL, libraryKind sql.NullString
 	var rating, matchScore, progressPosition, progressDuration sql.NullFloat64
 	var progressUpdated sql.NullString
 	var posterLocked, backdropLocked, watched int
@@ -196,7 +200,7 @@ func scanItem(scan func(dest ...any) error) (mediaItemDTO, error) {
 		&genres, &runtime, &rating, &directors, &castNames, &backdropURL,
 		&backdropLocked, &overviewLanguage, &matchStatus, &matchScore,
 		&seriesID, &seriesTitle, &episodeTitle, &stillURL, &credits,
-		&seriesPosterURL, &seriesBackdropURL, &watched,
+		&seriesPosterURL, &seriesBackdropURL, &libraryKind, &watched,
 		&progressPosition, &progressDuration, &progressUpdated,
 	)
 	if err != nil {
@@ -229,6 +233,7 @@ func scanItem(scan func(dest ...any) error) (mediaItemDTO, error) {
 	item.StillURL = stringPointer(stillURL)
 	item.SeriesPosterURL = stringPointer(seriesPosterURL)
 	item.SeriesBackdropURL = stringPointer(seriesBackdropURL)
+	item.LibraryKind = libraryKind.String
 	item.Credits = decodeCredits(credits)
 	item.Watched = watched != 0
 	if progressPosition.Valid && progressDuration.Valid && progressUpdated.Valid {
@@ -286,7 +291,9 @@ func floatPointer(v sql.NullFloat64) *float64 {
 
 func itemFilters(r *http.Request, userID int64) (string, []any, error) {
 	query := r.URL.Query()
-	var clauses []string
+	// Los clips viven en media_items como kind=movie; el listado de películas
+	// solo debe ver los ítems de bibliotecas de vídeo.
+	clauses := []string{videoLibraryClause("media_items")}
 	var args []any
 
 	field := strings.TrimSpace(query.Get("field"))
@@ -452,6 +459,7 @@ func (a *API) handleGenres(w http.ResponseWriter, r *http.Request) {
 	rows, err := a.db.QueryContext(r.Context(), `
 		SELECT je.value, COUNT(DISTINCT mi.id)
 		  FROM media_items mi
+		  JOIN libraries l ON l.id = mi.library_id AND l.kind = 'video'
 		  JOIN json_each(CASE WHEN mi.genres IS NOT NULL AND json_valid(mi.genres) THEN mi.genres ELSE '[]' END) je
 		 WHERE mi.kind = ?
 		 GROUP BY je.value
@@ -503,6 +511,9 @@ func (a *API) loadMovieItem(w http.ResponseWriter, r *http.Request) (mediaItemDT
 		return mediaItemDTO{}, false
 	case item.Kind != KindMovie:
 		writeJSONError(w, http.StatusNotFound, "ítem no encontrado")
+		return mediaItemDTO{}, false
+	case item.LibraryKind == "clips":
+		writeJSONError(w, http.StatusBadRequest, "Los vídeos no se identifican")
 		return mediaItemDTO{}, false
 	}
 	return item, true

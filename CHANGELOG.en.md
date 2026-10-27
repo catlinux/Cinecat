@@ -7,6 +7,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+### Added
+
+- "Videos" (`clips`) library type on the server: scanned without identification or outbound connections (the title comes from the file name), kept apart from movies, search, collections and counters, and browsed by folders with `GET /api/v1/libraries/{id}/browse`. Items expose `library_kind` and the home exposes `has_clips`. The web screen arrives in the next version.
+
 ## [0.17.0] - 2026-10-27
 
 ### Added

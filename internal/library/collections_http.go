@@ -18,12 +18,16 @@ const (
 )
 
 const collectionItemCountExpr = `(SELECT count(*) FROM collection_items ci
-	WHERE ci.collection_id = c.id AND ci.excluded = 0)`
+	WHERE ci.collection_id = c.id AND ci.excluded = 0
+	  AND ci.media_item_id IN (
+	      SELECT mi.id FROM media_items mi
+	      JOIN libraries l ON l.id = mi.library_id AND l.kind = 'video'))`
 
 const collectionPosterExpr = `COALESCE(NULLIF(c.poster_url, ''), (
 	SELECT mi.poster_url
 	  FROM collection_items ci
 	  JOIN media_items mi ON mi.id = ci.media_item_id
+	  JOIN libraries l ON l.id = mi.library_id AND l.kind = 'video'
 	 WHERE ci.collection_id = c.id
 	   AND ci.excluded = 0
 	   AND mi.poster_url IS NOT NULL
@@ -272,6 +276,7 @@ func (a *API) collectionMovieItems(ctx context.Context, collectionID, userID int
 		    ON ws.media_item_id = media_items.id AND ws.user_id = ?
 		  LEFT JOIN playback_progress pp
 		    ON pp.media_item_id = media_items.id AND pp.user_id = ?
+		 WHERE `+videoLibraryClause("media_items")+`
 		 ORDER BY ci.position IS NULL, ci.position ASC,
 		          media_items.year IS NULL, media_items.year ASC, media_items.id`,
 		collectionID, userID, userID)
@@ -481,9 +486,12 @@ func (a *API) writeCollection(w http.ResponseWriter, r *http.Request, id int64) 
 }
 
 func (a *API) requireMovieForCollection(w http.ResponseWriter, r *http.Request, itemID int64) bool {
-	var kind string
+	var kind, libraryKind string
 	err := a.db.QueryRowContext(r.Context(),
-		`SELECT kind FROM media_items WHERE id = ?`, itemID).Scan(&kind)
+		`SELECT mi.kind, l.kind
+		   FROM media_items mi
+		   JOIN libraries l ON l.id = mi.library_id
+		  WHERE mi.id = ?`, itemID).Scan(&kind, &libraryKind)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		writeJSONError(w, http.StatusNotFound, "ítem no encontrado")
@@ -491,6 +499,9 @@ func (a *API) requireMovieForCollection(w http.ResponseWriter, r *http.Request, 
 	case err != nil:
 		log.Printf("library: comprobar ítem %d para colección: %v", itemID, err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return false
+	case libraryKind == "clips":
+		writeJSONError(w, http.StatusBadRequest, "Los vídeos no se identifican")
 		return false
 	case kind != KindMovie:
 		writeJSONError(w, http.StatusBadRequest, "el ítem no es una película")
@@ -682,8 +693,12 @@ func (a *API) handleCollectionOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows, err := a.db.QueryContext(r.Context(), `
-		SELECT media_item_id FROM collection_items
-		 WHERE collection_id = ? AND excluded = 0`, collection.ID)
+		SELECT ci.media_item_id FROM collection_items ci
+		 WHERE ci.collection_id = ? AND ci.excluded = 0
+		   AND ci.media_item_id IN (
+		       SELECT mi.id FROM media_items mi
+		       JOIN libraries l ON l.id = mi.library_id AND l.kind = 'video')`,
+		collection.ID)
 	if err != nil {
 		log.Printf("library: leer orden de colección %d: %v", collection.ID, err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")

@@ -77,7 +77,7 @@ type Result struct {
 	Warnings           []string
 }
 
-// Scan recorre todas las bibliotecas de tipo vídeo. Cada biblioteca puede
+// Scan recorre las bibliotecas de tipo vídeo y clips. Cada biblioteca puede
 // tener varias carpetas; si una carpeta no está disponible no se podan sus
 // fichas y se avisa en el resultado.
 func (s *Scanner) Scan(ctx context.Context) (Result, error) {
@@ -112,7 +112,7 @@ func (s *Scanner) Scan(ctx context.Context) (Result, error) {
 
 	for _, l := range libraries {
 		res.Libraries++
-		if l.kind != "video" {
+		if l.kind != "video" && l.kind != "clips" {
 			res.Warnings = append(res.Warnings,
 				fmt.Sprintf("%s: tipo %s pendiente de implementar", l.name, l.kind))
 			continue
@@ -125,7 +125,7 @@ func (s *Scanner) Scan(ctx context.Context) (Result, error) {
 		seen := make(map[string]bool)
 		scannedRoots := make([]string, 0, len(paths))
 		for _, root := range paths {
-			ok, err := s.scanLibraryPath(ctx, l.id, root, seriesIDs, seen, &res)
+			ok, err := s.scanLibraryPath(ctx, l.id, l.kind, root, seriesIDs, seen, &res)
 			if err != nil {
 				return res, err
 			}
@@ -136,7 +136,7 @@ func (s *Scanner) Scan(ctx context.Context) (Result, error) {
 		if err := s.pruneLibrary(ctx, l.id, seen, scannedRoots, &res); err != nil {
 			return res, err
 		}
-		if s.tmdb != nil {
+		if l.kind == "video" && s.tmdb != nil {
 			ids, err := s.seriesIDsWithEpisodes(ctx, l.id)
 			if err != nil {
 				return res, err
@@ -155,6 +155,7 @@ func (s *Scanner) Scan(ctx context.Context) (Result, error) {
 func (s *Scanner) scanLibraryPath(
 	ctx context.Context,
 	libraryID int64,
+	libraryKind string,
 	root string,
 	seriesIDs map[string]int64,
 	seen map[string]bool,
@@ -208,6 +209,16 @@ func (s *Scanner) scanLibraryPath(
 		}
 
 		if strings.HasPrefix(d.Name(), ".") || !IsVideoFile(d.Name()) {
+			return nil
+		}
+
+		if libraryKind == "clips" {
+			if err := upsertClipItem(ctx, s.db, libraryID, path, clipTitle(d.Name())); err != nil {
+				return err
+			}
+			seen[filepath.Clean(path)] = true
+			res.Files++
+			res.Upserted++
 			return nil
 		}
 

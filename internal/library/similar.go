@@ -232,6 +232,7 @@ func loadSimilarCandidates(
 		           AND ci.excluded = 0 AND c.deleted = 0)
 		  FROM media_items
 		 WHERE kind = 'movie' AND id <> ?
+		   AND ` + videoLibraryClause("media_items") + `
 		   AND poster_url IS NOT NULL AND trim(poster_url) <> ''`
 	if series {
 		query = `
@@ -312,6 +313,19 @@ func (a *API) handleSimilarItems(w http.ResponseWriter, r *http.Request) {
 	}
 	if current.kind != KindMovie {
 		writeJSONError(w, http.StatusNotFound, "ítem no encontrado")
+		return
+	}
+	var libraryKind string
+	if err := a.db.QueryRowContext(r.Context(), `
+		SELECT l.kind FROM media_items mi
+		  JOIN libraries l ON l.id = mi.library_id
+		 WHERE mi.id = ?`, id).Scan(&libraryKind); err != nil {
+		log.Printf("library: leer biblioteca del ítem %d: %v", id, err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
+	if libraryKind == "clips" {
+		writeJSON(w, http.StatusOK, similarItemsResponse{Items: make([]mediaItemDTO, 0)})
 		return
 	}
 
