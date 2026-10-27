@@ -12,15 +12,54 @@ export interface ErrorResponse {
 	error: string;
 }
 
+export type LibraryKind = 'video' | 'clips' | 'music';
+
+export interface LibraryPath {
+	id: number;
+	path: string;
+}
+
 export interface Library {
 	id: number;
 	name: string;
+	kind: LibraryKind;
 	path: string;
+	paths: LibraryPath[];
+	item_count?: number;
 }
 
 export interface LibrariesResponse {
 	libraries: Library[];
 }
+
+export interface CreateLibraryInput {
+	name: string;
+	kind: LibraryKind;
+	paths: string[];
+}
+
+export interface FSRoot {
+	name: string;
+	path: string;
+}
+
+export interface FSEntry {
+	name: string;
+	path: string;
+}
+
+export interface FSRootsResponse {
+	roots: FSRoot[];
+}
+
+export interface FSBrowseResponse {
+	path: string;
+	parent: string | null;
+	entries: FSEntry[];
+	truncated: boolean;
+}
+
+export type FSResponse = FSRootsResponse | FSBrowseResponse;
 
 export interface PlaybackProgress {
 	position_seconds: number;
@@ -561,12 +600,33 @@ export class ApiClient {
 		return this.get<LibrariesResponse>('/api/v1/libraries', token);
 	}
 
-	async createLibrary(name: string, path: string, token: string): Promise<Library> {
-		return this.post<Library>('/api/v1/libraries', { name, path }, token);
+	async createLibrary(input: CreateLibraryInput, token: string): Promise<Library> {
+		return this.post<Library>('/api/v1/libraries', input, token);
+	}
+
+	async renameLibrary(id: number, name: string, token: string): Promise<Library> {
+		return this.request<Library>(`/api/v1/libraries/${id}`, {
+			method: 'PATCH',
+			body: { name },
+			token
+		});
+	}
+
+	async addLibraryPath(id: number, path: string, token: string): Promise<Library> {
+		return this.post<Library>(`/api/v1/libraries/${id}/paths`, { path }, token);
+	}
+
+	async removeLibraryPath(id: number, pathId: number, token: string): Promise<void> {
+		await this.delete(`/api/v1/libraries/${id}/paths/${pathId}`, token);
 	}
 
 	async deleteLibrary(id: number, token: string): Promise<void> {
 		await this.delete(`/api/v1/libraries/${id}`, token);
+	}
+
+	async browseFS(path: string | null | undefined, token: string): Promise<FSResponse> {
+		const suffix = path ? `?path=${encodeURIComponent(path)}` : '';
+		return this.get<FSResponse>(`/api/v1/fs${suffix}`, token);
 	}
 
 	async startScan(token: string): Promise<ScanStarted> {

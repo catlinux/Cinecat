@@ -2,7 +2,7 @@
 
 [Español](../es/estado.md) · [Back to README](../../README.en.md)
 
-Current version: **0.16.3**. This page describes the real state of the code, not the original plan. Versions come from the [CHANGELOG](../../CHANGELOG.en.md).
+Current version: **0.17.0**. This page describes the real state of the code, not the original plan. Versions come from the [CHANGELOG](../../CHANGELOG.en.md).
 
 ## What already exists
 
@@ -12,7 +12,7 @@ Current version: **0.16.3**. This page describes the real state of the code, not
 | Server and library | Local libraries, create/delete | ✅ 0.1.2 | One path per library; deleting a library removes its items. |
 | Server and library | Manual and automatic background scans | ✅ 0.11.0 | Scan returns 202/409 and reports progress; scheduled by `scan.interval` and at startup. |
 | Server and library | Technical file details through `ffprobe` | ✅ 0.11.0 | Container, size, tracks, subtitles and playback mode. |
-| Server and library | Multiple folders per library and folder browser | 🟡 | server done; web screen missing |
+| Server and library | Multiple folders per library and folder browser | ✅ 0.17.0 | the Vídeos and Música types are not scanned yet |
 | Server and library | Upload or delete files with a trash bin | ⬜ | `/media` is mounted read-only. |
 | Identification and metadata | TMDB as the main Spanish-language source, with cache | ✅ 0.11.0 | OMDb is a fallback when TMDB is absent; OMDb only fills movie synopsis and poster. |
 | Identification and metadata | Automatic identification, manual correction and "not this one" | ✅ 0.11.0 | `match_status`: `auto`, `manual`, `none` or empty; configurable threshold. |
@@ -52,15 +52,14 @@ The order comes from the plans in `.agents/plans`; no dates or committed version
 
 1. **Favorites and watchlist:** API, cards and pages.
 2. **Collections from a movie page** and **manual TMDB collection search/identification**, with "missing from your library".
-3. **Screen** to manage libraries with multiple folders and use the folder browser from the web (the server side is done).
-4. **File upload and deletion with a trash bin**, with retention and restore.
-5. **Users** (create, role, reset password, delete) and a **profile** with portal customisation.
-6. **Sessions/devices, activity and backups** from administration.
-7. **User-uploaded subtitles** and a design for the subtitle types not supported today.
-8. **Plugins**, still at the design stage.
-9. **DLNA/UPnP**, still at the design stage.
-10. **Library types** (for example music or photos) when the model is addressed.
-11. **Android and Android TV clients**.
+3. **File upload and deletion with a trash bin**, with retention and restore.
+4. **Users** (create, role, reset password, delete) and a **profile** with portal customisation.
+5. **Sessions/devices, activity and backups** from administration.
+6. **User-uploaded subtitles** and a design for the subtitle types not supported today.
+7. **Plugins**, still at the design stage.
+8. **DLNA/UPnP**, still at the design stage.
+9. **Library types** (for example music or photos) when the model is addressed.
+10. **Android and Android TV clients**.
 
 ## Known limitations and risks
 

@@ -7,8 +7,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-10-27
+
 ### Added
 
+- Administration → Libraries: redesigned screen with one card per library, several folders per library (add, remove with confirmation), rename, scan and delete, and a server folder browser to pick them. The "Videos" and "Music" types show as "Coming soon".
 - Libraries with several folders (for example on different disks) and a type (`video`, `clips`, `music`): `POST /api/v1/libraries` accepts `paths`, plus new `PATCH /api/v1/libraries/{id}`, `POST /api/v1/libraries/{id}/paths` and `DELETE /api/v1/libraries/{id}/paths/{pathId}`. Migration 0015 (`library_paths`, `libraries.kind`); the existing library is migrated with its folder. The `clips` and `music` types are accepted but not scanned yet.
 - Server folder browser `GET /api/v1/fs` (administrators only), confined to the roots in `CINECAT_MEDIA_ROOTS` (`/media` by default).
 - Portal: "Recently added series" row (`recent_series` in `GET /api/v1/home`) linking to the series list sorted by latest added. The movies row is now titled "Recently added movies".

@@ -2,22 +2,17 @@
 	import { enhance } from '$app/forms';
 	import { onMount, untrack } from 'svelte';
 	import type { Library, ScanStatus } from '$lib/api';
+	import { LIBRARY_KIND_OPTIONS, type LibraryFormState } from '$lib/libraries';
+	import FolderBrowser from '$lib/components/FolderBrowser.svelte';
+	import LibraryCard from '$lib/components/LibraryCard.svelte';
 	import ScanProgress from '$lib/components/ScanProgress.svelte';
-
-	type FormState = {
-		message?: string;
-		success?: boolean;
-		name?: string;
-		path?: string;
-		started?: boolean;
-	} | null;
 
 	let {
 		data,
 		form = null
 	}: {
 		data: { libraries: Library[]; ui?: { server_name: string } };
-		form?: FormState;
+		form?: LibraryFormState | null;
 	} = $props();
 
 	const POLL_INTERVAL = 3000;
@@ -25,8 +20,48 @@
 	let status = $state<ScanStatus | null>(null);
 	let pollTimer: ReturnType<typeof setInterval> | null = null;
 	let requesting = false;
+	let submitting = $state(false);
+
+	let name = $state(
+		untrack(() => (form?.action === 'create' ? (form.name ?? '') : ''))
+	);
+	let kind = $state(
+		untrack(() => (form?.action === 'create' && form.kind ? form.kind : 'video'))
+	);
+	let paths = $state<string[]>(
+		untrack(() =>
+			form?.action === 'create' && form.paths && form.paths.length > 0
+				? [...form.paths]
+				: ['']
+		)
+	);
+	let browserOpen = $state(false);
+	let browserIndex = $state(0);
 
 	const currentStatus = $derived(status ?? (form?.started ? runningStatus() : null));
+	const createMessage = $derived(form?.action === 'create' ? form : null);
+	const messageInCard = $derived(
+		form?.libraryId !== undefined &&
+			data.libraries.some((library) => library.id === form?.libraryId)
+	);
+	const otherMessage = $derived(
+		form && form.action !== 'create' && !messageInCard ? form : null
+	);
+
+	$effect(() => {
+		if (!form || form.action !== 'create') {
+			return;
+		}
+		if (form.success) {
+			name = '';
+			kind = 'video';
+			paths = [''];
+			return;
+		}
+		name = form.name ?? '';
+		kind = form.kind ?? 'video';
+		paths = form.paths && form.paths.length > 0 ? [...form.paths] : [''];
+	});
 
 	function runningStatus(): ScanStatus {
 		return {
@@ -107,10 +142,37 @@
 		}
 	});
 
-	function confirmDelete(event: SubmitEvent, name: string) {
-		if (!confirm(`¿Borrar la biblioteca «${name}»? Esta acción no se puede deshacer.`)) {
-			event.preventDefault();
+	function addPathRow() {
+		paths = [...paths, ''];
+	}
+
+	function removePathRow(index: number) {
+		if (paths.length <= 1) {
+			paths = [''];
+			return;
 		}
+		paths = paths.filter((_, current) => current !== index);
+	}
+
+	function openBrowser(index: number) {
+		browserIndex = index;
+		browserOpen = true;
+	}
+
+	function chooseNewPath(path: string) {
+		paths = paths.map((current, index) => (index === browserIndex ? path : current));
+		browserOpen = false;
+	}
+
+	function enhanceSubmit() {
+		submitting = true;
+		return async ({ update }: { update: () => Promise<void> }) => {
+			try {
+				await update();
+			} finally {
+				submitting = false;
+			}
+		};
 	}
 </script>
 
@@ -128,9 +190,12 @@
 		</p>
 	</div>
 
-	{#if form?.message}
-		<p class={form.success ? 'success' : 'error'} role={form.success ? 'status' : 'alert'}>
-			{form.message}
+	{#if otherMessage?.message}
+		<p
+			class={otherMessage.success ? 'success' : 'error'}
+			role={otherMessage.success ? 'status' : 'alert'}
+		>
+			{otherMessage.message}
 		</p>
 	{/if}
 
@@ -138,74 +203,124 @@
 		<ScanProgress status={currentStatus} />
 	{/if}
 
-	<div class="admin-grid">
-		<div class="admin-card">
+	{#if data.libraries.length === 0}
+		<div class="admin-card empty-libraries">
 			<h2>Bibliotecas</h2>
-
-			{#if data.libraries.length === 0}
-				<p class="admin-note">
-					Todavía no hay ninguna biblioteca. Crea una con el formulario de al lado.
-				</p>
-			{:else}
-				<ul class="admin-list">
-					{#each data.libraries as library (library.id)}
-						<li class="admin-item">
-							<div>
-								<p class="admin-item-name">{library.name}</p>
-								<p class="admin-item-path">{library.path}</p>
-							</div>
-							<form
-								method="POST"
-								action="?/delete"
-								onsubmit={(event) => confirmDelete(event, library.name)}
-							>
-								<input type="hidden" name="id" value={library.id} />
-								<button type="submit" class="button-danger">Borrar</button>
-							</form>
-						</li>
-					{/each}
-				</ul>
-			{/if}
-
-			<form method="POST" action="?/scan" class="admin-toolbar" use:enhance>
-				<button type="submit" class="button" disabled={currentStatus?.running ?? false}>
-					Escanear todas las bibliotecas
-				</button>
-			</form>
 			<p class="admin-note">
-				El escaneo continúa en segundo plano; puedes cerrar esta página mientras termina.
+				Todavía no hay ninguna biblioteca. Crea una con el formulario de abajo.
 			</p>
 		</div>
-
-		<div class="admin-card">
-			<h2>Nueva biblioteca</h2>
-			<form method="POST" action="?/create" class="login-form">
-				<label>
-					<span>Nombre</span>
-					<input type="text" name="name" value={form?.name ?? ''} required />
-				</label>
-
-				<label>
-					<span>Ruta en el servidor</span>
-					<input
-						type="text"
-						name="path"
-						placeholder="/media/peliculas"
-						value={form?.path ?? ''}
-						required
-					/>
-				</label>
-
-				<button type="submit">Crear biblioteca</button>
-			</form>
-			<p class="admin-note">La ruta debe existir y ser un directorio en el servidor.</p>
+	{:else}
+		<div class="admin-grid library-grid">
+			{#each data.libraries as library (library.id)}
+				<LibraryCard
+					{library}
+					{form}
+					scanRunning={currentStatus?.running ?? false}
+				/>
+			{/each}
 		</div>
+	{/if}
+
+	<form method="POST" action="?/scan" class="admin-toolbar" use:enhance={enhanceSubmit}>
+		<button
+			type="submit"
+			class="button"
+			disabled={(currentStatus?.running ?? false) || submitting}
+		>
+			Escanear todas las bibliotecas
+		</button>
+	</form>
+	<p class="admin-note">
+		El escaneo continúa en segundo plano; puedes cerrar esta página mientras termina.
+	</p>
+
+	<div class="admin-card new-library-card">
+		<h2>Nueva biblioteca</h2>
+
+		{#if createMessage?.message}
+			<p class={createMessage.success ? 'success' : 'error'} role={createMessage.success ? 'status' : 'alert'}>
+				{createMessage.message}
+			</p>
+		{/if}
+
+		<form method="POST" action="?/create" class="login-form" use:enhance={enhanceSubmit}>
+			<label>
+				<span>Nombre</span>
+				<input type="text" name="name" bind:value={name} required maxlength="80" />
+			</label>
+
+			<label>
+				<span>Tipo</span>
+				<select
+					name="kind"
+					onchange={(event) => (kind = (event.currentTarget as HTMLSelectElement).value)}
+				>
+					{#each LIBRARY_KIND_OPTIONS as option (option.value)}
+						<option
+							value={option.value}
+							disabled={option.disabled}
+							selected={kind === option.value}
+						>
+							{option.label}{option.disabled ? ' · Próximamente' : ''}
+						</option>
+					{/each}
+				</select>
+				<small class="admin-note">Los tipos Vídeos y Música aún no se escanean.</small>
+			</label>
+
+			<fieldset class="new-path-list">
+				<legend>Carpetas</legend>
+				{#each paths as path, index (index)}
+					<div class="new-path-row">
+						<label>
+							<span>Carpeta {index + 1}</span>
+							<input
+								type="text"
+								name="paths"
+								bind:value={paths[index]}
+								placeholder="/media/peliculas"
+								required
+							/>
+						</label>
+						<div class="path-row-actions">
+							<button
+								type="button"
+								class="button button-secondary"
+								onclick={() => openBrowser(index)}
+							>
+								Elegir…
+							</button>
+							{#if paths.length > 1}
+								<button
+									type="button"
+									class="button-danger"
+									onclick={() => removePathRow(index)}
+								>
+									Quitar
+								</button>
+							{/if}
+						</div>
+					</div>
+				{/each}
+			</fieldset>
+
+			<button type="button" class="button button-secondary" onclick={addPathRow}>
+				Añadir otra carpeta
+			</button>
+
+			<button type="submit" class="button" disabled={submitting}>Crear biblioteca</button>
+		</form>
+
+		<p class="admin-note">
+			Las rutas deben existir y estar dentro de las raíces permitidas del servidor. Puedes
+			escribirlas a mano o elegirlas con el navegador.
+		</p>
 	</div>
 </section>
 
-<style>
-	.admin-toolbar .button:disabled {
-		opacity: 0.55;
-		cursor: wait;
-	}
-</style>
+<FolderBrowser
+	open={browserOpen}
+	onclose={() => (browserOpen = false)}
+	onselect={chooseNewPath}
+/>

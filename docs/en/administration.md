@@ -9,7 +9,7 @@ Only users with the `admin` role can open `/admin`. The server checks the role o
 | Route | Screen | What it does |
 |---|---|---|
 | `/admin` | Summary | Server and web versions, last scan, movie/series/collection counts, and links to unidentified titles. |
-| `/admin/libraries` | Libraries | Create and delete libraries, start a scan of all of them and follow its background progress. |
+| `/admin/libraries` | Libraries | Create libraries with a name, type and several folders, choose folders on the server, rename, add or remove folders, scan and delete. |
 | `/admin/settings/scan` | Scan | Interval and scan at startup. |
 | `/admin/settings/metadata` | Metadata | TMDB language and identification threshold. |
 | `/admin/settings/ui` | Interface | Name, texts, menu, grid, order, collections, series, theme and accent. |
@@ -21,15 +21,18 @@ Only users with the `admin` role can open `/admin`. The server checks the role o
 ## Creating a library
 
 1. Open **Administración → Bibliotecas**.
-2. Under "Nueva biblioteca", enter a **Nombre** and the **Ruta en el servidor**.
-3. Press **Crear biblioteca**. The path must exist and be a directory inside the container, for example `/media/Multimedia/Pelis`.
-4. Press **Escanear todas las bibliotecas**. The scan continues in the background even if you close the page.
+2. Under "Nueva biblioteca", enter a **Nombre** and choose the **Tipo**. For now only "Películas y series" is available; "Vídeos" and "Música" will arrive in later tasks.
+3. Type the first folder path or press **Elegir…** to browse the server folders. With **Añadir otra carpeta** you can add more; all of them are stored in the same library.
+4. Press **Crear biblioteca**. The paths must exist and be directories inside the allowed roots; for example `/media/Multimedia/Pelis`.
+5. On each library card you can **Renombrar**, **Añadir carpeta**, **Quitar** a folder, **Escanear** or **Borrar biblioteca**. To delete one you must type its name to confirm.
+
+The scan continues in the background even if you close the page. The **Escanear** button on a card starts the same scan of all libraries.
 
 ### Multiple folders per library
 
 A library can group several folders, even on different disks. The first folder is kept as the main folder for compatibility; if it is removed, the next oldest becomes the main one. A library can be `video` (movies and series), `clips` (unidentified videos) or `music`; for now only `video` is scanned, and the other two types are skipped with a warning.
 
-The server can add and remove folders and exposes a confined browser at `GET /api/v1/fs` (administrators only). The web screen for that browser will arrive in the next task. Until then, the path is typed by hand; the container mounts `CINECAT_MEDIA_PATH` whole and read-only at `/media`.
+The **Elegir…** button opens a server folder browser. It shows the allowed roots, lets you go down into subfolders, go up with **Subir**, move through the breadcrumbs and confirm with **Elegir esta carpeta**. It only lists directories, does not follow links that leave the roots and limits the listing to 1000 entries. You can also type the path by hand without JavaScript. The container mounts `CINECAT_MEDIA_PATH` whole and read-only at `/media`.
 
 Folders are validated against `CINECAT_MEDIA_ROOTS`: a list of roots separated by `:` on Linux and `;` on Windows (default `/media`). A path outside those roots, missing, not a directory, repeated or overlapping another one is rejected. Removing a folder deletes its records from the database but does not touch files on disk.
 

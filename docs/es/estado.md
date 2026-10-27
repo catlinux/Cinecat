@@ -2,7 +2,7 @@
 
 [English](../en/status.md) · [Volver al README](../../README.md)
 
-Versión actual: **0.16.3**. Esta página resume el estado real del código, no el plan inicial. Las versiones salen del [CHANGELOG](../../CHANGELOG.md).
+Versión actual: **0.17.0**. Esta página resume el estado real del código, no el plan inicial. Las versiones salen del [CHANGELOG](../../CHANGELOG.md).
 
 ## Qué hay hecho
 
@@ -12,7 +12,7 @@ Versión actual: **0.16.3**. Esta página resume el estado real del código, no 
 | Servidor y biblioteca | Bibliotecas locales, alta y borrado | ✅ 0.1.2 | Una ruta por biblioteca; el borrado limpia sus ítems. |
 | Servidor y biblioteca | Escaneo manual y automático en segundo plano | ✅ 0.11.0 | El escaneo responde 202/409 y muestra progreso; se programa cada `scan.interval` y al arrancar. |
 | Servidor y biblioteca | Ficha técnica del archivo con `ffprobe` | ✅ 0.11.0 | Contenedor, tamaño, pistas, subtítulos y modo de reproducción. |
-| Servidor y biblioteca | Varias carpetas por biblioteca y navegador de carpetas | 🟡 | servidor hecho; falta la pantalla |
+| Servidor y biblioteca | Varias carpetas por biblioteca y navegador de carpetas | ✅ 0.17.0 | los tipos Vídeos y Música aún no se escanean |
 | Servidor y biblioteca | Subir o borrar archivos con papelera | ⬜ | `/media` se monta en solo lectura. |
 | Identificación y metadatos | TMDB como fuente principal en castellano, con caché | ✅ 0.11.0 | OMDb queda como respaldo si no hay TMDB; OMDb solo rellena sinopsis y cartel de películas. |
 | Identificación y metadatos | Identificación automática, corrección manual y «no es ninguna» | ✅ 0.11.0 | `match_status`: `auto`, `manual`, `none` o vacío; umbral configurable. |
@@ -52,15 +52,14 @@ El orden sale de los planes de `.agents/plans`; no hay fechas ni versiones compr
 
 1. **Favoritos y próximas a ver:** API, tarjetas y páginas.
 2. **Colecciones desde la ficha de película** y **búsqueda/identificación manual de colecciones en TMDB**, con «faltan en tu biblioteca».
-3. **Pantalla** para gestionar bibliotecas con varias carpetas y usar el navegador de carpetas desde la web (el servidor ya está hecho).
-4. **Subida y borrado de archivos con papelera**, con retención y restauración.
-5. **Usuarios** (crear, rol, restablecer contraseña, borrar) y **perfil** con personalización del portal.
-6. **Sesiones/dispositivos, actividad y copias de seguridad** desde administración.
-7. **Subtítulos subidos por el usuario** y diseño de subtítulos que hoy no se admiten.
-8. **Complementos**, todavía en fase de diseño.
-9. **DLNA/UPnP**, todavía en fase de diseño.
-10. **Tipos de biblioteca** (por ejemplo, música o fotos) cuando se aborde el modelo.
-11. **Clientes Android y Android TV**.
+3. **Subida y borrado de archivos con papelera**, con retención y restauración.
+4. **Usuarios** (crear, rol, restablecer contraseña, borrar) y **perfil** con personalización del portal.
+5. **Sesiones/dispositivos, actividad y copias de seguridad** desde administración.
+6. **Subtítulos subidos por el usuario** y diseño de subtítulos que hoy no se admiten.
+7. **Complementos**, todavía en fase de diseño.
+8. **DLNA/UPnP**, todavía en fase de diseño.
+9. **Tipos de biblioteca** (por ejemplo, música o fotos) cuando se aborde el modelo.
+10. **Clientes Android y Android TV**.
 
 ## Limitaciones y riesgos conocidos
 

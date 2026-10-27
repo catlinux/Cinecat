@@ -111,4 +111,57 @@ describe('ApiClient', () => {
 			expect((init?.headers as Record<string, string>).Authorization).toBe('Bearer token-123');
 		}
 	});
+
+	it('crea, renombra, añade y quita carpetas de bibliotecas', async () => {
+		const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
+			jsonResponse({ id: 7, name: 'Pelis', kind: 'video', path: '/media/a', paths: [] })
+		);
+		const client = new ApiClient({ baseUrl: 'http://api.test/', fetch: fetchMock });
+
+		await client.createLibrary(
+			{ name: 'Pelis', kind: 'video', paths: ['/media/a', '/media/b'] },
+			'token-123'
+		);
+		await client.renameLibrary(7, 'Películas', 'token-123');
+		await client.addLibraryPath(7, '/media/c', 'token-123');
+		await client.removeLibraryPath(7, 3, 'token-123');
+
+		expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
+			'http://api.test/api/v1/libraries',
+			'http://api.test/api/v1/libraries/7',
+			'http://api.test/api/v1/libraries/7/paths',
+			'http://api.test/api/v1/libraries/7/paths/3'
+		]);
+		expect(fetchMock.mock.calls.map(([, init]) => init?.method)).toEqual([
+			'POST',
+			'PATCH',
+			'POST',
+			'DELETE'
+		]);
+		expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({
+			name: 'Pelis',
+			kind: 'video',
+			paths: ['/media/a', '/media/b']
+		});
+		expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({ name: 'Películas' });
+		expect(JSON.parse(String(fetchMock.mock.calls[2][1]?.body))).toEqual({ path: '/media/c' });
+	});
+
+	it('consulta el navegador de carpetas con y sin ruta', async () => {
+		const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
+			jsonResponse({ roots: [] })
+		);
+		const client = new ApiClient({ baseUrl: 'http://api.test', fetch: fetchMock });
+
+		await client.browseFS(null, 'token-123');
+		await client.browseFS('/media/pelis con espacio', 'token-123');
+
+		expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
+			'http://api.test/api/v1/fs',
+			'http://api.test/api/v1/fs?path=%2Fmedia%2Fpelis%20con%20espacio'
+		]);
+		expect(fetchMock.mock.calls[0][1]?.headers).toMatchObject({
+			Authorization: 'Bearer token-123'
+		});
+	});
 });

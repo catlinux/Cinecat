@@ -7,8 +7,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.17.0] - 2026-10-27
+
 ### Añadido
 
+- Administración → Bibliotecas: pantalla renovada con tarjetas por biblioteca, varias carpetas por biblioteca (añadir, quitar con confirmación), renombrar, escanear y borrar, y un navegador de carpetas del servidor para elegirlas. Los tipos «Vídeos» y «Música» aparecen como «Próximamente».
 - Bibliotecas con varias carpetas (por ejemplo, en discos distintos) y con tipo (`video`, `clips`, `music`): `POST /api/v1/libraries` acepta `paths`, y nuevos `PATCH /api/v1/libraries/{id}`, `POST /api/v1/libraries/{id}/paths` y `DELETE /api/v1/libraries/{id}/paths/{pathId}`. Migración 0015 (`library_paths`, `libraries.kind`); la biblioteca existente se migra con su carpeta. Los tipos `clips` y `music` se aceptan pero aún no se escanean.
 - Navegador de carpetas del servidor `GET /api/v1/fs` (solo administradores), confinado a las raíces de `CINECAT_MEDIA_ROOTS` (por defecto `/media`).
 - Portal: fila «Series añadidas recientemente» (`recent_series` en `GET /api/v1/home`) con enlace a la lista de series ordenada por las últimas añadidas. La fila de películas pasa a titularse «Películas añadidas recientemente».

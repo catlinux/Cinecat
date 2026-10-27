@@ -9,7 +9,7 @@ Solo los usuarios con rol `admin` pueden entrar en `/admin`. El servidor comprue
 | Ruta | Pantalla | Qué permite |
 |---|---|---|
 | `/admin` | Resumen | Versiones del servidor y de la web, último escaneo, recuentos de películas, series y colecciones, y enlaces a los títulos sin identificar. |
-| `/admin/libraries` | Bibliotecas | Crear y borrar bibliotecas, lanzar un escaneo de todas y ver su progreso en segundo plano. |
+| `/admin/libraries` | Bibliotecas | Crear bibliotecas con nombre, tipo y varias carpetas, elegir carpetas en el servidor, renombrar, añadir o quitar carpetas, escanear y borrar. |
 | `/admin/settings/scan` | Escaneo | Intervalo y escaneo al arrancar. |
 | `/admin/settings/metadata` | Metadatos | Idioma de TMDB y umbral de identificación. |
 | `/admin/settings/ui` | Interfaz | Nombre, textos, menú, rejilla, orden, colecciones, series, tema y acento. |
@@ -21,15 +21,18 @@ Solo los usuarios con rol `admin` pueden entrar en `/admin`. El servidor comprue
 ## Crear una biblioteca
 
 1. Abre **Administración → Bibliotecas**.
-2. En «Nueva biblioteca», escribe un **Nombre** y la **Ruta en el servidor**.
-3. Pulsa **Crear biblioteca**. La ruta debe existir y ser un directorio dentro del contenedor; por ejemplo `/media/Multimedia/Pelis`.
-4. Pulsa **Escanear todas las bibliotecas**. El escaneo sigue en segundo plano aunque cierres la página.
+2. En «Nueva biblioteca», escribe un **Nombre** y elige el **Tipo**. De momento solo está disponible «Películas y series»; «Vídeos» y «Música» llegarán en tareas posteriores.
+3. Escribe la ruta de la primera carpeta o pulsa **Elegir…** para navegar por las carpetas del servidor. Con **Añadir otra carpeta** puedes añadir más; todas se guardan en la misma biblioteca.
+4. Pulsa **Crear biblioteca**. Las rutas deben existir y ser directorios dentro de las raíces permitidas; por ejemplo `/media/Multimedia/Pelis`.
+5. En la tarjeta de cada biblioteca puedes **Renombrar**, **Añadir carpeta**, **Quitar** una carpeta, **Escanear** o **Borrar biblioteca**. Al borrar hay que escribir el nombre para confirmar.
+
+El escaneo sigue en segundo plano aunque cierres la página. El botón **Escanear** de una tarjeta inicia el mismo escaneo de todas las bibliotecas.
 
 ### Varias carpetas por biblioteca
 
 Una biblioteca puede agrupar varias carpetas, incluso de discos distintos. La primera carpeta se conserva como carpeta principal por compatibilidad; al quitar la principal, pasa a serlo la siguiente más antigua. Una biblioteca puede ser de tipo `video` (películas y series), `clips` (vídeos sin identificar) o `music` (música); de momento solo se escanea `video`, y los otros dos tipos se omiten con un aviso.
 
-El servidor permite añadir y quitar carpetas y ofrece un navegador confinado en `GET /api/v1/fs` (solo administradores). La pantalla de la web para usar ese navegador llegará en la siguiente tarea. Mientras tanto, la ruta se escribe a mano; el contenedor monta `CINECAT_MEDIA_PATH` completo y en solo lectura en `/media`.
+El botón **Elegir…** abre un navegador de carpetas del servidor. Muestra las raíces permitidas, permite bajar por las subcarpetas, subir con **Subir**, moverse con las migas de pan y confirmar con **Elegir esta carpeta**. Solo lista directorios, no sigue enlaces que salgan de las raíces y limita el listado a 1000 entradas. También puedes escribir la ruta a mano sin usar JavaScript. El contenedor monta `CINECAT_MEDIA_PATH` completo y en solo lectura en `/media`.
 
 Las carpetas se validan contra `CINECAT_MEDIA_ROOTS`: una lista de raíces separadas por `:` en Linux y `;` en Windows (por defecto `/media`). Una ruta fuera de esas raíces, inexistente, que no sea un directorio, repetida o solapada con otra se rechaza. Quitar una carpeta borra sus fichas de la base de datos, pero no toca los archivos del disco.
 

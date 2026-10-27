@@ -1761,6 +1761,348 @@ footer {
 	background: var(--tinte);
 }
 
+.library-grid {
+	grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+}
+
+.library-card {
+	gap: 1rem;
+}
+
+.library-card-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 0.75rem;
+}
+
+.library-card-head h2 {
+	margin: 0;
+}
+
+.library-kind {
+	margin: 0.25rem 0 0;
+	font-size: 0.7rem;
+	font-weight: 700;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--naranja);
+}
+
+.library-paths h3 {
+	margin: 0 0 0.4rem;
+	font-family: 'Fraunces', Georgia, serif;
+	font-size: 1rem;
+	color: var(--granate);
+}
+
+.path-list {
+	display: grid;
+	gap: 0.4rem;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.path-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+	padding: 0.45rem 0;
+	border-bottom: 1px dashed var(--borde-suave);
+}
+
+.path-row:last-child {
+	border-bottom: 0;
+}
+
+.path-value {
+	min-width: 0;
+	flex: 1 1 12rem;
+	font-size: 0.78rem;
+	line-height: 1.4;
+	color: var(--texto-apagado);
+	overflow-wrap: anywhere;
+}
+
+.path-row form {
+	margin: 0;
+}
+
+.path-row .button-danger,
+.path-row-actions .button,
+.path-row-actions .button-danger,
+.library-action .button,
+.library-action .button-danger,
+.library-add-path .button {
+	margin: 0;
+}
+
+.library-add-path {
+	display: grid;
+	gap: 0.6rem;
+	padding-top: 0.6rem;
+	border-top: 1px dashed var(--borde-suave);
+}
+
+.library-add-path label,
+.library-action label {
+	display: grid;
+	gap: 0.3rem;
+	font-size: 0.68rem;
+	font-weight: 600;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--granate);
+}
+
+.library-add-path input,
+.library-action input,
+.new-path-row input,
+.new-library-card select {
+	width: 100%;
+	padding: 0.55rem 0.65rem;
+	border: 1px solid var(--borde-medio);
+	border-radius: 3px;
+	background: var(--crema-clara);
+	color: var(--tinta);
+	font-family: 'Inter', system-ui, sans-serif;
+	font-size: 0.9rem;
+	letter-spacing: normal;
+	text-transform: none;
+}
+
+.path-row-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4rem;
+}
+
+.library-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: 0.5rem;
+	margin-top: auto;
+	padding-top: 0.5rem;
+	border-top: 1px dashed var(--borde-suave);
+}
+
+.library-action {
+	margin: 0;
+}
+
+.library-action > summary {
+	width: fit-content;
+	margin: 0;
+	cursor: pointer;
+	list-style: none;
+}
+
+.library-action > summary::-webkit-details-marker {
+	display: none;
+}
+
+.library-action > form,
+.library-action[open] > form {
+	display: grid;
+	gap: 0.5rem;
+	margin-top: 0.6rem;
+	padding: 0.7rem;
+	border: 1px solid var(--borde-suave);
+	border-radius: 3px;
+	background: var(--tinte);
+}
+
+.library-delete > summary {
+	padding: 0.5rem 0.8rem;
+	border: 1px solid var(--naranja);
+	border-radius: 3px;
+	color: var(--naranja);
+	font-size: 0.7rem;
+	font-weight: 600;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+}
+
+.new-library-card {
+	margin-top: 1.5rem;
+}
+
+.new-path-list {
+	display: grid;
+	gap: 0.8rem;
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+
+.new-path-list legend {
+	margin-bottom: 0.2rem;
+	font-size: 0.72rem;
+	font-weight: 600;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--granate);
+}
+
+.new-path-row {
+	display: grid;
+	gap: 0.5rem;
+	padding: 0.7rem;
+	border: 1px solid var(--borde-suave);
+	border-radius: 3px;
+	background: var(--tinte);
+}
+
+.new-path-row label {
+	display: grid;
+	gap: 0.3rem;
+}
+
+.new-path-row label span {
+	font-size: 0.66rem;
+	font-weight: 600;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--granate);
+}
+
+.new-library-card .login-form {
+	margin-top: 1rem;
+}
+
+.folder-browser {
+	width: min(42rem, calc(100vw - 2rem));
+	max-height: min(80vh, 44rem);
+	padding: 0;
+	border: 1px solid var(--borde-medio);
+	border-radius: 5px;
+	background: var(--superficie);
+	color: var(--tinta);
+	box-shadow: 0 2rem 5rem -2rem var(--sombra);
+}
+
+.folder-browser::backdrop {
+	background: rgb(0 0 0 / 45%);
+}
+
+.folder-browser-body {
+	display: grid;
+	gap: 0.8rem;
+	max-height: inherit;
+	padding: clamp(1rem, 3vw, 1.6rem);
+	overflow: auto;
+}
+
+.folder-browser-head {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 1rem;
+}
+
+.folder-browser-head h2 {
+	margin: 0.15rem 0 0;
+	font-family: 'Fraunces', Georgia, serif;
+	font-size: 1.6rem;
+	color: var(--granate);
+}
+
+.folder-close {
+	margin: 0;
+	padding: 0.45rem 0.65rem;
+	font-size: 0.66rem;
+}
+
+.folder-breadcrumbs {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.15rem;
+	font-size: 0.75rem;
+	color: var(--texto-apagado);
+}
+
+.breadcrumb-button {
+	padding: 0.15rem 0.25rem;
+	border: 0;
+	border-radius: 2px;
+	background: transparent;
+	color: var(--granate);
+	font-family: 'Inter', system-ui, sans-serif;
+	font-size: 0.75rem;
+	cursor: pointer;
+}
+
+.breadcrumb-button:hover {
+	background: var(--tinte);
+}
+
+.folder-current {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.6rem;
+}
+
+.folder-current .button {
+	margin: 0;
+	padding: 0.45rem 0.7rem;
+	font-size: 0.66rem;
+}
+
+.folder-current span {
+	min-width: 0;
+	flex: 1 1 12rem;
+	font-size: 0.76rem;
+	color: var(--texto-apagado);
+	overflow-wrap: anywhere;
+}
+
+.folder-entries {
+	display: grid;
+	gap: 0.3rem;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.folder-entry {
+	display: grid;
+	gap: 0.1rem;
+	width: 100%;
+	padding: 0.55rem 0.65rem;
+	border: 1px solid transparent;
+	border-radius: 3px;
+	background: transparent;
+	color: var(--tinta);
+	font-family: 'Inter', system-ui, sans-serif;
+	font-size: 0.9rem;
+	text-align: left;
+	cursor: pointer;
+}
+
+.folder-entry:hover,
+.folder-entry:focus-visible {
+	border-color: var(--borde-medio);
+	background: var(--tinte);
+}
+
+.folder-entry-path {
+	font-size: 0.7rem;
+	color: var(--texto-apagado);
+	overflow-wrap: anywhere;
+}
+
+.folder-choose {
+	margin: 0;
+	justify-self: start;
+}
+
 .scan-result {
 	margin-top: 1.2rem;
 	padding: 1rem 1.1rem;

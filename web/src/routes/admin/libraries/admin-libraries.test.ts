@@ -7,6 +7,9 @@ import { actions, load } from './+page.server';
 import { GET as getScanStatus } from './status/+server';
 
 const create = actions.create!;
+const rename = actions.rename!;
+const addPath = actions.addPath!;
+const removePath = actions.removePath!;
 const remove = actions.delete!;
 const scan = actions.scan!;
 
@@ -36,14 +39,24 @@ function loadEvent(fetchImpl: typeof fetch) {
 
 function actionEvent(
 	fetchImpl: typeof fetch,
-	fields: Record<string, string>,
+	fields: Record<string, string | string[]>,
 	token: string | null = 'token-123'
 ) {
+	const body = new URLSearchParams();
+	for (const [key, value] of Object.entries(fields)) {
+		if (Array.isArray(value)) {
+			for (const item of value) {
+				body.append(key, item);
+			}
+		} else {
+			body.set(key, value);
+		}
+	}
 	return {
 		request: new Request('http://localhost/admin/libraries', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-			body: new URLSearchParams(fields)
+			body
 		}),
 		locals: { sessionToken: token },
 		fetch: fetchImpl,
@@ -60,8 +73,25 @@ function actionEvent(
 }
 
 const libraries: Library[] = [
-	{ id: 1, name: 'Peliculas', path: '/media/peliculas' },
-	{ id: 2, name: 'Series', path: '/media/series' }
+	{
+		id: 1,
+		name: 'Peliculas',
+		kind: 'video',
+		path: '/media/peliculas',
+		paths: [
+			{ id: 10, path: '/media/peliculas' },
+			{ id: 11, path: '/mnt/otro-disco/peliculas' }
+		],
+		item_count: 120
+	},
+	{
+		id: 2,
+		name: 'Series',
+		kind: 'video',
+		path: '/media/series',
+		paths: [{ id: 12, path: '/media/series' }],
+		item_count: 30
+	}
 ];
 
 function adminFetch(libs: Library[] = libraries) {
@@ -85,6 +115,7 @@ describe('carga de /admin/libraries', () => {
 
 		expect(result.libraries).toHaveLength(2);
 		expect(result.libraries[0].name).toBe('Peliculas');
+		expect(result.libraries[0].paths).toHaveLength(2);
 		expect(fetchMock).toHaveBeenCalledTimes(2);
 		expect(fetchMock.mock.calls[0][0]).toBe('http://api.test/api/v1/auth/me');
 		expect(fetchMock.mock.calls[1][0]).toBe('http://api.test/api/v1/libraries');
@@ -111,8 +142,14 @@ describe('acciones de /admin/libraries', () => {
 		vi.restoreAllMocks();
 	});
 
-	it('crear una biblioteca válida llama a la API y la lista se refresca', async () => {
-		const created: Library = { id: 3, name: 'Documentales', path: '/media/docs' };
+	it('crear una biblioteca con una carpeta llama a la API', async () => {
+		const created: Library = {
+			id: 3,
+			name: 'Documentales',
+			kind: 'video',
+			path: '/media/docs',
+			paths: [{ id: 20, path: '/media/docs' }]
+		};
 		const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
 			const url = String(input);
 			if (url.endsWith('/api/v1/libraries') && init?.method === 'POST') {
@@ -122,24 +159,51 @@ describe('acciones de /admin/libraries', () => {
 		});
 
 		const result = (await create(
-			actionEvent(fetchMock, { name: 'Documentales', path: '/media/docs' }) as never
+			actionEvent(fetchMock, {
+				name: 'Documentales',
+				kind: 'video',
+				paths: '/media/docs'
+			}) as never
 		)) as { success?: boolean; message?: string };
 
 		expect(result.success).toBe(true);
 		expect(result.message).toContain('Biblioteca creada');
 		expect(JSON.parse(fetchMock.mock.calls[0][1]?.body as string)).toEqual({
 			name: 'Documentales',
-			path: '/media/docs'
+			kind: 'video',
+			paths: ['/media/docs']
 		});
 		expect(fetchMock.mock.calls[0][1]?.headers).toMatchObject({
 			Authorization: 'Bearer token-123'
 		});
+	});
 
-		// SvelteKit vuelve a ejecutar el load tras una acción correcta.
-		const refreshed = (await load(
-			loadEvent(adminFetch([...libraries, created])) as never
-		)) as { libraries: Library[] };
-		expect(refreshed.libraries.map((library) => library.name)).toContain('Documentales');
+	it('crear con varias carpetas manda todas y las conserva si falla', async () => {
+		const fetchMock = vi
+			.fn()
+			.mockResolvedValue(jsonResponse({ error: 'la carpeta está solapada' }, 409));
+
+		const result = (await create(
+			actionEvent(fetchMock, {
+				name: 'Cine',
+				kind: 'video',
+				paths: ['/media/a', '/media/b']
+			}) as never
+		)) as {
+			status: number;
+			data: { message: string; action: string; name: string; paths: string[] };
+		};
+
+		expect(JSON.parse(fetchMock.mock.calls[0][1]?.body as string)).toEqual({
+			name: 'Cine',
+			kind: 'video',
+			paths: ['/media/a', '/media/b']
+		});
+		expect(result.status).toBe(409);
+		expect(result.data.message).toContain('solapada');
+		expect(result.data.action).toBe('create');
+		expect(result.data.name).toBe('Cine');
+		expect(result.data.paths).toEqual(['/media/a', '/media/b']);
 	});
 
 	it('crear con una ruta inválida muestra el mensaje de la API', async () => {
@@ -148,39 +212,176 @@ describe('acciones de /admin/libraries', () => {
 			.mockResolvedValue(jsonResponse({ error: 'la ruta no existe o no es accesible' }, 400));
 
 		const result = (await create(
-			actionEvent(fetchMock, { name: 'Rota', path: '/no/existe' }) as never
-		)) as { status: number; data: { message: string; name?: string; path?: string } };
+			actionEvent(fetchMock, {
+				name: 'Rota',
+				kind: 'video',
+				paths: '/no/existe'
+			}) as never
+		)) as {
+			status: number;
+			data: { message: string; name?: string; paths?: string[] };
+		};
 
 		expect(result.status).toBe(400);
 		expect(result.data.message).toContain('la ruta no existe');
 		expect(result.data.name).toBe('Rota');
-		expect(result.data.path).toBe('/no/existe');
+		expect(result.data.paths).toEqual(['/no/existe']);
 	});
 
-	it('crear sin nombre ni ruta no llama a la API', async () => {
+	it('validaciones: sin nombre, nombre largo, tipo no permitido y sin carpetas', async () => {
 		const fetchMock = vi.fn();
 
-		const result = (await create(
-			actionEvent(fetchMock, { name: '', path: '' }) as never
+		const noName = (await create(
+			actionEvent(fetchMock, { name: '', kind: 'video', paths: '/media/a' }) as never
+		)) as { status: number; data: { message: string } };
+		const longName = (await create(
+			actionEvent(fetchMock, { name: 'x'.repeat(81), kind: 'video', paths: '/media/a' }) as never
+		)) as { status: number; data: { message: string } };
+		const badKind = (await create(
+			actionEvent(fetchMock, { name: 'Cine', kind: 'otro', paths: '/media/a' }) as never
+		)) as { status: number; data: { message: string } };
+		const noPaths = (await create(
+			actionEvent(fetchMock, { name: 'Cine', kind: 'video', paths: ['', '  '] }) as never
 		)) as { status: number; data: { message: string } };
 
-		expect(result.status).toBe(400);
-		expect(result.data.message).toContain('Escribe un nombre y una ruta');
+		expect(noName.status).toBe(400);
+		expect(noName.data.message).toContain('nombre');
+		expect(longName.status).toBe(400);
+		expect(longName.data.message).toContain('80');
+		expect(badKind.status).toBe(400);
+		expect(badKind.data.message).toContain('Tipo');
+		expect(noPaths.status).toBe(400);
+		expect(noPaths.data.message).toContain('carpeta');
 		expect(fetchMock).not.toHaveBeenCalled();
 	});
 
-	it('borrar llama a deleteLibrary con el id', async () => {
+	it('crear con 403 devuelve el mensaje de administradores y con 401 redirige', async () => {
+		const forbidden = vi
+			.fn()
+			.mockResolvedValue(jsonResponse({ error: 'se requiere rol de administrador' }, 403));
+		const result = (await create(
+			actionEvent(forbidden, { name: 'Cine', kind: 'video', paths: '/media/a' }) as never
+		)) as { status: number; data: { message: string } };
+
+		expect(result.status).toBe(403);
+		expect(result.data.message).toContain('administradores');
+
+		const unauthorized = vi.fn().mockResolvedValue(jsonResponse({ error: 'sesión' }, 401));
+		await expect(
+			create(actionEvent(unauthorized, { name: 'Cine', kind: 'video', paths: '/media/a' }) as never)
+		).rejects.toMatchObject({ status: 303, location: '/login' });
+	});
+
+	it('renombrar llama a PATCH y conserva el nombre si falla', async () => {
+		const fetchMock = vi
+			.fn()
+			.mockResolvedValue(jsonResponse({ error: 'la biblioteca no existe' }, 404));
+
+		const result = (await rename(
+			actionEvent(fetchMock, { id: '4', name: 'Cine nuevo' }) as never
+		)) as { status: number; data: { message: string; action: string; renameName: string } };
+
+		expect(fetchMock.mock.calls[0][0]).toBe('http://api.test/api/v1/libraries/4');
+		expect(fetchMock.mock.calls[0][1]?.method).toBe('PATCH');
+		expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({ name: 'Cine nuevo' });
+		expect(result.status).toBe(404);
+		expect(result.data.action).toBe('rename');
+		expect(result.data.renameName).toBe('Cine nuevo');
+	});
+
+	it('renombrar valida id y nombre sin llamar a la API', async () => {
+		const fetchMock = vi.fn();
+
+		const badID = (await rename(
+			actionEvent(fetchMock, { id: '0', name: 'Cine' }) as never
+		)) as { status: number };
+		const badName = (await rename(
+			actionEvent(fetchMock, { id: '4', name: '' }) as never
+		)) as { status: number; data: { message: string } };
+
+		expect(badID.status).toBe(400);
+		expect(badName.status).toBe(400);
+		expect(badName.data.message).toContain('nombre');
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	it('añadir carpeta llama a la API y conserva la ruta si falla', async () => {
+		const fetchMock = vi
+			.fn()
+			.mockResolvedValue(jsonResponse({ error: 'la carpeta ya está en otra biblioteca' }, 409));
+
+		const result = (await addPath(
+			actionEvent(fetchMock, { id: '4', path: '/media/nueva' }) as never
+		)) as { status: number; data: { message: string; path: string } };
+
+		expect(fetchMock.mock.calls[0][0]).toBe('http://api.test/api/v1/libraries/4/paths');
+		expect(fetchMock.mock.calls[0][1]?.method).toBe('POST');
+		expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({ path: '/media/nueva' });
+		expect(result.status).toBe(409);
+		expect(result.data.message).toContain('otra biblioteca');
+		expect(result.data.path).toBe('/media/nueva');
+	});
+
+	it('quitar carpeta llama a DELETE con los dos identificadores', async () => {
 		const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
 
-		const result = (await remove(actionEvent(fetchMock, { id: '2' }) as never)) as {
-			success?: boolean;
-			message?: string;
-		};
+		const result = (await removePath(
+			actionEvent(fetchMock, { id: '4', pathId: '11' }) as never
+		)) as { success?: boolean; message?: string };
+
+		expect(result.success).toBe(true);
+		expect(result.message).toContain('Carpeta quitada');
+		expect(fetchMock.mock.calls[0][0]).toBe('http://api.test/api/v1/libraries/4/paths/11');
+		expect(fetchMock.mock.calls[0][1]?.method).toBe('DELETE');
+	});
+
+	it('quitar la única carpeta devuelve el error de la API', async () => {
+		const fetchMock = vi
+			.fn()
+			.mockResolvedValue(
+				jsonResponse({ error: 'una biblioteca debe tener al menos una carpeta' }, 400)
+			);
+
+		const result = (await removePath(
+			actionEvent(fetchMock, { id: '4', pathId: '11' }) as never
+		)) as { status: number; data: { message: string } };
+
+		expect(result.status).toBe(400);
+		expect(result.data.message).toContain('al menos una carpeta');
+	});
+
+	it('borrar exige escribir el nombre y luego llama a DELETE', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+
+		const mismatch = (await remove(
+			actionEvent(fetchMock, { id: '2', name: 'Series', confirm: 'Otra' }) as never
+		)) as { status: number; data: { message: string } };
+
+		expect(mismatch.status).toBe(400);
+		expect(mismatch.data.message).toContain('Escribe «Series»');
+		expect(fetchMock).not.toHaveBeenCalled();
+
+		const result = (await remove(
+			actionEvent(fetchMock, { id: '2', name: 'Series', confirm: 'Series' }) as never
+		)) as { success?: boolean; message?: string };
 
 		expect(result.success).toBe(true);
 		expect(result.message).toContain('Biblioteca borrada');
 		expect(fetchMock.mock.calls[0][0]).toBe('http://api.test/api/v1/libraries/2');
 		expect(fetchMock.mock.calls[0][1]?.method).toBe('DELETE');
+	});
+
+	it('borrar con 404 muestra el mensaje de la API', async () => {
+		const fetchMock = vi
+			.fn()
+			.mockResolvedValue(jsonResponse({ error: 'la biblioteca no existe' }, 404));
+
+		const result = (await remove(
+			actionEvent(fetchMock, { id: '9', name: 'No', confirm: 'No' }) as never
+		)) as { status: number; data: { message: string } };
+
+		expect(result.status).toBe(404);
+		expect(result.data.message).toContain('no existe');
 	});
 
 	it('escanear inicia el trabajo y devuelve started', async () => {
@@ -305,7 +506,7 @@ describe('estado del escaneo', () => {
 });
 
 describe('página de administración', () => {
-	it('muestra bibliotecas, formulario y controles del escaneo', () => {
+	it('muestra bibliotecas con varias carpetas, tipos y formularios sin JavaScript', () => {
 		const { body } = render(AdminPage, {
 			props: {
 				data: { libraries },
@@ -319,11 +520,54 @@ describe('página de administración', () => {
 
 		expect(body).toContain('Peliculas');
 		expect(body).toContain('/media/peliculas');
+		expect(body).toContain('/mnt/otro-disco/peliculas');
+		expect(body).toContain('Películas y series');
+		expect(body).toContain('120 fichas');
+		expect(body).toContain('Vídeos · Próximamente');
+		expect(body).toContain('Música · Próximamente');
+		expect(body).toContain('disabled');
 		expect(body).toContain('Nueva biblioteca');
+		expect(body).toContain('Añadir otra carpeta');
+		expect(body).toContain('Elegir…');
+		expect(body).toContain('action="?/create"');
+		expect(body).toContain('action="?/rename"');
+		expect(body).toContain('action="?/addPath"');
+		expect(body).toContain('action="?/removePath"');
+		expect(body).toContain('action="?/delete"');
+		expect(body).toContain('action="?/scan"');
 		expect(body).toContain('Escanear todas las bibliotecas');
 		expect(body).toContain('Escaneo iniciado.');
 		expect(body).toContain('Escaneo en curso…');
-		expect(body).toContain('disabled');
+	});
+
+	it('conserva nombre, tipo y varias carpetas tras un error de creación', () => {
+		const { body } = render(AdminPage, {
+			props: {
+				data: { libraries },
+				form: {
+					success: false,
+					action: 'create',
+					message: 'la carpeta está solapada',
+					name: 'Cine de prueba',
+					kind: 'music',
+					paths: ['/media/a', '/media/b']
+				}
+			}
+		});
+
+		expect(body).toContain('value="Cine de prueba"');
+		expect(body).toContain('value="/media/a"');
+		expect(body).toContain('value="/media/b"');
+		expect(body).toMatch(/value="music"[^>]*selected/);
+		expect(body).toContain('la carpeta está solapada');
+		expect(body).toContain('name="paths"');
+		expect(body).toContain('name="paths"');
+	});
+
+	it('muestra el aviso de que Vídeos y Música aún no se escanean', () => {
+		const { body } = render(AdminPage, { props: { data: { libraries } } });
+
+		expect(body).toContain('Los tipos Vídeos y Música aún no se escanean.');
 	});
 });
 
