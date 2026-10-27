@@ -520,6 +520,7 @@ paths:
         `next_up` incluye el siguiente episodio por ver de cada serie, con el
         nombre de la serie, el fotograma y los carteles de la serie.
         `recent_movies` son las 20 últimas películas añadidas.
+        `recent_series` son las 20 últimas series con episodios, por fecha de alta.
       security:
         - bearerAuth: []
       responses:
@@ -3734,6 +3735,7 @@ components:
         - continue
         - next_up
         - recent_movies
+        - recent_series
         - counts
       properties:
         continue:
@@ -3751,6 +3753,11 @@ components:
           description: Las 20 últimas películas añadidas, por id descendente.
           items:
             $ref: '#/components/schemas/MediaItem'
+        recent_series:
+          type: array
+          description: Las 20 últimas series con episodios, por fecha de alta descendente.
+          items:
+            $ref: '#/components/schemas/Series'
         counts:
           $ref: '#/components/schemas/HomeCounts'
       additionalProperties: false

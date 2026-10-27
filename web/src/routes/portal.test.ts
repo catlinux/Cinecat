@@ -1,6 +1,6 @@
 import { render } from 'svelte/server';
 import { describe, expect, it, vi } from 'vitest';
-import type { MediaItem } from '$lib/api';
+import type { MediaItem, Series } from '$lib/api';
 import { DEFAULT_PUBLIC_UI } from '$lib/settings';
 import { webVersion } from '$lib/version';
 import PortalPage from './+page.svelte';
@@ -79,11 +79,25 @@ const nextEpisode: MediaItem = {
 	}
 };
 
+const recentSeries: Series = {
+	id: 3,
+	title: 'The Big Bang Theory',
+	file_title: 'The Big Bang theory',
+	year: 2007,
+	poster_url: 'https://images.example/serie.jpg',
+	genres: ['Comedia'],
+	season_count: 2,
+	episode_count: 12,
+	watched_count: 4,
+	match_status: 'auto'
+};
+
 function homeResponse(overrides: Record<string, unknown> = {}) {
 	return {
 		continue: [continueItem],
 		next_up: [],
 		recent_movies: [recentItem],
+		recent_series: [recentSeries],
 		counts: { movies: 42, episodes: 2, series: 5 },
 		...overrides
 	};
@@ -113,6 +127,7 @@ function portalData(overrides: Record<string, unknown> = {}) {
 		continueWatching: [continueItem],
 		nextUp: [],
 		recent: [recentItem],
+		recentSeries: [recentSeries],
 		errorMessage: null,
 		...overrides
 	};
@@ -146,6 +161,7 @@ describe('carga del portal', () => {
 			continueWatching: MediaItem[];
 			nextUp: MediaItem[];
 			recent: MediaItem[];
+			recentSeries: Series[];
 			errorMessage: string | null;
 		};
 
@@ -155,8 +171,31 @@ describe('carga del portal', () => {
 		expect(result.continueWatching).toHaveLength(1);
 		expect(result.nextUp).toEqual([]);
 		expect(result.recent).toHaveLength(1);
+		expect(result.recentSeries).toHaveLength(1);
+		expect(result.recentSeries[0].title).toBe('The Big Bang Theory');
 		expect(result.errorMessage).toBeNull();
 		expect(fetchMock).toHaveBeenCalledTimes(2);
+	});
+
+	it('tolera un servidor antiguo sin recent_series', async () => {
+		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+			const url = new URL(String(input));
+			if (url.pathname === '/api/v1/collections') {
+				return collectionsResponse();
+			}
+			if (url.pathname === '/api/v1/home') {
+				return jsonResponse(homeResponse({ recent_series: undefined }));
+			}
+			throw new Error(`URL inesperada: ${url}`);
+		});
+
+		const result = (await load(loadEvent(fetchMock) as never)) as {
+			recentSeries: Series[];
+			errorMessage: string | null;
+		};
+
+		expect(result.recentSeries).toEqual([]);
+		expect(result.errorMessage).toBeNull();
 	});
 
 	it('mantiene el enlace de colecciones sin recuento si su API falla', async () => {
@@ -226,6 +265,7 @@ describe('carga del portal', () => {
 			continueWatching: MediaItem[];
 			nextUp: MediaItem[];
 			recent: MediaItem[];
+			recentSeries: Series[];
 			errorMessage: string | null;
 		};
 
@@ -234,6 +274,7 @@ describe('carga del portal', () => {
 		expect(result.continueWatching).toEqual([]);
 		expect(result.nextUp).toEqual([]);
 		expect(result.recent).toEqual([]);
+		expect(result.recentSeries).toEqual([]);
 		expect(result.errorMessage).toBeTruthy();
 	});
 
@@ -267,14 +308,19 @@ describe('portal', () => {
 		expect((body.match(/class="portal-category(?:\s|")/g) ?? []).length).toBe(3);
 		expect(body).toContain('Continuar viendo');
 		expect(body).toContain('Continúas por 1 h 12 min');
-		expect(body).toContain('Añadido recientemente');
+		expect(body).toContain('Películas añadidas recientemente');
+		expect(body).toContain('Series añadidas recientemente');
 		expect(body).toContain('El Padrino');
+		expect(body).toContain('The Big Bang Theory');
+		expect(body).toContain('href="/series?sort=added"');
 		expect(body).toContain('Ver todas');
 		expect(body).toContain('class="row-scroller');
 		expect(body).toContain('aria-label="Anterior"');
 		expect(body).toContain('aria-label="Siguiente"');
 		expect(body).toMatch(/class="row-arrows[^"]*"[^>]*\bhidden\b/);
-		expect(body.indexOf('Continuar viendo')).toBeLessThan(body.indexOf('Añadido recientemente'));
+		expect(body.indexOf('Continuar viendo')).toBeLessThan(
+			body.indexOf('Películas añadidas recientemente')
+		);
 		expect(body).not.toContain('Siguiente episodio');
 	});
 
@@ -333,7 +379,28 @@ describe('portal', () => {
 		});
 
 		expect(body).not.toContain('Continuar viendo');
-		expect(body).toContain('Añadido recientemente');
+		expect(body).toContain('Películas añadidas recientemente');
+	});
+
+	it('no muestra la fila de series si está vacía', () => {
+		const { body } = render(PortalPage, {
+			props: { data: portalData({ recentSeries: [] }) }
+		});
+
+		expect(body).not.toContain('Series añadidas recientemente');
+		expect(body).toContain('Películas añadidas recientemente');
+	});
+
+	it('oculta la fila de series si ui.show_series está desactivado', () => {
+		const { body } = render(PortalPage, {
+			props: {
+				data: portalData({
+					ui: { ...DEFAULT_PUBLIC_UI, show_series: false }
+				})
+			}
+		});
+
+		expect(body).not.toContain('Series añadidas recientemente');
 	});
 
 	it('muestra Siguiente episodio cuando next_up trae elementos', () => {

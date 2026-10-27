@@ -18,10 +18,12 @@ func TestHomeBaseVacia(t *testing.T) {
 	if err := json.Unmarshal(body, &home); err != nil {
 		t.Fatalf("respuesta de home: %v", err)
 	}
-	if home.Continue == nil || home.NextUp == nil || home.RecentMovies == nil {
+	if home.Continue == nil || home.NextUp == nil || home.RecentMovies == nil ||
+		home.RecentSeries == nil {
 		t.Fatalf("los arrays deben ser [] y no null: %+v", home)
 	}
-	if len(home.Continue) != 0 || len(home.NextUp) != 0 || len(home.RecentMovies) != 0 {
+	if len(home.Continue) != 0 || len(home.NextUp) != 0 || len(home.RecentMovies) != 0 ||
+		len(home.RecentSeries) != 0 {
 		t.Fatalf("home vacío con ítems: %+v", home)
 	}
 	if home.Counts.Movies != 0 || home.Counts.Episodes != 0 || home.Counts.Series != 0 {
@@ -172,5 +174,76 @@ func TestHomeRecientesContadoresYAislamiento(t *testing.T) {
 	}
 	if beaWatched.Watched {
 		t.Fatalf("bea no debe heredar el visionado de ana: %+v", beaWatched)
+	}
+}
+
+func TestHomeSeriesRecientesOrdenLimiteYFiltro(t *testing.T) {
+	ts := newLibraryHTTPTestServer(t)
+	libraryID := createLibrary(t, ts.db, t.TempDir())
+	anaID := progressUserID(t, ts.db, "ana")
+
+	seriesIDs := make([]int64, 0, 22)
+	for i := 0; i < 22; i++ {
+		id := insertSeriesHTTPFixture(t, ts, seriesHTTPFixture{
+			libraryID:    libraryID,
+			folder:       fmt.Sprintf("Serie %02d", i),
+			title:        fmt.Sprintf("Serie %02d", i),
+			displayTitle: fmt.Sprintf("Serie %02d", i),
+		})
+		seriesIDs = append(seriesIDs, id)
+		insertSeriesEpisodeHTTP(t, ts, libraryID, id, "Episodio", "s1e1",
+			1, 1, fmt.Sprintf("Episodio %02d", i), "", "")
+		if _, err := ts.db.Exec(
+			`UPDATE series SET created_at = ? WHERE id = ?`,
+			fmt.Sprintf("2026-10-27T10:%02d:00Z", i), id,
+		); err != nil {
+			t.Fatalf("fecha de la serie %d: %v", id, err)
+		}
+	}
+
+	emptySeries := insertSeriesHTTPFixture(t, ts, seriesHTTPFixture{
+		libraryID: libraryID, folder: "Serie vacía", title: "Serie vacía",
+	})
+	if _, err := ts.db.Exec(
+		`UPDATE series SET created_at = '2026-10-28T00:00:00Z' WHERE id = ?`, emptySeries,
+	); err != nil {
+		t.Fatalf("fecha de la serie vacía: %v", err)
+	}
+
+	var watchedEpisode int64
+	if err := ts.db.QueryRow(
+		`SELECT id FROM media_items WHERE series_id = ? LIMIT 1`, seriesIDs[21],
+	).Scan(&watchedEpisode); err != nil {
+		t.Fatalf("leer episodio de la serie reciente: %v", err)
+	}
+	setWatchState(t, ts.db, anaID, watchedEpisode)
+
+	status, body := libraryHTTPGet(t, ts.URL+"/api/v1/home", ts.token)
+	if status != http.StatusOK {
+		t.Fatalf("home: código = %d, cuerpo = %s", status, body)
+	}
+	var home homeResponse
+	if err := json.Unmarshal(body, &home); err != nil {
+		t.Fatalf("home: %v", err)
+	}
+	if len(home.RecentSeries) != 20 {
+		t.Fatalf("series recientes = %d, se esperaban 20", len(home.RecentSeries))
+	}
+	for i, item := range home.RecentSeries {
+		expected := seriesIDs[len(seriesIDs)-1-i]
+		if item.ID != expected {
+			t.Fatalf("serie reciente %d = %d, se esperaba %d", i, item.ID, expected)
+		}
+		if item.EpisodeCount != 1 || item.SeasonCount != 1 {
+			t.Fatalf("recuentos de la serie %d inesperados: %+v", item.ID, item)
+		}
+	}
+	if home.RecentSeries[0].WatchedCount != 1 {
+		t.Fatalf("la serie más reciente debe contar el episodio visto: %+v", home.RecentSeries[0])
+	}
+	for _, item := range home.RecentSeries {
+		if item.ID == emptySeries {
+			t.Fatal("una serie sin episodios no debe aparecer en recientes")
+		}
 	}
 }

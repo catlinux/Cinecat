@@ -197,9 +197,31 @@ func (a *API) handleSeries(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userID := sessionUserID(r)
+	series, err := querySeriesList(r.Context(), a.db, userID, where, order, args, limit, offset)
+	if err != nil {
+		log.Printf("library: listar series: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, seriesResponse{
+		Series: series, Total: total, Limit: limit, Offset: offset,
+	})
+}
+
+func querySeriesList(
+	ctx context.Context,
+	db *sql.DB,
+	userID int64,
+	where string,
+	order string,
+	args []any,
+	limit int,
+	offset int,
+) ([]seriesListDTO, error) {
 	queryArgs := append([]any{userID}, args...)
 	queryArgs = append(queryArgs, limit, offset)
-	rows, err := a.db.QueryContext(r.Context(), `
+	rows, err := db.QueryContext(ctx, `
 		SELECT s.id, COALESCE(NULLIF(s.display_title, ''), s.title), s.title,
 		       s.year, s.poster_url, s.genres,
 		       (SELECT count(DISTINCT mi.season) FROM media_items mi
@@ -212,9 +234,7 @@ func (a *API) handleSeries(w http.ResponseWriter, r *http.Request) {
 		  FROM series s
 		 WHERE `+where+order+` LIMIT ? OFFSET ?`, queryArgs...)
 	if err != nil {
-		log.Printf("library: listar series: %v", err)
-		writeJSONError(w, http.StatusInternalServerError, "error interno")
-		return
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -222,21 +242,27 @@ func (a *API) handleSeries(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		item, err := scanSeriesList(rows.Scan)
 		if err != nil {
-			log.Printf("library: leer serie: %v", err)
-			writeJSONError(w, http.StatusInternalServerError, "error interno")
-			return
+			return nil, err
 		}
 		series = append(series, item)
 	}
 	if err := rows.Err(); err != nil {
-		log.Printf("library: recorrer series: %v", err)
-		writeJSONError(w, http.StatusInternalServerError, "error interno")
-		return
+		return nil, err
 	}
+	return series, nil
+}
 
-	writeJSON(w, http.StatusOK, seriesResponse{
-		Series: series, Total: total, Limit: limit, Offset: offset,
-	})
+func queryRecentSeries(ctx context.Context, db *sql.DB, userID int64, limit int) ([]seriesListDTO, error) {
+	return querySeriesList(
+		ctx,
+		db,
+		userID,
+		"EXISTS (SELECT 1 FROM media_items mi WHERE mi.series_id = s.id)",
+		" ORDER BY s.created_at DESC, s.id DESC",
+		nil,
+		limit,
+		0,
+	)
 }
 
 func scanSeriesList(scan func(dest ...any) error) (seriesListDTO, error) {

@@ -7,6 +7,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+### Added
+
+- Portal: "Recently added series" row (`recent_series` in `GET /api/v1/home`) linking to the series list sorted by latest added. The movies row is now titled "Recently added movies".
+
 ## [0.16.3] - 2026-10-27
 
 ### Changed

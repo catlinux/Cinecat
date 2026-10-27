@@ -1,6 +1,7 @@
 <script lang="ts">
 	import CategoryArt from '$lib/components/CategoryArt.svelte';
 	import PosterRow from '$lib/components/PosterRow.svelte';
+	import SeriesRow from '$lib/components/SeriesRow.svelte';
 	import { DEFAULT_PUBLIC_UI } from '$lib/settings';
 	import type { PageData } from './$types';
 
@@ -141,12 +142,21 @@
 			{/if}
 
 			<PosterRow
-				title="Añadido recientemente"
+				title="Películas añadidas recientemente"
 				kicker="Estrenos"
 				items={data.recent}
 				href="/movies?sort=added"
 				emptyMessage="Todavía no hay películas recientes. La cartelera está esperando."
 			/>
+
+			{#if ui.show_series && data.recentSeries.length > 0}
+				<SeriesRow
+					title="Series añadidas recientemente"
+					kicker="Estrenos"
+					items={data.recentSeries}
+					href="/series?sort=added"
+				/>
+			{/if}
 		</div>
 	{/if}
 </section>

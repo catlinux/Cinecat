@@ -14,10 +14,11 @@ type homeCounts struct {
 }
 
 type homeResponse struct {
-	Continue     []mediaItemDTO `json:"continue"`
-	NextUp       []mediaItemDTO `json:"next_up"`
-	RecentMovies []mediaItemDTO `json:"recent_movies"`
-	Counts       homeCounts     `json:"counts"`
+	Continue     []mediaItemDTO  `json:"continue"`
+	NextUp       []mediaItemDTO  `json:"next_up"`
+	RecentMovies []mediaItemDTO  `json:"recent_movies"`
+	RecentSeries []seriesListDTO `json:"recent_series"`
+	Counts       homeCounts      `json:"counts"`
 }
 
 func (a *API) handleHome(w http.ResponseWriter, r *http.Request) {
@@ -59,6 +60,13 @@ func (a *API) handleHome(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	recentSeries, err := queryRecentSeries(r.Context(), a.db, user.ID, 20)
+	if err != nil {
+		log.Printf("library: listar series recientes: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
+
 	nextUp, err := queryHomeNextUp(r.Context(), a.db, user.ID, a.collectionMin())
 	if err != nil {
 		log.Printf("library: listar siguientes episodios: %v", err)
@@ -81,6 +89,7 @@ func (a *API) handleHome(w http.ResponseWriter, r *http.Request) {
 		Continue:     continueItems,
 		NextUp:       nextUp,
 		RecentMovies: recentMovies,
+		RecentSeries: recentSeries,
 		Counts:       counts,
 	})
 }

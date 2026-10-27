@@ -146,6 +146,7 @@ export interface HomeResponse {
 	continue: MediaItem[];
 	next_up: MediaItem[];
 	recent_movies: MediaItem[];
+	recent_series?: Series[];
 	counts: HomeCounts;
 }
 

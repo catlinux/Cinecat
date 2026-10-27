@@ -7,6 +7,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Añadido
+
+- Portal: fila «Series añadidas recientemente» (`recent_series` en `GET /api/v1/home`) con enlace a la lista de series ordenada por las últimas añadidas. La fila de películas pasa a titularse «Películas añadidas recientemente».
+
 ## [0.16.3] - 2026-10-27
 
 ### Cambiado
