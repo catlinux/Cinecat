@@ -205,7 +205,13 @@ func (a *API) ensureUploadDirectory(target *uploadTarget) error {
 	if target.Subdir == "" {
 		return nil
 	}
-	info, err := os.Lstat(target.FinalDir)
+	return ensureUploadDir(target.FinalDir)
+}
+
+// ensureUploadDir crea la carpeta de destino si no existe, con los permisos y
+// el propietario configurados. Nunca acepta enlaces simbólicos ni archivos.
+func ensureUploadDir(path string) error {
+	info, err := os.Lstat(path)
 	if err == nil {
 		if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
 			return errUploadInvalid
@@ -215,20 +221,20 @@ func (a *API) ensureUploadDirectory(target *uploadTarget) error {
 	if !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
-	if err := os.Mkdir(target.FinalDir, 0o775); err != nil {
+	if err := os.Mkdir(path, 0o775); err != nil {
 		if !errors.Is(err, os.ErrExist) {
 			return err
 		}
-		info, err := os.Lstat(target.FinalDir)
+		info, err := os.Lstat(path)
 		if err != nil || info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
 			return errUploadInvalid
 		}
 		return nil
 	}
-	if err := os.Chmod(target.FinalDir, 0o775); err != nil {
+	if err := os.Chmod(path, 0o775); err != nil {
 		return err
 	}
-	applyConfiguredOwner(target.FinalDir)
+	applyConfiguredOwner(path)
 	return nil
 }
 
@@ -289,6 +295,35 @@ func (a *API) writeUpload(w http.ResponseWriter, r *http.Request, target uploadT
 	return uploadResult{Path: target.FinalPath, Size: written}, nil
 }
 
+// receiveUpload comprueba tamaño y espacio, prepara la carpeta de destino y
+// escribe el cuerpo en un .part que después renombra, sin cargarlo en memoria.
+func (a *API) receiveUpload(w http.ResponseWriter, r *http.Request, target uploadTarget) (uploadResult, error) {
+	length := r.ContentLength
+	if length < 0 {
+		return uploadResult{}, errUploadNoLength
+	}
+	if length > a.uploadMaxBytes() {
+		return uploadResult{}, errUploadTooLarge
+	}
+	statDir := target.FinalDir
+	if _, err := os.Lstat(statDir); errors.Is(err, os.ErrNotExist) {
+		statDir = target.Dir
+	}
+	if free, known := diskFree(statDir); known && free < length+uploadSpaceMargin {
+		return uploadResult{}, errUploadNoSpace
+	}
+	if err := a.ensureUploadDirectory(&target); err != nil {
+		return uploadResult{}, err
+	}
+	return a.writeUpload(w, r, target, length)
+}
+
+func (a *API) startUploadScan() {
+	if a.scanJob != nil {
+		a.scanJob.StartService()
+	}
+}
+
 func (a *API) handleLibraryFileUpload(w http.ResponseWriter, r *http.Request) {
 	_ = http.NewResponseController(w).SetReadDeadline(time.Time{})
 
@@ -306,36 +341,13 @@ func (a *API) handleLibraryFileUpload(w http.ResponseWriter, r *http.Request) {
 		writeUploadError(w, err)
 		return
 	}
-	length := r.ContentLength
-	if length < 0 {
-		writeUploadError(w, errUploadNoLength)
-		return
-	}
-	if length > a.uploadMaxBytes() {
-		writeUploadError(w, errUploadTooLarge)
-		return
-	}
-	statDir := target.FinalDir
-	if _, err := os.Lstat(statDir); errors.Is(err, os.ErrNotExist) {
-		statDir = target.Dir
-	}
-	if free, known := diskFree(statDir); known && free < length+uploadSpaceMargin {
-		writeUploadError(w, errUploadNoSpace)
-		return
-	}
-	if err := a.ensureUploadDirectory(&target); err != nil {
-		writeUploadError(w, err)
-		return
-	}
-	result, err := a.writeUpload(w, r, target, length)
+	result, err := a.receiveUpload(w, r, target)
 	if err != nil {
 		writeUploadError(w, err)
 		return
 	}
 	log.Printf("library: subida: %s subió %s (%d bytes)", trashActor(r), result.Path, result.Size)
-	if a.scanJob != nil {
-		a.scanJob.StartService()
-	}
+	a.startUploadScan()
 	writeJSON(w, http.StatusCreated, result)
 }
 
