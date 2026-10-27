@@ -9,10 +9,12 @@ Only users with the `admin` role can open `/admin`. The server checks the role o
 | Route | Screen | What it does |
 |---|---|---|
 | `/admin` | Summary | Server and web versions, last scan, movie/series/collection counts, and links to unidentified titles. |
-| `/admin/libraries` | Libraries | Create libraries with a name, type and several folders, choose folders on the server, rename, add or remove folders, scan and delete. |
+| `/admin/libraries` | Libraries | Create libraries with a name, type and several folders, choose folders on the server, rename, add or remove folders, scan, delete and upload files. |
+| `/admin/trash` | Trash | Restore or permanently delete what was moved to the trash, and empty expired entries. |
 | `/admin/settings/scan` | Scan | Interval and scan at startup. |
 | `/admin/settings/metadata` | Metadata | TMDB language and identification threshold. |
 | `/admin/settings/ui` | Interface | Name, texts, menu, grid, order, collections, series, theme and accent. |
+| `/admin/settings/library` | Library | Allow file changes, days in the trash and maximum upload size. |
 | `/admin/settings/playback` | Playback | Maximum height, CRF, preset and simultaneous transcodes. |
 | `/admin/settings/system` | System | Update check, versions and the "Update now" panel. |
 | `/admin/update` | — | JSON endpoint used by the System panel to follow progress; not a screen. |
@@ -50,7 +52,7 @@ The scan does not inspect a track again when its size and modification time have
 
 Thumbnails are generated the first time they are viewed and stored in `cache/thumbs`, next to the database and inside the persistent volume. They can be deleted without risk: they will be generated again. The server needs FFmpeg and ffprobe installed in the container.
 
-The **Elegir…** button opens a server folder browser. It shows the allowed roots, lets you go down into subfolders, go up with **Subir**, move through the breadcrumbs and confirm with **Elegir esta carpeta**. It only lists directories, does not follow links that leave the roots and limits the listing to 1000 entries. You can also type the path by hand without JavaScript. The container mounts `CINECAT_MEDIA_PATH` whole and read-only at `/media`.
+The **Elegir…** button opens a server folder browser. It shows the allowed roots, lets you go down into subfolders, go up with **Subir**, move through the breadcrumbs and confirm with **Elegir esta carpeta**. It only lists directories, does not follow links that leave the roots and limits the listing to 1000 entries. You can also type the path by hand without JavaScript. The container mounts `CINECAT_MEDIA_PATH` whole at `/media`, read-only unless uploads are enabled (see "Uploading files and trash").
 
 Folders are validated against `CINECAT_MEDIA_ROOTS`: a list of roots separated by `:` on Linux and `;` on Windows (default `/media`). A path outside those roots, missing, not a directory, repeated or overlapping another one is rejected. Removing a folder deletes its records from the database but does not touch files on disk.
 
@@ -104,6 +106,9 @@ Settings are stored in the database with per-type validation. They apply without
 | `playback.crf` | Calidad (CRF) | Compression quality for transcoding; a lower value means more quality and size. | Integer 18–28 | `20` | Hot; new transcodes. |
 | `playback.preset` | Velocidad de codificación | x264 preset used for transcoding. | `veryfast`, `faster`, `fast` | `veryfast` | Hot; new transcodes. |
 | `playback.max_transcodes` | Transcodificaciones simultáneas | How many movies can be transcoded at once. More than the CPU can handle causes stalls when seeking. | Integer 1–8 | `2` | Hot; next process. |
+| `library.allow_file_changes` | Permitir cambiar archivos | Allows uploading files and moving them to the trash; requires mounting the library read-write. | Boolean | `false` | Hot. |
+| `trash.retention_days` | Días en la papelera | How long entries are kept before being purged for good. | Integer 1–90 | `14` | Hot; next daily purge. |
+| `library.upload_max_gb` | Tamaño máximo de subida (GB) | Maximum size of each uploaded file. | Integer 1–500 | `50` | Hot; next upload. |
 | `system.check_updates` | Buscar actualizaciones | Checks for new versions; it implies an optional outgoing connection that the administrator must enable. | Boolean | `false` | Hot; enables periodic checking and the immediate check when saved. |
 
 `scan.interval` may start with a different value when `CINECAT_SCAN_INTERVAL` is defined; the value stored in the database takes precedence over the environment default.
@@ -124,10 +129,21 @@ Read by the server:
 | `CINECAT_ADMIN_PASSWORD` | empty | Password for the `admin` created on first start; if absent, one is generated and printed once. |
 | `CINECAT_RUN_DIR` | `/run/cinecat-update` | Shared directory for update requests. |
 | `CINECAT_TRUSTED_PROXIES` | loopback and private networks | Networks from which `X-Forwarded-For` is accepted; comma-separated CIDR or IP list. |
+| `CINECAT_FILE_UID` / `CINECAT_FILE_GID` | empty | Numeric owner of what the server creates on the disks (uploads, folders, trash). |
 
-Docker also uses `CINECAT_MEDIA_PATH` (host path mounted at `/media`), `CINECAT_MEDIA_ROOTS` (roots visible inside the container), `CINECAT_API_PORT` (`8080`) and `CINECAT_WEB_PORT` (`8081`). The web container uses `ADDRESS_HEADER=X-Forwarded-For` and `XFF_DEPTH=1` (number of trusted proxies in front of the web app); `PUBLIC_API_URL` and `PROTOCOL_HEADER` also belong to the web container. There are no variables for the FFmpeg path, CORS, users or HLS limits.
+Docker also uses `CINECAT_MEDIA_PATH` (host path mounted at `/media`), `CINECAT_MEDIA_ROOTS` (roots visible inside the container), `CINECAT_API_PORT` (`8080`), `CINECAT_WEB_PORT` (`8081`) and `CINECAT_MEDIA_MODE` (`ro`; `rw` to upload and use the trash). The web container uses `ADDRESS_HEADER=X-Forwarded-For` and `XFF_DEPTH=1` (number of trusted proxies in front of the web app) and `BODY_SIZE_LIMIT=Infinity` (for uploads); `PUBLIC_API_URL` and `PROTOCOL_HEADER` also belong to the web container. There are no variables for the FFmpeg path, CORS, users or HLS limits.
 
 Each user has their own **Favorites** and **Watchlist**; they are not shared between accounts.
+
+## Uploading files and trash
+
+Disabled by default. Two things are needed: mount the library read-write (`CINECAT_MEDIA_MODE=rw` in the Debian `.env`, then bring the containers up again) and enable **Permitir cambiar archivos** in Administration → Library. With either one off, the web app shows the reason and does not touch the disk. With `rw`, any Cinecat administrator can write to your disks: protect that account well.
+
+- **Upload:** Administration → Libraries → **Subir archivos** on a movies-and-series or videos library. Choose the destination folder (and optionally a new folder inside it), select one or more videos or subtitles (`.srt`, `.vtt`, `.ass`, `.ssa`, `.sub`, `.idx`) and press **Subir**. Each file is first written as `.name.part` and renamed when done; an existing file is never overwritten. A scan starts afterwards. Limit: **Tamaño máximo de subida (GB)** (50 by default); the upload is refused when there is no room for the file plus a 1 GB margin. Do not close the page until it finishes.
+- **Move to trash:** on the item page, **Mover a la papelera**. Nothing is deleted: the video and its subtitles (or its folder, for a movie or video whose folder holds no other videos) are moved to `.cinecat-papelera`, at the root of the library folder and on the same disk. The entry disappears from listings.
+- **Trash:** Administration → Trash. **Restaurar** puts the files back and restores the entry with its watched state, progress, lists, collections and preferences (if the original path is taken, it does nothing and says so). **Eliminar definitivamente** deletes from disk. Anything older than **Días en la papelera** (14 by default) is deleted automatically every day.
+- **Owner:** the container runs as root. Set `CINECAT_FILE_UID` and `CINECAT_FILE_GID` (the ones shown by `ls -ln /media`) so uploads and the trash belong to your user and group.
+- Video only: music cannot be uploaded or moved to the trash from Cinecat.
 
 ## Updating the server
 
@@ -142,4 +158,4 @@ Each user has their own **Favorites** and **Watchlist**; they are not shared bet
 - There are no per-library permissions: any authenticated user sees the whole catalogue.
 - There is no screen to create users or revoke sessions.
 - The server sends no CORS headers; the Apache deployment works by sharing the origin.
-- `/media` is read-only: the application does not upload, move or delete files.
+- With `CINECAT_MEDIA_MODE=rw`, an administrator can upload and move to the trash; permanent deletion only affects `.cinecat-papelera`.

@@ -19,7 +19,7 @@ Current version: **0.20.0**. This page describes the real state of the code, not
 | Music | Music favourites | ⬜ | will reuse the favourites system |
 | Music | Unsupported-format conversion | ⬜ | FFmpeg transcoding |
 | Music | Gapless playback | ⬜ | seamless track changes |
-| Server and library | Upload or delete files with a trash bin | ⬜ | `/media` is mounted read-only. |
+| Server and library | Upload or delete files with a trash bin | ✅ 0.21.0 | Video only; disabled by default (`rw` mount and setting). |
 | Identification and metadata | TMDB as the main Spanish-language source, with cache | ✅ 0.11.0 | OMDb is a fallback when TMDB is absent; OMDb only fills movie synopsis and poster. |
 | Identification and metadata | Automatic identification, manual correction and "not this one" | ✅ 0.11.0 | `match_status`: `auto`, `manual`, `none` or empty; configurable threshold. |
 | Identification and metadata | Cast and crew with photo and character | ✅ 0.12.0 | Movies and series; old records are filled from the TMDB cache. |
@@ -59,14 +59,13 @@ The order comes from the plans in `.agents/plans`; no dates or committed version
 
 1. **Favorites and watchlist:** API, cards and pages.
 2. **Collections from a movie page** and **manual TMDB collection search/identification**, with "missing from your library".
-3. **File upload and deletion with a trash bin**, with retention and restore.
-4. **Users** (create, role, reset password, delete) and a **profile** with portal customisation.
-5. **Sessions/devices, activity and backups** from administration.
-6. **User-uploaded subtitles** and a design for the subtitle types not supported today.
-7. **Plugins**, still at the design stage.
-8. **DLNA/UPnP**, still at the design stage.
-9. **Library types** (for example music or photos) when the model is addressed.
-10. **Android and Android TV clients**.
+3. **Users** (create, role, reset password, delete) and a **profile** with portal customisation.
+4. **Sessions/devices, activity and backups** from administration.
+5. **User-uploaded subtitles** and a design for the subtitle types not supported today.
+6. **Plugins**, still at the design stage.
+7. **DLNA/UPnP**, still at the design stage.
+8. **Library types** (for example music or photos) when the model is addressed.
+9. **Android and Android TV clients**.
 
 ## Known limitations and risks
 
@@ -81,7 +80,7 @@ The order comes from the plans in `.agents/plans`; no dates or committed version
 - **Subtitles:** text only; PGS/VobSub are ignored. HLS has no separate subtitle rendition; they are served as WebVTT.
 - **Real HLS tests:** skipped without `ffmpeg`/`ffprobe` in PATH, and there is no CI to run them.
 - **TMDB TTL:** the 7-day cache is a starting value not checked against current terms. OMDb is only a fallback and has a daily quota.
-- **Read-only media:** files cannot be uploaded, moved or deleted from Cinecat.
+- **Changes on disk:** uploading and moving to the trash require mounting `/media` read-write; music cannot be uploaded or moved.
 - **Password change:** it does not invalidate other open sessions.
 - **Playback URLs:** valid for 8 hours, not bound to the user, and invalid after a server restart because the HMAC key is per process.
 - **Automatic updater:** only works when the host service has been installed; the repository cannot verify whether it is active on a given server.

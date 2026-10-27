@@ -9,10 +9,12 @@ Solo los usuarios con rol `admin` pueden entrar en `/admin`. El servidor comprue
 | Ruta | Pantalla | Qué permite |
 |---|---|---|
 | `/admin` | Resumen | Versiones del servidor y de la web, último escaneo, recuentos de películas, series y colecciones, y enlaces a los títulos sin identificar. |
-| `/admin/libraries` | Bibliotecas | Crear bibliotecas con nombre, tipo y varias carpetas, elegir carpetas en el servidor, renombrar, añadir o quitar carpetas, escanear y borrar. |
+| `/admin/libraries` | Bibliotecas | Crear bibliotecas con nombre, tipo y varias carpetas, elegir carpetas en el servidor, renombrar, añadir o quitar carpetas, escanear, borrar y subir archivos. |
+| `/admin/trash` | Papelera | Restaurar o eliminar definitivamente lo movido a la papelera y vaciar lo caducado. |
 | `/admin/settings/scan` | Escaneo | Intervalo y escaneo al arrancar. |
 | `/admin/settings/metadata` | Metadatos | Idioma de TMDB y umbral de identificación. |
 | `/admin/settings/ui` | Interfaz | Nombre, textos, menú, rejilla, orden, colecciones, series, tema y acento. |
+| `/admin/settings/library` | Biblioteca | Permitir cambiar archivos, días en la papelera y tamaño máximo de subida. |
 | `/admin/settings/playback` | Reproducción | Altura máxima, CRF, preset y transcodificaciones simultáneas. |
 | `/admin/settings/system` | Sistema | Búsqueda de actualizaciones, versiones y panel «Actualizar ahora». |
 | `/admin/update` | — | Endpoint JSON que usa el panel de Sistema para seguir el estado; no es una pantalla. |
@@ -50,7 +52,7 @@ El escaneo no vuelve a inspeccionar una pista cuyo tamaño y fecha no han cambia
 
 Las miniaturas se generan al verlas por primera vez y se guardan en `cache/thumbs`, junto a la base de datos y dentro del volumen persistente. Se pueden borrar sin riesgo: se volverán a generar. El servidor necesita FFmpeg y ffprobe instalados en el contenedor.
 
-El botón **Elegir…** abre un navegador de carpetas del servidor. Muestra las raíces permitidas, permite bajar por las subcarpetas, subir con **Subir**, moverse con las migas de pan y confirmar con **Elegir esta carpeta**. Solo lista directorios, no sigue enlaces que salgan de las raíces y limita el listado a 1000 entradas. También puedes escribir la ruta a mano sin usar JavaScript. El contenedor monta `CINECAT_MEDIA_PATH` completo y en solo lectura en `/media`.
+El botón **Elegir…** abre un navegador de carpetas del servidor. Muestra las raíces permitidas, permite bajar por las subcarpetas, subir con **Subir**, moverse con las migas de pan y confirmar con **Elegir esta carpeta**. Solo lista directorios, no sigue enlaces que salgan de las raíces y limita el listado a 1000 entradas. También puedes escribir la ruta a mano sin usar JavaScript. El contenedor monta `CINECAT_MEDIA_PATH` completo en `/media`, en solo lectura salvo que se active la subida (ver «Subir archivos y papelera»).
 
 Las carpetas se validan contra `CINECAT_MEDIA_ROOTS`: una lista de raíces separadas por `:` en Linux y `;` en Windows (por defecto `/media`). Una ruta fuera de esas raíces, inexistente, que no sea un directorio, repetida o solapada con otra se rechaza. Quitar una carpeta borra sus fichas de la base de datos, pero no toca los archivos del disco.
 
@@ -104,6 +106,9 @@ Los ajustes se guardan en la base de datos con validación por tipo. Se aplican 
 | `playback.crf` | Calidad (CRF) | Calidad de compresión del remux; un valor menor da más calidad y tamaño. | Entero 18–28 | `20` | En caliente; nuevas transcodificaciones. |
 | `playback.preset` | Velocidad de codificación | Preset de x264 usado al remuxear. | `veryfast`, `faster`, `fast` | `veryfast` | En caliente; nuevas transcodificaciones. |
 | `playback.max_transcodes` | Transcodificaciones simultáneas | Cuántas películas se pueden recodificar a la vez. Más de las que aguante el procesador provoca cortes al avanzar. | Entero 1–8 | `2` | En caliente; siguiente proceso. |
+| `library.allow_file_changes` | Permitir cambiar archivos | Permite subir archivos y moverlos a la papelera; exige montar la biblioteca en lectura y escritura. | Booleano | `false` | En caliente. |
+| `trash.retention_days` | Días en la papelera | Tiempo que se conservan antes de purgarlos definitivamente. | Entero 1–90 | `14` | En caliente; siguiente purga diaria. |
+| `library.upload_max_gb` | Tamaño máximo de subida (GB) | Tamaño máximo de cada archivo subido. | Entero 1–500 | `50` | En caliente; siguiente subida. |
 | `system.check_updates` | Buscar actualizaciones | Comprueba si hay versiones nuevas; implica una conexión saliente opcional que debe activar el administrador. | Booleano | `false` | En caliente; activa la comprobación periódica y la inmediata al guardar. |
 
 `scan.interval` puede tener un valor inicial distinto si se define `CINECAT_SCAN_INTERVAL`; el valor guardado en la base manda sobre el defecto de entorno.
@@ -124,10 +129,21 @@ Leídas por el servidor:
 | `CINECAT_ADMIN_PASSWORD` | vacío | Contraseña del `admin` creado en el primer arranque; si falta, se genera y se imprime una vez. |
 | `CINECAT_RUN_DIR` | `/run/cinecat-update` | Directorio compartido para las peticiones de actualización. |
 | `CINECAT_TRUSTED_PROXIES` | loopback y redes privadas | Redes desde las que se acepta `X-Forwarded-For`; lista separada por comas de CIDR o IP. |
+| `CINECAT_FILE_UID` / `CINECAT_FILE_GID` | vacío | Propietario numérico de lo que el servidor crea en los discos (subidas, carpetas, papelera). |
 
-En Docker, además: `CINECAT_MEDIA_PATH` (ruta del host montada en `/media`), `CINECAT_MEDIA_ROOTS` (raíces visibles dentro del contenedor), `CINECAT_API_PORT` (`8080`) y `CINECAT_WEB_PORT` (`8081`). El contenedor web usa `ADDRESS_HEADER=X-Forwarded-For` y `XFF_DEPTH=1` (número de proxies de confianza delante de la web); `PUBLIC_API_URL` y `PROTOCOL_HEADER` también son del contenedor web. No hay variables para la ruta de FFmpeg, CORS, usuarios ni límites de HLS.
+En Docker, además: `CINECAT_MEDIA_PATH` (ruta del host montada en `/media`), `CINECAT_MEDIA_ROOTS` (raíces visibles dentro del contenedor), `CINECAT_API_PORT` (`8080`), `CINECAT_WEB_PORT` (`8081`) y `CINECAT_MEDIA_MODE` (`ro`; `rw` para subir y usar la papelera). El contenedor web usa `ADDRESS_HEADER=X-Forwarded-For` y `XFF_DEPTH=1` (número de proxies de confianza delante de la web) y `BODY_SIZE_LIMIT=Infinity` (para las subidas); `PUBLIC_API_URL` y `PROTOCOL_HEADER` también son del contenedor web. No hay variables para la ruta de FFmpeg, CORS, usuarios ni límites de HLS.
 
 Cada usuario tiene sus propias listas de **Favoritos** y **Próximas a ver**; no se comparten entre cuentas.
+
+## Subir archivos y papelera
+
+Desactivado por defecto. Para usarlo hacen falta dos cosas: montar la biblioteca en lectura y escritura (`CINECAT_MEDIA_MODE=rw` en el `.env` del Debian y volver a levantar los contenedores) y activar **Permitir cambiar archivos** en Administración → Biblioteca. Con cualquiera de las dos apagada, la web muestra el motivo y no toca el disco. Con `rw`, cualquier administrador de Cinecat puede escribir en tus discos: protege bien esa cuenta.
+
+- **Subir:** Administración → Bibliotecas → **Subir archivos** en una biblioteca de películas y series o de vídeos. Elige la carpeta de destino (y, si quieres, una carpeta nueva dentro), selecciona uno o varios vídeos o subtítulos (`.srt`, `.vtt`, `.ass`, `.ssa`, `.sub`, `.idx`) y pulsa **Subir**. Cada archivo se escribe primero como `.nombre.part` y se renombra al terminar; nunca se sobrescribe uno existente. Al acabar se lanza un escaneo. Límite: **Tamaño máximo de subida (GB)** (50 por defecto); se rechaza si no queda espacio para el archivo más 1 GB de margen. No cierres la página hasta que termine.
+- **Mover a la papelera:** en la ficha, **Mover a la papelera**. Nada se borra: el vídeo y sus subtítulos (o su carpeta, si es una película o un vídeo cuya carpeta no contiene otros vídeos) se mueven a `.cinecat-papelera`, en la raíz de la carpeta de la biblioteca y en el mismo disco. La ficha desaparece de los listados.
+- **Papelera:** Administración → Papelera. **Restaurar** devuelve los archivos a su sitio y la ficha con su visto, progreso, listas, colecciones y preferencias (si la ruta original está ocupada, no hace nada y lo avisa). **Eliminar definitivamente** borra del disco. Lo que supera **Días en la papelera** (14 por defecto) se borra solo cada día.
+- **Propietario:** el contenedor corre como root. Define `CINECAT_FILE_UID` y `CINECAT_FILE_GID` (los de `ls -ln /media`) para que lo subido y la papelera queden a nombre de tu usuario y grupo.
+- Solo vídeo: la música no se puede subir ni mover a la papelera desde Cinecat.
 
 ## Actualizar el servidor
 
@@ -142,4 +158,4 @@ Cada usuario tiene sus propias listas de **Favoritos** y **Próximas a ver**; no
 - No hay permisos por biblioteca: cualquier usuario autenticado ve todo el catálogo.
 - No hay pantalla para crear usuarios ni para revocar sesiones.
 - El servidor no envía CORS; el despliegue con Apache funciona por compartir origen.
-- `/media` está en solo lectura: la aplicación no sube, mueve ni borra archivos.
+- Con `CINECAT_MEDIA_MODE=rw`, un administrador puede subir y mover a la papelera; la eliminación definitiva solo afecta a `.cinecat-papelera`.

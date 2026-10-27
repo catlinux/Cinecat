@@ -19,7 +19,7 @@ Versión actual: **0.20.0**. Esta página resume el estado real del código, no 
 | Música | Favoritos de música | ⬜ | reutilizará el sistema de favoritos |
 | Música | Conversión de formatos no compatibles | ⬜ | transcodificación con FFmpeg |
 | Música | Reproducción sin cortes entre pistas | ⬜ | gapless |
-| Servidor y biblioteca | Subir o borrar archivos con papelera | ⬜ | `/media` se monta en solo lectura. |
+| Servidor y biblioteca | Subir o borrar archivos con papelera | ✅ 0.21.0 | Solo vídeo; desactivado por defecto (montaje `rw` y ajuste). |
 | Identificación y metadatos | TMDB como fuente principal en castellano, con caché | ✅ 0.11.0 | OMDb queda como respaldo si no hay TMDB; OMDb solo rellena sinopsis y cartel de películas. |
 | Identificación y metadatos | Identificación automática, corrección manual y «no es ninguna» | ✅ 0.11.0 | `match_status`: `auto`, `manual`, `none` o vacío; umbral configurable. |
 | Identificación y metadatos | Reparto y equipo con foto y personaje | ✅ 0.12.0 | Películas y series; las fichas antiguas se rellenan desde la caché de TMDB. |
@@ -58,14 +58,13 @@ El orden sale de los planes de `.agents/plans`; no hay fechas ni versiones compr
 
 1. **Favoritos y próximas a ver:** API, tarjetas y páginas.
 2. **Colecciones desde la ficha de película** y **búsqueda/identificación manual de colecciones en TMDB**, con «faltan en tu biblioteca».
-3. **Subida y borrado de archivos con papelera**, con retención y restauración.
-4. **Usuarios** (crear, rol, restablecer contraseña, borrar) y **perfil** con personalización del portal.
-5. **Sesiones/dispositivos, actividad y copias de seguridad** desde administración.
-6. **Subtítulos subidos por el usuario** y diseño de subtítulos que hoy no se admiten.
-7. **Complementos**, todavía en fase de diseño.
-8. **DLNA/UPnP**, todavía en fase de diseño.
-9. **Tipos de biblioteca** (por ejemplo, música o fotos) cuando se aborde el modelo.
-10. **Clientes Android y Android TV**.
+3. **Usuarios** (crear, rol, restablecer contraseña, borrar) y **perfil** con personalización del portal.
+4. **Sesiones/dispositivos, actividad y copias de seguridad** desde administración.
+5. **Subtítulos subidos por el usuario** y diseño de subtítulos que hoy no se admiten.
+6. **Complementos**, todavía en fase de diseño.
+7. **DLNA/UPnP**, todavía en fase de diseño.
+8. **Tipos de biblioteca** (por ejemplo, música o fotos) cuando se aborde el modelo.
+9. **Clientes Android y Android TV**.
 
 ## Limitaciones y riesgos conocidos
 
@@ -80,7 +79,7 @@ El orden sale de los planes de `.agents/plans`; no hay fechas ni versiones compr
 - **Subtítulos:** solo de texto; PGS/VobSub se ignoran. El HLS no lleva una pista de subtítulos separada, se sirven como WebVTT.
 - **Tests HLS reales:** se saltan sin `ffmpeg`/`ffprobe` en PATH y no hay CI que los ejecute.
 - **TTL de TMDB:** la caché de 7 días es un valor de partida no verificado contra los términos vigentes. OMDb solo se usa como respaldo y tiene cuota diaria.
-- **Medios en solo lectura:** no se pueden subir, mover ni borrar archivos desde Cinecat.
+- **Cambios en los discos:** subir y mover a la papelera exige montar `/media` en lectura y escritura; la música no se puede subir ni mover.
 - **Cambio de contraseña:** no invalida las demás sesiones abiertas.
 - **URLs de reproducción:** duran 8 horas, no están ligadas al usuario y dejan de valer al reiniciar el servidor porque la clave HMAC es por proceso.
 - **Actualizador automático:** solo funciona si se instaló el servicio del host; el repositorio no puede comprobar si está activo en un servidor concreto.

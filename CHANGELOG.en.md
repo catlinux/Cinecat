@@ -7,6 +7,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-10-27
+
 ### Added
 
 - Upload files from the web: Administration → Libraries → "Upload files" on video and clip libraries (destination folder with the folder picker, optional new folder, several files with a progress bar and cancel). The web streams each file to the server.
@@ -17,6 +19,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ### Changed
 
+- Deployment: the `/media` mount depends on `CINECAT_MEDIA_MODE` (`ro` by default, `rw` to upload and use the trash); new `CINECAT_FILE_UID`/`CINECAT_FILE_GID` variables, and the web container accepts large bodies (`BODY_SIZE_LIMIT=Infinity`). Documented under Administration → "Uploading files and trash".
 - Administration → System: "Update now" now opens a confirmation dialog (with "Cancel" and "Update now") instead of a collapsible with a second button. Without JavaScript the two-step fallback is kept.
 
 ## [0.20.0] - 2026-10-27

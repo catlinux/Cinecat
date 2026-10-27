@@ -17,7 +17,6 @@ This file contains only work that is still open. Published work is in the [CHANG
 - **Collections from a movie page** (add, remove and create without leaving the page).
 - **Identify collections on TMDB:** manual search, synopsis and "missing from your library".
 - **Libraries with multiple folders** and a **folder browser** to choose paths from the web.
-- **File upload and deletion with a trash bin:** retention, restore, write permissions and proxy size warnings.
 - **Users and profile:** user CRUD, own profile, portal customisation, open sessions and history.
 - **Sessions, devices, activity and backups** in administration.
 - **User-uploaded subtitles:** needs a design first; today only embedded text and `.srt`/`.vtt`/`.ass` files next to the video are read.
@@ -52,7 +51,7 @@ This file contains only work that is still open. Published work is in the [CHANG
 
 - An inactive Android app from 2015 called "CineCat" exists (F-Droid, Catalan film catalogue; no trademark). The Cinecat name is kept; minor confusion risk.
 - **No CORS:** the server sends no `Access-Control-*` headers; the deployment relies on Apache serving the API and web app under the same origin.
-- **Read-only media:** `/media` is mounted `:ro`; the application cannot upload, delete or move files.
+- **Writing to disks:** uploads and the trash require `CINECAT_MEDIA_MODE=rw`; music cannot be uploaded or moved to the trash.
 - **Software only:** transcoding uses libx264; there is no hardware acceleration or H.264 copy.
 - **Cache and quotas:** the TMDB TTL is a starting value and OMDb has a daily quota; TMDB requires attribution (the "About" screen is missing).
 - **Manually corrected series:** scans do not touch them; missing seasons or episodes are not filled automatically.

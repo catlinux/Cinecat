@@ -17,7 +17,6 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 - **Colecciones desde la ficha de película** (añadir, quitar y crear sin salir de la ficha).
 - **Identificar colecciones en TMDB:** búsqueda manual, sinopsis y «faltan en tu biblioteca».
 - **Bibliotecas con varias carpetas** y **navegador de carpetas** para elegir rutas desde la web.
-- **Subida y borrado de archivos con papelera:** retención, restauración, permisos de escritura y aviso de límites del proxy.
 - **Usuarios y perfil:** CRUD de usuarios, perfil propio, personalización del portal, sesiones abiertas e historial.
 - **Sesiones, dispositivos, actividad y copias de seguridad** en administración.
 - **Subtítulos subidos por el usuario:** requiere diseño previo; hoy solo se leen incrustados de texto o archivos `.srt`/`.vtt`/`.ass` junto al vídeo.
@@ -52,7 +51,7 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 
 - Existe una app Android inactiva desde 2015 llamada «CineCat» (F-Droid, catálogo de cine catalán; sin marca registrada). Se mantiene el nombre Cinecat; riesgo de confusión menor.
 - **Sin CORS:** el servidor no envía cabeceras `Access-Control-*`; el despliegue depende de que Apache sirva la API y la web bajo el mismo origen.
-- **Medios en solo lectura:** `/media` se monta `:ro`; no se puede subir, borrar ni mover desde la aplicación.
+- **Escritura en los discos:** subir y la papelera exigen `CINECAT_MEDIA_MODE=rw`; la música no se puede subir ni mover a la papelera.
 - **Solo software:** la transcodificación usa libx264; no hay aceleración por hardware ni copia H.264.
 - **Caché y cuotas:** el TTL de TMDB es un valor de partida y OMDb tiene cuota diaria; TMDB exige atribución (falta la pantalla «Acerca de»).
 - **Series corregidas a mano:** el escaneo no las vuelve a tocar; si faltan temporadas o episodios, no se rellenan solos.

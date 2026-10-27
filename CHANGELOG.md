@@ -7,6 +7,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.21.0] - 2026-10-27
+
 ### Añadido
 
 - Subir archivos desde la web: Administración → Bibliotecas → «Subir archivos» en las bibliotecas de vídeo y clips (carpeta de destino con el selector de carpetas, carpeta nueva opcional, varios archivos con barra de progreso y cancelación). La web reenvía cada archivo en streaming al servidor.
@@ -17,6 +19,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ### Cambiado
 
+- Despliegue: el montaje de `/media` depende de `CINECAT_MEDIA_MODE` (`ro` por defecto, `rw` para subir y usar la papelera); nuevas variables `CINECAT_FILE_UID`/`CINECAT_FILE_GID`, y el contenedor web acepta cuerpos grandes (`BODY_SIZE_LIMIT=Infinity`). Documentado en Administración → «Subir archivos y papelera».
 - Administración → Sistema: «Actualizar ahora» abre ahora un cuadro de confirmación (con «Cancelar» y «Actualizar ahora») en lugar de un desplegable con un segundo botón. Sin JavaScript se conserva el respaldo de dos pasos.
 
 ## [0.20.0] - 2026-10-27
