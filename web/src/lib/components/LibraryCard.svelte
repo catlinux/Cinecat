@@ -4,6 +4,7 @@
 	import type { Library } from '$lib/api';
 	import { libraryKindLabel, type LibraryFormState } from '$lib/libraries';
 	import FolderBrowser from './FolderBrowser.svelte';
+	import LibraryUploadPanel from './LibraryUploadPanel.svelte';
 
 	let {
 		library,
@@ -157,6 +158,10 @@
 	</form>
 
 	<div class="library-actions">
+		{#if library.kind !== 'music'}
+			<LibraryUploadPanel {library} />
+		{/if}
+
 		<details class="library-action">
 			<summary class="button button-secondary">Renombrar</summary>
 			<form method="POST" action="?/rename" use:enhance={enhanceSubmit}>

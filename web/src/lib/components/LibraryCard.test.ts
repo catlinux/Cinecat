@@ -32,6 +32,7 @@ describe('tarjeta de biblioteca', () => {
 		expect(html).toContain('Renombrar');
 		expect(html).toContain('Escanear');
 		expect(html).toContain('Borrar biblioteca');
+		expect(html).toContain('Subir archivos');
 	});
 
 	it('incluye la confirmación de quitar carpeta y de borrar biblioteca', () => {
@@ -57,6 +58,7 @@ describe('tarjeta de biblioteca', () => {
 
 		expect(html).toContain('Música');
 		expect(html).toContain('3 pistas');
+		expect(html).not.toContain('Subir archivos');
 	});
 
 	it('conserva el nombre y la ruta escritos tras un error', () => {

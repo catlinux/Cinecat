@@ -9,6 +9,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ### Added
 
+- Upload files from the web: Administration → Libraries → "Upload files" on video and clip libraries (destination folder with the folder picker, optional new folder, several files with a progress bar and cancel). The web streams each file to the server.
 - Trash on the web: "Move to trash" button on the item page (administrators only, with confirmation) and an Administration → Trash page to restore, delete permanently or empty expired entries. New Administration → Library section with "Allow file changes" and "Days in the trash".
 
 - Video trash on the server (administrators only, with the "Allow file changes" setting): `DELETE /api/v1/items/{id}` moves the movie, episode or clip (with its subtitles, or its folder when it holds no other videos) to `.cinecat-papelera` on the same disk, without deleting anything; `GET /api/v1/trash`, `POST /api/v1/trash/{id}/restore` (brings back the file and the entry with watched state, progress, lists, collections and preferences), `DELETE /api/v1/trash/{id}` and `POST /api/v1/trash/purge`. Daily purge according to "Days in the trash" (14 by default). Migration 0018.
