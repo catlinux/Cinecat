@@ -42,6 +42,7 @@ const KeyScanInterval = "scan.interval"
 // Claves de la gestión de archivos de la biblioteca.
 const (
 	KeyAllowFileChanges = "library.allow_file_changes"
+	KeyUploadMaxGB      = "library.upload_max_gb"
 	KeyTrashRetention   = "trash.retention_days"
 )
 
@@ -341,6 +342,16 @@ var definitions = []Definition{
 		Description: "Permite mover archivos de la biblioteca a la papelera; exige montar la biblioteca en lectura y escritura.",
 		Type:        TypeBool,
 		Default:     false,
+	},
+	{
+		Key:         KeyUploadMaxGB,
+		Section:     "library",
+		Label:       "Tamaño máximo de subida (GB)",
+		Description: "Tamaño máximo de cada archivo que se sube a la biblioteca. El valor se expresa en gigabytes.",
+		Type:        TypeInt,
+		Default:     50,
+		Min:         1,
+		Max:         500,
 	},
 	{
 		Key:         KeyTrashRetention,

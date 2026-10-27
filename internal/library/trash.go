@@ -350,6 +350,7 @@ func (a *API) applyTrashMoves(plan trashPlan) error {
 	if info.Mode()&os.ModeSymlink != 0 {
 		return errTrashUnsafe
 	}
+	applyConfiguredOwner(trashDir)
 	moved := make([]trashMove, 0, len(plan.Moves))
 	for _, move := range plan.Moves {
 		if err := os.Rename(move.Original, move.Trash); err != nil {
@@ -625,10 +626,12 @@ func (a *API) restoreTrash(ctx context.Context, trashID int64, actor string) (in
 	}
 	moved := make([]trashMove, 0, len(restores))
 	for _, restore := range restores {
-		if err := os.MkdirAll(filepath.Dir(restore.Original), 0o775); err != nil {
+		parent := filepath.Dir(restore.Original)
+		if err := os.MkdirAll(parent, 0o775); err != nil {
 			undoTrashMoves(moved)
 			return 0, err
 		}
+		applyConfiguredOwner(parent)
 		if err := os.Rename(restore.Trash, restore.Original); err != nil {
 			undoTrashMoves(moved)
 			return 0, fmt.Errorf("library: restaurar desde la papelera: %w", err)

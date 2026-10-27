@@ -95,6 +95,7 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.Handle("DELETE /api/v1/libraries/{id}", a.requireAdmin(a.handleDeleteLibrary))
 	mux.Handle("POST /api/v1/libraries/{id}/paths", a.requireAdmin(a.handleAddLibraryPath))
 	mux.Handle("DELETE /api/v1/libraries/{id}/paths/{pathId}", a.requireAdmin(a.handleDeleteLibraryPath))
+	mux.Handle("PUT /api/v1/libraries/{id}/files", a.requireAdmin(a.handleLibraryFileUpload))
 	mux.Handle("GET /api/v1/libraries/{id}/browse", a.requireSession(a.handleClipBrowse))
 	mux.Handle("GET /api/v1/music/artists", a.requireSession(a.handleMusicArtists))
 	mux.Handle("GET /api/v1/music/artists/{id}", a.requireSession(a.handleMusicArtist))

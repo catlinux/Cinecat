@@ -48,8 +48,8 @@ func raw(value string) json.RawMessage {
 
 func TestDefinitions(t *testing.T) {
 	definitions := Definitions()
-	if len(definitions) != 25 {
-		t.Fatalf("ajustes = %d, se esperaban 25", len(definitions))
+	if len(definitions) != 26 {
+		t.Fatalf("ajustes = %d, se esperaban 26", len(definitions))
 	}
 
 	seen := make(map[string]bool)
@@ -162,6 +162,8 @@ func TestValidate(t *testing.T) {
 		{"transcodificaciones mínimo", "playback.max_transcodes", "1", 1},
 		{"transcodificaciones máximo", "playback.max_transcodes", "8", 8},
 		{"cambiar archivos", KeyAllowFileChanges, "true", true},
+		{"subida mínima", KeyUploadMaxGB, "1", 1},
+		{"subida máxima", KeyUploadMaxGB, "500", 500},
 		{"retención mínima", KeyTrashRetention, "1", 1},
 		{"retención máxima", KeyTrashRetention, "90", 90},
 	}
@@ -212,6 +214,8 @@ func TestValidate(t *testing.T) {
 		{"transcodificaciones fuera por abajo", "playback.max_transcodes", "0"},
 		{"transcodificaciones fuera por arriba", "playback.max_transcodes", "9"},
 		{"transcodificaciones decimal", "playback.max_transcodes", "2.5"},
+		{"subida fuera por abajo", KeyUploadMaxGB, "0"},
+		{"subida fuera por arriba", KeyUploadMaxGB, "501"},
 		{"retención fuera por abajo", KeyTrashRetention, "0"},
 		{"retención fuera por arriba", KeyTrashRetention, "91"},
 		{"valor null", "ui.show_series", "null"},

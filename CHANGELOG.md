@@ -10,6 +10,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 ### Añadido
 
 - Papelera de vídeos en el servidor (solo administradores y con el ajuste «Permitir cambiar archivos»): `DELETE /api/v1/items/{id}` mueve la película, el episodio o el clip (con sus subtítulos, o su carpeta si no contiene otros vídeos) a `.cinecat-papelera` en el mismo disco, sin borrar nada; `GET /api/v1/trash`, `POST /api/v1/trash/{id}/restore` (devuelve el archivo y la ficha con visto, progreso, listas, colecciones y preferencias), `DELETE /api/v1/trash/{id}` y `POST /api/v1/trash/purge`. Purga diaria según «Días en la papelera» (14 por defecto). Migración 0018.
+- Subida de archivos en el servidor: `PUT /api/v1/libraries/{id}/files?dir=…&name=…[&subdir=…]` guarda en streaming un vídeo o subtítulo en una carpeta de una biblioteca de vídeo (nunca sobrescribe; escribe en un `.part` y lo renombra al terminar), con límite «Tamaño máximo de subida (GB)» (50 por defecto), comprobación de espacio libre y escaneo posterior. `CINECAT_FILE_UID`/`CINECAT_FILE_GID` fijan el propietario de lo que crea el servidor.
 
 ### Cambiado
 

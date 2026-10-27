@@ -10,6 +10,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 ### Added
 
 - Video trash on the server (administrators only, with the "Allow file changes" setting): `DELETE /api/v1/items/{id}` moves the movie, episode or clip (with its subtitles, or its folder when it holds no other videos) to `.cinecat-papelera` on the same disk, without deleting anything; `GET /api/v1/trash`, `POST /api/v1/trash/{id}/restore` (brings back the file and the entry with watched state, progress, lists, collections and preferences), `DELETE /api/v1/trash/{id}` and `POST /api/v1/trash/purge`. Daily purge according to "Days in the trash" (14 by default). Migration 0018.
+- File upload on the server: `PUT /api/v1/libraries/{id}/files?dir=…&name=…[&subdir=…]` streams a video or subtitle into a folder of a video library (never overwrites; writes a `.part` file and renames it when done), with a "Maximum upload size (GB)" limit (50 by default), a free-space check and a scan afterwards. `CINECAT_FILE_UID`/`CINECAT_FILE_GID` set the owner of what the server creates.
 
 ### Changed
 
