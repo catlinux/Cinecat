@@ -8,10 +8,12 @@
 	export const adminNavItems: AdminNavItem[] = [
 		{ href: '/admin', label: 'Resumen' },
 		{ href: '/admin/libraries', label: 'Bibliotecas' },
+		{ href: '/admin/trash', label: 'Papelera' },
 		{ href: '/admin/settings/scan', label: 'Escaneo' },
 		{ href: '/admin/settings/metadata', label: 'Metadatos' },
 		{ href: '/admin/settings/ui', label: 'Interfaz' },
 		{ href: '/admin/settings/playback', label: 'Reproducción' },
+		{ href: '/admin/settings/library', label: 'Biblioteca' },
 		{ href: '/admin/settings/system', label: 'Sistema' },
 		{ href: '/admin/users', label: 'Usuarios', soon: true }
 	];

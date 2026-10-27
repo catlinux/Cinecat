@@ -4302,6 +4302,98 @@ footer {
 	margin: 1.2rem 0 0;
 }
 
+.item-admin-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+	margin-top: 2rem;
+}
+
+.item-trash-trigger {
+	margin-top: 0;
+	color: var(--naranja);
+}
+
+.trash-page {
+	width: min(72rem, 100%);
+}
+
+.trash-toolbar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	margin-top: 1.5rem;
+}
+
+.trash-toolbar .admin-note {
+	margin: 0;
+}
+
+.trash-toolbar .button {
+	margin-top: 0;
+}
+
+.trash-list {
+	margin-top: 1rem;
+}
+
+.trash-item {
+	align-items: flex-start;
+}
+
+.trash-copy {
+	min-width: 0;
+	flex: 1 1 22rem;
+}
+
+.trash-meta {
+	margin: 0.2rem 0 0;
+	color: var(--texto-tenue);
+	font-size: 0.78rem;
+	line-height: 1.4;
+}
+
+.trash-expiry {
+	margin: 0.25rem 0 0;
+	color: var(--naranja);
+	font-size: 0.7rem;
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.trash-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.trash-actions form {
+	margin: 0;
+}
+
+.trash-actions .button {
+	margin-top: 0;
+}
+
+.trash-empty {
+	margin-top: 1.5rem;
+}
+
+@media (max-width: 700px) {
+	.trash-toolbar {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	.trash-actions {
+		width: 100%;
+	}
+}
+
 @media (max-width: 900px) {
 	.filters-form--compact {
 		grid-template-columns: repeat(2, minmax(0, 1fr));

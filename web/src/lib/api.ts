@@ -732,6 +732,31 @@ export interface UpdateInfo {
 	status: UpdateStatus;
 }
 
+export interface TrashItem {
+	id: number;
+	library_id: number;
+	title: string;
+	year: number | null;
+	kind: string;
+	original_path: string;
+	moved_kind: 'file' | 'folder';
+	deleted_by: string | null;
+	deleted_at: string;
+	expires_at: string;
+}
+
+export interface TrashResponse {
+	items: TrashItem[];
+}
+
+export interface TrashRestoreResponse {
+	item_id: number;
+}
+
+export interface TrashPurgeResponse {
+	purged: number;
+}
+
 // Error del servidor o de red. status 0 significa que no se pudo contactar.
 export class ApiError extends Error {
 	readonly status: number;
@@ -903,6 +928,29 @@ export class ApiClient {
 
 	async getItem(id: number, token: string): Promise<MediaItem> {
 		return this.get<MediaItem>(`/api/v1/items/${id}`, token);
+	}
+
+	async trashItem(id: number, token: string): Promise<TrashItem> {
+		return this.request<TrashItem>(`/api/v1/items/${id}`, {
+			method: 'DELETE',
+			token
+		});
+	}
+
+	async listTrash(token: string): Promise<TrashResponse> {
+		return this.get<TrashResponse>('/api/v1/trash', token);
+	}
+
+	async restoreTrash(id: number, token: string): Promise<TrashRestoreResponse> {
+		return this.post<TrashRestoreResponse>(`/api/v1/trash/${id}/restore`, undefined, token);
+	}
+
+	async deleteTrash(id: number, token: string): Promise<void> {
+		await this.delete(`/api/v1/trash/${id}`, token);
+	}
+
+	async purgeTrash(token: string): Promise<TrashPurgeResponse> {
+		return this.post<TrashPurgeResponse>('/api/v1/trash/purge', undefined, token);
 	}
 
 	async getItems(query: ItemsQuery, token: string): Promise<ItemsResponse> {

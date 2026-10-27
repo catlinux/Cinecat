@@ -9,6 +9,7 @@
 		PlayResponse
 	} from '$lib/api';
 	import CastRow from '$lib/components/CastRow.svelte';
+	import ConfirmActionDialog from '$lib/components/ConfirmActionDialog.svelte';
 	import EpisodeNav from '$lib/components/EpisodeNav.svelte';
 	import ItemFacts from '$lib/components/ItemFacts.svelte';
 	import PosterCard from '$lib/components/PosterCard.svelte';
@@ -113,6 +114,18 @@
 			.catch(() => '')
 	);
 </script>
+
+{#snippet trashDialog()}
+	<ConfirmActionDialog
+		id={`item-trash-${item.id}`}
+		triggerLabel="Mover a la papelera"
+		title="Mover a la papelera"
+		description="El archivo se moverá a la papelera de su disco y podrás restaurarlo durante los días configurados."
+		confirmLabel="Mover a la papelera"
+		action="?/papelera"
+		triggerClass="button button-secondary item-trash-trigger"
+	/>
+{/snippet}
 
 <svelte:head>
 	<title>{item.title} · {data.ui?.server_name ?? 'Cinecat'}</title>
@@ -248,6 +261,11 @@
 					<a class="text-link" href={`${seriesHref}?corregir=1`}>Corregir la serie</a>
 				</p>
 			{/if}
+			{#if data.isAdmin}
+				<div class="item-admin-actions">
+					{@render trashDialog()}
+				</div>
+			{/if}
 		</div>
 	</section>
 {:else if isClip}
@@ -327,6 +345,12 @@
 			{/if}
 
 			<FilePanel result={fileInfo} />
+
+			{#if data.isAdmin}
+				<div class="item-admin-actions">
+					{@render trashDialog()}
+				</div>
+			{/if}
 		</div>
 	</section>
 {:else}
@@ -498,6 +522,9 @@
 			{/if}
 
 			{#if isMovie && data.isAdmin}
+				<div class="item-admin-actions">
+					{@render trashDialog()}
+				</div>
 				<ImagePanel
 					{item}
 					open={imagePanelOpen}

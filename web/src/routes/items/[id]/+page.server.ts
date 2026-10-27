@@ -7,7 +7,8 @@ import type {
 	ImageKind,
 	ImageOptions,
 	MediaItem,
-	PlayResponse
+	PlayResponse,
+	TrashItem
 } from '$lib/api';
 import { ConfigurationError, createApiClient } from '$lib/api-factory';
 import { loadEpisodeNavigation } from '$lib/episode-navigation';
@@ -129,6 +130,30 @@ function imageKind(value: FormDataEntryValue | null): ImageKind | null {
 	return kind === 'poster' || kind === 'backdrop' ? kind : null;
 }
 
+function trashFailure(cause: unknown) {
+	if (cause instanceof ApiError) {
+		if (cause.status === 401) {
+			redirect(303, '/login');
+		}
+		if (cause.status === 403) {
+			return fail(403, {
+				message: cause.message || 'No se pudo mover el archivo a la papelera.'
+			});
+		}
+		if (cause.status === 400) {
+			return fail(400, {
+				message: cause.message || 'Este archivo no se puede mover a la papelera.'
+			});
+		}
+		if (cause.status === 404) {
+			return fail(404, { message: cause.message || 'Ítem no encontrado.' });
+		}
+	}
+	return fail(502, {
+		message: 'No se pudo mover el archivo a la papelera. Inténtalo de nuevo.'
+	});
+}
+
 function imageFailure(cause: unknown) {
 	if (cause instanceof ApiError) {
 		if (cause.status === 401) {
@@ -244,6 +269,21 @@ export const actions: Actions = {
 			success: true,
 			message: requested === '1' ? 'Marcada como vista.' : 'Desmarcada.'
 		};
+	},
+
+	papelera: async ({ locals, fetch, params }) => {
+		const token = requireSessionToken(locals);
+		const id = itemID(params);
+		if (id === null) {
+			return fail(404, { message: 'Ítem no encontrado.' });
+		}
+		let trash: TrashItem;
+		try {
+			trash = await createApiClient(fetch).trashItem(id, token);
+		} catch (err) {
+			return trashFailure(err);
+		}
+		redirect(303, `/admin/trash?movido=${trash.id}`);
 	},
 
 	candidates: async ({ request, locals, fetch, params }) => {

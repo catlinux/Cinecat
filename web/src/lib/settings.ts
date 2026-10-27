@@ -106,6 +106,7 @@ export const settingsSectionKeys = [
 	'metadata',
 	'ui',
 	'playback',
+	'library',
 	'system'
 ] as const;
 

@@ -390,6 +390,17 @@ describe('ficha de película', () => {
 		expect(user).not.toContain('Corregir ficha');
 	});
 
+	it('muestra la papelera solo a administradores', () => {
+		const admin = renderPage(makeItem(), { isAdmin: true });
+		expect(admin).toContain('Mover a la papelera');
+		expect(admin).toContain('El archivo se moverá a la papelera de su disco');
+		expect(admin).toContain('action="?/papelera"');
+		expect(admin).toContain('<dialog');
+
+		const user = renderPage(makeItem(), { isAdmin: false });
+		expect(user).not.toContain('Mover a la papelera');
+	});
+
 	it('lista los candidatos con su sinopsis recortada y el botón para elegirlos', () => {
 		const candidate: Candidate = {
 			tmdb_id: 238,
@@ -452,6 +463,49 @@ describe('acciones de la ficha', () => {
 		const [url, init] = fetchMock.mock.calls[0];
 		expect(url).toBe('http://api.test/api/v1/items/7/watched');
 		expect(init.method).toBe('DELETE');
+	});
+
+	it('mueve a la papelera y redirige a Administración', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(
+			jsonResponse({
+				id: 9,
+				library_id: 1,
+				title: 'El Padrino',
+				year: 1972,
+				kind: 'movie',
+				original_path: '/media/peliculas/El Padrino (1972).mkv',
+				moved_kind: 'file',
+				deleted_by: 'ana',
+				deleted_at: '2026-10-27T10:00:00Z',
+				expires_at: '2026-11-10T10:00:00Z'
+			})
+		);
+
+		await expect(actions.papelera!(actionEvent(fetchMock, 'papelera') as never)).rejects.toMatchObject({
+			status: 303,
+			location: '/admin/trash?movido=9'
+		});
+		const [url, init] = fetchMock.mock.calls[0];
+		expect(url).toBe('http://api.test/api/v1/items/7');
+		expect(init.method).toBe('DELETE');
+		expect(init.headers.Authorization).toBe('Bearer token-123');
+	});
+
+	it('muestra el error de la papelera y respeta el estado', async () => {
+		const forbidden = vi.fn().mockResolvedValue(jsonResponse({ error: 'cambios apagados' }, 403));
+		const result = (await actions.papelera!(actionEvent(forbidden, 'papelera') as never)) as {
+			status: number;
+			data: { message: string };
+		};
+		expect(result.status).toBe(403);
+		expect(result.data.message).toBe('cambios apagados');
+
+		const broken = vi.fn().mockResolvedValue(jsonResponse({ error: 'fallo' }, 500));
+		const brokenResult = (await actions.papelera!(
+			actionEvent(broken, 'papelera') as never
+		)) as { status: number; data: { message: string } };
+		expect(brokenResult.status).toBe(502);
+		expect(brokenResult.data.message).toContain('No se pudo mover');
 	});
 
 	it('fija una coincidencia con PUT', async () => {

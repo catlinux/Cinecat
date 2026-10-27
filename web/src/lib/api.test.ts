@@ -273,3 +273,50 @@ describe('ApiClient de listas', () => {
 		expect(fetchMock.mock.calls[2][1]?.method).toBe('DELETE');
 	});
 });
+
+describe('ApiClient de la papelera', () => {
+	it('mueve, lista, restaura, elimina y purga elementos', async () => {
+		const trash = {
+			id: 9,
+			library_id: 1,
+			title: 'Peli',
+			year: 2020,
+			kind: 'movie',
+			original_path: '/media/Peli.mkv',
+			moved_kind: 'file',
+			deleted_by: 'ana',
+			deleted_at: '2026-10-27T10:00:00Z',
+			expires_at: '2026-11-10T10:00:00Z'
+		};
+		const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+			if (init?.method === 'DELETE' && String(_input).endsWith('/api/v1/trash/9')) {
+				return new Response(null, { status: 204 });
+			}
+			if (init?.method === 'DELETE') {
+				return jsonResponse(trash);
+			}
+			if (String(_input).endsWith('/restore')) {
+				return jsonResponse({ item_id: 4 });
+			}
+			if (String(_input).endsWith('/purge')) {
+				return jsonResponse({ purged: 2 });
+			}
+			return jsonResponse({ items: [trash] });
+		});
+		const client = new ApiClient({ baseUrl: 'http://api.test', fetch: fetchMock });
+
+		await client.trashItem(4, 'token');
+		await client.listTrash('token');
+		await client.restoreTrash(9, 'token');
+		await client.deleteTrash(9, 'token');
+		await client.purgeTrash('token');
+
+		expect(fetchMock.mock.calls.map(([url, init]) => [String(url), init?.method ?? 'GET'])).toEqual([
+			['http://api.test/api/v1/items/4', 'DELETE'],
+			['http://api.test/api/v1/trash', 'GET'],
+			['http://api.test/api/v1/trash/9/restore', 'POST'],
+			['http://api.test/api/v1/trash/9', 'DELETE'],
+			['http://api.test/api/v1/trash/purge', 'POST']
+		]);
+	});
+});
