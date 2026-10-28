@@ -114,6 +114,7 @@ func main() {
 	}
 
 	authSvc := auth.New(st.DB(), auth.WithTrustedProxies(cfg.TrustedProxies))
+	go cleanupPairings(ctx, authSvc)
 	playSvc, err := playback.New(playback.Options{
 		Settings: func() playback.TranscodeSettings {
 			return playback.TranscodeSettings{
@@ -376,6 +377,25 @@ func scheduleScans(ctx context.Context, job scanStarter, initialDelay time.Durat
 	}
 }
 
+// cleanupPairings borra las vinculaciones caducadas o consumidas hace tiempo.
+func cleanupPairings(ctx context.Context, svc *auth.Service) {
+	if svc == nil {
+		return
+	}
+	ticker := time.NewTicker(time.Hour)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			if err := svc.CleanupPairings(ctx); err != nil {
+				log.Printf("cinecatd: limpiar vinculaciones: %v", err)
+			}
+		}
+	}
+}
+
 // tmdbCacheDir deja la caché junto a la base de datos para que viva en el
 // volumen de Docker y sobreviva a las actualizaciones. Con ":memory:" no hay
 // archivo junto al que guardarla.
@@ -443,6 +463,7 @@ func newHandlerWithBackup(
 		mux.Handle("GET /api/v1/auth/me", authSvc.CurrentUserHandler())
 		authSvc.RegisterUserRoutes(mux)
 		authSvc.RegisterSessionRoutes(mux)
+		authSvc.RegisterPairingRoutes(mux)
 	}
 	if api != nil {
 		api.Register(mux)

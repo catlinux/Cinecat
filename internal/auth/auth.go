@@ -97,6 +97,11 @@ type Service struct {
 	mu         sync.Mutex
 	attempts   map[string]*attempt
 	ipAttempts map[string]*attempt
+
+	pairIPLimiter      *rateLimiter
+	pairApproveLimiter *rateLimiter
+	pairTokenLimiter   *rateLimiter
+	pairCreateMu       sync.Mutex
 }
 
 type attempt struct {
@@ -178,6 +183,10 @@ func New(db *sql.DB, opts ...Option) *Service {
 		trusted:       DefaultTrustedProxies(),
 		attempts:      make(map[string]*attempt),
 		ipAttempts:    make(map[string]*attempt),
+
+		pairIPLimiter:      newRateLimiter(pairCreateLimit, pairCreateWindow),
+		pairApproveLimiter: newRateLimiter(pairApproveLimit, pairFailureWindow),
+		pairTokenLimiter:   newRateLimiter(pairTokenLimit, pairFailureWindow),
 	}
 	for _, opt := range opts {
 		opt(s)
@@ -343,6 +352,21 @@ func (s *Service) LoginWithDevice(
 	}
 	s.resetFailures(key)
 
+	return s.createSession(ctx, s.db, user.ID, client, deviceName, now)
+}
+
+type sessionWriter interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+}
+
+// createSession crea la fila de una sesión y devuelve el token en claro.
+func (s *Service) createSession(
+	ctx context.Context,
+	writer sessionWriter,
+	userID int64,
+	client, deviceName string,
+	now time.Time,
+) (LoginResult, error) {
 	token, err := newToken()
 	if err != nil {
 		return LoginResult{}, err
@@ -350,11 +374,11 @@ func (s *Service) LoginWithDevice(
 	expiresAt := now.Add(s.sessionTTLFor(client)).UTC().Truncate(time.Millisecond)
 	createdAt := formatTime(now)
 
-	result, err := s.db.ExecContext(ctx,
+	result, err := writer.ExecContext(ctx,
 		`INSERT INTO sessions (
 			user_id, token_hash, expires_at, device_name, client, created_at, last_seen_at
 		) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		user.ID, hashToken(token), formatTime(expiresAt), deviceName, client, createdAt, createdAt,
+		userID, hashToken(token), formatTime(expiresAt), deviceName, client, createdAt, createdAt,
 	)
 	if err != nil {
 		return LoginResult{}, fmt.Errorf("auth: crear sesión: %w", err)
@@ -363,7 +387,6 @@ func (s *Service) LoginWithDevice(
 	if err != nil {
 		return LoginResult{}, fmt.Errorf("auth: id de la sesión creada: %w", err)
 	}
-
 	return LoginResult{Token: token, ExpiresAt: expiresAt, SessionID: sessionID}, nil
 }
 

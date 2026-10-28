@@ -147,6 +147,171 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/auth/pair:
+    post:
+      summary: Inicia la vinculación de un dispositivo
+      description: |
+        Crea un código temporal para vincular un cliente nativo. El dispositivo
+        debe guardar `secret`: es el único que puede canjear el token. El código
+        solo sirve para que un usuario con sesión lo apruebe.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PairCreateRequest'
+      responses:
+        '201':
+          description: Vinculación pendiente de aprobación
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PairCreateResponse'
+        '400':
+          description: Cliente no válido o petición incorrecta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Demasiadas vinculaciones desde esta IP
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Demasiadas vinculaciones pendientes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/auth/pair/approve:
+    post:
+      summary: Previsualiza o aprueba una vinculación
+      description: |
+        Con `confirm: false` muestra el dispositivo que solicita la vinculación
+        sin aprobarla. Con `confirm: true` la aprueba para el usuario de la
+        sesión. Un código inexistente, caducado, ya aprobado o consumido
+        responde siempre con el mismo 404.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PairApproveRequest'
+      responses:
+        '200':
+          description: Vista previa o vinculación aprobada
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/PairApprovePreview'
+                  - $ref: '#/components/schemas/PairApproveResponse'
+        '400':
+          description: Código no válido o petición incorrecta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Código no válido o caducado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Demasiados intentos fallidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/auth/pair/token:
+    post:
+      summary: Canjea una vinculación aprobada
+      description: |
+        Entrega una única vez la sesión del dispositivo. Mientras está
+        pendiente responde 428 con `Retry-After`; si el secreto no coincide,
+        404; si caducó, se consumió o el usuario aprobador ya no está activo,
+        410. El sondeo demasiado rápido y los intentos fallidos de secreto
+        pueden responder 429.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PairTokenRequest'
+      responses:
+        '200':
+          description: Sesión del dispositivo creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PairTokenResponse'
+        '400':
+          description: Petición incorrecta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Vinculación o secreto no válidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '410':
+          description: Vinculación caducada, consumida o usuario no disponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '428':
+          description: Vinculación pendiente de aprobación
+          headers:
+            Retry-After:
+              description: Segundos recomendados antes de volver a preguntar.
+              schema:
+                type: integer
+                minimum: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Demasiados intentos o sondeo demasiado rápido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/auth/sessions:
     get:
       summary: Lista las sesiones del usuario autenticado
@@ -4467,6 +4632,142 @@ components:
           type: integer
           format: int64
           description: Identificador de la sesión creada.
+      additionalProperties: false
+    PairCreateRequest:
+      type: object
+      required:
+        - device_name
+        - client
+      properties:
+        device_name:
+          type: string
+          maxLength: 80
+        client:
+          type: string
+          enum:
+            - android
+            - androidtv
+      additionalProperties: false
+    PairCreateResponse:
+      type: object
+      required:
+        - pair_id
+        - secret
+        - code
+        - verification_path
+        - expires_in
+        - interval
+      properties:
+        pair_id:
+          type: string
+          description: Identificador público de la vinculación.
+        secret:
+          type: string
+          description: Secreto que solo debe conservar el dispositivo.
+        code:
+          type: string
+          pattern: '^[A-HJ-KM-NP-Z2-9]{4}-[A-HJ-KM-NP-Z2-9]{4}$'
+        verification_path:
+          type: string
+          example: /vincular
+        expires_in:
+          type: integer
+          minimum: 1
+          description: Segundos que dura la vinculación.
+        interval:
+          type: integer
+          minimum: 1
+          description: Segundos recomendados entre sondeos.
+      additionalProperties: false
+    PairApproveRequest:
+      type: object
+      required:
+        - code
+        - confirm
+      properties:
+        code:
+          type: string
+          description: Código mostrado por el dispositivo; se normaliza.
+        confirm:
+          type: boolean
+          description: Si es falso solo se muestra la vista previa.
+      additionalProperties: false
+    PairApprovePreview:
+      type: object
+      required:
+        - device_name
+        - client
+        - expires_at
+      properties:
+        device_name:
+          type: string
+        client:
+          type: string
+          enum:
+            - android
+            - androidtv
+        expires_at:
+          type: string
+          format: date-time
+      additionalProperties: false
+    PairApproveResponse:
+      type: object
+      required:
+        - device_name
+        - client
+      properties:
+        device_name:
+          type: string
+        client:
+          type: string
+          enum:
+            - android
+            - androidtv
+      additionalProperties: false
+    PairTokenRequest:
+      type: object
+      required:
+        - pair_id
+        - secret
+      properties:
+        pair_id:
+          type: string
+        secret:
+          type: string
+      additionalProperties: false
+    PairTokenResponse:
+      type: object
+      required:
+        - token
+        - expires_at
+        - session_id
+        - user
+      properties:
+        token:
+          type: string
+          description: Token de sesión en claro; no se vuelve a poder consultar.
+        expires_at:
+          type: string
+          format: date-time
+        session_id:
+          type: integer
+          format: int64
+        user:
+          $ref: '#/components/schemas/PairUser'
+      additionalProperties: false
+    PairUser:
+      type: object
+      required:
+        - username
+        - role
+      properties:
+        username:
+          type: string
+        role:
+          type: string
+          enum:
+            - admin
+            - user
       additionalProperties: false
     Session:
       type: object
