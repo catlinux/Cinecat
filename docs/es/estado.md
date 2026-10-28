@@ -50,7 +50,8 @@ Versión actual: **0.20.0**. Esta página resume el estado real del código, no 
 | Interfaz web | Temas claro/oscuro/sistema, menú lateral o superior y diseño adaptable | ✅ 0.2.0 / 0.14.0 | La preferencia de tema se guarda en el navegador. |
 | Interfaz web | Favoritos, lista de próximas, búsqueda global y perfiles | ⬜ | No implementados. |
 | Administración | Resumen, bibliotecas, escaneo, ajustes, corrección e imágenes | ✅ 0.11.0 / 0.12.0 | Los ajustes se aplican sin reiniciar. |
-| Administración | Usuarios, sesiones, dispositivos, actividad y copias de seguridad | ⬜ | «Usuarios» aparece como «Pronto»; no hay CRUD de usuarios. |
+| Administración | Copia diaria de la base de datos | ✅ 0.25.0 | `VACUUM INTO` en `/data/backups` con retención configurable; lista y «hacer copia ahora» en Ajustes → Sistema. |
+| Administración | Sesiones, dispositivos y actividad | ⬜ | «Usuarios» aparece como «Pronto»; no hay CRUD de usuarios. |
 | Actualizaciones | Comprobar etiquetas y notas desde el servidor | ✅ 0.14.0 | Etiquetas `vX.Y.Z` de GitHub; `system.check_updates` es opt-in. |
 | Actualizaciones | Comprobar y actualizar desde Administración → Sistema | ✅ 0.16.0 | Seguimiento por fases con reinicio, éxito, fallo o vuelta atrás. |
 | Actualizaciones | Servicio del host con copia de la base y rollback | ✅ 0.16.0 | Bash + systemd de usuario; no lo ejecuta el contenedor. |
@@ -64,7 +65,7 @@ El orden sale de los planes de `.agents/plans`; no hay fechas ni versiones compr
 
 1. **Búsqueda/identificación manual de colecciones en TMDB**, con «faltan en tu biblioteca».
 2. **Usuarios** (crear, rol, restablecer contraseña, borrar) y **perfil** con personalización del portal.
-3. **Sesiones/dispositivos, actividad y copias de seguridad** desde administración.
+3. **Sesiones/dispositivos y actividad** desde administración.
 4. **Subtítulos subidos por el usuario** y diseño de subtítulos que hoy no se admiten.
 5. **Complementos**, todavía en fase de diseño.
 6. **DLNA/UPnP**, todavía en fase de diseño.

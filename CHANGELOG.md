@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.25.0] - 2026-10-28
+
+### Añadido
+
+- Copia de seguridad diaria de la base de datos: el servidor crea una copia consistente (`VACUUM INTO`) cada 24 horas en `/data/backups`, junto a la base, y conserva 7 días (ajustable de 1 a 365; la más reciente se conserva siempre). Ajustes `backup.enabled` y `backup.retention_days`. En Administración → Ajustes → Sistema hay un panel con la lista de copias y el botón «Hacer copia ahora» (API `GET/POST /api/v1/system/backups`, solo administradores, sin exponer rutas del disco). Las copias están en el mismo volumen que la base: no protegen de perder el disco.
+
 ## [0.24.1] - 2026-10-28
 
 ### Corregido

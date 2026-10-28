@@ -111,6 +111,8 @@ Settings are stored in the database with per-type validation. They apply without
 | `trash.retention_days` | Días en la papelera | How long entries are kept before being purged for good. | Integer 1–90 | `14` | Hot; next daily purge. |
 | `library.upload_max_gb` | Tamaño máximo de subida (GB) | Maximum size of each uploaded file. | Integer 1–500 | `50` | Hot; next upload. |
 | `system.check_updates` | Buscar actualizaciones | Checks for new versions; it implies an optional outgoing connection that the administrator must enable. | Boolean | `false` | Hot; enables periodic checking and the immediate check when saved. |
+| `backup.enabled` | Daily backups | Creates a copy of the database every 24 hours next to the server data. | Boolean | `true` | Hot. |
+| `backup.retention_days` | Days to keep backups | Maximum age of automatic copies; the most recent one is always kept. | Integer 1–365 | `7` | Hot; next backup. |
 
 `scan.interval` may start with a different value when `CINECAT_SCAN_INTERVAL` is defined; the value stored in the database takes precedence over the environment default.
 

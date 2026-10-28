@@ -15,7 +15,8 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 
 - **Identificar colecciones en TMDB:** búsqueda manual, sinopsis y «faltan en tu biblioteca».
 - **Usuarios y perfil:** CRUD de usuarios, perfil propio, personalización del portal, sesiones abiertas e historial.
-- **Sesiones, dispositivos, actividad y copias de seguridad** en administración.
+- **Sesiones, dispositivos y actividad** en administración.
+- **Copiar las copias de seguridad fuera del volumen** (otro disco o equipo): hoy están en `/data/backups`, junto a la base.
 - **Subtítulos subidos por el usuario:** requiere diseño previo; hoy solo se leen incrustados de texto o archivos `.srt`/`.vtt`/`.ass` junto al vídeo.
 - **Reproducción avanzada:** perfiles por dispositivo, HDR/10 bits, desentrelazado, subtítulos de imagen y audio no soportado.
 - **Tests HLS reales y CI:** los tests se saltan sin `ffmpeg`/`ffprobe`; no hay flujo automático que los ejecute en Linux.

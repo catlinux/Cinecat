@@ -51,7 +51,8 @@ Current version: **0.20.0**. This page describes the real state of the code, not
 | Web interface | Favorites and watchlist | ✅ 0.20.0 | Cards, pages and portal rows. |
 | Web interface | Global search and profiles | ⬜ | Not implemented. |
 | Administration | Summary, libraries, scan, settings, correction and images | ✅ 0.11.0 / 0.12.0 | Settings apply without a restart. |
-| Administration | Users, sessions, devices, activity and backups | ⬜ | "Users" appears as "Soon"; there is no user CRUD. |
+| Administration | Daily database backup | ✅ 0.25.0 | `VACUUM INTO` in `/data/backups` with configurable retention; list and "back up now" in Settings → System. |
+| Administration | Sessions, devices and activity | ⬜ | "Users" appears as "Soon"; there is no user CRUD. |
 | Updates | Check tags and release notes from the server | ✅ 0.14.0 | GitHub `vX.Y.Z` tags; `system.check_updates` is opt-in. |
 | Updates | Check and update from Administration → System | ✅ 0.16.0 | Phase tracking with restart, success, failure or rollback. |
 | Updates | Host service with database backup and rollback | ✅ 0.16.0 | Bash + user systemd; the container does not run it. |
@@ -65,7 +66,7 @@ The order comes from the plans in `.agents/plans`; no dates or committed version
 
 1. **Manual TMDB collection search/identification**, with "missing from your library".
 2. **Users** (create, role, reset password, delete) and a **profile** with portal customisation.
-3. **Sessions/devices, activity and backups** from administration.
+3. **Sessions/devices and activity** from administration.
 4. **User-uploaded subtitles** and a design for the subtitle types not supported today.
 5. **Plugins**, still at the design stage.
 6. **DLNA/UPnP**, still at the design stage.

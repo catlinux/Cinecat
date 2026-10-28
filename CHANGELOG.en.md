@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-10-28
+
+### Added
+
+- Daily database backup: the server creates a consistent copy (`VACUUM INTO`) every 24 hours in `/data/backups`, next to the database, and keeps 7 days (adjustable from 1 to 365; the most recent one is always kept). Settings `backup.enabled` and `backup.retention_days`. Administration → Settings → System has a panel listing the copies with a "Back up now" button (API `GET/POST /api/v1/system/backups`, administrators only, no disk paths exposed). Copies live in the same volume as the database: they do not protect against losing the disk.
+
 ## [0.24.1] - 2026-10-28
 
 ### Fixed

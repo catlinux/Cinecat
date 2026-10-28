@@ -111,6 +111,8 @@ Los ajustes se guardan en la base de datos con validación por tipo. Se aplican 
 | `trash.retention_days` | Días en la papelera | Tiempo que se conservan antes de purgarlos definitivamente. | Entero 1–90 | `14` | En caliente; siguiente purga diaria. |
 | `library.upload_max_gb` | Tamaño máximo de subida (GB) | Tamaño máximo de cada archivo subido. | Entero 1–500 | `50` | En caliente; siguiente subida. |
 | `system.check_updates` | Buscar actualizaciones | Comprueba si hay versiones nuevas; implica una conexión saliente opcional que debe activar el administrador. | Booleano | `false` | En caliente; activa la comprobación periódica y la inmediata al guardar. |
+| `backup.enabled` | Copias de seguridad diarias | Crea una copia de la base de datos cada 24 horas junto a los datos del servidor. | Booleano | `true` | En caliente. |
+| `backup.retention_days` | Días que se conservan las copias | Antigüedad máxima de las copias automáticas; la más reciente se conserva siempre. | Entero 1–365 | `7` | En caliente; siguiente copia. |
 
 `scan.interval` puede tener un valor inicial distinto si se define `CINECAT_SCAN_INTERVAL`; el valor guardado en la base manda sobre el defecto de entorno.
 

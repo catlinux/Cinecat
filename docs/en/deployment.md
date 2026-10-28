@@ -118,6 +118,8 @@ docker cp cinecat-servidor-1:/data/cinecat.db-shm "$HOME/cinecat-backups/cinecat
 sqlite3 "$HOME/cinecat-backups/cinecat.db" "VACUUM INTO '$HOME/cinecat-backups/cinecat-copy.db'"
 ```
 
+The server itself also makes a daily copy (`VACUUM INTO`) in `/data/backups` inside the volume and keeps 7 days (adjustable in Administration → Settings → System, which also lists them and can make one now). These copies live in the same volume as the database: they protect against deletions or corruption, not against losing the disk; copy `/data/backups` to another disk or machine if you want that.
+
 The automatic updater already makes a copy before each update and keeps the last 10 in `~/cinecat-backups/`.
 
 ## Changing domain or server
