@@ -35,16 +35,20 @@ var (
 // Capabilities resume los códecs que declara el cliente. HEVC y HEVC10
 // corresponden a la reproducción directa; HEVCMSE y HEVC10MSE indican que el
 // navegador puede recibir HEVC por MSE, que es lo que exige el HLS en MPEG-TS.
+// HEV1 indica aceptación de la etiqueta hev1 y es independiente de las demás.
 type Capabilities struct {
 	HEVC      bool
 	HEVC10    bool
 	HEVCMSE   bool
 	HEVC10MSE bool
+	// HEV1 indica que el navegador acepta la etiqueta hev1 en MP4. No
+	// implica HEVC ni al revés.
+	HEV1 bool
 }
 
 // ParseCapabilities interpreta la lista separada por comas que envía la web.
 // Los tokens desconocidos se ignoran; hevc10 implica hevc y hevc10mse implica
-// hevcmse.
+// hevcmse. hev1 no implica hevc ni al revés.
 func ParseCapabilities(raw string) Capabilities {
 	var result Capabilities
 	for _, token := range strings.Split(raw, ",") {
@@ -59,6 +63,8 @@ func ParseCapabilities(raw string) Capabilities {
 		case "hevc10mse":
 			result.HEVCMSE = true
 			result.HEVC10MSE = true
+		case "hev1":
+			result.HEV1 = true
 		}
 	}
 	return result
@@ -78,6 +84,9 @@ func (c Capabilities) QueryValue() string {
 	}
 	if c.HEVC10MSE {
 		values = append(values, "hevc10mse")
+	}
+	if c.HEV1 {
+		values = append(values, "hev1")
 	}
 	return strings.Join(values, ",")
 }
@@ -128,7 +137,21 @@ func directVideo(info *FileInfo, caps Capabilities) bool {
 		if !caps.HEVC && !caps.HEVC10 {
 			return false
 		}
+		if !directHEVCTag(video, caps) {
+			return false
+		}
 		return !hevc10Bit(video) || caps.HEVC10
+	default:
+		return false
+	}
+}
+
+func directHEVCTag(video VideoStream, caps Capabilities) bool {
+	switch strings.ToLower(strings.TrimSpace(video.CodecTag)) {
+	case "hvc1":
+		return true
+	case "hev1":
+		return caps.HEV1
 	default:
 		return false
 	}

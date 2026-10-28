@@ -7,6 +7,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Seguridad
+
+- El servidor se compila con Go 1.26 (antes 1.22.12, que ya no recibe parches y arrastraba 43 vulnerabilidades conocidas de la biblioteca estándar: `net/http`, `crypto/tls`, `crypto/x509`, `mime/multipart`…).
+
 ### Añadido
 
 - Aceleración por hardware (Intel VA-API) en la recodificación: cuando se activa `docker-compose.gpu.yml`, la gráfica integrada codifica el vídeo a H.264 y, si no hay que escalar, también lo decodifica (H.264 y H.265 de 8 bits), con un uso de CPU mucho menor. Si no hay gráfica, el ajuste «Aceleración por hardware» está en «Desactivada» o algo falla, se recodifica con `libx264` como antes. La ficha del archivo indica «Recodificación (gráfica)». La imagen incluye el controlador `intel-media-va-driver`. Es opcional: sin `COMPOSE_FILE=docker-compose.yml:docker-compose.gpu.yml` en el `.env` no cambia nada.
@@ -19,6 +23,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ### Corregido
 
+- Un MP4 con H.265 etiquetado `hev1` (la mayoría de los descargados) ya no se envía en directo a un navegador que no lo acepta (Safari y iOS solo aceptan `hvc1`): la web comprueba también esa etiqueta y, si no, se reproduce por copia o recodificación.
+- El listado de colecciones es mucho más rápido (el recuento usa `JOIN`).
 - Las subidas largas ya no fallan con `fetch failed`: la web reenviaba el archivo con un `fetch` que corta a los 300 s sin respuesta, y el servidor solo responde al terminar de recibirlo. Ahora se reenvía en streaming sin límite de tiempo y directo al servidor por la red de Docker (`INTERNAL_API_URL`, ya en `docker-compose.yml`), sin salir a internet ni pasar otra vez por Apache.
 
 ## [0.22.1] - 2026-10-28

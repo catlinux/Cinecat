@@ -30,6 +30,7 @@ func TestParseFFprobeJSONMKV(t *testing.T) {
 	    {
 	      "index": 0,
 	      "codec_name": "h264",
+	      "codec_tag_string": "AVC1",
 	      "codec_long_name": "H.264 / AVC / MPEG-4 AVC",
 	      "profile": "High",
 	      "codec_type": "video",
@@ -114,7 +115,7 @@ func TestParseFFprobeJSONMKV(t *testing.T) {
 	if video.Codec != "h264" || video.Profile != "High" || video.Width != 1920 ||
 		video.Height != 1080 || video.DisplayAspectRatio != "16:9" ||
 		video.BitRate != 5000000 || video.PixelFormat != "yuv420p" ||
-		video.BitDepth != 8 || video.HDR != "" || video.FieldOrder != "progressive" ||
+		video.CodecTag != "avc1" || video.BitDepth != 8 || video.HDR != "" || video.FieldOrder != "progressive" ||
 		video.Language != "eng" ||
 		video.Title != "Principal" || !video.Default {
 		t.Fatalf("vídeo inesperado: %+v", video)

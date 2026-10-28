@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
 	HEVC10_MIME,
 	HEVC_MIME,
+	HEV1_MIME,
 	capsCookie,
 	capsFromCookie,
 	detectClientCapabilities,
@@ -20,12 +21,23 @@ describe('capacidades del cliente', () => {
 		expect(detectClientCapabilities((type) => type === HEVC10_MIME, () => '')).toBe(
 			'hevc,hevc10,hevcmse,hevc10mse'
 		);
+		expect(
+			detectClientCapabilities(
+				(type) => type === HEVC_MIME,
+				(type) => (type === HEV1_MIME ? 'probably' : '')
+			)
+		).toBe('hevc,hevcmse,hev1');
+		expect(detectClientCapabilities(() => false, (type) => (type === HEV1_MIME ? 'maybe' : ''))).toBe(
+			'hev1'
+		);
 		expect(detectClientCapabilities(() => false, () => '')).toBe('');
 	});
 
 	it('sanea la lista de capacidades y aplica las implicaciones', () => {
 		expect(sanitizeClientCapabilities('HEVC10, otro ,hevc')).toBe('hevc,hevc10');
 		expect(sanitizeClientCapabilities('HEVC10MSE, otro')).toBe('hevcmse,hevc10mse');
+		expect(sanitizeClientCapabilities('HEV1, hevc')).toBe('hevc,hev1');
+		expect(sanitizeClientCapabilities('hev1')).toBe('hev1');
 		expect(sanitizeClientCapabilities('otro')).toBe('');
 		expect(sanitizeClientCapabilities(null)).toBe('');
 	});
@@ -33,6 +45,7 @@ describe('capacidades del cliente', () => {
 	it('lee y escribe la cookie de capacidades', () => {
 		expect(capsFromCookie('otra=1; cinecat_caps=hevc10%2Cdesconocido')).toBe('hevc,hevc10');
 		expect(capsFromCookie('cinecat_caps=hevc')).toBe('hevc');
+		expect(capsFromCookie('cinecat_caps=hev1')).toBe('hev1');
 		expect(capsFromCookie('')).toBe('');
 		expect(capsFromCookie('cinecat_caps=%')).toBe('');
 		const cookie = capsCookie('hevc10');
@@ -40,5 +53,6 @@ describe('capacidades del cliente', () => {
 		expect(cookie).toContain('path=/');
 		expect(cookie).toContain('max-age=31536000');
 		expect(cookie).toContain('SameSite=Lax');
+		expect(capsCookie('hev1')).toContain('cinecat_caps=hev1');
 	});
 });

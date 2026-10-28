@@ -7,6 +7,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+### Security
+
+- The server is built with Go 1.26 (before 1.22.12, which no longer receives patches and carried 43 known standard library vulnerabilities: `net/http`, `crypto/tls`, `crypto/x509`, `mime/multipart`…).
+
 ### Added
 
 - Hardware acceleration (Intel VA-API) when re-encoding: when `docker-compose.gpu.yml` is enabled, the integrated graphics encodes the video to H.264 and, when no scaling is needed, also decodes it (8-bit H.264 and H.265), with much lower CPU use. If there is no graphics device, the "Hardware acceleration" setting is "Off" or something fails, it re-encodes with `libx264` as before. The file details show "Re-encode (graphics)". The image includes the `intel-media-va-driver` driver. It is optional: without `COMPOSE_FILE=docker-compose.yml:docker-compose.gpu.yml` in `.env` nothing changes.
@@ -19,6 +23,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ### Fixed
 
+- An H.265 MP4 tagged `hev1` (most downloaded ones) is no longer sent directly to a browser that does not accept it (Safari and iOS only accept `hvc1`): the web app also checks that tag and, if not, plays it by copy or re-encode.
+- The collections list is much faster (the count uses `JOIN`).
 - Long uploads no longer fail with `fetch failed`: the web app forwarded the file with a `fetch` that gives up after 300 s without a response, and the server only answers once it has received it. It is now streamed without a time limit and straight to the server over the Docker network (`INTERNAL_API_URL`, already in `docker-compose.yml`), without going out to the internet or through Apache again.
 
 ## [0.22.1] - 2026-10-28

@@ -272,10 +272,16 @@ func TestParseCapabilities(t *testing.T) {
 	if got := ParseCapabilities("hevc10mse"); !got.HEVCMSE || !got.HEVC10MSE {
 		t.Fatalf("hevc10mse debe implicar hevcmse: %+v", got)
 	}
+	if got := ParseCapabilities("hev1"); !got.HEV1 || got.HEVC {
+		t.Fatalf("hev1 no debe implicar hevc: %+v", got)
+	}
+	if got := (Capabilities{HEV1: true}).QueryValue(); got != "hev1" {
+		t.Fatalf("QueryValue de hev1 = %q", got)
+	}
 	if got := ParseCapabilities("otro"); got.HEVC || got.HEVC10 || got.HEVCMSE || got.HEVC10MSE {
 		t.Fatalf("token desconocido: %+v", got)
 	}
-	if got := (Capabilities{HEVC: true, HEVC10: true, HEVCMSE: true, HEVC10MSE: true}).QueryValue(); got != "hevc,hevc10,hevcmse,hevc10mse" {
+	if got := (Capabilities{HEVC: true, HEVC10: true, HEVCMSE: true, HEVC10MSE: true, HEV1: true}).QueryValue(); got != "hevc,hevc10,hevcmse,hevc10mse,hev1" {
 		t.Fatalf("QueryValue = %q", got)
 	}
 }
@@ -317,10 +323,41 @@ func TestCanCopy(t *testing.T) {
 	}
 }
 
+func TestHEVCTagDirecto(t *testing.T) {
+	hevc8 := VideoStream{Codec: "hevc", Profile: "Main", PixelFormat: "yuv420p", BitDepth: 8}
+	hevc10 := VideoStream{Codec: "hevc", Profile: "Main 10", PixelFormat: "yuv420p10le", BitDepth: 10}
+	tests := []struct {
+		name  string
+		video VideoStream
+		caps  Capabilities
+		want  bool
+	}{
+		{name: "hvc1 directo", video: withCodecTag(hevc8, "hvc1"), caps: Capabilities{HEVC: true}, want: true},
+		{name: "hev1 sin token", video: withCodecTag(hevc8, "hev1"), caps: Capabilities{HEVC: true}, want: false},
+		{name: "hev1 con token", video: withCodecTag(hevc8, "hev1"), caps: Capabilities{HEVC: true, HEV1: true}, want: true},
+		{name: "etiqueta vacía", video: hevc8, caps: Capabilities{HEVC: true}, want: false},
+		{name: "otra etiqueta", video: withCodecTag(hevc8, "hev0"), caps: Capabilities{HEVC: true, HEV1: true}, want: false},
+		{name: "hev1 10 bits con hevc10", video: withCodecTag(hevc10, "hev1"), caps: Capabilities{HEVC: true, HEVC10: true}, want: false},
+		{name: "hev1 10 bits con hevc10 y token", video: withCodecTag(hevc10, "hev1"), caps: Capabilities{HEVC: true, HEVC10: true, HEV1: true}, want: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := directVideo(&FileInfo{Video: []VideoStream{test.video}}, test.caps); got != test.want {
+				t.Fatalf("directVideo = %v, se esperaba %v", got, test.want)
+			}
+		})
+	}
+}
+
+func withCodecTag(video VideoStream, tag string) VideoStream {
+	video.CodecTag = tag
+	return video
+}
+
 func TestDecideFor(t *testing.T) {
 	h264 := VideoStream{Codec: "h264", Profile: "High", PixelFormat: "yuv420p", BitDepth: 8}
-	hevc := VideoStream{Codec: "hevc", Profile: "Main", PixelFormat: "yuv420p", BitDepth: 8}
-	hevc10 := VideoStream{Codec: "hevc", Profile: "Main 10", PixelFormat: "yuv420p10le", BitDepth: 10}
+	hevc := VideoStream{Codec: "hevc", CodecTag: "hvc1", Profile: "Main", PixelFormat: "yuv420p", BitDepth: 8}
+	hevc10 := VideoStream{Codec: "hevc", CodecTag: "hvc1", Profile: "Main 10", PixelFormat: "yuv420p10le", BitDepth: 10}
 	aac := AudioStream{Codec: "aac", Default: true}
 	ac3 := AudioStream{Codec: "ac3", Default: true}
 	tests := []struct {

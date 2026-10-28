@@ -33,6 +33,7 @@ type VideoStream struct {
 	Index              int     `json:"index"`
 	Codec              string  `json:"codec"`
 	CodecLongName      string  `json:"codec_long_name"`
+	CodecTag           string  `json:"codec_tag"`
 	Profile            string  `json:"profile"`
 	Width              int     `json:"width"`
 	Height             int     `json:"height"`
@@ -130,6 +131,7 @@ type ffprobeStream struct {
 	Index              ffInt             `json:"index"`
 	CodecName          string            `json:"codec_name"`
 	CodecLongName      string            `json:"codec_long_name"`
+	CodecTag           string            `json:"codec_tag_string"`
 	Profile            string            `json:"profile"`
 	CodecType          string            `json:"codec_type"`
 	Width              ffInt             `json:"width"`
@@ -234,6 +236,7 @@ func parseFFprobeJSON(data []byte) (*FileInfo, error) {
 				Index:              int(stream.Index),
 				Codec:              cleanFFString(stream.CodecName),
 				CodecLongName:      cleanFFString(stream.CodecLongName),
+				CodecTag:           strings.ToLower(cleanFFString(stream.CodecTag)),
 				Profile:            cleanFFString(stream.Profile),
 				Width:              int(stream.Width),
 				Height:             int(stream.Height),
