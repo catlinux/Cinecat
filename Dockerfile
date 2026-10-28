@@ -1,4 +1,4 @@
-FROM golang:1.22-bookworm AS build
+FROM golang:1.26-bookworm AS build
 ARG COMMIT=""
 ARG BUILT_AT=""
 WORKDIR /src
