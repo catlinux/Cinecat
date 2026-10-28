@@ -19,7 +19,7 @@
 	const paths = $derived(
 		library.paths && library.paths.length > 0
 			? library.paths
-			: [{ id: 0, path: library.path }]
+			: [{ id: 0, path: library.path ?? '' }]
 	);
 	const kindLabel = $derived(libraryKindLabel(library.kind));
 	const removeMessage =

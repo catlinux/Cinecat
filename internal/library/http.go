@@ -307,6 +307,7 @@ func (a *API) handleItems(w http.ResponseWriter, r *http.Request) {
 			items[i].Collections = collections
 		}
 	}
+	compactMediaItemListSlice(items, isAdminRequest(r))
 
 	writeJSON(w, http.StatusOK, itemsResponse{
 		Items:  items,
@@ -331,6 +332,7 @@ func (a *API) handleItem(w http.ResponseWriter, r *http.Request) {
 		log.Printf("library: leer ítem %d: %v", id, err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
 	default:
+		compactMediaItemDetail(&item, isAdminRequest(r))
 		writeJSON(w, http.StatusOK, item)
 	}
 }

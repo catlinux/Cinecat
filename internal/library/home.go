@@ -135,6 +135,18 @@ func (a *API) handleHome(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	admin := isAdminRequest(r)
+	compactMediaItemListSlice(continueItems, admin)
+	compactMediaItemListSlice(nextUp, admin)
+	compactMediaItemListSlice(recentMovies, admin)
+	for _, list := range [][]homeListEntry{watchlist, favorites} {
+		for i := range list {
+			if list[i].Item != nil {
+				compactMediaItemList(list[i].Item, admin)
+			}
+		}
+	}
+
 	writeJSON(w, http.StatusOK, homeResponse{
 		Continue:     continueItems,
 		NextUp:       nextUp,

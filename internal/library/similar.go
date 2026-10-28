@@ -356,6 +356,7 @@ func (a *API) handleSimilarItems(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
 		return
 	}
+	compactMediaItemListSlice(items, isAdminRequest(r))
 	response.Items = items
 	writeJSON(w, http.StatusOK, response)
 }

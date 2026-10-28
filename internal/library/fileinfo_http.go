@@ -35,7 +35,7 @@ type PlaybackInfo struct {
 
 type fileInfoResponse struct {
 	*playback.FileInfo
-	Path     string       `json:"path"`
+	Path     string       `json:"path,omitempty"`
 	Playback PlaybackInfo `json:"playback"`
 }
 
@@ -134,6 +134,9 @@ func (a *API) handleItemFileInfo(w http.ResponseWriter, r *http.Request) {
 		info.FileName = filepath.Base(safePath)
 	}
 	caps := playback.ParseCapabilities(r.URL.Query().Get("caps"))
+	if !isAdminRequest(r) {
+		relative = ""
+	}
 	writeJSON(w, http.StatusOK, fileInfoResponse{
 		FileInfo: &info,
 		Path:     relative,

@@ -9,6 +9,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ### Security
 
+- File and library folder paths (on detail pages, listings, libraries and the file technical details) are only sent to administrators; other users no longer see how the server disk is organised.
 - Security headers on the web app and the API: the web app can no longer be embedded in another page (`X-Frame-Options: DENY` and `frame-ancestors 'none'`), `Strict-Transport-Security` over HTTPS, `X-Content-Type-Options: nosniff`, referrer and permissions policies. The CSP is only the minimal one; a full one is left for later. `ServerTokens Prod` is recommended for Apache (see deployment).
 - The server is built with Go 1.26 (before 1.22.12, which no longer receives patches and carried 43 known standard library vulnerabilities: `net/http`, `crypto/tls`, `crypto/x509`, `mime/multipart`…).
 
@@ -20,6 +21,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ### Changed
 
+- Listings (movies, series, home, lists, similar) no longer include each title's full cast, which cards do not use: a page of 48 movies goes from about 320 KB to a fraction of that and loads faster on mobile and slow connections. The detail page still shows the full cast.
 - "Upload movie": "Create a folder for each movie" is unchecked by default.
 
 ### Fixed

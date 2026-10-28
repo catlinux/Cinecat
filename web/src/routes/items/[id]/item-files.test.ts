@@ -300,6 +300,17 @@ describe('FilePanel', () => {
 		expect(body).toContain('Se recodifica a H.264 + AAC estéreo por HLS');
 	});
 
+	it('oculta la ruta cuando la API no la envía', () => {
+		const body = renderFilePanel(
+			fileInfoResult(
+				makeFileInfo({
+					path: undefined
+				})
+			)
+		);
+		expect(body).not.toContain('<code>');
+	});
+
 	it('indica cuando la recodificación usa la gráfica', () => {
 		const body = renderFilePanel(
 			fileInfoResult(

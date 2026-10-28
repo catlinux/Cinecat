@@ -52,7 +52,9 @@
 
 		<p class="file-path">
 			<strong>{file.file_name}</strong>
-			<code>{file.path}</code>
+			{#if file.path}
+				<code>{file.path}</code>
+			{/if}
 		</p>
 
 		<section class="file-section">

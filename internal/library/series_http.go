@@ -57,7 +57,7 @@ type seriesDetailDTO struct {
 	ID               int64             `json:"id"`
 	Title            string            `json:"title"`
 	FileTitle        string            `json:"file_title"`
-	Folder           string            `json:"folder"`
+	Folder           string            `json:"folder,omitempty"`
 	OriginalTitle    *string           `json:"original_title"`
 	Year             *int              `json:"year"`
 	Tagline          *string           `json:"tagline"`
@@ -544,6 +544,13 @@ func (a *API) handleSeriesDetail(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
 		return
 	}
+	admin := isAdminRequest(r)
+	if !admin {
+		detail.Folder = ""
+	}
+	if detail.NextEpisode != nil {
+		compactMediaItemDetail(detail.NextEpisode, admin)
+	}
 	writeJSON(w, http.StatusOK, detail)
 }
 
@@ -584,6 +591,7 @@ func (a *API) handleSeriesSeason(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
 		return
 	}
+	compactMediaItemListSlice(items, isAdminRequest(r))
 	writeJSON(w, http.StatusOK, seriesSeasonDetailDTO{
 		Season: seasonNumber, Name: name, Overview: stringPointer(overview),
 		PosterURL: stringPointer(poster), Items: items,

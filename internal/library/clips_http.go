@@ -249,6 +249,7 @@ func (a *API) handleClipBrowse(w http.ResponseWriter, r *http.Request) {
 			relative = filepath.Base(itemPath)
 		}
 		pageItems[index].Path = filepath.ToSlash(relative)
+		compactMediaItemCredits(&pageItems[index])
 	}
 	if pageItems == nil {
 		pageItems = make([]mediaItemDTO, 0)

@@ -21,15 +21,15 @@ const (
 
 type libraryPathDTO struct {
 	ID   int64  `json:"id"`
-	Path string `json:"path"`
+	Path string `json:"path,omitempty"`
 }
 
 type libraryDTO struct {
 	ID        int64            `json:"id"`
 	Name      string           `json:"name"`
 	Kind      string           `json:"kind"`
-	Path      string           `json:"path"`
-	Paths     []libraryPathDTO `json:"paths"`
+	Path      string           `json:"path,omitempty"`
+	Paths     []libraryPathDTO `json:"paths,omitempty"`
 	ItemCount int64            `json:"item_count"`
 }
 
@@ -257,6 +257,12 @@ func (a *API) handleLibraries(w http.ResponseWriter, r *http.Request) {
 		logLibraryError("listar bibliotecas", err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
 		return
+	}
+	if !isAdminRequest(r) {
+		for i := range libraries {
+			libraries[i].Path = ""
+			libraries[i].Paths = nil
+		}
 	}
 	writeJSON(w, http.StatusOK, librariesResponse{Libraries: libraries})
 }

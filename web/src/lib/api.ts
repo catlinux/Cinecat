@@ -23,8 +23,8 @@ export interface Library {
 	id: number;
 	name: string;
 	kind: LibraryKind;
-	path: string;
-	paths: LibraryPath[];
+	path?: string;
+	paths?: LibraryPath[];
 	item_count?: number;
 }
 
@@ -150,7 +150,7 @@ export interface MediaItem {
 	id: number;
 	library_id: number;
 	library_kind?: LibraryKind;
-	path: string;
+	path?: string;
 	title: string;
 	file_title: string;
 	year: number | null;
@@ -170,7 +170,7 @@ export interface MediaItem {
 	trailer_url?: string | null;
 	trailer_language?: 'es' | 'en' | null;
 	directors: string[];
-	cast: string[];
+	cast?: string[];
 	credits?: Credits | null;
 	backdrop_url: string | null;
 	backdrop_custom: boolean;
@@ -479,7 +479,7 @@ export interface FileInfo {
 	bit_rate: number;
 	modified_at: string;
 	file_name: string;
-	path: string;
+	path?: string;
 	video: VideoStream[];
 	audio: AudioStream[];
 	subtitles: SubtitleStream[];
@@ -624,7 +624,7 @@ export interface SeriesDetail {
 	id: number;
 	title: string;
 	file_title: string;
-	folder: string;
+	folder?: string;
 	original_title: string | null;
 	year: number | null;
 	tagline: string | null;

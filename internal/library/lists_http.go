@@ -252,5 +252,6 @@ func (a *API) handleLists(w http.ResponseWriter, r *http.Request) {
 			response.Total = &total
 		}
 	}
+	compactMediaItemListSlice(response.Items, isAdminRequest(r))
 	writeJSON(w, http.StatusOK, response)
 }

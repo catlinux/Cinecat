@@ -340,7 +340,7 @@
 		<MatchDialog
 			item={series}
 			kind="series"
-			defaultQuery={series.folder}
+			defaultQuery={series.folder ?? ''}
 			{candidates}
 			{search}
 			open={panelOpen}

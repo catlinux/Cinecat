@@ -23,8 +23,8 @@
 
 	let { library }: { library: Library } = $props();
 
-	const firstPath = $derived(library.paths?.[0]?.path ?? library.path);
-	let destination = $state(untrack(() => library.paths?.[0]?.path ?? library.path));
+	const firstPath = $derived(library.paths?.[0]?.path ?? library.path ?? '');
+	let destination = $state(untrack(() => library.paths?.[0]?.path ?? library.path ?? ''));
 	let subdir = $state('');
 	let selectedFiles = $state<File[]>([]);
 	let entries = $state<UploadEntry[]>([]);

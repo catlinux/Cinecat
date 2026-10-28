@@ -19,7 +19,7 @@ type mediaItemDTO struct {
 	ID                int64               `json:"id"`
 	LibraryID         int64               `json:"library_id"`
 	LibraryKind       string              `json:"library_kind"`
-	Path              string              `json:"path"`
+	Path              string              `json:"path,omitempty"`
 	Title             string              `json:"title"`
 	FileTitle         string              `json:"file_title"`
 	Year              *int                `json:"year"`
@@ -40,7 +40,7 @@ type mediaItemDTO struct {
 	TrailerLanguage   *string             `json:"trailer_language"`
 	Directors         []string            `json:"directors"`
 	Cast              []string            `json:"cast"`
-	Credits           creditsDTO          `json:"credits"`
+	Credits           creditsDTO          `json:"credits,omitempty"`
 	Preferences       *itemPreferencesDTO `json:"preferences"`
 	BackdropURL       *string             `json:"backdrop_url"`
 	BackdropCustom    bool                `json:"backdrop_custom"`
@@ -58,6 +58,57 @@ type mediaItemDTO struct {
 	StillURL          *string             `json:"still_url"`
 	SeriesPosterURL   *string             `json:"series_poster_url"`
 	SeriesBackdropURL *string             `json:"series_backdrop_url"`
+}
+
+// MarshalJSON omite credits en los listados compactados. En una ficha se
+// mantiene el objeto completo, aunque sus arrays estén vacíos.
+func (item mediaItemDTO) MarshalJSON() ([]byte, error) {
+	type plain mediaItemDTO
+	var cast *[]string
+	if item.Cast != nil {
+		cast = &item.Cast
+	}
+	out := struct {
+		plain
+		Cast    *[]string   `json:"cast,omitempty"`
+		Credits *creditsDTO `json:"credits,omitempty"`
+	}{plain: plain(item), Cast: cast}
+	if item.Credits.Cast != nil || item.Credits.Crew != nil {
+		out.Credits = &item.Credits
+	}
+	return json.Marshal(out)
+}
+
+func isAdminRequest(r *http.Request) bool {
+	user, ok := sessionUserFromRequest(r)
+	return ok && user.Role == "admin"
+}
+
+// compactMediaItemList deja fuera los datos que no usan las tarjetas. El
+// detalle sigue usando los mismos DTO completos.
+func compactMediaItemList(item *mediaItemDTO, admin bool) {
+	if !admin {
+		item.Path = ""
+	}
+	item.Cast = nil
+	item.Credits = creditsDTO{}
+}
+
+func compactMediaItemListSlice(items []mediaItemDTO, admin bool) {
+	for i := range items {
+		compactMediaItemList(&items[i], admin)
+	}
+}
+
+func compactMediaItemCredits(item *mediaItemDTO) {
+	item.Cast = nil
+	item.Credits = creditsDTO{}
+}
+
+func compactMediaItemDetail(item *mediaItemDTO, admin bool) {
+	if !admin {
+		item.Path = ""
+	}
 }
 
 type itemCollection struct {

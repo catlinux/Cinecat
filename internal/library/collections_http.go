@@ -345,6 +345,7 @@ func (a *API) handleCollection(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
 		return
 	}
+	compactMediaItemListSlice(items, isAdminRequest(r))
 
 	writeJSON(w, http.StatusOK, collectionDetailDTO{
 		ID:          collection.ID,

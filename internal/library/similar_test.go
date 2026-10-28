@@ -162,9 +162,8 @@ func TestSimilarItemsHTTP(t *testing.T) {
 	if !item.Watched || item.Progress == nil || item.Progress.PositionSeconds != 120 {
 		t.Fatalf("estado del usuario ausente: %+v", item)
 	}
-	if len(item.Credits.Cast) != 1 || item.Credits.Cast[0].Character != "Heroína" ||
-		item.Credits.Cast[0].PhotoURL != "https://images.example/a.jpg" {
-		t.Fatalf("credits del DTO inesperados: %+v", item.Credits)
+	if len(item.Credits.Cast) != 0 || len(item.Credits.Crew) != 0 {
+		t.Fatalf("los similares no deben incluir credits: %+v", item.Credits)
 	}
 
 	status, body = libraryHTTPGet(t, ts.URL+"/api/v1/items/"+strconv.FormatInt(current, 10)+"/similar", ts.token)
