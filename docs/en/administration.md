@@ -18,7 +18,7 @@ Only users with the `admin` role can open `/admin`. The server checks the role o
 | `/admin/settings/playback` | Playback | Maximum height, CRF, preset, hardware acceleration and simultaneous transcodes. |
 | `/admin/settings/system` | System | Update check, versions and the "Update now" panel. |
 | `/admin/update` | — | JSON endpoint used by the System panel to follow progress; not a screen. |
-| `/admin/users` | — | Does not exist yet. Navigation shows "Usuarios · Pronto". |
+| `/admin/users` | Users | Create and manage accounts, roles, visible libraries, password resets, activation and deletion. |
 
 ## Creating a library
 
@@ -140,7 +140,9 @@ Each user has their own **Favorites** and **Watchlist**; they are not shared bet
 
 Each user account only sees the libraries assigned to it by the administrator. The administrator always sees every library; an account with the "all libraries" option also sees libraries created in the future. Filtering is enforced by the server for listings, item pages, series, collections, people, music and individual items.
 
-Anything outside the visible libraries responds as if it did not exist: listings do not show it and direct routes return 404. Collections and people pages only count visible content. Playback URLs already issued keep working until they expire, 8 hours later, even if access is removed or sessions are closed. The user-management screen will arrive in the next version.
+Anything outside the visible libraries responds as if it did not exist: listings do not show it and direct routes return 404. Collections and people pages only count visible content. Playback URLs already issued keep working until they expire, 8 hours later, even if access is removed or sessions are closed.
+
+In **Administration → Users** you can create an account with a name, password and role, choose its libraries (or tick "All, including future libraries"), change its role, enable or disable it, reset its password and delete it. User accounts must have at least one library or access to all. The administrator cannot delete, disable or remove the admin role from their own account, and at least one active administrator must remain. Resetting a password, changing a role, disabling or deleting an account closes all its sessions.
 
 ## Uploading files and trash
 
@@ -162,7 +164,7 @@ Disabled by default. Two things are needed: mount the library read-write (`CINEC
 ## Security limitations
 
 - Login lockout counts failures per user+IP pair and adds a per-IP limit, but it still lives in process memory and depends on Apache and the web app forwarding the real IP correctly.
-- Per-library permissions are enforced by the server; the screen to manage users will arrive in the next version.
+- Per-library permissions are enforced by the server; account management is available in Administration → Users.
 - Signed playback URLs that have already been issued remain valid until they expire, even if access is removed or sessions are closed.
 - The server sends no CORS headers; the Apache deployment works by sharing the origin.
 - With `CINECAT_MEDIA_MODE=rw`, an administrator can upload and move to the trash; permanent deletion only affects `.cinecat-papelera`.

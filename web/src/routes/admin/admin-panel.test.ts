@@ -330,12 +330,17 @@ describe('layout de administración', () => {
 		expect(result.pathname).toBe('/admin/settings/scan');
 	});
 
-	it('marca la entrada activa y deja sitio para Usuarios', () => {
+	it('marca la entrada activa y enlaza Usuarios', () => {
 		const body = render(AdminNav, { props: { pathname: '/admin/settings/scan' } }).body;
 		expect(body).toContain('aria-label="Administración"');
 		expect(body).toContain('aria-current="page"');
+		expect(body).toContain('href="/admin/users"');
 		expect(body).toContain('Usuarios');
-		expect(body).toContain('Pronto');
+		expect(body).not.toContain('Pronto');
+
+		const usersBody = render(AdminNav, { props: { pathname: '/admin/users' } }).body;
+		expect(usersBody).toContain('href="/admin/users"');
+		expect(usersBody).toContain('aria-current="page"');
 	});
 
 	it('pinta la barra lateral y el contenido', () => {

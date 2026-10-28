@@ -320,3 +320,84 @@ describe('ApiClient de la papelera', () => {
 		]);
 	});
 });
+
+describe('ApiClient de usuarios', () => {
+	it('consulta el usuario actual con acceso y gestiona cuentas', async () => {
+		const user = {
+			id: 4,
+			username: 'bea',
+			role: 'user',
+			disabled: false,
+			all_libraries: false,
+			library_ids: [2],
+			created_at: '2026-10-28T10:00:00Z',
+			active_sessions: 1
+		};
+		const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+			const url = String(input);
+			if (url.endsWith('/api/v1/auth/me')) {
+				return jsonResponse({
+					username: 'ana',
+					role: 'admin',
+					all_libraries: true,
+					library_ids: []
+				});
+			}
+			if (init?.method === 'DELETE' || url.endsWith('/password')) {
+				return new Response(null, { status: 204 });
+			}
+			if (url.endsWith('/api/v1/users') && init?.method === 'POST') {
+				return jsonResponse(user, 201);
+			}
+			if (url.endsWith('/api/v1/users')) {
+				return jsonResponse({ users: [user] });
+			}
+			return jsonResponse(user);
+		});
+		const client = new ApiClient({ baseUrl: 'http://api.test', fetch: fetchMock });
+
+		const current = await client.getCurrentUser('token');
+		expect(current.all_libraries).toBe(true);
+		const list = await client.listUsers('token');
+		expect(list.users[0].username).toBe('bea');
+		await client.createUser(
+			{
+				username: 'bea',
+				password: 'Clave-segura-1',
+				role: 'user',
+				all_libraries: false,
+				library_ids: [2]
+			},
+			'token'
+		);
+		await client.updateUser(4, { role: 'admin', disabled: true }, 'token');
+		await client.setUserLibraries(4, [1, 2], 'token');
+		await client.resetUserPassword(4, 'Clave-nueva-1', 'token');
+		await client.deleteUser(4, 'token');
+
+		expect(fetchMock.mock.calls.map(([url, init]) => [String(url), init?.method ?? 'GET'])).toEqual([
+			['http://api.test/api/v1/auth/me', 'GET'],
+			['http://api.test/api/v1/users', 'GET'],
+			['http://api.test/api/v1/users', 'POST'],
+			['http://api.test/api/v1/users/4', 'PATCH'],
+			['http://api.test/api/v1/users/4/libraries', 'PUT'],
+			['http://api.test/api/v1/users/4/password', 'POST'],
+			['http://api.test/api/v1/users/4', 'DELETE']
+		]);
+		expect(JSON.parse(String(fetchMock.mock.calls[2][1]?.body))).toMatchObject({
+			username: 'bea',
+			role: 'user',
+			library_ids: [2]
+		});
+		expect(JSON.parse(String(fetchMock.mock.calls[3][1]?.body))).toEqual({
+			role: 'admin',
+			disabled: true
+		});
+		expect(JSON.parse(String(fetchMock.mock.calls[4][1]?.body))).toEqual({
+			library_ids: [1, 2]
+		});
+		expect(JSON.parse(String(fetchMock.mock.calls[5][1]?.body))).toEqual({
+			password: 'Clave-nueva-1'
+		});
+	});
+});

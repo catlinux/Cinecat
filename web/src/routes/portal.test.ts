@@ -141,6 +141,8 @@ function portalData(overrides: Record<string, unknown> = {}) {
 	return {
 		hasSession: true,
 		isAdmin: false,
+		hasVideo: true,
+		hasAnyLibraryAccess: true,
 		isHome: false,
 		activeCategory: null,
 		serverVersion: null,
@@ -571,5 +573,32 @@ describe('filas de listas personales del portal', () => {
 		}).body;
 		expect(hiddenSeries).toContain('Favorita');
 		expect(hiddenSeries).not.toContain('Serie favorita');
+	});
+});
+
+describe('portal sin bibliotecas', () => {
+	it('muestra un mensaje claro y no pinta secciones vacías', () => {
+		const { body } = render(PortalPage, {
+			props: {
+				data: portalData({
+					hasVideo: false,
+					hasClips: false,
+					hasMusic: false,
+					hasAnyLibraryAccess: false,
+					moviesTotal: 0,
+					collectionsTotal: 0,
+					seriesTotal: 0,
+					continueWatching: [],
+					nextUp: [],
+					recent: [],
+					recentSeries: [],
+					watchlist: [],
+					favorites: []
+				})
+			}
+		});
+		expect(body).toContain('Todavía no tienes ninguna biblioteca asignada');
+		expect(body).toContain('Pídele acceso al administrador');
+		expect(body).not.toContain('portal-categories');
 	});
 });

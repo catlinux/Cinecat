@@ -52,8 +52,10 @@ export const load: LayoutServerLoad = async ({ locals, fetch, url }) => {
 		return {
 			hasSession: false,
 			isAdmin: false,
+			hasVideo: true,
 			hasClips: false,
 			hasMusic: false,
+			hasAnyLibraryAccess: false,
 			isHome,
 			activeCategory,
 			serverVersion,
@@ -71,33 +73,42 @@ export const load: LayoutServerLoad = async ({ locals, fetch, url }) => {
 	locals.publicUI = ui;
 
 	let isAdmin = false;
+	let allLibraries = false;
 	try {
 		const user = await createApiClient(fetch).getCurrentUser(locals.sessionToken);
 		isAdmin = user.role === 'admin';
+		allLibraries = user.all_libraries === true;
 	} catch {
 		isAdmin = false;
+		allLibraries = false;
 	}
 
-	let hasClips = false;
-	let hasMusic = false;
+	const unrestricted = isAdmin || allLibraries;
+	let hasVideo = unrestricted;
+	let hasClips = unrestricted;
+	let hasMusic = unrestricted;
+	let hasAnyLibraryAccess = unrestricted;
 	try {
 		const libraries = await createApiClient(fetch).listLibraries(locals.sessionToken);
-		hasClips = (libraries.libraries ?? []).some(
-			(library) => library.kind === 'clips' && (library.item_count ?? 0) > 0
-		);
-		hasMusic = (libraries.libraries ?? []).some(
-			(library) => library.kind === 'music' && (library.item_count ?? 0) > 0
-		);
+		const visible = libraries.libraries ?? [];
+		hasVideo = unrestricted || visible.some((library) => library.kind === 'video');
+		hasClips = unrestricted || visible.some((library) => library.kind === 'clips');
+		hasMusic = unrestricted || visible.some((library) => library.kind === 'music');
+		hasAnyLibraryAccess = unrestricted || visible.length > 0;
 	} catch {
-		hasClips = false;
-		hasMusic = false;
+		hasVideo = unrestricted;
+		hasClips = unrestricted;
+		hasMusic = unrestricted;
+		hasAnyLibraryAccess = unrestricted;
 	}
 
 	return {
 		hasSession: true,
 		isAdmin,
+		hasVideo,
 		hasClips,
 		hasMusic,
+		hasAnyLibraryAccess,
 		isHome,
 		activeCategory,
 		serverVersion,

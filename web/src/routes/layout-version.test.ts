@@ -25,8 +25,10 @@ function layoutData(serverVersion: string | null, serverCommit: string | null = 
 	return {
 		hasSession: false,
 		isAdmin: false,
+		hasVideo: true,
 		hasClips: false,
 		hasMusic: false,
+		hasAnyLibraryAccess: true,
 		isHome: false,
 		activeCategory: null,
 		serverVersion,

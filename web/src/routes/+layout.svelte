@@ -69,6 +69,7 @@
 			isHome={data.isHome ?? false}
 			isAdmin={data.isAdmin}
 			hasSession={data.hasSession}
+			hasVideo={data.hasVideo ?? true}
 			hasClips={data.hasClips}
 			hasMusic={data.hasMusic}
 			{versionLabel}
@@ -92,25 +93,29 @@
 							class:category-active={data.isHome}
 							aria-current={data.isHome ? 'page' : undefined}>Inicio</a
 						>
-						<a
-							href="/movies"
-							class:category-active={data.activeCategory === 'movies'}
-							aria-current={data.activeCategory === 'movies' ? 'page' : undefined}>Películas</a
-						>
-						{#if ui.show_collections}
+						{#if data.hasVideo ?? true}
 							<a
-								href="/collections"
-								class:category-active={data.activeCategory === 'collections'}
-								aria-current={data.activeCategory === 'collections' ? 'page' : undefined}
-								>Colecciones</a
+								href="/movies"
+								class:category-active={data.activeCategory === 'movies'}
+								aria-current={data.activeCategory === 'movies' ? 'page' : undefined}
+								>Películas</a
 							>
-						{/if}
-						{#if ui.show_series}
-							<a
-								href="/series"
-								class:category-active={data.activeCategory === 'series'}
-								aria-current={data.activeCategory === 'series' ? 'page' : undefined}>Series</a
-							>
+							{#if ui.show_collections}
+								<a
+									href="/collections"
+									class:category-active={data.activeCategory === 'collections'}
+									aria-current={data.activeCategory === 'collections' ? 'page' : undefined}
+									>Colecciones</a
+								>
+							{/if}
+							{#if ui.show_series}
+								<a
+									href="/series"
+									class:category-active={data.activeCategory === 'series'}
+									aria-current={data.activeCategory === 'series' ? 'page' : undefined}
+									>Series</a
+								>
+							{/if}
 						{/if}
 						{#if data.hasClips}
 							<a

@@ -21,8 +21,10 @@ function layoutData(overrides: Record<string, unknown> = {}) {
 	return {
 		hasSession: true,
 		isAdmin: false,
+		hasVideo: true,
 		hasClips: false,
 		hasMusic: false,
+		hasAnyLibraryAccess: true,
 		isHome: false,
 		activeCategory: null,
 		serverVersion: null,
@@ -41,7 +43,7 @@ function loadEvent(fetchImpl: typeof fetch, pathname = '/music') {
 	};
 }
 
-function layoutFetch(libraries: unknown[] = []) {
+function layoutFetch(libraries: unknown[] = [], role: 'admin' | 'user' = 'user', allLibraries = false) {
 	return vi.fn(async (input: RequestInfo | URL) => {
 		const url = String(input);
 		if (url.endsWith('/api/v1/system/version')) {
@@ -51,7 +53,7 @@ function layoutFetch(libraries: unknown[] = []) {
 			return jsonResponse({});
 		}
 		if (url.endsWith('/api/v1/auth/me')) {
-			return jsonResponse({ username: 'ana', role: 'user' });
+			return jsonResponse({ username: 'ana', role, all_libraries: allLibraries, library_ids: [] });
 		}
 		if (url.endsWith('/api/v1/libraries')) {
 			return jsonResponse({ libraries });
@@ -114,7 +116,7 @@ describe('load del layout', () => {
 			) as never
 		)) as any;
 		expect(result.hasMusic).toBe(true);
-		expect(result.hasClips).toBe(false);
+		expect(result.hasClips).toBe(true);
 		expect(result.activeCategory).toBe('music');
 	});
 
@@ -175,6 +177,64 @@ describe('load de listas en el layout', () => {
 		] as const) {
 			const result = (await load(loadEvent(layoutFetch(), pathname) as never)) as any;
 			expect(result.activeCategory).toBe(expected);
+		}
+	});
+});
+
+
+describe('menú filtrado por bibliotecas visibles', () => {
+	function renderedFor(result: Record<string, unknown>, nav_layout: 'side' | 'top' = 'side') {
+		return render(Layout, {
+			props: {
+				data: layoutData({
+					...result,
+					ui: { ...DEFAULT_PUBLIC_UI, nav_layout }
+				}),
+				children
+			}
+		}).body;
+	}
+
+	it('un usuario con solo vídeos ve Vídeos y no las secciones de películas', async () => {
+		const result = (await load(
+			loadEvent(layoutFetch([{ id: 2, kind: 'clips', name: 'Vídeos', item_count: 1 }])) as never
+		)) as any;
+		expect(result.hasVideo).toBe(false);
+		expect(result.hasClips).toBe(true);
+		expect(result.hasMusic).toBe(false);
+		for (const layout of ['side', 'top'] as const) {
+			const body = renderedFor(result, layout);
+			expect(body).toContain('href="/videos"');
+			expect(body).not.toContain('href="/movies"');
+			expect(body).not.toContain('href="/series"');
+			expect(body).not.toContain('href="/collections"');
+		}
+	});
+
+	it('un usuario con una biblioteca de vídeo ve Películas, Series y Colecciones', async () => {
+		const result = (await load(
+			loadEvent(layoutFetch([{ id: 1, kind: 'video', name: 'Pelis', item_count: 0 }])) as never
+		)) as any;
+		expect(result.hasVideo).toBe(true);
+		expect(result.hasClips).toBe(false);
+		expect(result.hasMusic).toBe(false);
+		const body = renderedFor(result);
+		expect(body).toContain('href="/movies"');
+		expect(body).toContain('href="/series"');
+		expect(body).toContain('href="/collections"');
+		expect(body).not.toContain('href="/videos"');
+		expect(body).not.toContain('href="/music"');
+	});
+
+	it('el administrador ve todas las secciones aunque no haya bibliotecas', async () => {
+		const result = (await load(loadEvent(layoutFetch([], 'admin')) as never)) as any;
+		expect(result.isAdmin).toBe(true);
+		expect(result.hasVideo).toBe(true);
+		expect(result.hasClips).toBe(true);
+		expect(result.hasMusic).toBe(true);
+		const body = renderedFor(result);
+		for (const href of ['/movies', '/series', '/collections', '/videos', '/music']) {
+			expect(body).toContain(`href="${href}"`);
 		}
 	});
 });

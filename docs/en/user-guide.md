@@ -26,7 +26,7 @@ Rows can be scrolled with the `‹` and `›` arrows; you can also swipe with a 
 
 ## Browsing the library
 
-The menu can be on the left (**lateral**) or at the top (**superior**), depending on the administrator's setting. It contains **Inicio**, **Películas**, **Colecciones**, **Series**, **Vídeos** and **Música** when libraries of those types have content, **Mi cuenta** and, for administrators, **Administración**.
+The menu can be on the left (**lateral**) or at the top (**superior**), depending on the administrator's setting. It contains **Inicio**, **Películas**, **Colecciones**, **Series**, **Vídeos** and **Música** when your account has access to a library of those types, **Mi cuenta** and, for administrators, **Administración**.
 
 ### Movies
 
@@ -130,7 +130,7 @@ Progress is saved every 15 s and on exit. If 15 s or less remain, playback does 
 
 The theme selector offers **Auto**, **Claro** and **Oscuro**. Auto follows the system theme. The preference is stored in that browser; if there is none, the server default is used.
 
-In **Mi cuenta** you can change your password: enter the current one, the new one and the confirmation; the new one must be at least 8 characters. The current session on that device stays active.
+In **Mi cuenta → Change my password** you can change your password: enter the current one, the new one and the confirmation; the new one must be at least 8 characters. The current session on that device stays active. As a user you only see the libraries assigned to you by the administrator.
 
 ## Glossary
 

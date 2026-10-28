@@ -770,7 +770,40 @@ export interface ServerVersion {
 
 export interface CurrentUserResponse {
 	username: string;
-	role: 'admin' | 'user';
+	role: UserRole;
+	all_libraries?: boolean;
+	library_ids?: number[];
+}
+
+export type UserRole = 'admin' | 'user';
+
+export interface ManagedUser {
+	id: number;
+	username: string;
+	role: UserRole;
+	disabled: boolean;
+	all_libraries: boolean;
+	library_ids: number[];
+	created_at: string;
+	active_sessions: number;
+}
+
+export interface UsersResponse {
+	users: ManagedUser[];
+}
+
+export interface CreateUserInput {
+	username: string;
+	password: string;
+	role: UserRole;
+	all_libraries: boolean;
+	library_ids: number[];
+}
+
+export interface UpdateUserInput {
+	role?: UserRole;
+	disabled?: boolean;
+	all_libraries?: boolean;
 }
 
 export interface UpdateStatus {
@@ -883,6 +916,38 @@ export class ApiClient {
 
 	async getCurrentUser(token: string): Promise<CurrentUserResponse> {
 		return this.get<CurrentUserResponse>('/api/v1/auth/me', token);
+	}
+
+	async listUsers(token: string): Promise<UsersResponse> {
+		return this.get<UsersResponse>('/api/v1/users', token);
+	}
+
+	async createUser(input: CreateUserInput, token: string): Promise<ManagedUser> {
+		return this.post<ManagedUser>('/api/v1/users', input, token);
+	}
+
+	async updateUser(id: number, changes: UpdateUserInput, token: string): Promise<ManagedUser> {
+		return this.request<ManagedUser>(`/api/v1/users/${id}`, {
+			method: 'PATCH',
+			body: changes,
+			token
+		});
+	}
+
+	async setUserLibraries(
+		id: number,
+		libraryIDs: number[],
+		token: string
+	): Promise<ManagedUser> {
+		return this.put<ManagedUser>(`/api/v1/users/${id}/libraries`, { library_ids: libraryIDs }, token);
+	}
+
+	async resetUserPassword(id: number, password: string, token: string): Promise<void> {
+		await this.post<void>(`/api/v1/users/${id}/password`, { password }, token);
+	}
+
+	async deleteUser(id: number, token: string): Promise<void> {
+		await this.delete(`/api/v1/users/${id}`, token);
 	}
 
 	async listLibraries(token: string): Promise<LibrariesResponse> {

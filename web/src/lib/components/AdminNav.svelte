@@ -15,7 +15,7 @@
 		{ href: '/admin/settings/playback', label: 'Reproducción' },
 		{ href: '/admin/settings/library', label: 'Biblioteca' },
 		{ href: '/admin/settings/system', label: 'Sistema' },
-		{ href: '/admin/users', label: 'Usuarios', soon: true }
+		{ href: '/admin/users', label: 'Usuarios' }
 	];
 </script>
 

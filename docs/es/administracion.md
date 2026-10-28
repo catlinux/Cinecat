@@ -18,7 +18,7 @@ Solo los usuarios con rol `admin` pueden entrar en `/admin`. El servidor comprue
 | `/admin/settings/playback` | Reproducción | Altura máxima, CRF, preset, aceleración por hardware y transcodificaciones simultáneas. |
 | `/admin/settings/system` | Sistema | Búsqueda de actualizaciones, versiones y panel «Actualizar ahora». |
 | `/admin/update` | — | Endpoint JSON que usa el panel de Sistema para seguir el estado; no es una pantalla. |
-| `/admin/users` | — | No existe todavía. La navegación muestra «Usuarios · Pronto». |
+| `/admin/users` | Usuarios | Crear y gestionar cuentas, roles, bibliotecas visibles, restablecer contraseñas, activar o desactivar y borrar. |
 
 ## Crear una biblioteca
 
@@ -140,7 +140,9 @@ Cada usuario tiene sus propias listas de **Favoritos** y **Próximas a ver**; no
 
 Cada cuenta de usuario solo ve las bibliotecas que el administrador le haya asignado. El administrador ve siempre todas; una cuenta con la opción «todas las bibliotecas» ve también las que se creen en el futuro. El filtrado se aplica en el servidor a listados, fichas, series, colecciones, personas, música y elementos individuales.
 
-Lo que queda fuera de las bibliotecas visibles responde igual que si no existiera: los listados no lo muestran y las rutas directas devuelven 404. Las colecciones y las fichas de personas solo cuentan el contenido visible. Las URLs de reproducción ya emitidas siguen funcionando hasta que caducan, 8 horas después, aunque se retire el acceso o se cierren las sesiones. La pantalla de administración de usuarios llegará en la siguiente versión.
+Lo que queda fuera de las bibliotecas visibles responde igual que si no existiera: los listados no lo muestran y las rutas directas devuelven 404. Las colecciones y las fichas de personas solo cuentan el contenido visible. Las URLs de reproducción ya emitidas siguen funcionando hasta que caducan, 8 horas después, aunque se retire el acceso o se cierren las sesiones.
+
+En **Administración → Usuarios** puedes crear una cuenta con nombre, contraseña y rol, elegir sus bibliotecas (o marcar «Todas, también las que se creen en el futuro»), cambiar el rol, activar o desactivar la cuenta, restablecer su contraseña y borrarla. Las cuentas de usuario deben tener al menos una biblioteca o el acceso a todas. El administrador no puede borrarse, desactivarse ni quitarse el rol a sí mismo, y siempre debe quedar un administrador activo. Restablecer la contraseña, cambiar el rol, desactivar o borrar una cuenta cierra todas sus sesiones.
 
 ## Subir archivos y papelera
 
@@ -162,7 +164,7 @@ Desactivado por defecto. Para usarlo hacen falta dos cosas: montar la biblioteca
 ## Limitaciones de seguridad
 
 - El bloqueo de login cuenta por pareja usuario+IP y añade un límite por IP, pero sigue en memoria del proceso y depende de que Apache y la web reenvíen bien la IP real.
-- Los permisos por biblioteca se aplican en el servidor; la pantalla para gestionar usuarios llegará en la siguiente versión.
+- Los permisos por biblioteca se aplican en el servidor; la gestión de cuentas está en Administración → Usuarios.
 - Las URLs de reproducción firmadas ya emitidas siguen siendo válidas hasta su caducidad aunque se retire el acceso o se cierren las sesiones.
 - El servidor no envía CORS; el despliegue con Apache funciona por compartir origen.
 - Con `CINECAT_MEDIA_MODE=rw`, un administrador puede subir y mover a la papelera; la eliminación definitiva solo afecta a `.cinecat-papelera`.

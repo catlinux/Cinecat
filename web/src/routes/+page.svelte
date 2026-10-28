@@ -26,33 +26,45 @@
 	// Para activar una categoría, dale href; para añadir Imágenes o Vídeos
 	// musicales, añade otra entrada a este mismo array.
 	const categories = $derived<PortalCategory[]>([
-		{
-			id: 'movies',
-			title: 'Películas',
-			description: 'La cartelera completa, con fichas, filtros y búsqueda por reparto o dirección.',
-			kicker: 'En cartel',
-			href: '/movies',
-			art: 'movies',
-			count: data.errorMessage ? null : data.moviesTotal
-		},
-		{
-			id: 'collections',
-			title: 'Colecciones',
-			description: 'Sagas y ciclos reunidos en un mismo estante.',
-			kicker: 'Sagas',
-			href: '/collections',
-			art: 'collections',
-			count: data.collectionsTotal
-		},
-		{
-			id: 'series',
-			title: 'Series',
-			description: 'Temporadas, episodios y ese capítulo que siempre vuelve.',
-			kicker: 'Series',
-			href: '/series',
-			art: 'series',
-			count: data.seriesTotal
-		},
+		...(data.hasVideo !== false
+			? [
+					{
+						id: 'movies',
+						title: 'Películas',
+						description: 'La cartelera completa, con fichas, filtros y búsqueda por reparto o dirección.',
+						kicker: 'En cartel',
+						href: '/movies',
+						art: 'movies' as const,
+						count: data.errorMessage ? null : data.moviesTotal
+					},
+					...(ui.show_collections
+						? [
+								{
+									id: 'collections',
+									title: 'Colecciones',
+									description: 'Sagas y ciclos reunidos en un mismo estante.',
+									kicker: 'Sagas',
+									href: '/collections',
+									art: 'collections' as const,
+									count: data.collectionsTotal
+								}
+							]
+						: []),
+					...(ui.show_series
+						? [
+								{
+									id: 'series',
+									title: 'Series',
+									description: 'Temporadas, episodios y ese capítulo que siempre vuelve.',
+									kicker: 'Series',
+									href: '/series',
+									art: 'series' as const,
+									count: data.seriesTotal
+								}
+							]
+						: [])
+				]
+			: []),
 		...(data.hasClips
 			? [
 					{
@@ -139,6 +151,12 @@
 		<p class="error" role="alert">{data.errorMessage}</p>
 	{/if}
 
+	{#if data.hasAnyLibraryAccess === false}
+		<div class="admin-card portal-empty" role="status">
+			<h2>Todavía no tienes ninguna biblioteca asignada</h2>
+			<p class="admin-note">Pídele acceso al administrador.</p>
+		</div>
+	{:else}
 	<div class="portal-categories">
 		{#each categories as category (category.id)}
 			{#if category.href}
@@ -240,4 +258,15 @@
 			{/if}
 		</div>
 	{/if}
+	{/if}
+
 </section>
+
+<style>
+	.portal-empty {
+		margin-top: 1.5rem;
+	}
+	.portal-empty h2 {
+		margin-bottom: 0.5rem;
+	}
+</style>

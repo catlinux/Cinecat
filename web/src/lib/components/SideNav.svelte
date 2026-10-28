@@ -8,6 +8,7 @@
 		isHome = false,
 		isAdmin = false,
 		hasSession = false,
+		hasVideo = true,
 		hasClips = false,
 		hasMusic = false,
 		versionLabel
@@ -25,6 +26,7 @@
 		isHome?: boolean;
 		isAdmin?: boolean;
 		hasSession?: boolean;
+		hasVideo?: boolean;
 		hasClips?: boolean;
 		hasMusic?: boolean;
 		versionLabel: string;
@@ -44,28 +46,30 @@
 			<li>
 				<a href="/" aria-current={isHome ? 'page' : undefined}>Inicio</a>
 			</li>
-			<li>
-				<a
-					href="/movies"
-					aria-current={activeCategory === 'movies' ? 'page' : undefined}>Películas</a
-				>
-			</li>
-			{#if ui.show_collections}
+			{#if hasVideo}
 				<li>
 					<a
-						href="/collections"
-						aria-current={activeCategory === 'collections' ? 'page' : undefined}
-						>Colecciones</a
+						href="/movies"
+						aria-current={activeCategory === 'movies' ? 'page' : undefined}>Películas</a
 					>
 				</li>
-			{/if}
-			{#if ui.show_series}
-				<li>
-					<a
-						href="/series"
-						aria-current={activeCategory === 'series' ? 'page' : undefined}>Series</a
-					>
-				</li>
+				{#if ui.show_collections}
+					<li>
+						<a
+							href="/collections"
+							aria-current={activeCategory === 'collections' ? 'page' : undefined}
+							>Colecciones</a
+						>
+					</li>
+				{/if}
+				{#if ui.show_series}
+					<li>
+						<a
+							href="/series"
+							aria-current={activeCategory === 'series' ? 'page' : undefined}>Series</a
+						>
+					</li>
+				{/if}
 			{/if}
 			{#if hasClips}
 				<li>

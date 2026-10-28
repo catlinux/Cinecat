@@ -325,6 +325,8 @@ function pageData(overrides: Record<string, unknown> = {}) {
 	return {
 		hasSession: true,
 		isAdmin: false,
+		hasVideo: true,
+		hasAnyLibraryAccess: true,
 		hasClips: false,
 		hasMusic: false,
 		isHome: false,

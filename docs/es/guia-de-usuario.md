@@ -26,7 +26,7 @@ Las filas se pueden desplazar con las flechas `‹` y `›`; con el dedo o el tr
 
 ## Navegar por la biblioteca
 
-El menú puede estar a la izquierda (**lateral**) o arriba (**superior**), según lo configure el administrador. Contiene **Inicio**, **Películas**, **Colecciones**, **Series**, **Vídeos** y **Música** cuando hay una biblioteca de esos tipos con contenido, **Mi cuenta** y, si eres administrador, **Administración**.
+El menú puede estar a la izquierda (**lateral**) o arriba (**superior**), según lo configure el administrador. Contiene **Inicio**, **Películas**, **Colecciones**, **Series**, **Vídeos** y **Música** cuando tu cuenta tiene acceso a una biblioteca de esos tipos, **Mi cuenta** y, si eres administrador, **Administración**.
 
 ### Películas
 
@@ -130,7 +130,7 @@ El progreso se guarda cada 15 s y al salir. Si quedan 15 s o menos, no se reanud
 
 El selector de tema tiene **Auto**, **Claro** y **Oscuro**. Auto sigue el tema del sistema. La preferencia se guarda en ese navegador; si no hay ninguna, se usa el tema por defecto del servidor.
 
-En **Mi cuenta** puedes cambiar tu contraseña: pide la actual, la nueva y la repetición; la nueva debe tener al menos 8 caracteres. La sesión abierta en ese dispositivo sigue funcionando.
+En **Mi cuenta → Cambiar mi contraseña** puedes cambiar tu contraseña: pide la actual, la nueva y la repetición; la nueva debe tener al menos 8 caracteres. La sesión abierta en ese dispositivo sigue funcionando. Como usuario solo ves las bibliotecas que el administrador te haya asignado.
 
 ## Glosario
 
