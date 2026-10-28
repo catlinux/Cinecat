@@ -76,6 +76,7 @@ Details, systemd/linger requirements, backups and manual recovery are in [update
 | Administration | [administración](docs/es/administracion.md) | [administration](docs/en/administration.md) |
 | Vision and decisions | [visión](docs/es/vision.md) | [vision](docs/en/vision.md) |
 | Architecture and security | [arquitectura](docs/es/arquitectura.md) | [architecture](docs/en/architecture.md) |
+| API for native clients | [API](docs/es/api.md) | [API](docs/en/api.md) |
 | Playback and codecs | [reproducción](docs/es/reproduccion.md) | [playback](docs/en/playback.md) |
 | Metadata | [metadatos](docs/es/metadatos.md) | [metadata](docs/en/metadata.md) |
 | Updates | [actualizaciones](docs/es/actualizaciones.md) | [updates](docs/en/updates.md) |

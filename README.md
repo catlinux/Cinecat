@@ -76,6 +76,7 @@ Los detalles, requisitos de systemd/linger, copias y recuperación manual están
 | Administración | [administración](docs/es/administracion.md) | [administration](docs/en/administration.md) |
 | Visión y decisiones | [visión](docs/es/vision.md) | [vision](docs/en/vision.md) |
 | Arquitectura y seguridad | [arquitectura](docs/es/arquitectura.md) | [architecture](docs/en/architecture.md) |
+| API para clientes nativos | [API](docs/es/api.md) | [API](docs/en/api.md) |
 | Reproducción y códecs | [reproducción](docs/es/reproduccion.md) | [playback](docs/en/playback.md) |
 | Metadatos | [metadatos](docs/es/metadatos.md) | [metadata](docs/en/metadata.md) |
 | Actualizaciones | [actualizaciones](docs/es/actualizaciones.md) | [updates](docs/en/updates.md) |
