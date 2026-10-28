@@ -7,6 +7,13 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.27.0] - 2026-10-28
+
+### Añadido
+
+- Vincular un dispositivo por código: una app de Android o Android TV pide un código (`POST /api/v1/auth/pair`), lo muestra como `XXXX-XXXX` con un QR, y el usuario lo aprueba en la web en la nueva página **/vincular** (enlace también en Tu cuenta) tras ver el nombre del dispositivo y un aviso contra engaños; el dispositivo recoge entonces su sesión de 90 días (`POST /api/v1/auth/pair/token`). El código caduca a los 10 minutos y es de un solo uso; el token solo se entrega a quien tiene el secreto del dispositivo, que nunca se muestra; código y secreto se guardan solo como hash, con límites de intentos y de sondeo. Migración 0022.
+- El login vuelve a la página de la que venías (`?next=`), solo si es una ruta del propio sitio.
+
 ## [0.26.0] - 2026-10-28
 
 ### Añadido

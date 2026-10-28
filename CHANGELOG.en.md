@@ -7,6 +7,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-10-28
+
+### Added
+
+- Pair a device by code: an Android or Android TV app requests a code (`POST /api/v1/auth/pair`), shows it as `XXXX-XXXX` with a QR code, and the user approves it on the web in the new **/vincular** page (also linked from Your account) after seeing the device name and an anti-scam warning; the device then collects its 90-day session (`POST /api/v1/auth/pair/token`). The code expires after 10 minutes and is single-use; the token is only handed to whoever holds the device secret, which is never shown; code and secret are stored only as hashes, with attempt and polling limits. Migration 0022.
+- Login returns to the page you came from (`?next=`), only when it is a path on the same site.
+
 ## [0.26.0] - 2026-10-28
 
 ### Added

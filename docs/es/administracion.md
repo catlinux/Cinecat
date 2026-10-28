@@ -148,6 +148,8 @@ En **Administración → Usuarios** puedes crear una cuenta con nombre, contrase
 
 Cada sesión guarda su dispositivo y su tipo. **Tu cuenta** lista tus sesiones abiertas (dispositivo, última actividad y caducidad) para que puedas cerrar cualquiera, y cada tarjeta de **Usuarios** hace lo mismo para el administrador. Las sesiones web duran 24 horas y las de las apps nativas durarán 90 días, ambas renovadas mientras se usan.
 
+**Vincular un dispositivo:** las apps de Android y Android TV podrán iniciar sesión sin escribir la contraseña. El dispositivo muestra un código `XXXX-XXXX` y un QR; ábrelo (o entra en **/vincular** desde Tu cuenta), comprueba que el nombre del dispositivo es el tuyo y pulsa «Vincular». El código caduca a los 10 minutos y sirve una sola vez. Aprueba solo un código que veas en tu propia pantalla: si alguien te pasa uno, daría acceso a tu cuenta.
+
 ## Subir archivos y papelera
 
 Desactivado por defecto. Para usarlo hacen falta dos cosas: montar la biblioteca en lectura y escritura (`CINECAT_MEDIA_MODE=rw` en el `.env` del Debian y volver a levantar los contenedores) y activar **Permitir cambiar archivos** en Administración → Biblioteca. Con cualquiera de las dos apagada, la web muestra el motivo y no toca el disco. Con `rw`, cualquier administrador de Cinecat puede escribir en tus discos: protege bien esa cuenta.

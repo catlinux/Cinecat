@@ -148,6 +148,8 @@ In **Administration → Users** you can create an account with a name, password 
 
 Every session records its device and type. **Your account** lists your open sessions (device, last activity, expiry) so you can close any of them, and each user card in **Users** does the same for administrators. Web sessions last 24 hours; native app sessions will last 90 days, both renewed while in use.
 
+**Pair a device:** the Android and Android TV apps will be able to sign in without typing the password. The device shows an `XXXX-XXXX` code and a QR code; open it (or go to **/vincular** from Your account), check that the device name is yours and press "Vincular". The code expires after 10 minutes and works once. Only approve a code you see on your own screen: if someone sends you one, it would give them access to your account.
+
 ## Uploading files and trash
 
 Disabled by default. Two things are needed: mount the library read-write (`CINECAT_MEDIA_MODE=rw` in the Debian `.env`, then bring the containers up again) and enable **Permitir cambiar archivos** in Administration → Library. With either one off, the web app shows the reason and does not touch the disk. With `rw`, any Cinecat administrator can write to your disks: protect that account well.
