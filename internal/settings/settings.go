@@ -49,6 +49,12 @@ const (
 	KeyTrashRetention   = "trash.retention_days"
 )
 
+// Claves de las copias de seguridad.
+const (
+	KeyBackupEnabled       = "backup.enabled"
+	KeyBackupRetentionDays = "backup.retention_days"
+)
+
 // ErrUnknownKey indica que la clave no forma parte del registro de ajustes.
 var ErrUnknownKey = errors.New("ajuste desconocido")
 
@@ -377,6 +383,24 @@ var definitions = []Definition{
 		Default:     14,
 		Min:         1,
 		Max:         90,
+	},
+	{
+		Key:         KeyBackupEnabled,
+		Section:     "system",
+		Label:       "Copias de seguridad diarias",
+		Description: "Crea una copia de la base de datos cada 24 horas junto a los datos del servidor.",
+		Type:        TypeBool,
+		Default:     true,
+	},
+	{
+		Key:         KeyBackupRetentionDays,
+		Section:     "system",
+		Label:       "Días que se conservan las copias",
+		Description: "Antigüedad máxima de las copias automáticas; la más reciente se conserva siempre.",
+		Type:        TypeInt,
+		Default:     7,
+		Min:         1,
+		Max:         365,
 	},
 	{
 		Key:         "system.check_updates",

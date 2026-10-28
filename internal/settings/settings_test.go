@@ -48,8 +48,8 @@ func raw(value string) json.RawMessage {
 
 func TestDefinitions(t *testing.T) {
 	definitions := Definitions()
-	if len(definitions) != 27 {
-		t.Fatalf("ajustes = %d, se esperaban 27", len(definitions))
+	if len(definitions) != 29 {
+		t.Fatalf("ajustes = %d, se esperaban 29", len(definitions))
 	}
 
 	seen := make(map[string]bool)
@@ -174,6 +174,9 @@ func TestValidate(t *testing.T) {
 		{"subida máxima", KeyUploadMaxGB, "500", 500},
 		{"retención mínima", KeyTrashRetention, "1", 1},
 		{"retención máxima", KeyTrashRetention, "90", 90},
+		{"copias activadas", KeyBackupEnabled, "true", true},
+		{"retención de copias mínima", KeyBackupRetentionDays, "1", 1},
+		{"retención de copias máxima", KeyBackupRetentionDays, "365", 365},
 	}
 
 	for _, test := range tests {
@@ -227,6 +230,8 @@ func TestValidate(t *testing.T) {
 		{"subida fuera por arriba", KeyUploadMaxGB, "501"},
 		{"retención fuera por abajo", KeyTrashRetention, "0"},
 		{"retención fuera por arriba", KeyTrashRetention, "91"},
+		{"retención de copias fuera por abajo", KeyBackupRetentionDays, "0"},
+		{"retención de copias fuera por arriba", KeyBackupRetentionDays, "366"},
 		{"valor null", "ui.show_series", "null"},
 		{"json inválido", "ui.show_series", "{"},
 	}

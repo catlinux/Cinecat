@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/catlinux/cinecat/internal/auth"
+	"github.com/catlinux/cinecat/internal/backup"
 	"github.com/catlinux/cinecat/internal/config"
 	"github.com/catlinux/cinecat/internal/library"
 	"github.com/catlinux/cinecat/internal/metadata"
@@ -183,6 +184,24 @@ func main() {
 		6*time.Hour,
 	)
 
+	backupManager := backup.New(st.DB(), cfg.DatabasePath).WithSettings(
+		func() bool { return settingsStore.Bool(settings.KeyBackupEnabled) },
+		func() int { return settingsStore.Int(settings.KeyBackupRetentionDays) },
+	)
+	backupChanges := make(chan struct{}, 1)
+	settingsStore.OnChange(func(keys []string) {
+		for _, key := range keys {
+			if key == settings.KeyBackupEnabled || key == settings.KeyBackupRetentionDays {
+				select {
+				case backupChanges <- struct{}{}:
+				default:
+				}
+				return
+			}
+		}
+	})
+	go backup.RunBackground(ctx, backupManager, backupChanges, 2*time.Minute, 24*time.Hour, time.Hour)
+
 	api := library.NewAPI(st.DB(), authSvc, playSvc, scanJob, tmdbClient)
 	api = api.WithSettings(settingsStore)
 	api = api.WithFileInspector(playSvc)
@@ -197,9 +216,15 @@ func main() {
 		updateRequester,
 		func() bool { return settingsStore.Bool("system.check_updates") },
 	)
+	backupAPI := backup.NewAPI(
+		authSvc.Authenticate,
+		backupManager,
+		func() bool { return settingsStore.Bool(settings.KeyBackupEnabled) },
+		func() int { return settingsStore.Int(settings.KeyBackupRetentionDays) },
+	)
 	srv := &http.Server{
 		Addr:              cfg.ListenAddr,
-		Handler:           newHandler(authSvc, api, updateAPI),
+		Handler:           newHandlerWithBackup(authSvc, api, updateAPI, backupAPI),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
@@ -391,6 +416,19 @@ func musicCoverCacheDir(databasePath string) string {
 }
 
 func newHandler(authSvc *auth.Service, api *library.API, updateAPIs ...*update.API) http.Handler {
+	var updateAPI *update.API
+	if len(updateAPIs) > 0 {
+		updateAPI = updateAPIs[0]
+	}
+	return newHandlerWithBackup(authSvc, api, updateAPI, nil)
+}
+
+func newHandlerWithBackup(
+	authSvc *auth.Service,
+	api *library.API,
+	updateAPI *update.API,
+	backupAPI *backup.API,
+) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
@@ -408,8 +446,11 @@ func newHandler(authSvc *auth.Service, api *library.API, updateAPIs ...*update.A
 	if api != nil {
 		api.Register(mux)
 	}
-	if len(updateAPIs) > 0 && updateAPIs[0] != nil {
-		updateAPIs[0].Register(mux)
+	if updateAPI != nil {
+		updateAPI.Register(mux)
+	}
+	if backupAPI != nil {
+		backupAPI.Register(mux)
 	}
 	return securityHeaders(mux)
 }
