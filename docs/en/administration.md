@@ -92,6 +92,7 @@ Settings are stored in the database with per-type validation. They apply without
 | `ui.tagline` | Eslogan | Short phrase next to the name in the header. Empty to hide it. | Text 0–60 | `Sesión continua` | Hot; next page. |
 | `ui.portal_title` | Título del portal | Main title of the home page. | Text 1–60 | `Tu cine en casa` | Hot; next page. |
 | `ui.portal_intro` | Texto del portal | Paragraph below the home page title. Empty to hide it. | Text 0–240 | `Una biblioteca personal con olor a palomitas, carteles pintados a mano y la sesión de siempre esperándote.` | Hot; next page. |
+| `ui.portal_rows` | Portal rows | Order, visibility, title and kicker of the home page rows; edited with the "Filas del portal" editor. | JSON (list of rows) | Default order, all visible | Hot; next page. |
 | `ui.nav_layout` | Menú de navegación | Position of the main menu: side on desktop or top. | `side` (left), `top` (top) | `side` | Hot; next page. |
 | `ui.grid_columns` | Columnas de los listados | Posters per row in movies, series and collections. | Integer 4–8 | `6` | Hot; next page. |
 | `ui.grid_rows` | Filas por página | Poster rows per page; the result count is columns × rows. | Integer 2–12 | `8` | Hot; next page. |

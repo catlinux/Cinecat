@@ -7,6 +7,17 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-10-28
+
+### Added
+
+- Configurable portal: **Administration → Settings → Interface → Portal rows** sets the order of the home page rows, which ones are shown and their title and kicker (`ui.portal_rows` setting). The category strip stays fixed at the top.
+- New **"Vistas hace poco"** (recently watched) row with the latest movies marked as watched (`recently_watched` in `GET /api/v1/home`).
+
+### Changed
+
+- Default portal order: recently added movies, continue watching movies, movies to watch, recently watched, recently added series, continue watching series, next episode, series to watch and favourites. "Próximas a ver" is split into movies and series; some rows are renamed.
+
 ## [0.27.0] - 2026-10-28
 
 ### Added

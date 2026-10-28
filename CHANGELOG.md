@@ -7,6 +7,17 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.28.0] - 2026-10-28
+
+### Añadido
+
+- Portal configurable: en **Administración → Ajustes → Interfaz → Filas del portal** se elige el orden de las filas de la página de inicio, cuáles se muestran y su título y antetítulo (ajuste `ui.portal_rows`). La tira de categorías sigue fija arriba.
+- Fila nueva **«Vistas hace poco»** con las últimas películas marcadas como vistas (`recently_watched` en `GET /api/v1/home`).
+
+### Cambiado
+
+- Orden por defecto del portal: películas recién añadidas, continuar viendo películas, películas por ver, vistas hace poco, series recién añadidas, continuar viendo series, siguiente episodio, series por ver y favoritos. «Próximas a ver» se separa en «Películas por ver» y «Series por ver»; algunas filas cambian de nombre («Películas recién añadidas», «Series recién añadidas»).
+
 ## [0.27.0] - 2026-10-28
 
 ### Añadido

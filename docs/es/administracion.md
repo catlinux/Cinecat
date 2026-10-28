@@ -92,6 +92,7 @@ Los ajustes se guardan en la base de datos con validación por tipo. Se aplican 
 | `ui.tagline` | Eslogan | Frase corta junto al nombre en la cabecera. Vacía para ocultarla. | Texto 0–60 | `Sesión continua` | En caliente; siguiente página. |
 | `ui.portal_title` | Título del portal | Título principal de la página de inicio. | Texto 1–60 | `Tu cine en casa` | En caliente; siguiente página. |
 | `ui.portal_intro` | Texto del portal | Párrafo bajo el título de la página de inicio. Vacío para ocultarlo. | Texto 0–240 | `Una biblioteca personal con olor a palomitas, carteles pintados a mano y la sesión de siempre esperándote.` | En caliente; siguiente página. |
+| `ui.portal_rows` | Filas del portal | Orden, visibilidad, título y antetítulo de las filas de la página de inicio; se edita con el editor «Filas del portal». | JSON (lista de filas) | Orden por defecto, todas visibles | En caliente; siguiente página. |
 | `ui.nav_layout` | Menú de navegación | Posición del menú principal: lateral en escritorio o superior. | `side` (lateral), `top` (superior) | `side` | En caliente; siguiente página. |
 | `ui.grid_columns` | Columnas de los listados | Carátulas por fila en películas, series y colecciones. | Entero 4–8 | `6` | En caliente; siguiente página. |
 | `ui.grid_rows` | Filas por página | Filas de carátulas por página; el número de resultados es columnas × filas. | Entero 2–12 | `8` | En caliente; siguiente página. |

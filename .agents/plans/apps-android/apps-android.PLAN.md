@@ -59,3 +59,4 @@ Orden: servidor primero (la app necesita S1-S4), después la app. Cada paso term
 
 - 2026-10-28: plan escrito (Opus) y ajustado con las respuestas del usuario (equipos, aspecto, distribución por GitHub con actualización automática, pruebas con `adb`). Nada empezado; el siguiente paso es S1.
 - 2026-10-28: **S1 hecho** (0.26.0, publicado). **S2 hecho** (0.27.0): servidor revisado por Opus según el diseño; web `/vincular` con vuelta segura del login (`safeNextPath`). Siguiente: S3 (Opus).
+- 2026-10-28: entre medias se publicó 0.28.0 (portal configurable, ajeno al plan): **las versiones previstas de S3 en adelante se desplazan una menor** (S3 → 0.29.0, S4 → 0.30.0, A0 → 0.31.0…); usar siempre la siguiente libre.
