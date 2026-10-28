@@ -177,6 +177,7 @@ func queryHomeNextUp(
 		WITH watched AS (
 			SELECT mi.series_id, MAX(ws.watched_at) AS activity
 			  FROM media_items mi
+			  JOIN series s ON s.id = mi.series_id AND `+access.Clause("s")+`
 			  JOIN watch_state ws
 			    ON ws.media_item_id = mi.id AND ws.user_id = ?
 			 WHERE mi.series_id IS NOT NULL
@@ -186,6 +187,7 @@ func queryHomeNextUp(
 		in_progress AS (
 			SELECT DISTINCT mi.series_id
 			  FROM media_items mi
+			  JOIN series s ON s.id = mi.series_id AND `+access.Clause("s")+`
 			  JOIN playback_progress pp
 			    ON pp.media_item_id = mi.id AND pp.user_id = ?
 			 WHERE mi.series_id IS NOT NULL
@@ -195,6 +197,7 @@ func queryHomeNextUp(
 			SELECT watched.series_id, watched.activity,
 			       (SELECT mi.id
 			          FROM media_items mi
+			          JOIN series s ON s.id = mi.series_id AND `+access.Clause("s")+`
 			         WHERE mi.series_id = watched.series_id
 			           AND `+access.VideoClause("mi")+`
 			           AND NOT EXISTS (

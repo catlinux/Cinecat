@@ -236,7 +236,7 @@ func (a *API) handleClipBrowse(w http.ResponseWriter, r *http.Request) {
 	for _, item := range direct[start:end] {
 		pageIDs = append(pageIDs, item.id)
 	}
-	pageItems, err := a.mediaItemsByIDs(r.Context(), pageIDs, sessionUserID(r))
+	pageItems, err := a.mediaItemsByIDs(r.Context(), pageIDs, sessionUserID(r), accessFromRequest(r))
 	if err != nil {
 		log.Printf("library: leer fichas de la biblioteca %d: %v", libraryID, err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")

@@ -17,24 +17,44 @@ const (
 	maxCollectionsLimit     = 200
 )
 
-// El recuento usa JOIN y no IN (SELECT …): con ~200 colecciones el listado
-// pasó de 40 ms a 2 ms en SQLite.
-const collectionItemCountExpr = `(SELECT count(*) FROM collection_items ci
+// Las expresiones de recuento, cartel y visibilidad dependen del acceso del
+// usuario: una colección solo cuenta y muestra las películas visibles.
+func collectionItemCountSQL(access libraryAccess) string {
+	return `(SELECT count(*) FROM collection_items ci
 	JOIN media_items mi ON mi.id = ci.media_item_id
 	JOIN libraries l ON l.id = mi.library_id AND l.kind = 'video'
-	WHERE ci.collection_id = c.id AND ci.excluded = 0)`
+	WHERE ci.collection_id = c.id AND ci.excluded = 0
+	  AND ` + access.Clause("mi") + `)`
+}
 
-const collectionPosterExpr = `COALESCE(NULLIF(c.poster_url, ''), (
+func collectionPosterSQL(access libraryAccess) string {
+	return `COALESCE(NULLIF(c.poster_url, ''), (
 	SELECT mi.poster_url
 	  FROM collection_items ci
 	  JOIN media_items mi ON mi.id = ci.media_item_id
 	  JOIN libraries l ON l.id = mi.library_id AND l.kind = 'video'
 	 WHERE ci.collection_id = c.id
 	   AND ci.excluded = 0
+	   AND ` + access.Clause("mi") + `
 	   AND mi.poster_url IS NOT NULL
 	   AND trim(mi.poster_url) <> ''
 	 ORDER BY (mi.year IS NULL) ASC, mi.year ASC, mi.id ASC
 	 LIMIT 1))`
+}
+
+func collectionVisibleSQL(access libraryAccess, alias string) string {
+	if access.Unrestricted() {
+		return "1 = 1"
+	}
+	return `EXISTS (
+		SELECT 1
+		  FROM collection_items ci_visible
+		  JOIN media_items mi_visible ON mi_visible.id = ci_visible.media_item_id
+		  JOIN libraries l_visible ON l_visible.id = mi_visible.library_id AND l_visible.kind = 'video'
+		 WHERE ci_visible.collection_id = ` + alias + `.id
+		   AND ci_visible.excluded = 0
+		   AND ` + access.Clause("mi_visible") + `)`
+}
 
 type collectionDTO struct {
 	ID          int64   `json:"id"`
@@ -106,10 +126,13 @@ func (a *API) handleCollections(w http.ResponseWriter, r *http.Request) {
 	if sortOrder == "" {
 		sortOrder = "name"
 	}
+	access := accessFromRequest(r)
+	countExpr := collectionItemCountSQL(access)
+	posterExpr := collectionPosterSQL(access)
 
 	where := fmt.Sprintf(
-		`c.deleted = 0 AND (c.source = 'manual' OR %s >= %d)`,
-		collectionItemCountExpr, a.collectionMin(),
+		`c.deleted = 0 AND (c.source = 'manual' OR %s >= %d) AND %s`,
+		countExpr, a.collectionMin(), collectionVisibleSQL(access, "c"),
 	)
 	args := make([]any, 0)
 	if q != "" {
@@ -131,7 +154,7 @@ func (a *API) handleCollections(w http.ResponseWriter, r *http.Request) {
 	case "added":
 		order = " ORDER BY c.id DESC"
 	case "size":
-		order = " ORDER BY " + collectionItemCountExpr + " DESC, c.name COLLATE NOCASE, c.id"
+		order = " ORDER BY " + countExpr + " DESC, c.name COLLATE NOCASE, c.id"
 	default:
 		writeJSONError(w, http.StatusBadRequest, "sort debe ser name, added o size")
 		return
@@ -140,8 +163,8 @@ func (a *API) handleCollections(w http.ResponseWriter, r *http.Request) {
 	queryArgs := append([]any{sessionUserID(r), sessionUserID(r)}, args...)
 	queryArgs = append(queryArgs, limit, offset)
 	rows, err := a.db.QueryContext(r.Context(), `
-		SELECT c.id, c.name, c.overview, `+collectionPosterExpr+`, c.backdrop_url,
-		       `+collectionItemCountExpr+`, c.source, c.edited,
+		SELECT c.id, c.name, c.overview, `+posterExpr+`, c.backdrop_url,
+		       `+countExpr+`, c.source, c.edited,
 		       EXISTS (SELECT 1 FROM collection_lists cl_favorite
 		                WHERE cl_favorite.user_id = ?
 		                  AND cl_favorite.collection_id = c.id
@@ -192,6 +215,9 @@ func (a *API) handleAllCollections(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	access := unrestrictedLibraryAccess()
+	countExpr := collectionItemCountSQL(access)
+	posterExpr := collectionPosterSQL(access)
 	where := "c.deleted = 0"
 	args := make([]any, 0, 1)
 	if q := strings.TrimSpace(r.URL.Query().Get("q")); q != "" {
@@ -200,8 +226,8 @@ func (a *API) handleAllCollections(w http.ResponseWriter, r *http.Request) {
 	}
 	queryArgs := append([]any{sessionUserID(r), sessionUserID(r)}, args...)
 	rows, err := a.db.QueryContext(r.Context(), `
-		SELECT c.id, c.name, c.overview, `+collectionPosterExpr+`, c.backdrop_url,
-		       `+collectionItemCountExpr+`, c.source, c.edited,
+		SELECT c.id, c.name, c.overview, `+posterExpr+`, c.backdrop_url,
+		       `+countExpr+`, c.source, c.edited,
 		       EXISTS (SELECT 1 FROM collection_lists cl_favorite
 		                WHERE cl_favorite.user_id = ?
 		                  AND cl_favorite.collection_id = c.id
@@ -282,14 +308,14 @@ func scanCollection(scan func(dest ...any) error) (collectionDTO, error) {
 	return collection, nil
 }
 
-func queryCollectionBase(ctx context.Context, db *sql.DB, id int64, userIDs ...int64) (collectionDTO, bool, error) {
+func queryCollectionBase(ctx context.Context, db *sql.DB, id int64, access libraryAccess, userIDs ...int64) (collectionDTO, bool, error) {
 	var userID int64
 	if len(userIDs) > 0 {
 		userID = userIDs[0]
 	}
 	row := db.QueryRowContext(ctx, `
-		SELECT c.id, c.name, c.overview, `+collectionPosterExpr+`, c.backdrop_url,
-		       `+collectionItemCountExpr+`, c.source, c.edited, c.deleted,
+		SELECT c.id, c.name, c.overview, `+collectionPosterSQL(access)+`, c.backdrop_url,
+		       `+collectionItemCountSQL(access)+`, c.source, c.edited, c.deleted,
 		       EXISTS (SELECT 1 FROM collection_lists cl_favorite
 		                WHERE cl_favorite.user_id = ?
 		                  AND cl_favorite.collection_id = c.id
@@ -324,7 +350,8 @@ func (a *API) handleCollection(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusNotFound, "colección no encontrada")
 		return
 	}
-	collection, deleted, err := queryCollectionBase(r.Context(), a.db, id, sessionUserID(r))
+	access := accessFromRequest(r)
+	collection, deleted, err := queryCollectionBase(r.Context(), a.db, id, access, sessionUserID(r))
 	if errors.Is(err, sql.ErrNoRows) || deleted {
 		writeJSONError(w, http.StatusNotFound, "colección no encontrada")
 		return
@@ -334,12 +361,16 @@ func (a *API) handleCollection(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
 		return
 	}
+	if !access.Unrestricted() && collection.ItemCount == 0 {
+		writeJSONError(w, http.StatusNotFound, "colección no encontrada")
+		return
+	}
 	if collection.Source == "tmdb" && collection.ItemCount < int64(a.collectionMin()) {
 		writeJSONError(w, http.StatusNotFound, "colección no encontrada")
 		return
 	}
 
-	items, err := a.collectionMovieItems(r.Context(), id, sessionUserID(r))
+	items, err := a.collectionMovieItems(r.Context(), id, sessionUserID(r), access)
 	if err != nil {
 		log.Printf("library: leer películas de la colección %d: %v", id, err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
@@ -362,7 +393,7 @@ func (a *API) handleCollection(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (a *API) collectionMovieItems(ctx context.Context, collectionID, userID int64) ([]mediaItemDTO, error) {
+func (a *API) collectionMovieItems(ctx context.Context, collectionID, userID int64, access libraryAccess) ([]mediaItemDTO, error) {
 	rows, err := a.db.QueryContext(ctx, `
 		SELECT `+mediaItemColumns+watchedColumn+progressColumn+itemListColumns+`
 		  FROM media_items
@@ -374,7 +405,7 @@ func (a *API) collectionMovieItems(ctx context.Context, collectionID, userID int
 		    ON ws.media_item_id = media_items.id AND ws.user_id = ?
 		  LEFT JOIN playback_progress pp
 		    ON pp.media_item_id = media_items.id AND pp.user_id = ?
-		 WHERE `+unrestrictedLibraryAccess().VideoClause("media_items")+`
+		 WHERE `+access.VideoClause("media_items")+`
 		 ORDER BY ci.position IS NULL, ci.position ASC,
 		          media_items.year IS NULL, media_items.year ASC, media_items.id`,
 		userID, userID, collectionID, userID, userID)
@@ -399,7 +430,7 @@ func (a *API) collectionMovieItems(ctx context.Context, collectionID, userID int
 	for _, item := range items {
 		itemIDs = append(itemIDs, item.ID)
 	}
-	collectionsByItem, err := loadItemCollections(ctx, a.db, itemIDs, a.collectionMin())
+	collectionsByItem, err := loadItemCollectionsWithAccess(ctx, a.db, itemIDs, access, a.collectionMin())
 	if err != nil {
 		return nil, err
 	}
@@ -459,7 +490,7 @@ func (a *API) handleCollectionCreate(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
 		return
 	}
-	collection, _, err := queryCollectionBase(r.Context(), a.db, id, sessionUserID(r))
+	collection, _, err := queryCollectionBase(r.Context(), a.db, id, accessFromRequest(r), sessionUserID(r))
 	if err != nil {
 		log.Printf("library: leer colección creada %d: %v", id, err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
@@ -564,7 +595,7 @@ func (a *API) loadAdminCollection(w http.ResponseWriter, r *http.Request) (colle
 		writeJSONError(w, http.StatusNotFound, "colección no encontrada")
 		return collectionDTO{}, false
 	}
-	collection, deleted, err := queryCollectionBase(r.Context(), a.db, id, sessionUserID(r))
+	collection, deleted, err := queryCollectionBase(r.Context(), a.db, id, accessFromRequest(r), sessionUserID(r))
 	if errors.Is(err, sql.ErrNoRows) || deleted {
 		writeJSONError(w, http.StatusNotFound, "colección no encontrada")
 		return collectionDTO{}, false
@@ -578,7 +609,7 @@ func (a *API) loadAdminCollection(w http.ResponseWriter, r *http.Request) (colle
 }
 
 func (a *API) writeCollection(w http.ResponseWriter, r *http.Request, id int64) {
-	collection, _, err := queryCollectionBase(r.Context(), a.db, id, sessionUserID(r))
+	collection, _, err := queryCollectionBase(r.Context(), a.db, id, accessFromRequest(r), sessionUserID(r))
 	if err != nil {
 		log.Printf("library: leer colección %d: %v", id, err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")

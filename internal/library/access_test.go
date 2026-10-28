@@ -1,9 +1,12 @@
 package library
 
 import (
+	"context"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/catlinux/cinecat/internal/auth"
 )
 
 func TestLibraryAccessClausulas(t *testing.T) {
@@ -48,4 +51,34 @@ func TestAccessFromRequestSinContextoDeniega(t *testing.T) {
 	if access.Unrestricted() || access.Allows(1) || access.Clause("mi") != "0 = 1" {
 		t.Fatalf("sin contexto debe denegarse: %+v", access)
 	}
+}
+
+func partialAccessToken(t *testing.T, ts *libraryTestServer, libraryIDs ...int64) (string, int64) {
+	t.Helper()
+	hash, err := auth.HashPassword("Clave-parcial-1")
+	if err != nil {
+		t.Fatalf("HashPassword: %v", err)
+	}
+	result, err := ts.db.Exec(`
+		INSERT INTO users (username, password_hash, role, all_libraries)
+		VALUES ('parcial', ?, 'user', 0)`, hash)
+	if err != nil {
+		t.Fatalf("crear usuario parcial: %v", err)
+	}
+	userID, err := result.LastInsertId()
+	if err != nil {
+		t.Fatalf("id de usuario parcial: %v", err)
+	}
+	for _, libraryID := range libraryIDs {
+		if _, err := ts.db.Exec(
+			`INSERT INTO user_libraries (user_id, library_id) VALUES (?, ?)`,
+			userID, libraryID); err != nil {
+			t.Fatalf("asignar biblioteca %d: %v", libraryID, err)
+		}
+	}
+	token, _, err := ts.auth.Login(context.Background(), "parcial", "Clave-parcial-1")
+	if err != nil {
+		t.Fatalf("Login parcial: %v", err)
+	}
+	return token, userID
 }

@@ -727,3 +727,122 @@ func TestCollectionsListAllAdmin(t *testing.T) {
 		t.Fatalf("all=1 sin admin: código = %d, cuerpo = %s", status, body)
 	}
 }
+
+func TestCollectionsFiltraAccesoParcial(t *testing.T) {
+	ts := newLibraryHTTPTestServer(t)
+	visibleLibrary := createLibrary(t, ts.db, t.TempDir())
+	hiddenLibrary := createLibrary(t, ts.db, t.TempDir())
+	visibleMovie := insertItemFixture(t, ts.db, itemFixture{
+		libraryID: visibleLibrary, path: "/media/visible/uno.mkv",
+		title: "Visible uno", year: 2001, posterURL: "https://img/visible.jpg",
+	})
+	hiddenOne := insertItemFixture(t, ts.db, itemFixture{
+		libraryID: hiddenLibrary, path: "/media/oculta/uno.mkv",
+		title: "Oculta uno", year: 2002,
+	})
+	hiddenTwo := insertItemFixture(t, ts.db, itemFixture{
+		libraryID: hiddenLibrary, path: "/media/oculta/dos.mkv",
+		title: "Oculta dos", year: 2003,
+	})
+	tmdbCollection := collectionHTTPSeed(t, ts.db, "Automática", "tmdb", 999991, "", 0, 0)
+	manualCollection := collectionHTTPSeed(t, ts.db, "Manual", "manual", nil, "", 0, 0)
+	hiddenCollection := collectionHTTPSeed(t, ts.db, "Solo oculta", "manual", nil, "", 0, 0)
+	for _, collectionID := range []int64{tmdbCollection, manualCollection} {
+		collectionHTTPMember(t, ts.db, collectionID, visibleMovie, 0, 0)
+		collectionHTTPMember(t, ts.db, collectionID, hiddenOne, 1, 0)
+		collectionHTTPMember(t, ts.db, collectionID, hiddenTwo, 2, 0)
+	}
+	collectionHTTPMember(t, ts.db, hiddenCollection, hiddenOne, 0, 0)
+	collectionHTTPMember(t, ts.db, hiddenCollection, hiddenTwo, 1, 0)
+
+	userToken, _ := partialAccessToken(t, ts, visibleLibrary)
+
+	status, body := libraryHTTPGet(t, ts.URL+"/api/v1/collections", userToken)
+	if status != http.StatusOK {
+		t.Fatalf("listado parcial: %d %s", status, body)
+	}
+	var partial collectionsResponse
+	if err := json.Unmarshal(body, &partial); err != nil {
+		t.Fatalf("listado parcial: %v", err)
+	}
+	byID := make(map[int64]collectionDTO)
+	for _, collection := range partial.Collections {
+		byID[collection.ID] = collection
+	}
+	if _, ok := byID[tmdbCollection]; ok {
+		t.Fatal("la colección automática con una sola película visible no debe aparecer")
+	}
+	if _, ok := byID[hiddenCollection]; ok {
+		t.Fatal("la colección sin películas visibles no debe aparecer")
+	}
+	manual, ok := byID[manualCollection]
+	if !ok || manual.ItemCount != 1 {
+		t.Fatalf("colección manual parcial inesperada: %+v", manual)
+	}
+
+	status, body = libraryHTTPGet(t, collectionHTTPURL(ts, manualCollection), userToken)
+	if status != http.StatusOK {
+		t.Fatalf("detalle parcial: %d %s", status, body)
+	}
+	var detail collectionDetailDTO
+	if err := json.Unmarshal(body, &detail); err != nil {
+		t.Fatalf("detalle parcial: %v", err)
+	}
+	if detail.ItemCount != 1 || len(detail.Items) != 1 || detail.Items[0].ID != visibleMovie {
+		t.Fatalf("detalle parcial inesperado: %+v", detail)
+	}
+	if detail.PosterURL == nil || *detail.PosterURL != "https://img/visible.jpg" {
+		t.Fatalf("cartel parcial = %v", detail.PosterURL)
+	}
+	if status, body := libraryHTTPGet(t, collectionHTTPURL(ts, tmdbCollection), userToken); status != http.StatusNotFound {
+		t.Fatalf("automática bajo mínimo: %d %s", status, body)
+	}
+	if status, body := libraryHTTPGet(t, collectionHTTPURL(ts, hiddenCollection), userToken); status != http.StatusNotFound {
+		t.Fatalf("colección oculta: %d %s", status, body)
+	}
+
+	status, body = libraryHTTPGet(t, ts.URL+"/api/v1/items?collection_id="+strconv.FormatInt(hiddenCollection, 10), userToken)
+	if status != http.StatusOK {
+		t.Fatalf("filtro collection_id: %d %s", status, body)
+	}
+	var filtered itemsResponse
+	if err := json.Unmarshal(body, &filtered); err != nil {
+		t.Fatalf("filtro collection_id: %v", err)
+	}
+	if filtered.Total != 0 || len(filtered.Items) != 0 {
+		t.Fatalf("collection_id oculto devolvió %+v", filtered.Items)
+	}
+
+	status, body = libraryHTTPGet(t, ts.URL+"/api/v1/collections", ts.token)
+	if status != http.StatusOK {
+		t.Fatalf("listado admin: %d %s", status, body)
+	}
+	var admin collectionsResponse
+	if err := json.Unmarshal(body, &admin); err != nil {
+		t.Fatalf("listado admin: %v", err)
+	}
+	adminByID := make(map[int64]collectionDTO)
+	for _, collection := range admin.Collections {
+		adminByID[collection.ID] = collection
+	}
+	if got := adminByID[tmdbCollection].ItemCount; got != 3 {
+		t.Fatalf("admin automática = %+v", adminByID[tmdbCollection])
+	}
+	if got := adminByID[manualCollection].ItemCount; got != 3 {
+		t.Fatalf("admin manual = %+v", adminByID[manualCollection])
+	}
+	if got := adminByID[hiddenCollection].ItemCount; got != 2 {
+		t.Fatalf("admin oculta = %+v", adminByID[hiddenCollection])
+	}
+
+	status, body = libraryHTTPGet(t, collectionHTTPURL(ts, tmdbCollection), ts.token)
+	if status != http.StatusOK {
+		t.Fatalf("detalle admin: %d %s", status, body)
+	}
+	if err := json.Unmarshal(body, &detail); err != nil {
+		t.Fatalf("detalle admin: %v", err)
+	}
+	if detail.ItemCount != 3 || len(detail.Items) != 3 {
+		t.Fatalf("detalle admin inesperado: %+v", detail)
+	}
+}

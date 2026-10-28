@@ -297,7 +297,7 @@ func (a *API) handleItems(w http.ResponseWriter, r *http.Request) {
 	for _, item := range items {
 		itemIDs = append(itemIDs, item.ID)
 	}
-	collectionsByItem, err := loadItemCollections(r.Context(), a.db, itemIDs, a.collectionMin())
+	collectionsByItem, err := loadItemCollectionsWithAccess(r.Context(), a.db, itemIDs, access, a.collectionMin())
 	if err != nil {
 		log.Printf("library: leer colecciones de los ítems: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")

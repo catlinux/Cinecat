@@ -83,7 +83,9 @@ func (a *API) setSeriesList(w http.ResponseWriter, r *http.Request, add bool) {
 		return
 	}
 	var exists int
-	err := a.db.QueryRowContext(r.Context(), `SELECT 1 FROM series WHERE id = ?`, id).Scan(&exists)
+	access := accessFromRequest(r)
+	err := a.db.QueryRowContext(r.Context(),
+		`SELECT 1 FROM series s WHERE s.id = ? AND `+access.Clause("s"), id).Scan(&exists)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		writeJSONError(w, http.StatusNotFound, "serie no encontrada")
@@ -134,8 +136,10 @@ func (a *API) setCollectionList(w http.ResponseWriter, r *http.Request, add bool
 		return
 	}
 	var exists int
+	access := accessFromRequest(r)
 	err := a.db.QueryRowContext(r.Context(),
-		`SELECT 1 FROM collections WHERE id = ? AND deleted = 0`, id).Scan(&exists)
+		`SELECT 1 FROM collections c WHERE c.id = ? AND c.deleted = 0 AND `+
+			collectionVisibleSQL(access, "c"), id).Scan(&exists)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		writeJSONError(w, http.StatusNotFound, "colección no encontrada")
@@ -240,7 +244,7 @@ func (a *API) handleLists(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if queryKind == "all" || queryKind == "collections" {
-		collections, total, err := queryListCollections(r.Context(), a.db, userID, list, limit, offset)
+		collections, total, err := queryListCollections(r.Context(), a.db, userID, list, limit, offset, access)
 		if err != nil {
 			log.Printf("library: listar colecciones de %q: %v", list, err)
 			writeJSONError(w, http.StatusInternalServerError, "error interno")

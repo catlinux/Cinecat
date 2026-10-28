@@ -205,6 +205,16 @@ func loadItemCollections(
 	itemIDs []int64,
 	minItems ...int,
 ) (map[int64][]itemCollection, error) {
+	return loadItemCollectionsWithAccess(ctx, db, itemIDs, unrestrictedLibraryAccess(), minItems...)
+}
+
+func loadItemCollectionsWithAccess(
+	ctx context.Context,
+	db *sql.DB,
+	itemIDs []int64,
+	access libraryAccess,
+	minItems ...int,
+) (map[int64][]itemCollection, error) {
 	minimum := collectionMinimum(minItems...)
 	result := make(map[int64][]itemCollection, len(itemIDs))
 	if len(itemIDs) == 0 {
@@ -227,7 +237,10 @@ func loadItemCollections(
 		   AND c.deleted = 0
 		   AND (c.source = 'manual' OR (
 		         SELECT count(*) FROM collection_items cc
+		           JOIN media_items cmi ON cmi.id = cc.media_item_id
+		           JOIN libraries cl ON cl.id = cmi.library_id AND cl.kind = 'video'
 		          WHERE cc.collection_id = c.id AND cc.excluded = 0
+		            AND `+access.Clause("cmi")+`
 		       ) >= ?)
 		 ORDER BY c.name COLLATE NOCASE, c.id`, args...)
 	if err != nil {
@@ -482,7 +495,10 @@ func itemFilters(r *http.Request, userID int64, access libraryAccess, minCollect
 				  AND c.deleted = 0
 				  AND (c.source = 'manual' OR (
 				        SELECT count(*) FROM collection_items cc
+				          JOIN media_items cmi ON cmi.id = cc.media_item_id
+				          JOIN libraries cl ON cl.id = cmi.library_id AND cl.kind = 'video'
 				         WHERE cc.collection_id = c.id AND cc.excluded = 0
+				           AND `+access.Clause("cmi")+`
 				  ) >= ?)))`)
 			args = append(args, collectionMinimum(minCollectionItems...))
 		case "none":

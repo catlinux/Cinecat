@@ -158,6 +158,7 @@ func (a *API) handleSeries(w http.ResponseWriter, r *http.Request) {
 	if sortOrder == "" {
 		sortOrder = "title"
 	}
+	access := accessFromRequest(r)
 
 	where := "1 = 1"
 	args := make([]any, 0)
@@ -187,7 +188,8 @@ func (a *API) handleSeries(w http.ResponseWriter, r *http.Request) {
 
 	var total int64
 	if err := a.db.QueryRowContext(r.Context(),
-		`SELECT count(*) FROM series s WHERE `+where, args...).Scan(&total); err != nil {
+		`SELECT count(*) FROM series s WHERE `+where+` AND (`+access.Clause("s")+`)`,
+		args...).Scan(&total); err != nil {
 		log.Printf("library: contar series: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
 		return
@@ -206,7 +208,7 @@ func (a *API) handleSeries(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userID := sessionUserID(r)
-	series, err := querySeriesList(r.Context(), a.db, userID, where, order, args, limit, offset)
+	series, err := querySeriesList(r.Context(), a.db, userID, where, order, args, limit, offset, access)
 	if err != nil {
 		log.Printf("library: listar series: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
@@ -227,22 +229,22 @@ func querySeriesList(
 	args []any,
 	limit int,
 	offset int,
-	access ...libraryAccess,
+	access libraryAccess,
 ) ([]seriesListDTO, error) {
-	if len(access) > 0 {
-		where += " AND (" + access[0].Clause("s") + ")"
-	}
+	where += " AND (" + access.Clause("s") + ")"
 	queryArgs := append([]any{userID, userID, userID}, args...)
 	queryArgs = append(queryArgs, limit, offset)
 	rows, err := db.QueryContext(ctx, `
 		SELECT s.id, COALESCE(NULLIF(s.display_title, ''), s.title), s.title,
 		       s.year, s.poster_url, s.genres,
 		       (SELECT count(DISTINCT mi.season) FROM media_items mi
-		         WHERE mi.series_id = s.id AND mi.season IS NOT NULL),
-		       (SELECT count(*) FROM media_items mi WHERE mi.series_id = s.id),
+		         WHERE mi.series_id = s.id AND mi.season IS NOT NULL
+		           AND `+access.Clause("mi")+`),
+		       (SELECT count(*) FROM media_items mi
+		         WHERE mi.series_id = s.id AND `+access.Clause("mi")+`),
 		       (SELECT count(*) FROM media_items mi
 		          JOIN watch_state ws ON ws.media_item_id = mi.id AND ws.user_id = ?
-		         WHERE mi.series_id = s.id),
+		         WHERE mi.series_id = s.id AND `+access.Clause("mi")+`),
 		       s.rating, s.trailer_url, s.trailer_language,
 		       s.match_status,
 		       EXISTS (SELECT 1 FROM series_lists sl_favorite
@@ -314,11 +316,13 @@ func scanSeriesList(scan func(dest ...any) error) (seriesListDTO, error) {
 }
 
 func (a *API) handleSeriesGenres(w http.ResponseWriter, r *http.Request) {
+	access := accessFromRequest(r)
 	rows, err := a.db.QueryContext(r.Context(), `
 		SELECT je.value, COUNT(DISTINCT s.id)
 		  FROM series s
 		  JOIN json_each(CASE WHEN s.genres IS NOT NULL AND json_valid(s.genres)
 			THEN s.genres ELSE '[]' END) je
+		 WHERE `+access.Clause("s")+`
 		 GROUP BY je.value
 		 ORDER BY je.value COLLATE NOCASE, je.value`)
 	if err != nil {
@@ -356,13 +360,20 @@ func (a *API) loadSeriesRecord(w http.ResponseWriter, r *http.Request) (seriesRe
 		writeJSONError(w, http.StatusNotFound, "serie no encontrada")
 		return seriesRecord{}, false
 	}
+	return a.requireVisibleSeries(w, r, id)
+}
+
+// requireVisibleSeries devuelve la serie solo si pertenece a una biblioteca
+// visible para la petición. Una serie oculta responde igual que una inexistente.
+func (a *API) requireVisibleSeries(w http.ResponseWriter, r *http.Request, id int64) (seriesRecord, bool) {
+	access := accessFromRequest(r)
 	var record seriesRecord
 	var year, tmdbID sql.NullInt64
 	var matchStatus sql.NullString
 	err := a.db.QueryRowContext(r.Context(), `
 		SELECT id, COALESCE(NULLIF(display_title, ''), title), title, folder,
 		       year, tmdb_id, match_status
-		  FROM series WHERE id = ?`, id).
+		  FROM series s WHERE s.id = ? AND `+access.Clause("s"), id).
 		Scan(&record.ID, &record.Title, &record.FileTitle, &record.Folder,
 			&year, &tmdbID, &matchStatus)
 	switch {
@@ -384,6 +395,7 @@ func querySeriesDetail(
 	ctx context.Context,
 	db *sql.DB,
 	seriesID, userID int64,
+	access libraryAccess,
 	minCollectionItems ...int,
 ) (seriesDetailDTO, error) {
 	minimum := collectionMinimum(minCollectionItems...)
@@ -401,10 +413,11 @@ func querySeriesDetail(
 		       s.cast_names, s.credits, s.trailer_url, s.trailer_language,
 		       s.tmdb_id, s.match_status, s.match_score,
 		       s.poster_locked, s.backdrop_locked,
-		       (SELECT count(*) FROM media_items mi WHERE mi.series_id = s.id),
+		       (SELECT count(*) FROM media_items mi
+		         WHERE mi.series_id = s.id AND `+access.Clause("mi")+`),
 		       (SELECT count(*) FROM media_items mi
 		          JOIN watch_state ws ON ws.media_item_id = mi.id AND ws.user_id = ?
-		         WHERE mi.series_id = s.id),
+		         WHERE mi.series_id = s.id AND `+access.Clause("mi")+`),
 		       EXISTS (SELECT 1 FROM series_lists sl_favorite
 		                WHERE sl_favorite.user_id = ?
 		                  AND sl_favorite.series_id = s.id
@@ -413,7 +426,7 @@ func querySeriesDetail(
 		                WHERE sl_watchlist.user_id = ?
 		                  AND sl_watchlist.series_id = s.id
 		                  AND sl_watchlist.list = 'watchlist')
-		  FROM series s WHERE s.id = ?`, userID, userID, userID, seriesID).
+		  FROM series s WHERE s.id = ? AND `+access.Clause("s"), userID, userID, userID, seriesID).
 		Scan(&detail.ID, &detail.Title, &detail.FileTitle, &detail.Folder,
 			&originalTitle, &year, &tagline, &overview, &overviewLanguage,
 			&poster, &backdrop, &genres, &rating, &directors, &castNames, &credits,
@@ -445,14 +458,14 @@ func querySeriesDetail(
 	detail.Favorite = favorite != 0
 	detail.Watchlist = watchlist != 0
 
-	seasons, err := querySeriesSeasons(ctx, db, seriesID, userID)
+	seasons, err := querySeriesSeasons(ctx, db, seriesID, userID, access)
 	if err != nil {
 		return seriesDetailDTO{}, err
 	}
 	detail.Seasons = seasons
 	detail.SeasonCount = int64(len(seasons))
 
-	next, err := queryNextSeriesEpisode(ctx, db, seriesID, userID)
+	next, err := queryNextSeriesEpisode(ctx, db, seriesID, userID, access)
 	if err != nil {
 		return seriesDetailDTO{}, err
 	}
@@ -466,7 +479,7 @@ func querySeriesDetail(
 	return detail, nil
 }
 
-func querySeriesSeasons(ctx context.Context, db *sql.DB, seriesID, userID int64) ([]seriesSeasonDTO, error) {
+func querySeriesSeasons(ctx context.Context, db *sql.DB, seriesID, userID int64, access libraryAccess) ([]seriesSeasonDTO, error) {
 	rows, err := db.QueryContext(ctx, `
 		SELECT mi.season,
 		       COALESCE(NULLIF(ss.name, ''), 'Temporada ' || mi.season),
@@ -479,6 +492,7 @@ func querySeriesSeasons(ctx context.Context, db *sql.DB, seriesID, userID int64)
 		  LEFT JOIN watch_state ws
 		    ON ws.media_item_id = mi.id AND ws.user_id = ?
 		 WHERE mi.series_id = ? AND mi.season IS NOT NULL
+		   AND `+access.Clause("mi")+`
 		 GROUP BY mi.season, ss.name, ss.overview, ss.poster_url
 		 ORDER BY mi.season`, userID, seriesID)
 	if err != nil {
@@ -504,14 +518,15 @@ func querySeriesSeasons(ctx context.Context, db *sql.DB, seriesID, userID int64)
 	return seasons, nil
 }
 
-func queryNextSeriesEpisode(ctx context.Context, db *sql.DB, seriesID, userID int64) (*int64, error) {
+func queryNextSeriesEpisode(ctx context.Context, db *sql.DB, seriesID, userID int64, access libraryAccess) (*int64, error) {
 	var id int64
 	err := db.QueryRowContext(ctx, `
 		SELECT mi.id
 		  FROM media_items mi
+		  JOIN series s ON s.id = mi.series_id AND `+access.Clause("s")+`
 		  JOIN playback_progress pp
 		    ON pp.media_item_id = mi.id AND pp.user_id = ?
-		 WHERE mi.series_id = ?
+		 WHERE mi.series_id = ? AND `+access.Clause("mi")+`
 		 ORDER BY pp.updated_at DESC, mi.id DESC
 		 LIMIT 1`, userID, seriesID).Scan(&id)
 	if err == nil {
@@ -524,9 +539,10 @@ func queryNextSeriesEpisode(ctx context.Context, db *sql.DB, seriesID, userID in
 	err = db.QueryRowContext(ctx, `
 		SELECT mi.id
 		  FROM media_items mi
+		  JOIN series s ON s.id = mi.series_id AND `+access.Clause("s")+`
 		  LEFT JOIN watch_state ws
 		    ON ws.media_item_id = mi.id AND ws.user_id = ?
-		 WHERE mi.series_id = ? AND ws.user_id IS NULL
+		 WHERE mi.series_id = ? AND `+access.Clause("mi")+` AND ws.user_id IS NULL
 		 ORDER BY mi.season IS NULL, mi.season, mi.episode IS NULL, mi.episode, mi.id
 		 LIMIT 1`, userID, seriesID).Scan(&id)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -543,7 +559,7 @@ func (a *API) handleSeriesDetail(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	detail, err := querySeriesDetail(r.Context(), a.db, record.ID, sessionUserID(r), a.collectionMin())
+	detail, err := querySeriesDetail(r.Context(), a.db, record.ID, sessionUserID(r), accessFromRequest(r), a.collectionMin())
 	if err != nil {
 		log.Printf("library: leer ficha de la serie %d: %v", record.ID, err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
@@ -570,7 +586,7 @@ func (a *API) handleSeriesSeason(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	userID := sessionUserID(r)
-	items, err := a.querySeriesItems(r.Context(), record.ID, &seasonNumber, userID)
+	items, err := a.querySeriesItems(r.Context(), record.ID, &seasonNumber, userID, accessFromRequest(r))
 	if err != nil {
 		log.Printf("library: leer episodios de la serie %d: %v", record.ID, err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
@@ -603,14 +619,14 @@ func (a *API) handleSeriesSeason(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (a *API) querySeriesItems(ctx context.Context, seriesID int64, season *int, userID int64) ([]mediaItemDTO, error) {
+func (a *API) querySeriesItems(ctx context.Context, seriesID int64, season *int, userID int64, access libraryAccess) ([]mediaItemDTO, error) {
 	query := `SELECT ` + mediaItemColumns + watchedColumn + progressColumn + itemListColumns + `
 		  FROM media_items
 		  LEFT JOIN watch_state ws
 		    ON ws.media_item_id = media_items.id AND ws.user_id = ?
 		  LEFT JOIN playback_progress pp
 		    ON pp.media_item_id = media_items.id AND pp.user_id = ?
-		 WHERE media_items.series_id = ?`
+		 WHERE media_items.series_id = ? AND ` + access.Clause("media_items")
 	args := []any{userID, userID, userID, userID, seriesID}
 	if season != nil {
 		query += " AND media_items.season = ?"
@@ -638,7 +654,7 @@ func (a *API) querySeriesItems(ctx context.Context, seriesID int64, season *int,
 	for _, item := range items {
 		ids = append(ids, item.ID)
 	}
-	collections, err := loadItemCollections(ctx, a.db, ids, a.collectionMin())
+	collections, err := loadItemCollectionsWithAccess(ctx, a.db, ids, access, a.collectionMin())
 	if err != nil {
 		return nil, err
 	}
@@ -805,7 +821,7 @@ func (a *API) handleSeriesMatchDelete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) writeSeriesByID(w http.ResponseWriter, r *http.Request, id int64) {
-	detail, err := querySeriesDetail(r.Context(), a.db, id, sessionUserID(r), a.collectionMin())
+	detail, err := querySeriesDetail(r.Context(), a.db, id, sessionUserID(r), accessFromRequest(r), a.collectionMin())
 	if err != nil {
 		log.Printf("library: leer ficha de la serie %d: %v", id, err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
@@ -933,9 +949,11 @@ func (a *API) handleSeriesWatched(w http.ResponseWriter, r *http.Request, watche
 	if !ok {
 		return
 	}
+	access := accessFromRequest(r)
 	var exists int
 	if err := a.db.QueryRowContext(r.Context(),
-		`SELECT 1 FROM media_items WHERE series_id = ? LIMIT 1`, record.ID).Scan(&exists); err != nil {
+		`SELECT 1 FROM media_items WHERE series_id = ? AND `+
+			access.Clause("media_items")+` LIMIT 1`, record.ID).Scan(&exists); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			writeJSONError(w, http.StatusNotFound, "serie no encontrada")
 		} else {
@@ -944,7 +962,7 @@ func (a *API) handleSeriesWatched(w http.ResponseWriter, r *http.Request, watche
 		}
 		return
 	}
-	a.setSeriesWatched(w, r, seriesEpisodeWhere(record.ID, nil), watched)
+	a.setSeriesWatched(w, r, seriesEpisodeWhere(record.ID, nil, access), watched)
 }
 
 func (a *API) handleSeriesSeasonWatched(w http.ResponseWriter, r *http.Request, watched bool) {
@@ -957,9 +975,11 @@ func (a *API) handleSeriesSeasonWatched(w http.ResponseWriter, r *http.Request, 
 		writeJSONError(w, http.StatusNotFound, "temporada no encontrada")
 		return
 	}
+	access := accessFromRequest(r)
 	var exists int
 	if err := a.db.QueryRowContext(r.Context(),
-		`SELECT 1 FROM media_items WHERE series_id = ? AND season = ? LIMIT 1`,
+		`SELECT 1 FROM media_items WHERE series_id = ? AND season = ? AND `+
+			access.Clause("media_items")+` LIMIT 1`,
 		record.ID, seasonNumber).Scan(&exists); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			writeJSONError(w, http.StatusNotFound, "temporada no encontrada")
@@ -970,7 +990,7 @@ func (a *API) handleSeriesSeasonWatched(w http.ResponseWriter, r *http.Request, 
 		}
 		return
 	}
-	a.setSeriesWatched(w, r, seriesEpisodeWhere(record.ID, &seasonNumber), watched)
+	a.setSeriesWatched(w, r, seriesEpisodeWhere(record.ID, &seasonNumber, access), watched)
 }
 
 type seriesEpisodeFilter struct {
@@ -979,10 +999,10 @@ type seriesEpisodeFilter struct {
 	args     []any
 }
 
-func seriesEpisodeWhere(seriesID int64, season *int) seriesEpisodeFilter {
+func seriesEpisodeWhere(seriesID int64, season *int, access libraryAccess) seriesEpisodeFilter {
 	filter := seriesEpisodeFilter{
 		seriesID: seriesID,
-		query:    "series_id = ?",
+		query:    "series_id = ? AND " + access.Clause("media_items"),
 		args:     []any{seriesID},
 	}
 	if season != nil {
@@ -1039,7 +1059,7 @@ func (a *API) setSeriesWatched(w http.ResponseWriter, r *http.Request, filter se
 			writeJSONError(w, http.StatusInternalServerError, "error interno")
 			return
 		}
-		if err := clearSeriesWatchlistIfWatched(r.Context(), tx, userID, filter.seriesID); err != nil {
+		if err := clearSeriesWatchlistIfWatched(r.Context(), tx, userID, filter.seriesID, accessFromRequest(r)); err != nil {
 			log.Printf("library: limpiar próxima a ver de la serie %d: %v", filter.seriesID, err)
 			writeJSONError(w, http.StatusInternalServerError, "error interno")
 			return

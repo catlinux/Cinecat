@@ -49,9 +49,11 @@ func validListName(value string) bool {
 func queryListTotals(ctx context.Context, db *sql.DB, userID int64, list string, access ...libraryAccess) (listsTotals, error) {
 	mediaClause := "1 = 1"
 	seriesClause := "1 = 1"
+	collectionClause := "1 = 1"
 	if len(access) > 0 {
 		mediaClause = access[0].Clause("mi")
 		seriesClause = access[0].Clause("s")
+		collectionClause = collectionVisibleSQL(access[0], "c")
 	}
 	var totals listsTotals
 	err := db.QueryRowContext(ctx, `
@@ -64,7 +66,7 @@ func queryListTotals(ctx context.Context, db *sql.DB, userID int64, list string,
 		    WHERE sl.user_id = ? AND sl.list = ? AND `+seriesClause+`),
 		  (SELECT count(*) FROM collection_lists cl
 		     JOIN collections c ON c.id = cl.collection_id AND c.deleted = 0
-		    WHERE cl.user_id = ? AND cl.list = ?)`,
+		    WHERE cl.user_id = ? AND cl.list = ? AND `+collectionClause+`)`,
 		userID, list, userID, list, userID, list).
 		Scan(&totals.Items, &totals.Series, &totals.Collections)
 	return totals, err
@@ -122,7 +124,11 @@ func queryListItems(ctx context.Context, db *sql.DB, userID int64, list string, 
 		for _, item := range items {
 			ids = append(ids, item.Item.ID)
 		}
-		collections, err := loadItemCollections(ctx, db, ids)
+		itemAccess := unrestrictedLibraryAccess()
+		if len(access) > 0 {
+			itemAccess = access[0]
+		}
+		collections, err := loadItemCollectionsWithAccess(ctx, db, ids, itemAccess)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -199,17 +205,25 @@ func queryListSeries(ctx context.Context, db *sql.DB, userID int64, list string,
 	return series, total, nil
 }
 
-func queryListCollections(ctx context.Context, db *sql.DB, userID int64, list string, limit, offset int) ([]listedCollection, int64, error) {
+func queryListCollections(ctx context.Context, db *sql.DB, userID int64, list string, limit, offset int, access ...libraryAccess) ([]listedCollection, int64, error) {
+	collectionClause := "1 = 1"
+	posterExpr := collectionPosterSQL(unrestrictedLibraryAccess())
+	countExpr := collectionItemCountSQL(unrestrictedLibraryAccess())
+	if len(access) > 0 {
+		collectionClause = collectionVisibleSQL(access[0], "c")
+		posterExpr = collectionPosterSQL(access[0])
+		countExpr = collectionItemCountSQL(access[0])
+	}
 	var total int64
 	if err := db.QueryRowContext(ctx, `
 		SELECT count(*) FROM collection_lists cl
 		  JOIN collections c ON c.id = cl.collection_id AND c.deleted = 0
-		 WHERE cl.user_id = ? AND cl.list = ?`, userID, list).Scan(&total); err != nil {
+		 WHERE cl.user_id = ? AND cl.list = ? AND `+collectionClause, userID, list).Scan(&total); err != nil {
 		return nil, 0, err
 	}
 	rows, err := db.QueryContext(ctx, `
-		SELECT c.id, c.name, c.overview, `+collectionPosterExpr+`, c.backdrop_url,
-		       `+collectionItemCountExpr+`, c.source, c.edited,
+		SELECT c.id, c.name, c.overview, `+posterExpr+`, c.backdrop_url,
+		       `+countExpr+`, c.source, c.edited,
 		       EXISTS (SELECT 1 FROM collection_lists cl_favorite
 		                WHERE cl_favorite.user_id = ?
 		                  AND cl_favorite.collection_id = c.id
@@ -221,7 +235,7 @@ func queryListCollections(ctx context.Context, db *sql.DB, userID int64, list st
 		       cl.added_at
 		  FROM collection_lists cl
 		  JOIN collections c ON c.id = cl.collection_id AND c.deleted = 0
-		 WHERE cl.user_id = ? AND cl.list = ?
+		 WHERE cl.user_id = ? AND cl.list = ? AND `+collectionClause+`
 		 ORDER BY cl.added_at DESC, cl.collection_id DESC
 		 LIMIT ? OFFSET ?`,
 		userID, userID, userID, list, limit, offset)
@@ -258,14 +272,18 @@ func listKindName(kind string) (string, error) {
 	}
 }
 
-func clearSeriesWatchlistIfWatched(ctx context.Context, tx *sql.Tx, userID, seriesID int64) error {
+func clearSeriesWatchlistIfWatched(ctx context.Context, tx *sql.Tx, userID, seriesID int64, access ...libraryAccess) error {
+	accessClause := "1 = 1"
+	if len(access) > 0 {
+		accessClause = access[0].Clause("mi")
+	}
 	var total, watched int64
 	if err := tx.QueryRowContext(ctx, `
 		SELECT count(*), count(ws.media_item_id)
 		  FROM media_items mi
 		  LEFT JOIN watch_state ws
 		    ON ws.media_item_id = mi.id AND ws.user_id = ?
-		 WHERE mi.series_id = ?`, userID, seriesID).Scan(&total, &watched); err != nil {
+		 WHERE mi.series_id = ? AND `+accessClause, userID, seriesID).Scan(&total, &watched); err != nil {
 		return err
 	}
 	if total == 0 || watched < total {

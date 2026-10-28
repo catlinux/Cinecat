@@ -212,10 +212,10 @@ func loadMovieSimilarProfile(ctx context.Context, db *sql.DB, id int64, access l
 	return scanSimilarProfile(row.Scan, true)
 }
 
-func loadSeriesSimilarProfile(ctx context.Context, db *sql.DB, id int64) (similarProfile, error) {
+func loadSeriesSimilarProfile(ctx context.Context, db *sql.DB, id int64, access libraryAccess) (similarProfile, error) {
 	row := db.QueryRowContext(ctx, `
 		SELECT id, genres, cast_names, directors, year, rating, credits, NULL
-		  FROM series WHERE id = ?`, id)
+		  FROM series WHERE id = ? AND `+access.Clause("series"), id)
 	return scanSimilarProfile(row.Scan, false)
 }
 
@@ -355,7 +355,7 @@ func (a *API) handleSimilarItems(w http.ResponseWriter, r *http.Request) {
 		ids = append(ids, candidate.id)
 	}
 
-	items, err := a.mediaItemsByIDs(r.Context(), ids, sessionUserID(r))
+	items, err := a.mediaItemsByIDs(r.Context(), ids, sessionUserID(r), access)
 	if err != nil {
 		log.Printf("library: leer fichas de similares del ítem %d: %v", id, err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
@@ -378,7 +378,8 @@ func (a *API) handleSimilarSeries(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	current, err := loadSeriesSimilarProfile(r.Context(), a.db, id)
+	access := accessFromRequest(r)
+	current, err := loadSeriesSimilarProfile(r.Context(), a.db, id, access)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		writeJSONError(w, http.StatusNotFound, "serie no encontrada")
@@ -395,7 +396,7 @@ func (a *API) handleSimilarSeries(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	candidates, err := loadSimilarCandidates(r.Context(), a.db, id, true, unrestrictedLibraryAccess())
+	candidates, err := loadSimilarCandidates(r.Context(), a.db, id, true, access)
 	if err != nil {
 		log.Printf("library: leer similares de la serie %d: %v", id, err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
@@ -410,7 +411,7 @@ func (a *API) handleSimilarSeries(w http.ResponseWriter, r *http.Request) {
 		ids = append(ids, candidate.id)
 	}
 
-	series, err := a.seriesListByIDs(r.Context(), ids, sessionUserID(r))
+	series, err := a.seriesListByIDs(r.Context(), ids, sessionUserID(r), access)
 	if err != nil {
 		log.Printf("library: leer resúmenes de similares de la serie %d: %v", id, err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
@@ -424,6 +425,7 @@ func (a *API) mediaItemsByIDs(
 	ctx context.Context,
 	ids []int64,
 	userID int64,
+	access libraryAccess,
 ) ([]mediaItemDTO, error) {
 	if len(ids) == 0 {
 		return []mediaItemDTO{}, nil
@@ -459,7 +461,7 @@ func (a *API) mediaItemsByIDs(
 		return nil, err
 	}
 
-	byItem, err := loadItemCollections(ctx, a.db, ids, a.collectionMin())
+	byItem, err := loadItemCollectionsWithAccess(ctx, a.db, ids, access, a.collectionMin())
 	if err != nil {
 		return nil, err
 	}
@@ -481,6 +483,7 @@ func (a *API) seriesListByIDs(
 	ctx context.Context,
 	ids []int64,
 	userID int64,
+	access libraryAccess,
 ) ([]seriesListDTO, error) {
 	if len(ids) == 0 {
 		return []seriesListDTO{}, nil
@@ -495,11 +498,13 @@ func (a *API) seriesListByIDs(
 		SELECT s.id, COALESCE(NULLIF(s.display_title, ''), s.title), s.title,
 		       s.year, s.poster_url, s.genres,
 		       (SELECT count(DISTINCT mi.season) FROM media_items mi
-		         WHERE mi.series_id = s.id AND mi.season IS NOT NULL),
-		       (SELECT count(*) FROM media_items mi WHERE mi.series_id = s.id),
+		         WHERE mi.series_id = s.id AND mi.season IS NOT NULL
+		           AND `+access.Clause("mi")+`),
+		       (SELECT count(*) FROM media_items mi
+		         WHERE mi.series_id = s.id AND `+access.Clause("mi")+`),
 		       (SELECT count(*) FROM media_items mi
 		          JOIN watch_state ws ON ws.media_item_id = mi.id AND ws.user_id = ?
-		         WHERE mi.series_id = s.id),
+		         WHERE mi.series_id = s.id AND `+access.Clause("mi")+`),
 		       s.rating, s.trailer_url, s.trailer_language,
 		       s.match_status,
 		       EXISTS (SELECT 1 FROM series_lists sl_favorite
@@ -511,7 +516,7 @@ func (a *API) seriesListByIDs(
 		                  AND sl_watchlist.series_id = s.id
 		                  AND sl_watchlist.list = 'watchlist')
 		  FROM series s
-		 WHERE s.id IN (`+placeholders+`)`, args...)
+		 WHERE s.id IN (`+placeholders+`) AND `+access.Clause("s"), args...)
 	if err != nil {
 		return nil, err
 	}

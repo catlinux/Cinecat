@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -14,9 +16,14 @@ import (
 	"testing"
 
 	"github.com/catlinux/cinecat/internal/auth"
+	"github.com/catlinux/cinecat/internal/metadata"
 )
 
-const leakMarker = "OCULTO-7f3a"
+const (
+	leakMarker   = "OCULTO-7f3a"
+	leakPersonID = 777
+	leakCredits  = `{"cast":[{"id":777,"name":"Persona","character":"Protagonista","photo":""}],"crew":[]}`
+)
 
 type leakFixture struct {
 	visibleVideo, hiddenVideo           int64
@@ -37,6 +44,7 @@ type leakCase struct {
 	name       string
 	pattern    string
 	path       string
+	method     string
 	pending    string
 	exempt     string
 	notFound   bool
@@ -111,6 +119,14 @@ func newLeakFixture(t *testing.T, ts *libraryTestServer) (leakFixture, string) {
 		INSERT INTO series (library_id, folder, title, display_title, genres, poster_url, match_status)
 		VALUES (?, ?, ?, ?, '["OCULTO-7f3a"]', 'https://img/OCULTO-7f3a.jpg', 'auto')`,
 		f.hiddenVideo, leakMarker+"-serie", leakMarker+" serie", leakMarker+" serie")
+	leakExec(t, ts.db, `UPDATE media_items SET tmdb_id = ?, credits = ? WHERE id = ?`,
+		1001, leakCredits, f.visibleMovie)
+	leakExec(t, ts.db, `UPDATE media_items SET tmdb_id = ?, credits = ? WHERE id = ?`,
+		1002, leakCredits, f.hiddenMovie)
+	leakExec(t, ts.db, `UPDATE series SET tmdb_id = ?, credits = ? WHERE id = ?`,
+		2001, leakCredits, f.visibleSeries)
+	leakExec(t, ts.db, `UPDATE series SET tmdb_id = ?, credits = ? WHERE id = ?`,
+		2002, leakCredits, f.hiddenSeries)
 	season, episode := 1, 1
 	f.visibleEpisode = leakItem(t, ts.db, f.visibleVideo,
 		"/media/visible-video/visible-serie/S01E01.mkv", "Episodio visible", "episode", `[]`, &f.visibleSeries, &season, &episode)
@@ -176,6 +192,14 @@ func newLeakFixture(t *testing.T, ts *libraryTestServer) (leakFixture, string) {
 		leakExec(t, ts.db, `INSERT INTO watch_state (user_id, media_item_id) VALUES (?, ?)`,
 			userID, itemID)
 	}
+	for _, seriesID := range []int64{f.visibleSeries, f.hiddenSeries} {
+		leakExec(t, ts.db, `INSERT INTO series_lists (user_id, series_id, list) VALUES (?, ?, 'favorite')`,
+			userID, seriesID)
+	}
+	for _, collectionID := range []int64{f.visibleCollection, f.hiddenCollection} {
+		leakExec(t, ts.db, `INSERT INTO collection_lists (user_id, collection_id, list) VALUES (?, ?, 'favorite')`,
+			userID, collectionID)
+	}
 	token, _, err := ts.auth.Login(context.Background(), "user", "Clave-user-1")
 	if err != nil {
 		t.Fatalf("Login user: %v", err)
@@ -197,6 +221,41 @@ func leakAllLibrariesToken(t *testing.T, ts *libraryTestServer) string {
 		t.Fatalf("Login alluser: %v", err)
 	}
 	return token
+}
+
+func newLeakHTTPServer(t *testing.T) *libraryTestServer {
+	t.Helper()
+	tmdbServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/person/777" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"id": leakPersonID, "name": "Persona",
+			"combined_credits": map[string]any{
+				"cast": []map[string]any{
+					{"id": 1001, "media_type": "movie", "title": "Obra visible externa", "release_date": "2000-01-01", "character": "Rol"},
+					{"id": 1002, "media_type": "movie", "title": "Obra oculta externa", "release_date": "2001-01-01", "character": "Rol"},
+					{"id": 2001, "media_type": "tv", "name": "Serie visible externa", "first_air_date": "2002-01-01", "character": "Rol"},
+					{"id": 2002, "media_type": "tv", "name": "Serie oculta externa", "first_air_date": "2003-01-01", "character": "Rol"},
+				},
+				"crew": []map[string]any{},
+			},
+		})
+	}))
+	t.Cleanup(tmdbServer.Close)
+	tmdb, err := metadata.New(metadata.Options{
+		APIKey:       "clave",
+		BaseURL:      tmdbServer.URL,
+		ImageBaseURL: tmdbServer.URL + "/img",
+		CacheDir:     t.TempDir(),
+		HTTPClient:   tmdbServer.Client(),
+	})
+	if err != nil {
+		t.Fatalf("metadata.New: %v", err)
+	}
+	return newLibraryHTTPTestServer(t, tmdb)
 }
 
 func leakRoutes() []leakCase {
@@ -221,19 +280,28 @@ func leakRoutes() []leakCase {
 		{name: "portal", pattern: "/api/v1/home", path: "/api/v1/home", adminMarca: true},
 		{name: "favoritos", pattern: "/api/v1/lists/{list}", path: "/api/v1/lists/favorite?kind=items"},
 		{name: "próximas", pattern: "/api/v1/lists/{list}", path: "/api/v1/lists/watchlist?kind=items"},
-		{name: "colecciones", pattern: "/api/v1/collections", pending: "U2b"},
-		{name: "colección oculta", pattern: "/api/v1/collections/{id}", pending: "U2b"},
-		{name: "colección visible", pattern: "/api/v1/collections/{id}", pending: "U2b"},
-		{name: "persona oculta", pattern: "/api/v1/people/{id}", path: "/api/v1/people/1", pending: "U2b"},
-		{name: "persona visible", pattern: "/api/v1/people/{id}", path: "/api/v1/people/2", pending: "U2b"},
-		{name: "series", pattern: "/api/v1/series", pending: "U2b"},
-		{name: "géneros de series", pattern: "/api/v1/series/genres", pending: "U2b"},
-		{name: "serie oculta", pattern: "/api/v1/series/{id}", pending: "U2b"},
-		{name: "serie visible", pattern: "/api/v1/series/{id}", pending: "U2b"},
-		{name: "similares de serie oculta", pattern: "/api/v1/series/{id}/similar", pending: "U2b"},
-		{name: "similares de serie visible", pattern: "/api/v1/series/{id}/similar", pending: "U2b"},
-		{name: "temporada de serie oculta", pattern: "/api/v1/series/{id}/seasons/{n}", pending: "U2b"},
-		{name: "temporada de serie visible", pattern: "/api/v1/series/{id}/seasons/{n}", pending: "U2b"},
+		{name: "series favoritas", pattern: "/api/v1/lists/{list}", path: "/api/v1/lists/favorite?kind=series"},
+		{name: "colecciones favoritas", pattern: "/api/v1/lists/{list}", path: "/api/v1/lists/favorite?kind=collections"},
+		{name: "visto de serie oculta PUT", pattern: "/api/v1/series/{id}/watched", path: "/api/v1/series/", method: http.MethodPut, notFound: true},
+		{name: "visto de serie oculta DELETE", pattern: "/api/v1/series/{id}/watched", path: "/api/v1/series/", method: http.MethodDelete, notFound: true},
+		{name: "temporada vista de serie oculta PUT", pattern: "/api/v1/series/{id}/seasons/{n}/watched", path: "/api/v1/series/", method: http.MethodPut, notFound: true},
+		{name: "temporada vista de serie oculta DELETE", pattern: "/api/v1/series/{id}/seasons/{n}/watched", path: "/api/v1/series/", method: http.MethodDelete, notFound: true},
+		{name: "lista de serie oculta PUT", pattern: "/api/v1/series/{id}/lists/{list}", path: "/api/v1/series/", method: http.MethodPut, notFound: true},
+		{name: "lista de serie oculta DELETE", pattern: "/api/v1/series/{id}/lists/{list}", path: "/api/v1/series/", method: http.MethodDelete, notFound: true},
+		{name: "lista de colección oculta PUT", pattern: "/api/v1/collections/{id}/lists/{list}", path: "/api/v1/collections/", method: http.MethodPut, notFound: true},
+		{name: "lista de colección oculta DELETE", pattern: "/api/v1/collections/{id}/lists/{list}", path: "/api/v1/collections/", method: http.MethodDelete, notFound: true},
+		{name: "colecciones", pattern: "/api/v1/collections", path: "/api/v1/collections", adminMarca: true},
+		{name: "colección oculta", pattern: "/api/v1/collections/{id}", notFound: true},
+		{name: "colección visible", pattern: "/api/v1/collections/{id}"},
+		{name: "persona", pattern: "/api/v1/people/{id}", path: "/api/v1/people/777", adminMarca: true},
+		{name: "series", pattern: "/api/v1/series", path: "/api/v1/series", adminMarca: true},
+		{name: "géneros de series", pattern: "/api/v1/series/genres", path: "/api/v1/series/genres", adminMarca: true},
+		{name: "serie oculta", pattern: "/api/v1/series/{id}", notFound: true},
+		{name: "serie visible", pattern: "/api/v1/series/{id}"},
+		{name: "similares de serie oculta", pattern: "/api/v1/series/{id}/similar", notFound: true},
+		{name: "similares de serie visible", pattern: "/api/v1/series/{id}/similar"},
+		{name: "temporada de serie oculta", pattern: "/api/v1/series/{id}/seasons/{n}", notFound: true},
+		{name: "temporada de serie visible", pattern: "/api/v1/series/{id}/seasons/{n}"},
 		{name: "artistas", pattern: "/api/v1/music/artists", pending: "U2c"},
 		{name: "artista oculto", pattern: "/api/v1/music/artists/{id}", pending: "U2c"},
 		{name: "artista visible", pattern: "/api/v1/music/artists/{id}", pending: "U2c"},
@@ -257,7 +325,7 @@ func leakRoutes() []leakCase {
 }
 
 func TestPruebaDeFugas(t *testing.T) {
-	ts := newLibraryHTTPTestServer(t)
+	ts := newLeakHTTPServer(t)
 	fixture, userToken := newLeakFixture(t, ts)
 	adminToken := ts.token
 
@@ -307,6 +375,30 @@ func TestPruebaDeFugas(t *testing.T) {
 		},
 		"colección visible": func() string {
 			return "/api/v1/collections/" + strconv.FormatInt(fixture.visibleCollection, 10)
+		},
+		"visto de serie oculta PUT": func() string {
+			return "/api/v1/series/" + strconv.FormatInt(fixture.hiddenSeries, 10) + "/watched"
+		},
+		"visto de serie oculta DELETE": func() string {
+			return "/api/v1/series/" + strconv.FormatInt(fixture.hiddenSeries, 10) + "/watched"
+		},
+		"temporada vista de serie oculta PUT": func() string {
+			return "/api/v1/series/" + strconv.FormatInt(fixture.hiddenSeries, 10) + "/seasons/1/watched"
+		},
+		"temporada vista de serie oculta DELETE": func() string {
+			return "/api/v1/series/" + strconv.FormatInt(fixture.hiddenSeries, 10) + "/seasons/1/watched"
+		},
+		"lista de serie oculta PUT": func() string {
+			return "/api/v1/series/" + strconv.FormatInt(fixture.hiddenSeries, 10) + "/lists/favorite"
+		},
+		"lista de serie oculta DELETE": func() string {
+			return "/api/v1/series/" + strconv.FormatInt(fixture.hiddenSeries, 10) + "/lists/favorite"
+		},
+		"lista de colección oculta PUT": func() string {
+			return "/api/v1/collections/" + strconv.FormatInt(fixture.hiddenCollection, 10) + "/lists/favorite"
+		},
+		"lista de colección oculta DELETE": func() string {
+			return "/api/v1/collections/" + strconv.FormatInt(fixture.hiddenCollection, 10) + "/lists/favorite"
 		},
 		"serie oculta": func() string {
 			return "/api/v1/series/" + strconv.FormatInt(fixture.hiddenSeries, 10)
@@ -383,7 +475,17 @@ func TestPruebaDeFugas(t *testing.T) {
 			continue
 		}
 		t.Run(item.name, func(t *testing.T) {
-			status, body := libraryHTTPGet(t, ts.URL+item.path, userToken)
+			method := item.method
+			if method == "" {
+				method = http.MethodGet
+			}
+			var status int
+			var body []byte
+			if method == http.MethodGet {
+				status, body = libraryHTTPGet(t, ts.URL+item.path, userToken)
+			} else {
+				status, body = libraryHTTPDo(t, method, ts.URL+item.path, userToken, nil)
+			}
 			if item.notFound {
 				if status != http.StatusNotFound {
 					t.Fatalf("usuario: código = %d, se esperaba 404; cuerpo = %s", status, body)
@@ -394,7 +496,7 @@ func TestPruebaDeFugas(t *testing.T) {
 			if bytes.Contains(body, []byte(leakMarker)) {
 				t.Fatalf("fuga en %s: %s", item.path, body)
 			}
-			if item.adminMarca {
+			if item.adminMarca && method == http.MethodGet {
 				adminStatus, adminBody := libraryHTTPGet(t, ts.URL+item.path, adminToken)
 				if adminStatus != http.StatusOK {
 					t.Fatalf("admin: código = %d; cuerpo = %s", adminStatus, adminBody)
@@ -406,8 +508,29 @@ func TestPruebaDeFugas(t *testing.T) {
 		})
 	}
 
+	status, body := libraryHTTPGet(t, ts.URL+"/api/v1/people/777", userToken)
+	if status != http.StatusOK {
+		t.Fatalf("persona parcial: %d %s", status, body)
+	}
+	var personResponse personMediaResponse
+	if err := json.Unmarshal(body, &personResponse); err != nil {
+		t.Fatalf("persona parcial: %v", err)
+	}
+	for _, item := range personResponse.InLibrary {
+		if item.ID == fixture.hiddenMovie || item.ID == fixture.hiddenSeries {
+			t.Fatalf("la persona no debe incluir contenido oculto: %+v", item)
+		}
+	}
+	notInLibrary := make(map[int64]bool)
+	for _, item := range personResponse.NotInLibrary {
+		notInLibrary[item.TMDBID] = true
+	}
+	if !notInLibrary[1002] || !notInLibrary[2002] {
+		t.Fatalf("las obras solo ocultas deben seguir en not_in_library: %+v", personResponse.NotInLibrary)
+	}
+
 	allToken := leakAllLibrariesToken(t, ts)
-	status, body := libraryHTTPGet(t, ts.URL+"/api/v1/items", allToken)
+	status, body = libraryHTTPGet(t, ts.URL+"/api/v1/items", allToken)
 	if status != http.StatusOK || !bytes.Contains(body, []byte(leakMarker)) {
 		t.Fatalf("un usuario con all_libraries debe ver la marca: código = %d, cuerpo = %s", status, body)
 	}

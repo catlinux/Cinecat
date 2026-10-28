@@ -820,3 +820,123 @@ func TestSerieDTOConTrailerYCreditosConID(t *testing.T) {
 		t.Fatalf("créditos con id inesperados: %+v", detail.Credits)
 	}
 }
+
+func TestSeriesFiltraAccesoParcial(t *testing.T) {
+	ts := newLibraryHTTPTestServer(t)
+	visibleLibrary := createLibrary(t, ts.db, t.TempDir())
+	hiddenLibrary := createLibrary(t, ts.db, t.TempDir())
+	seriesID := insertSeriesHTTPFixture(t, ts, seriesHTTPFixture{
+		libraryID: visibleLibrary, folder: "Visible", title: "Serie visible",
+		displayTitle: "Serie visible", genres: `["Drama"]`,
+	})
+	visibleEpisode := insertSeriesEpisodeHTTP(t, ts, visibleLibrary, seriesID,
+		"Episodio visible", "Episodio visible", 1, 1, "Episodio visible", "", "")
+	hiddenEpisode := insertSeriesEpisodeHTTP(t, ts, hiddenLibrary, seriesID,
+		"Episodio oculto", "Episodio oculto", 1, 2, "Episodio oculto", "", "")
+	hiddenSeries := insertSeriesHTTPFixture(t, ts, seriesHTTPFixture{
+		libraryID: hiddenLibrary, folder: "Oculta", title: "Serie oculta",
+		displayTitle: "Serie oculta", genres: `["Drama"]`,
+	})
+	insertSeriesEpisodeHTTP(t, ts, hiddenLibrary, hiddenSeries,
+		"Episodio de oculta", "Episodio de oculta", 1, 1, "Episodio de oculta", "", "")
+
+	userToken, userID := partialAccessToken(t, ts, visibleLibrary)
+	for _, itemID := range []int64{visibleEpisode, hiddenEpisode} {
+		if _, err := ts.db.Exec(
+			`INSERT INTO watch_state (user_id, media_item_id) VALUES (?, ?)`, userID, itemID); err != nil {
+			t.Fatalf("marcar visto %d: %v", itemID, err)
+		}
+	}
+
+	status, body := libraryHTTPGet(t, ts.URL+"/api/v1/series", userToken)
+	if status != http.StatusOK {
+		t.Fatalf("listado parcial: %d %s", status, body)
+	}
+	var partial seriesResponse
+	if err := json.Unmarshal(body, &partial); err != nil {
+		t.Fatalf("listado parcial: %v", err)
+	}
+	if len(partial.Series) != 1 || partial.Series[0].ID != seriesID {
+		t.Fatalf("series visibles inesperadas: %+v", partial.Series)
+	}
+	visible := partial.Series[0]
+	if visible.SeasonCount != 1 || visible.EpisodeCount != 1 || visible.WatchedCount != 1 {
+		t.Fatalf("recuentos parciales: %+v", visible)
+	}
+
+	status, body = libraryHTTPGet(t, seriesHTTPURL(ts, seriesID, ""), userToken)
+	if status != http.StatusOK {
+		t.Fatalf("ficha parcial: %d %s", status, body)
+	}
+	var detail seriesDetailDTO
+	if err := json.Unmarshal(body, &detail); err != nil {
+		t.Fatalf("ficha parcial: %v", err)
+	}
+	if detail.EpisodeCount != 1 || detail.WatchedCount != 1 || detail.SeasonCount != 1 ||
+		len(detail.Seasons) != 1 || detail.Seasons[0].EpisodeCount != 1 ||
+		detail.Seasons[0].WatchedCount != 1 {
+		t.Fatalf("ficha parcial inesperada: %+v", detail)
+	}
+
+	status, body = libraryHTTPGet(t, seriesHTTPURL(ts, seriesID, "/seasons/1"), userToken)
+	if status != http.StatusOK {
+		t.Fatalf("temporada parcial: %d %s", status, body)
+	}
+	var season seriesSeasonDetailDTO
+	if err := json.Unmarshal(body, &season); err != nil {
+		t.Fatalf("temporada parcial: %v", err)
+	}
+	if len(season.Items) != 1 || season.Items[0].ID != visibleEpisode {
+		t.Fatalf("episodios visibles inesperados: %+v", season.Items)
+	}
+	if status, body := libraryHTTPGet(t, seriesHTTPURL(ts, hiddenSeries, ""), userToken); status != http.StatusNotFound {
+		t.Fatalf("serie oculta: %d %s", status, body)
+	}
+	if status, body := libraryHTTPGet(t, seriesHTTPURL(ts, seriesID, "/similar"), userToken); status != http.StatusOK {
+		t.Fatalf("similares visibles: %d %s", status, body)
+	}
+
+	status, body = libraryHTTPGet(t, ts.URL+"/api/v1/series", ts.token)
+	if status != http.StatusOK {
+		t.Fatalf("listado admin: %d %s", status, body)
+	}
+	var admin seriesResponse
+	if err := json.Unmarshal(body, &admin); err != nil {
+		t.Fatalf("listado admin: %v", err)
+	}
+	foundVisible := false
+	for _, item := range admin.Series {
+		if item.ID == seriesID {
+			foundVisible = true
+			if item.SeasonCount != 1 || item.EpisodeCount != 2 || item.WatchedCount != 0 {
+				t.Fatalf("recuentos admin: %+v", item)
+			}
+		}
+	}
+	if !foundVisible {
+		t.Fatal("el admin debe ver la serie visible")
+	}
+
+	status, body = libraryHTTPGet(t, seriesHTTPURL(ts, seriesID, ""), ts.token)
+	if status != http.StatusOK {
+		t.Fatalf("ficha admin: %d %s", status, body)
+	}
+	if err := json.Unmarshal(body, &detail); err != nil {
+		t.Fatalf("ficha admin: %v", err)
+	}
+	if detail.EpisodeCount != 2 || detail.WatchedCount != 0 || len(detail.Seasons) != 1 ||
+		detail.Seasons[0].EpisodeCount != 2 {
+		t.Fatalf("ficha admin inesperada: %+v", detail)
+	}
+
+	status, body = libraryHTTPGet(t, seriesHTTPURL(ts, seriesID, "/seasons/1"), ts.token)
+	if status != http.StatusOK {
+		t.Fatalf("temporada admin: %d %s", status, body)
+	}
+	if err := json.Unmarshal(body, &season); err != nil {
+		t.Fatalf("temporada admin: %v", err)
+	}
+	if len(season.Items) != 2 {
+		t.Fatalf("episodios admin = %d", len(season.Items))
+	}
+}

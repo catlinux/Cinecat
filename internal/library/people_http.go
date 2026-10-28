@@ -81,13 +81,14 @@ func (a *API) handlePerson(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	movies, err := a.localPersonMovies(r.Context())
+	access := accessFromRequest(r)
+	movies, err := a.localPersonMovies(r.Context(), access)
 	if err != nil {
 		log.Printf("library: personas: películas locales: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
 		return
 	}
-	series, err := a.localPersonSeries(r.Context())
+	series, err := a.localPersonSeries(r.Context(), access)
 	if err != nil {
 		log.Printf("library: personas: series locales: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
@@ -199,13 +200,13 @@ func (a *API) handlePerson(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (a *API) localPersonMovies(ctx context.Context) ([]localPersonMedia, error) {
+func (a *API) localPersonMovies(ctx context.Context, access libraryAccess) ([]localPersonMedia, error) {
 	rows, err := a.db.QueryContext(ctx, `
 		SELECT mi.id, COALESCE(NULLIF(mi.display_title, ''), mi.title), mi.year,
 		       mi.poster_url, mi.rating, mi.tmdb_id, mi.credits
 		  FROM media_items mi
 		  JOIN libraries l ON l.id = mi.library_id AND l.kind = 'video'
-		 WHERE mi.kind = 'movie'
+		 WHERE mi.kind = 'movie' AND `+access.Clause("mi")+`
 		 ORDER BY mi.title COLLATE NOCASE, mi.id`)
 	if err != nil {
 		return nil, err
@@ -233,12 +234,13 @@ func (a *API) localPersonMovies(ctx context.Context) ([]localPersonMedia, error)
 	return result, nil
 }
 
-func (a *API) localPersonSeries(ctx context.Context) ([]localPersonMedia, error) {
+func (a *API) localPersonSeries(ctx context.Context, access libraryAccess) ([]localPersonMedia, error) {
 	rows, err := a.db.QueryContext(ctx, `
 		SELECT s.id, COALESCE(NULLIF(s.display_title, ''), s.title), s.year,
 		       s.poster_url, s.rating, s.tmdb_id, s.credits
 		  FROM series s
 		  JOIN libraries l ON l.id = s.library_id AND l.kind = 'video'
+		 WHERE `+access.Clause("s")+`
 		 ORDER BY s.title COLLATE NOCASE, s.id`)
 	if err != nil {
 		return nil, err
