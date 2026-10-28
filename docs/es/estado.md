@@ -62,15 +62,14 @@ Versión actual: **0.20.0**. Esta página resume el estado real del código, no 
 
 El orden sale de los planes de `.agents/plans`; no hay fechas ni versiones comprometidas.
 
-1. **Favoritos y próximas a ver:** API, tarjetas y páginas.
-2. **Búsqueda/identificación manual de colecciones en TMDB**, con «faltan en tu biblioteca».
-3. **Usuarios** (crear, rol, restablecer contraseña, borrar) y **perfil** con personalización del portal.
-4. **Sesiones/dispositivos, actividad y copias de seguridad** desde administración.
-5. **Subtítulos subidos por el usuario** y diseño de subtítulos que hoy no se admiten.
-6. **Complementos**, todavía en fase de diseño.
-7. **DLNA/UPnP**, todavía en fase de diseño.
-8. **Tipos de biblioteca** (por ejemplo, música o fotos) cuando se aborde el modelo.
-9. **Clientes Android y Android TV**.
+1. **Búsqueda/identificación manual de colecciones en TMDB**, con «faltan en tu biblioteca».
+2. **Usuarios** (crear, rol, restablecer contraseña, borrar) y **perfil** con personalización del portal.
+3. **Sesiones/dispositivos, actividad y copias de seguridad** desde administración.
+4. **Subtítulos subidos por el usuario** y diseño de subtítulos que hoy no se admiten.
+5. **Complementos**, todavía en fase de diseño.
+6. **DLNA/UPnP**, todavía en fase de diseño.
+7. **Tipos de biblioteca** (por ejemplo, música o fotos) cuando se aborde el modelo.
+8. **Clientes Android y Android TV**.
 
 ## Limitaciones y riesgos conocidos
 

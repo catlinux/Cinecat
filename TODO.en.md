@@ -14,7 +14,6 @@ This file contains only work that is still open. Published work is in the [CHANG
 ## 🟠 Next phase
 
 - **Identify collections on TMDB:** manual search, synopsis and "missing from your library".
-- **Libraries with multiple folders** and a **folder browser** to choose paths from the web.
 - **Users and profile:** user CRUD, own profile, portal customisation, open sessions and history.
 - **Sessions, devices, activity and backups** in administration.
 - **User-uploaded subtitles:** needs a design first; today only embedded text and `.srt`/`.vtt`/`.ass` files next to the video are read.

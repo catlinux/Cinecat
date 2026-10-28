@@ -63,15 +63,14 @@ Current version: **0.20.0**. This page describes the real state of the code, not
 
 The order comes from the plans in `.agents/plans`; no dates or committed versions.
 
-1. **Favorites and watchlist:** API, cards and pages.
-2. **Manual TMDB collection search/identification**, with "missing from your library".
-3. **Users** (create, role, reset password, delete) and a **profile** with portal customisation.
-4. **Sessions/devices, activity and backups** from administration.
-5. **User-uploaded subtitles** and a design for the subtitle types not supported today.
-6. **Plugins**, still at the design stage.
-7. **DLNA/UPnP**, still at the design stage.
-8. **Library types** (for example music or photos) when the model is addressed.
-9. **Android and Android TV clients**.
+1. **Manual TMDB collection search/identification**, with "missing from your library".
+2. **Users** (create, role, reset password, delete) and a **profile** with portal customisation.
+3. **Sessions/devices, activity and backups** from administration.
+4. **User-uploaded subtitles** and a design for the subtitle types not supported today.
+5. **Plugins**, still at the design stage.
+6. **DLNA/UPnP**, still at the design stage.
+7. **Library types** (for example music or photos) when the model is addressed.
+8. **Android and Android TV clients**.
 
 ## Known limitations and risks
 

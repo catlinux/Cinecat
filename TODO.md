@@ -14,7 +14,6 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 ## 🟠 Próxima fase
 
 - **Identificar colecciones en TMDB:** búsqueda manual, sinopsis y «faltan en tu biblioteca».
-- **Bibliotecas con varias carpetas** y **navegador de carpetas** para elegir rutas desde la web.
 - **Usuarios y perfil:** CRUD de usuarios, perfil propio, personalización del portal, sesiones abiertas e historial.
 - **Sesiones, dispositivos, actividad y copias de seguridad** en administración.
 - **Subtítulos subidos por el usuario:** requiere diseño previo; hoy solo se leen incrustados de texto o archivos `.srt`/`.vtt`/`.ass` junto al vídeo.
