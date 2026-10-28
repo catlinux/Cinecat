@@ -40,32 +40,6 @@ docker compose logs servidor
 
 The first start creates the `admin` user. If you did not set a password, it appears once in the log: copy it before it is lost. The server listens on `http://127.0.0.1:8080` and the web app on `http://127.0.0.1:8081`, reachable only from the Debian machine.
 
-## Dynamic IP with OVH DynHost
-
-If your ISP changes your home IP, the domain has to follow it. With a domain at OVH this is done with **DynHost** ([official guide](https://docs.ovhcloud.com/en/guides/web-cloud/domains/dns-dynhost)). It is an optional piece and separate from Cinecat: if your router can already update DynHost (many support a custom DynDNS service) you can use it and skip steps 2 and 3.
-
-1. In the OVH panel, **Web Cloud → DNS zones →** your domain **→ DynHost tab**. First create the access (**Manage access → Create a username**: suffix, sub-domain —for example `media`— and password) and then the record (**Add a DynHost**: the same sub-domain and your current public IP). The sub-domain must not already exist as an A or AAAA record in the zone.
-2. On the Debian, store the DynHost username and password (not your OVH account ones) in a file only your user can read:
-
-   ```sh
-   mkdir -p ~/.config/systemd/user ~/.config/cinecat
-   install -m 600 deploy/dynhost/dynhost.env.example ~/.config/cinecat/dynhost.env
-   nano ~/.config/cinecat/dynhost.env
-   ```
-
-3. Install the user timer, which every 5 minutes checks the IP and tells OVH only if it has changed (or if it has not been confirmed for more than 24 hours). It needs `linger` enabled for the user, like the updater:
-
-   ```sh
-   sed "s|@REPO@|$PWD|" deploy/dynhost/cinecat-dynhost.service > ~/.config/systemd/user/cinecat-dynhost.service
-   cp deploy/dynhost/cinecat-dynhost.timer ~/.config/systemd/user/
-   systemctl --user daemon-reload
-   systemctl --user enable --now cinecat-dynhost.timer
-   ```
-
-4. Check that it works: `systemctl --user start cinecat-dynhost.service` and `journalctl --user -u cinecat-dynhost.service -n 5` should show "OVH confirmó media.techmarc.es → your IP". The change can take a few minutes to propagate; `getent hosts media.techmarc.es` must return your IP before you request the certificate. With `DYNHOST_DRY_RUN=1 deploy/dynhost/ovh-dynhost.sh` you see what it would do without calling OVH.
-
-The password only lives in `~/.config/cinecat/dynhost.env` (the script refuses to run if other users can read it) and does not show up in the process list. To learn your IP, the script queries `api.ipify.org`, `ifconfig.me` and `icanhazip.com`, in that order (change them with `DYNHOST_IP_SERVICES`); that is the only outgoing connection and the script makes it, not Cinecat.
-
 ## Apache and HTTPS
 
 ```sh
