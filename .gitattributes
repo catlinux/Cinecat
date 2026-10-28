@@ -1,3 +1,4 @@
 *.sh text eol=lf
 deploy/systemd/* text eol=lf
 deploy/dynhost/* text eol=lf
+deploy/*.conf text eol=lf
