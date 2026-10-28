@@ -134,6 +134,42 @@ describe('ApiClient', () => {
 		}
 	});
 
+	it('consulta y crea copias de seguridad del sistema', async () => {
+		const backup = {
+			name: 'cinecat-20261027-100000.db',
+			size_bytes: 1024,
+			created_at: '2026-10-27T10:00:00Z'
+		};
+		const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+			if (init?.method === 'POST') {
+				return jsonResponse(backup, 201);
+			}
+			return jsonResponse({
+				enabled: true,
+				retention_days: 7,
+				backups: [backup],
+				last_error: ''
+			});
+		});
+		const client = new ApiClient({ baseUrl: 'http://api.test', fetch: fetchMock });
+
+		const list = await client.getBackups('token-123');
+		const created = await client.createBackup('token-123');
+
+		expect(list).toMatchObject({ enabled: true, retention_days: 7 });
+		expect(list.backups[0]).toEqual(backup);
+		expect(created).toEqual(backup);
+		expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
+			'http://api.test/api/v1/system/backups',
+			'http://api.test/api/v1/system/backups'
+		]);
+		expect(fetchMock.mock.calls[0][1]?.method).toBe('GET');
+		expect(fetchMock.mock.calls[1][1]?.method).toBe('POST');
+		for (const [, init] of fetchMock.mock.calls) {
+			expect((init?.headers as Record<string, string>).Authorization).toBe('Bearer token-123');
+		}
+	});
+
 	it('crea, renombra, añade y quita carpetas de bibliotecas', async () => {
 		const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
 			jsonResponse({ id: 7, name: 'Pelis', kind: 'video', path: '/media/a', paths: [] })

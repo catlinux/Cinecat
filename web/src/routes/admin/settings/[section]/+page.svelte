@@ -1,4 +1,5 @@
 <script lang="ts">
+	import BackupPanel from '$lib/components/BackupPanel.svelte';
 	import SettingsForm from '$lib/components/SettingsForm.svelte';
 	import UpdatePanel from '$lib/components/UpdatePanel.svelte';
 	import { formatDateTime } from '$lib/media';
@@ -6,12 +7,19 @@
 	import type { UpdateActionState } from '$lib/updates';
 	import type { PageData } from './$types';
 
-	interface SettingsPageForm extends SettingsFormState, UpdateActionState {}
+	interface BackupActionState {
+		backupAction?: boolean;
+		success?: boolean;
+		message?: string;
+	}
+
+	interface SettingsPageForm extends SettingsFormState, UpdateActionState, BackupActionState {}
 
 	let { data, form = null }: { data: PageData; form?: SettingsPageForm | null } = $props();
 
 	const section = $derived(data.section);
 	const updateForm = $derived(form?.updateAction ? form : null);
+	const backupForm = $derived(form?.backupAction ? form : null);
 	const settingsForm = $derived(
 		updateForm
 			? {
@@ -19,7 +27,9 @@
 					fields: updateForm.fields,
 					values: updateForm.values
 				}
-			: form
+			: backupForm
+				? null
+				: form
 	);
 </script>
 
@@ -67,6 +77,16 @@
 				info={data.updateInfo}
 				currentVersion={data.serverInfo?.server ?? data.webVersion}
 				form={updateForm}
+			/>
+		</section>
+
+		<section class="admin-card system-card">
+			<p class="kicker">Servidor</p>
+			<h2>Copias de seguridad</h2>
+			<BackupPanel
+				info={data.backupInfo}
+				loadError={data.backupLoadError}
+				form={backupForm}
 			/>
 		</section>
 	{/if}

@@ -2,6 +2,8 @@ import { createRawSnippet } from 'svelte';
 import { render } from 'svelte/server';
 import { describe, expect, it, vi } from 'vitest';
 import type {
+	Backup,
+	BackupsResponse,
 	ScanStatus,
 	ServerVersion,
 	Setting,
@@ -24,6 +26,7 @@ const save = settingsActions.save!;
 const reset = settingsActions.reset!;
 const checkUpdates = settingsActions.checkUpdates!;
 const applyUpdate = settingsActions.applyUpdate!;
+const createBackup = settingsActions.backup!;
 
 function jsonResponse(body: unknown, status = 200): Response {
 	return new Response(JSON.stringify(body), {
@@ -303,6 +306,25 @@ function updateInfo(overrides: Partial<UpdateInfo> = {}): UpdateInfo {
 	};
 }
 
+function backup(overrides: Partial<Backup> = {}): Backup {
+	return {
+		name: 'cinecat-20261027-100000.db',
+		size_bytes: 734003200,
+		created_at: '2026-10-27T10:00:00Z',
+		...overrides
+	};
+}
+
+function backupsInfo(overrides: Partial<BackupsResponse> = {}): BackupsResponse {
+	return {
+		enabled: true,
+		retention_days: 7,
+		backups: [backup()],
+		last_error: '',
+		...overrides
+	};
+}
+
 describe('layout de administración', () => {
 	it('redirige sin sesión', async () => {
 		await expect(
@@ -508,13 +530,21 @@ describe('carga de ajustes', () => {
 				if (path === '/api/v1/system/update') {
 					return jsonResponse(updateInfo());
 				}
+				if (path === '/api/v1/system/backups') {
+					return jsonResponse(backupsInfo());
+				}
 				throw new Error(`URL inesperada: ${path}`);
 			});
-			const result = (await loadSettings(
-				sectionLoadEvent(fetchMock, key) as never
-			)) as { section: SettingsSection; updateInfo: UpdateInfo | null };
+			const result = (await loadSettings(sectionLoadEvent(fetchMock, key) as never)) as {
+				section: SettingsSection;
+				updateInfo: UpdateInfo | null;
+				backupInfo: BackupsResponse | null;
+			};
 			expect(result.section.key).toBe(key);
 			expect(result.updateInfo?.latest ?? null).toBe(key === 'system' ? 'v99.0.0' : null);
+			expect(result.backupInfo?.backups[0]?.name ?? null).toBe(
+				key === 'system' ? 'cinecat-20261027-100000.db' : null
+			);
 		}
 	});
 
@@ -531,16 +561,53 @@ describe('carga de ajustes', () => {
 			if (path === '/api/v1/system/update') {
 				return jsonResponse({ error: 'sin actualizador' }, 502);
 			}
+			if (path === '/api/v1/system/backups') {
+				return jsonResponse(backupsInfo());
+			}
 			throw new Error(`URL inesperada: ${path}`);
 		});
 		const result = (await loadSettings(sectionLoadEvent(fetchMock, 'system') as never)) as {
 			section: SettingsSection;
 			serverInfo: ServerVersion | null;
 			updateInfo: UpdateInfo | null;
+			backupInfo: BackupsResponse | null;
+			backupLoadError: boolean;
 		};
 		expect(result.section.key).toBe('system');
 		expect(result.serverInfo?.commit).toBe('abc1234');
 		expect(result.updateInfo).toBeNull();
+		expect(result.backupInfo?.enabled).toBe(true);
+		expect(result.backupLoadError).toBe(false);
+	});
+
+	it('no bloquea la sección si falla la lista de copias', async () => {
+		const response = settingsResponse();
+		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+			const path = new URL(String(input)).pathname;
+			if (path === '/api/v1/settings') {
+				return jsonResponse(response);
+			}
+			if (path === '/api/v1/system/version') {
+				return jsonResponse(serverInfo);
+			}
+			if (path === '/api/v1/system/update') {
+				return jsonResponse(updateInfo());
+			}
+			if (path === '/api/v1/system/backups') {
+				return jsonResponse({ error: 'sin copias' }, 500);
+			}
+			throw new Error(`URL inesperada: ${path}`);
+		});
+		const result = (await loadSettings(sectionLoadEvent(fetchMock, 'system') as never)) as {
+			section: SettingsSection;
+			updateInfo: UpdateInfo | null;
+			backupInfo: BackupsResponse | null;
+			backupLoadError: boolean;
+		};
+		expect(result.section.key).toBe('system');
+		expect(result.updateInfo?.latest).toBe('v99.0.0');
+		expect(result.backupInfo).toBeNull();
+		expect(result.backupLoadError).toBe(true);
 	});
 
 	it('devuelve 404 para una sección desconocida', async () => {
@@ -797,7 +864,7 @@ describe('sistema y actualizaciones', () => {
 		expect(result.data.message).toBe('No se pudo solicitar la actualización.');
 	});
 
-	it('redirige al login sin sesión en ambas acciones', async () => {
+	it('redirige al login sin sesión en las acciones del sistema', async () => {
 		await expect(
 			checkUpdates(
 				actionEvent(vi.fn(), 'checkUpdates', {}, 'system', null) as never
@@ -808,6 +875,64 @@ describe('sistema y actualizaciones', () => {
 				actionEvent(vi.fn(), 'applyUpdate', { tag: 'v99.0.0' }, 'system', null) as never
 			)
 		).rejects.toMatchObject({ status: 303, location: '/login' });
+		await expect(
+			createBackup(actionEvent(vi.fn(), 'backup', {}, 'system', null) as never)
+		).rejects.toMatchObject({ status: 303, location: '/login' });
+	});
+
+	it('crea una copia de seguridad desde la acción', async () => {
+		const created = backup();
+		const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+			const url = new URL(String(input));
+			if (url.pathname === '/api/v1/system/backups' && init?.method === 'POST') {
+				expect(init.headers).toMatchObject({ Authorization: 'Bearer token-123' });
+				return jsonResponse(created, 201);
+			}
+			throw new Error(`URL inesperada: ${url}`);
+		});
+		const result = (await createBackup(
+			actionEvent(fetchMock, 'backup', {}, 'system') as never
+		)) as {
+			backupAction: boolean;
+			success: boolean;
+			message: string;
+			backup: Backup;
+		};
+
+		expect(result.backupAction).toBe(true);
+		expect(result.success).toBe(true);
+		expect(result.message).toBe('Copia de seguridad creada.');
+		expect(result.backup.name).toBe(created.name);
+	});
+
+	it('traduce los errores al crear una copia', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ error: 'ocupado' }, 409));
+		const conflict = (await createBackup(
+			actionEvent(fetchMock, 'backup', {}, 'system') as never
+		)) as { status: number; data: { message: string; backupAction: boolean } };
+		expect(conflict.status).toBe(409);
+		expect(conflict.data.message).toBe('Ya hay una copia en curso');
+		expect(conflict.data.backupAction).toBe(true);
+
+		const broken = vi.fn().mockResolvedValue(jsonResponse({ error: 'fallo' }, 500));
+		const failure = (await createBackup(
+			actionEvent(broken, 'backup', {}, 'system') as never
+		)) as { status: number; data: { message: string } };
+		expect(failure.status).toBe(502);
+		expect(failure.data.message).toBe('No se pudo crear la copia de seguridad.');
+
+		const forbidden = vi.fn().mockResolvedValue(jsonResponse({ error: 'no admin' }, 403));
+		const denied = (await createBackup(
+			actionEvent(forbidden, 'backup', {}, 'system') as never
+		)) as { status: number; data: { message: string } };
+		expect(denied.status).toBe(403);
+
+		const fetchMockForOther = vi.fn();
+		const other = (await createBackup(
+			actionEvent(fetchMockForOther, 'backup', {}, 'scan') as never
+		)) as { status: number };
+		expect(other.status).toBe(404);
+		expect(fetchMockForOther).not.toHaveBeenCalled();
 	});
 
 	it('renderiza la versión nueva y las instrucciones si no hay actualizador', () => {
@@ -817,6 +942,8 @@ describe('sistema y actualizaciones', () => {
 					section: systemSection(false),
 					serverInfo,
 					updateInfo: updateInfo({ check_enabled: false, apply_supported: false }),
+					backupInfo: backupsInfo(),
+					backupLoadError: false,
 					webVersion
 				} as never,
 				form: null
@@ -837,6 +964,8 @@ describe('sistema y actualizaciones', () => {
 					section: systemSection(true),
 					serverInfo,
 					updateInfo: updateInfo(),
+					backupInfo: backupsInfo(),
+					backupLoadError: false,
 					webVersion
 				} as never,
 				form: {
@@ -846,6 +975,49 @@ describe('sistema y actualizaciones', () => {
 			}
 		}).body;
 		expect(html).toContain('Ya hay una actualización en curso');
+	});
+
+	it('muestra el panel de copias con la lista y el botón', () => {
+		const html = render(SettingsPage, {
+			props: {
+				data: {
+					section: systemSection(true),
+					serverInfo,
+					updateInfo: updateInfo(),
+					backupInfo: backupsInfo(),
+					backupLoadError: false,
+					webVersion
+				} as never,
+				form: null
+			}
+		}).body;
+		expect(html).toContain('Copias de seguridad');
+		expect(html).toContain('Copias automáticas');
+		expect(html).toContain('Hacer copia ahora');
+		expect(html).toContain('cinecat-20261027-100000.db');
+	});
+
+	it('muestra el aviso de copia en curso y el error de carga', () => {
+		const html = render(SettingsPage, {
+			props: {
+				data: {
+					section: systemSection(true),
+					serverInfo,
+					updateInfo: updateInfo(),
+					backupInfo: null,
+					backupLoadError: true,
+					webVersion
+				} as never,
+				form: {
+					backupAction: true,
+					success: false,
+					message: 'Ya hay una copia en curso'
+				}
+			}
+		}).body;
+		expect(html).toContain('No se pudieron cargar las copias de seguridad');
+		expect(html).toContain('Ya hay una copia en curso');
+		expect(html).toContain('Hacer copia ahora');
 	});
 });
 

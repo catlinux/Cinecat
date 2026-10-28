@@ -826,6 +826,19 @@ export interface UpdateInfo {
 	status: UpdateStatus;
 }
 
+export interface Backup {
+	name: string;
+	size_bytes: number;
+	created_at: string;
+}
+
+export interface BackupsResponse {
+	enabled: boolean;
+	retention_days: number;
+	backups: Backup[];
+	last_error: string;
+}
+
 export interface TrashItem {
 	id: number;
 	library_id: number;
@@ -1031,6 +1044,14 @@ export class ApiClient {
 
 	async applyUpdate(tag: string, token: string): Promise<UpdateInfo> {
 		return this.post<UpdateInfo>('/api/v1/system/update/apply', { tag }, token);
+	}
+
+	async getBackups(token: string): Promise<BackupsResponse> {
+		return this.get<BackupsResponse>('/api/v1/system/backups', token);
+	}
+
+	async createBackup(token: string): Promise<Backup> {
+		return this.post<Backup>('/api/v1/system/backups', undefined, token);
 	}
 
 	async getSettings(token: string): Promise<SettingsResponse> {

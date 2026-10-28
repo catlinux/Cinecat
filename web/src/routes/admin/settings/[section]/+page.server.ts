@@ -1,5 +1,5 @@
 import { error, fail, redirect } from '@sveltejs/kit';
-import type { ServerVersion, SettingsSection, UpdateInfo } from '$lib/api';
+import type { Backup, BackupsResponse, ServerVersion, SettingsSection, UpdateInfo } from '$lib/api';
 import { ApiError } from '$lib/api';
 import { createApiClient } from '$lib/api-factory';
 import { requireSessionToken } from '$lib/session';
@@ -19,6 +19,8 @@ const UPDATE_OBSOLETE = 'Esa versión ya no es la última: vuelve a comprobar';
 const UPDATE_RUNNING = 'Ya hay una actualización en curso';
 const UPDATE_UNSUPPORTED =
 	'La actualización automática no está instalada en este servidor';
+const BACKUP_CREATE_ERROR = 'No se pudo crear la copia de seguridad.';
+const BACKUP_RUNNING = 'Ya hay una copia en curso';
 
 function sectionError(reason: unknown, fallback = LOAD_ERROR): never {
 	if (reason instanceof ApiError) {
@@ -86,6 +88,8 @@ export const load: PageServerLoad = async ({ params, locals, fetch }) => {
 
 	let serverInfo: ServerVersion | null = null;
 	let updateInfo: UpdateInfo | null = null;
+	let backupInfo: BackupsResponse | null = null;
+	let backupLoadError = false;
 	if (sectionKey === 'system') {
 		const api = createApiClient(fetch);
 		try {
@@ -99,9 +103,16 @@ export const load: PageServerLoad = async ({ params, locals, fetch }) => {
 			// La tarjeta de versiones sigue siendo útil sin el estado de actualización.
 			updateInfo = null;
 		}
+		try {
+			backupInfo = await api.getBackups(token);
+		} catch {
+			// Las copias no deben impedir que se vean los ajustes ni las versiones.
+			backupInfo = null;
+			backupLoadError = true;
+		}
 	}
 
-	return { section, serverInfo, updateInfo, webVersion };
+	return { section, serverInfo, updateInfo, backupInfo, backupLoadError, webVersion };
 };
 
 export const actions: Actions = {
@@ -239,5 +250,37 @@ export const actions: Actions = {
 			}
 			return fail(502, { updateAction: true, message: UPDATE_APPLY_ERROR });
 		}
+	},
+
+	backup: async ({ locals, fetch, params }) => {
+		if (params.section !== 'system') {
+			return fail(404, { message: 'Sección de ajustes no encontrada.' });
+		}
+		const token = requireSessionToken(locals);
+
+		let backup: Backup;
+		try {
+			backup = await createApiClient(fetch).createBackup(token);
+		} catch (reason) {
+			if (reason instanceof ApiError) {
+				if (reason.status === 401) {
+					redirect(303, '/login');
+				}
+				if (reason.status === 403) {
+					return fail(403, { backupAction: true, message: ADMIN_MESSAGE });
+				}
+				if (reason.status === 409) {
+					return fail(409, { backupAction: true, message: BACKUP_RUNNING });
+				}
+			}
+			return fail(502, { backupAction: true, message: BACKUP_CREATE_ERROR });
+		}
+
+		return {
+			backupAction: true,
+			success: true,
+			message: 'Copia de seguridad creada.',
+			backup
+		};
 	}
 };
