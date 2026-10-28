@@ -98,6 +98,37 @@ describe('ApiClient', () => {
 		}
 	});
 
+	it('previsualiza y aprueba una vinculación', async () => {
+		const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
+			jsonResponse({
+				device_name: 'TV',
+				client: 'androidtv',
+				expires_at: '2026-10-28T22:30:00Z'
+			})
+		);
+		const client = new ApiClient({ baseUrl: 'http://api.test', fetch: fetchMock });
+
+		await client.approvePairing('ABCD-EFGH', false, 'token-123');
+		await client.approvePairing('ABCD-EFGH', true, 'token-123');
+
+		expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
+			'http://api.test/api/v1/auth/pair/approve',
+			'http://api.test/api/v1/auth/pair/approve'
+		]);
+		expect(fetchMock.mock.calls.map(([, init]) => init?.method)).toEqual(['POST', 'POST']);
+		expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({
+			code: 'ABCD-EFGH',
+			confirm: false
+		});
+		expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({
+			code: 'ABCD-EFGH',
+			confirm: true
+		});
+		for (const [, init] of fetchMock.mock.calls) {
+			expect((init?.headers as Record<string, string>).Authorization).toBe('Bearer token-123');
+		}
+	});
+
 	it('convierte un 401 en ApiError con estado', async () => {
 		const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ error: 'credenciales' }, 401));
 		const client = new ApiClient({ baseUrl: 'http://api.test', fetch: fetchMock });

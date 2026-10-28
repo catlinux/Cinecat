@@ -1,15 +1,21 @@
 import { render } from 'svelte/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import LoginPage from './+page.svelte';
-import { actions } from './+page.server';
+import { actions, load as loadLogin } from './+page.server';
 
 const login = actions.login!;
 const logout = actions.logout!;
 
-function formRequest(username?: string, password?: string, userAgent?: string): Request {
+function formRequest(
+	username?: string,
+	password?: string,
+	userAgent?: string,
+	next?: string
+): Request {
 	const body = new URLSearchParams();
 	if (username !== undefined) body.set('username', username);
 	if (password !== undefined) body.set('password', password);
+	if (next !== undefined) body.set('next', next);
 	return new Request('http://localhost/login?/login', {
 		method: 'POST',
 		headers: {
@@ -26,6 +32,7 @@ function fakeEvent(options: {
 	username?: string;
 	password?: string;
 	userAgent?: string;
+	next?: string;
 	token?: string | null;
 	clientIP?: string | null;
 }) {
@@ -35,9 +42,14 @@ function fakeEvent(options: {
 	const cookies = { get, set, delete: remove };
 
 	const event = {
-		request: formRequest(options.username, options.password, options.userAgent),
+		request: formRequest(options.username, options.password, options.userAgent, options.next),
 		cookies,
-		url: new URL(options.url ?? 'http://localhost/login'),
+		url: new URL(
+			options.url ??
+				(options.next
+					? `http://localhost/login?next=${encodeURIComponent(options.next)}`
+					: 'http://localhost/login')
+		),
 		fetch: options.fetchImpl,
 		locals: {},
 		params: {},
@@ -124,6 +136,63 @@ describe('acción de login', () => {
 
 		await expect(login(event as never)).rejects.toMatchObject({ status: 303, location: '/' });
 		expect(fetchMock.mock.calls[0][1].headers['User-Agent']).toBe(userAgent);
+	});
+
+	it('vuelve a la ruta interna indicada en next', async () => {
+		const { event } = fakeEvent({
+			fetchImpl: loginOk(),
+			username: 'ana',
+			password: 'Clave-segura-1',
+			next: '/vincular?codigo=AB'
+		});
+
+		await expect(login(event as never)).rejects.toMatchObject({
+			status: 303,
+			location: '/vincular?codigo=AB'
+		});
+	});
+
+	it('usa next del campo oculto si la acción ya no lleva la query', async () => {
+		const { event } = fakeEvent({
+			fetchImpl: loginOk(),
+			url: 'http://localhost/login',
+			username: 'ana',
+			password: 'Clave-segura-1',
+			next: '/vincular?codigo=AB'
+		});
+
+		await expect(login(event as never)).rejects.toMatchObject({
+			status: 303,
+			location: '/vincular?codigo=AB'
+		});
+	});
+
+	it('ignora destinos externos o inseguros', async () => {
+		for (const next of ['//evil.com', '/\\evil.com', 'https://evil.com', 'javascript:alert(1)']) {
+			const { event } = fakeEvent({
+				fetchImpl: loginOk(),
+				username: 'ana',
+				password: 'Clave-segura-1',
+				next
+			});
+			await expect(login(event as never)).rejects.toMatchObject({
+				status: 303,
+				location: '/'
+			});
+		}
+	});
+
+	it('mantiene en el mismo origen una ruta codificada con doble barra', async () => {
+		const { event } = fakeEvent({
+			fetchImpl: loginOk(),
+			username: 'ana',
+			password: 'Clave-segura-1',
+			next: '/%2F%2Fevil.com'
+		});
+		await expect(login(event as never)).rejects.toMatchObject({
+			status: 303,
+			location: '/%2F%2Fevil.com'
+		});
 	});
 
 	it('marca Secure en la cookie si la petición llegó por HTTPS', async () => {
@@ -286,5 +355,25 @@ describe('página de login', () => {
 		expect(body).toContain('Usuario o contraseña incorrectos.');
 		expect(body).toContain('value="ana"');
 		expect(body).toContain('Entrar en la sala');
+	});
+
+	it('conserva next en el campo oculto y descarta destinos inseguros', async () => {
+		const safe = (await loadLogin({
+			locals: { sessionToken: null },
+			url: new URL('http://localhost/login?next=%2Fvincular%3Fcodigo%3DAB')
+		} as never)) as { next: string };
+		expect(safe.next).toBe('/vincular?codigo=AB');
+
+		const unsafe = (await loadLogin({
+			locals: { sessionToken: null },
+			url: new URL('http://localhost/login?next=%2F%2Fevil.com')
+		} as never)) as { next: string };
+		expect(unsafe.next).toBe('');
+
+		const page = render(LoginPage, {
+			props: { data: { hasSession: false, next: '/vincular?codigo=AB' } }
+		}).body;
+		expect(page).toContain('name="next"');
+		expect(page).toContain('value="/vincular?codigo=AB"');
 	});
 });

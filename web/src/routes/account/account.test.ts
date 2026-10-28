@@ -302,5 +302,7 @@ describe('página de cuenta', () => {
 		expect(body).toContain('Este dispositivo');
 		expect(body).toContain('Cerrar esta sesión');
 		expect(body).toContain('action="?/closeSession"');
+		expect(body).toContain('href="/vincular"');
+		expect(body).toContain('Vincular un dispositivo');
 	});
 });

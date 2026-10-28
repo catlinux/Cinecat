@@ -1,13 +1,15 @@
 <script lang="ts">
-	type FormState = { username?: string; message?: string } | null;
+	type FormState = { username?: string; message?: string; next?: string } | null;
 
 	let {
 		data = { hasSession: false },
 		form = null
 	}: {
-		data?: { hasSession: boolean; ui?: { server_name: string } };
+		data?: { hasSession: boolean; next?: string; ui?: { server_name: string } };
 		form?: FormState;
 	} = $props();
+
+	const next = $derived(form?.next ?? data?.next ?? '');
 </script>
 
 <svelte:head>
@@ -27,6 +29,7 @@
 		{/if}
 
 		<form method="POST" action="?/login" class="login-form">
+			<input type="hidden" name="next" value={next} />
 			<label>
 				<span>Usuario</span>
 				<input

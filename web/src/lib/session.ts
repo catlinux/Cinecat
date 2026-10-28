@@ -40,6 +40,33 @@ export function requireSessionToken(locals: App.Locals): string {
 	return locals.sessionToken;
 }
 
+// Acepta solo una ruta interna absoluta: evita redirecciones a otro origen,
+// esquemas peligrosos y rutas con barras invertidas o caracteres de control.
+export function safeNextPath(
+	value: string | null | undefined,
+	origin: string | URL
+): string | null {
+	if (typeof value !== 'string' || value === '') {
+		return null;
+	}
+	if (!value.startsWith('/') || value.startsWith('//') || value.startsWith('/\\')) {
+		return null;
+	}
+	if (value.includes('\\') || /[\u0000-\u001f\u007f-\u009f]/.test(value)) {
+		return null;
+	}
+	try {
+		const base = new URL(origin.toString());
+		const target = new URL(value, base);
+		if (target.origin !== base.origin) {
+			return null;
+		}
+		return value;
+	} catch {
+		return null;
+	}
+}
+
 function maxAgeFrom(expiresAt: string): number {
 	const timestamp = Date.parse(expiresAt);
 	if (Number.isNaN(timestamp)) {

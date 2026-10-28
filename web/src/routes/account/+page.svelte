@@ -96,6 +96,9 @@
 			})}
 			currentLabel="Este dispositivo"
 		/>
+		<p class="account-vincular">
+			<a class="text-link" href="/vincular">Vincular un dispositivo</a>
+		</p>
 	</div>
 </section>
 
@@ -115,5 +118,9 @@
 		font-size: clamp(1.6rem, 4vw, 2.2rem);
 		font-weight: 600;
 		color: var(--granate);
+	}
+
+	.account-vincular {
+		margin: 1rem 0 0;
 	}
 </style>

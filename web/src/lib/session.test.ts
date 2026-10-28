@@ -4,6 +4,7 @@ import {
 	SESSION_COOKIE,
 	clearSessionCookie,
 	getSessionToken,
+	safeNextPath,
 	setSessionCookie
 } from './session';
 
@@ -63,5 +64,27 @@ describe('sesión', () => {
 		clearSessionCookie(cookies, true);
 
 		expect(remove).toHaveBeenCalledWith(SESSION_COOKIE, { path: '/', secure: true });
+	});
+});
+
+describe('safeNextPath', () => {
+	const origin = 'https://cinecat.test';
+
+	it('acepta rutas internas con query', () => {
+		expect(safeNextPath('/vincular?codigo=AB', origin)).toBe('/vincular?codigo=AB');
+		expect(safeNextPath('/%2F%2Fevil.com', origin)).toBe('/%2F%2Fevil.com');
+	});
+
+	it('rechaza otros orígenes, esquemas y barras peligrosas', () => {
+		expect(safeNextPath('//evil.com', origin)).toBeNull();
+		expect(safeNextPath('/\\evil.com', origin)).toBeNull();
+		expect(safeNextPath('https://evil.com', origin)).toBeNull();
+		expect(safeNextPath('javascript:alert(1)', origin)).toBeNull();
+		expect(safeNextPath('', origin)).toBeNull();
+	});
+
+	it('rechaza caracteres de control', () => {
+		expect(safeNextPath('/ruta\nfalsa', origin)).toBeNull();
+		expect(safeNextPath('/ruta\u0000falsa', origin)).toBeNull();
 	});
 });

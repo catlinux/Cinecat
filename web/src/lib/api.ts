@@ -25,6 +25,12 @@ export interface SessionsResponse {
 	sessions: Session[];
 }
 
+export interface PairPreview {
+	device_name: string;
+	client: 'android' | 'androidtv';
+	expires_at?: string;
+}
+
 export interface ErrorResponse {
 	error: string;
 }
@@ -966,6 +972,10 @@ export class ApiClient {
 
 	async closeSession(id: number, token: string): Promise<void> {
 		await this.delete(`/api/v1/auth/sessions/${id}`, token);
+	}
+
+	async approvePairing(code: string, confirm: boolean, token: string): Promise<PairPreview> {
+		return this.post<PairPreview>('/api/v1/auth/pair/approve', { code, confirm }, token);
 	}
 
 	async getUserSessions(userId: number, token: string): Promise<SessionsResponse> {
