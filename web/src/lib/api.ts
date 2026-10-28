@@ -266,6 +266,7 @@ export interface HomeResponse {
 	continue: MediaItem[];
 	next_up: MediaItem[];
 	recent_movies: MediaItem[];
+	recently_watched?: MediaItem[];
 	recent_series?: Series[];
 	has_clips?: boolean;
 	has_music?: boolean;
@@ -746,7 +747,7 @@ export interface ScanStatus {
 	error: string;
 }
 
-export type SettingType = 'bool' | 'int' | 'float' | 'string' | 'duration' | 'enum';
+export type SettingType = 'bool' | 'int' | 'float' | 'string' | 'duration' | 'enum' | 'json';
 
 export interface SettingOption {
 	value: string;

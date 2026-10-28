@@ -2,12 +2,14 @@ import { describe, expect, it } from 'vitest';
 import type { Setting } from './api';
 import {
 	collectSettingsForm,
+	DEFAULT_PORTAL_ROWS,
 	DEFAULT_PUBLIC_UI,
 	findSettingsSection,
 	formatDurationText,
 	formatSettingDefault,
 	isNumericEnum,
 	listPageSize,
+	parsePortalRows,
 	parsePublicUI,
 	parseSettingValue
 } from './settings';
@@ -125,7 +127,10 @@ describe('ajustes públicos de la interfaz', () => {
 			'ui.accent': 'dorado',
 			'ui.grid_columns': 5,
 			'ui.grid_rows': 10,
-			'ui.row_columns': 4
+			'ui.row_columns': 4,
+			'ui.portal_rows': JSON.stringify([
+				{ id: 'favorites', visible: false, title: '  Mi selección  ', kicker: 'Lo mejor' }
+			])
 		});
 
 		expect(ui).toEqual({
@@ -140,7 +145,10 @@ describe('ajustes públicos de la interfaz', () => {
 			accent: 'dorado',
 			grid_columns: 5,
 			grid_rows: 10,
-			row_columns: 4
+			row_columns: 4,
+			portal_rows: parsePortalRows([
+				{ id: 'favorites', visible: false, title: 'Mi selección', kicker: 'Lo mejor' }
+			])
 		});
 	});
 
@@ -177,6 +185,83 @@ describe('ajustes públicos de la interfaz', () => {
 		expect(listPageSize({ grid_columns: 5, grid_rows: 10 })).toBe(50);
 		expect(listPageSize({ grid_columns: 3, grid_rows: 99 })).toBe(48);
 		expect(listPageSize(null)).toBe(48);
+	});
+});
+
+describe('filas del portal', () => {
+	it('usa el orden y los textos por defecto', () => {
+		expect(DEFAULT_PORTAL_ROWS.map((row) => row.id)).toEqual([
+			'recent_movies',
+			'continue_movies',
+			'watchlist_movies',
+			'watched_movies',
+			'recent_series',
+			'continue_series',
+			'next_up',
+			'watchlist_series',
+			'favorites'
+		]);
+		expect(DEFAULT_PORTAL_ROWS[3]).toMatchObject({
+			title: 'Vistas hace poco',
+			kicker: 'Tu historial'
+		});
+	});
+
+	it('normaliza desconocidos, duplicados, huecos y títulos vacíos', () => {
+		const rows = parsePortalRows(
+			JSON.stringify([
+				{ id: 'favorites', visible: false, title: '  Mi selección  ', kicker: '  Lo mejor  ' },
+				{ id: 'desconocida', visible: true, title: 'No', kicker: 'No' },
+				{ id: 'recent_movies', visible: true, title: '   ', kicker: '' },
+				{ id: 'favorites', visible: true, title: 'Duplicada', kicker: 'Duplicada' }
+			])
+		);
+		expect(rows).toHaveLength(DEFAULT_PORTAL_ROWS.length);
+		expect(rows[0]).toEqual({
+			id: 'favorites',
+			visible: false,
+			title: 'Mi selección',
+			kicker: 'Lo mejor'
+		});
+		expect(rows[1]).toEqual({
+			id: 'recent_movies',
+			visible: true,
+			title: 'Películas recién añadidas',
+			kicker: ''
+		});
+		expect(rows[2].id).toBe('continue_movies');
+		expect(rows.some((row) => row.id === 'desconocida')).toBe(false);
+		expect(rows.some((row) => row.title === 'Duplicada')).toBe(false);
+	});
+
+	it('vuelve a los valores por defecto con JSON inválido y tolera tipos incorrectos', () => {
+		expect(parsePortalRows('{')).toEqual(DEFAULT_PORTAL_ROWS);
+		expect(parsePortalRows({})).toEqual(DEFAULT_PORTAL_ROWS);
+		const rows = parsePortalRows([
+			{ id: 'favorites', visible: 'sí', title: 3, kicker: null }
+		]);
+		expect(rows[0]).toEqual({
+			id: 'favorites',
+			visible: true,
+			title: 'Tus favoritos',
+			kicker: 'Tu selección'
+		});
+		expect(rows.slice(1)).toEqual(DEFAULT_PORTAL_ROWS.slice(0, 8));
+	});
+
+	it('completa las filas que faltan al final', () => {
+		const rows = parsePortalRows('[{"id":"next_up","visible":false}]');
+		expect(rows[0]).toMatchObject({ id: 'next_up', visible: false, title: 'Siguiente episodio' });
+		expect(rows.slice(1).map((row) => row.id)).toEqual([
+			'recent_movies',
+			'continue_movies',
+			'watchlist_movies',
+			'watched_movies',
+			'recent_series',
+			'continue_series',
+			'watchlist_series',
+			'favorites'
+		]);
 	});
 });
 

@@ -122,6 +122,7 @@ function homeResponse(overrides: Record<string, unknown> = {}) {
 		continue: [continueItem],
 		next_up: [],
 		recent_movies: [recentItem],
+		recently_watched: [{ ...recentItem, id: 12, title: 'Vista ayer' }],
 		recent_series: [recentSeries],
 		has_clips: false,
 		counts: { movies: 42, episodes: 2, series: 5 },
@@ -157,6 +158,7 @@ function portalData(overrides: Record<string, unknown> = {}) {
 		continueWatching: [continueItem],
 		nextUp: [],
 		recent: [recentItem],
+		recentlyWatched: [],
 		recentSeries: [recentSeries],
 		watchlist: [],
 		favorites: [],
@@ -194,6 +196,7 @@ describe('carga del portal', () => {
 			continueWatching: MediaItem[];
 			nextUp: MediaItem[];
 			recent: MediaItem[];
+			recentlyWatched: MediaItem[];
 			recentSeries: Series[];
 			errorMessage: string | null;
 		};
@@ -205,6 +208,8 @@ describe('carga del portal', () => {
 		expect(result.continueWatching).toHaveLength(1);
 		expect(result.nextUp).toEqual([]);
 		expect(result.recent).toHaveLength(1);
+		expect(result.recentlyWatched).toHaveLength(1);
+		expect(result.recentlyWatched[0].title).toBe('Vista ayer');
 		expect(result.recentSeries).toHaveLength(1);
 		expect(result.recentSeries[0].title).toBe('The Big Bang Theory');
 		expect(result.errorMessage).toBeNull();
@@ -324,7 +329,7 @@ describe('carga del portal', () => {
 });
 
 describe('portal', () => {
-	it('muestra Continuar viendo antes de las recientes', () => {
+	it('respeta el orden por defecto de las filas del portal', () => {
 		const { body } = render(PortalPage, { props: { data: portalData() } });
 
 		expect(body).toContain('Tu cine en casa');
@@ -342,8 +347,8 @@ describe('portal', () => {
 		expect((body.match(/class="portal-category(?:\s|")/g) ?? []).length).toBe(3);
 		expect(body).toContain('Continuar viendo');
 		expect(body).toContain('Continúas por 1 h 12 min');
-		expect(body).toContain('Películas añadidas recientemente');
-		expect(body).toContain('Series añadidas recientemente');
+		expect(body).toContain('Películas recién añadidas');
+		expect(body).toContain('Series recién añadidas');
 		expect(body).toContain('El Padrino');
 		expect(body).toContain('The Big Bang Theory');
 		expect(body).toContain('href="/series?sort=added"');
@@ -352,8 +357,8 @@ describe('portal', () => {
 		expect(body).toContain('aria-label="Anterior"');
 		expect(body).toContain('aria-label="Siguiente"');
 		expect(body).toMatch(/class="row-arrows[^"]*"[^>]*\bhidden\b/);
-		expect(body.indexOf('Continuar viendo')).toBeLessThan(
-			body.indexOf('Películas añadidas recientemente')
+		expect(body.indexOf('Películas recién añadidas')).toBeLessThan(
+			body.indexOf('Continuar viendo')
 		);
 		expect(body).not.toContain('Siguiente episodio');
 	});
@@ -454,7 +459,7 @@ describe('portal', () => {
 		});
 
 		expect(body).not.toContain('Continuar viendo');
-		expect(body).toContain('Películas añadidas recientemente');
+		expect(body).toContain('Películas recién añadidas');
 	});
 
 	it('no muestra la fila de series si está vacía', () => {
@@ -462,8 +467,8 @@ describe('portal', () => {
 			props: { data: portalData({ recentSeries: [] }) }
 		});
 
-		expect(body).not.toContain('Series añadidas recientemente');
-		expect(body).toContain('Películas añadidas recientemente');
+		expect(body).not.toContain('Series recién añadidas');
+		expect(body).toContain('Películas recién añadidas');
 	});
 
 	it('oculta la fila de series si ui.show_series está desactivado', () => {
@@ -475,7 +480,7 @@ describe('portal', () => {
 			}
 		});
 
-		expect(body).not.toContain('Series añadidas recientemente');
+		expect(body).not.toContain('Series recién añadidas');
 	});
 
 	it('muestra Siguiente episodio cuando next_up trae elementos', () => {
@@ -492,6 +497,48 @@ describe('portal', () => {
 		expect(body).toContain('https://images.example/episodio.jpg');
 		expect(body).toContain('EPISODIO');
 		expect(body).toContain('row-wide');
+	});
+
+	it('muestra Vistas hace poco cuando recently_watched trae películas', () => {
+		const watched = { ...recentItem, id: 70, title: 'Vista ayer' };
+		const { body } = render(PortalPage, {
+			props: { data: portalData({ recentlyWatched: [watched] }) }
+		});
+
+		expect(body).toContain('Vistas hace poco');
+		expect(body).toContain('Tu historial');
+		expect(body).toContain('Vista ayer');
+
+		const empty = render(PortalPage, {
+			props: { data: portalData({ recentlyWatched: [] }) }
+		}).body;
+		expect(empty).not.toContain('Vistas hace poco');
+	});
+
+	it('respeta el orden, la visibilidad y los textos de ui.portal_rows', () => {
+		const watched = { ...recentItem, id: 71, title: 'Vista reciente' };
+		const { body } = render(PortalPage, {
+			props: {
+				data: portalData({
+					recentlyWatched: [watched],
+					ui: {
+						...DEFAULT_PUBLIC_UI,
+						portal_rows: [
+							{ id: 'continue_movies', visible: true, title: 'Seguir viendo', kicker: 'En pausa' },
+							{ id: 'recent_movies', visible: false, title: 'No se pinta', kicker: 'Oculta' },
+							{ id: 'watched_movies', visible: true, title: 'Recién vistas', kicker: 'Historial' }
+						]
+					}
+				})
+			}
+		});
+
+		expect(body).toContain('Seguir viendo');
+		expect(body).toContain('Recién vistas');
+		expect(body).toContain('Historial');
+		expect(body).not.toContain('No se pinta');
+		expect(body).not.toContain('Películas recién añadidas');
+		expect(body.indexOf('Seguir viendo')).toBeLessThan(body.indexOf('Recién vistas'));
 	});
 
 	it('usa el cartel de la serie y después el respaldo en el siguiente episodio', () => {
@@ -554,7 +601,8 @@ describe('filas de listas personales del portal', () => {
 			}
 		});
 
-		expect(body).toContain('Próximas a ver');
+		expect(body).toContain('Películas por ver');
+		expect(body).toContain('Series por ver');
 		expect(body).toContain('href="/watchlist"');
 		expect(body).toContain('Tus favoritos');
 		expect(body).toContain('href="/favorites"');
@@ -565,15 +613,16 @@ describe('filas de listas personales del portal', () => {
 		expect(body).toContain('Serie favorita');
 		expect(body).toContain('class="video-card');
 		expect(body).toContain('class="series-card');
-		expect(body.indexOf('Continuar viendo')).toBeLessThan(body.indexOf('Próximas a ver'));
-		expect(body.indexOf('Series añadidas recientemente')).toBeLessThan(body.indexOf('Tus favoritos'));
+		expect(body.indexOf('Continuar viendo')).toBeLessThan(body.indexOf('Películas por ver'));
+		expect(body.indexOf('Series recién añadidas')).toBeLessThan(body.indexOf('Tus favoritos'));
 	});
 
 	it('tolera listas ausentes y respeta show_series', () => {
 		const withoutLists = portalData({ watchlist: undefined, favorites: undefined });
 		const { body } = render(PortalPage, { props: { data: withoutLists } });
 		expect(body).not.toContain('Tus favoritos');
-		expect(body).not.toContain('Próximas a ver');
+		expect(body).not.toContain('Películas por ver');
+		expect(body).not.toContain('Series por ver');
 
 		const hiddenSeries = render(PortalPage, {
 			props: {

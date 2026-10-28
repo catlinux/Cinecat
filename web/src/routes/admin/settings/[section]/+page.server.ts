@@ -6,7 +6,9 @@ import { requireSessionToken } from '$lib/session';
 import {
 	collectSettingsForm,
 	findSettingsSection,
-	isSettingsSection
+	isSettingsSection,
+	parsePortalRows,
+	type PortalRow
 } from '$lib/settings';
 import { webVersion } from '$lib/version';
 import type { Actions, PageServerLoad } from './$types';
@@ -70,6 +72,72 @@ async function loadSettingsSection(
 		error(404, 'Sección de ajustes no encontrada.');
 	}
 	return section;
+}
+
+function readPortalRows(form: FormData): PortalRow[] | null {
+	const countRaw = form.get('row_count');
+	if (countRaw !== null && Number.isInteger(Number(countRaw)) && Number(countRaw) >= 0) {
+		const count = Number(countRaw);
+		const rows: PortalRow[] = [];
+		for (let index = 0; index < count; index += 1) {
+			const id = String(form.get(`row_id_${index}`) ?? '').trim();
+			if (!id) {
+				return null;
+			}
+			rows.push({
+				id,
+				visible: ['1', 'true', 'on'].includes(
+					String(form.get(`row_visible_${index}`) ?? '').toLowerCase()
+				),
+				title: String(form.get(`row_title_${index}`) ?? ''),
+				kicker: String(form.get(`row_kicker_${index}`) ?? '')
+			});
+		}
+		return parsePortalRows(rows);
+	}
+
+	const raw = String(
+		form.get('portal_rows') ?? form.get('rows') ?? form.get('ui.portal_rows') ?? ''
+	).trim();
+	if (!raw) {
+		return null;
+	}
+	try {
+		const parsed: unknown = JSON.parse(raw);
+		if (!Array.isArray(parsed)) {
+			return null;
+		}
+		return parsePortalRows(parsed);
+	} catch {
+		return null;
+	}
+}
+
+function portalRowsFailure(reason: unknown, rows: PortalRow[]) {
+	if (reason instanceof ApiError) {
+		if (reason.status === 401) {
+			redirect(303, '/login');
+		}
+		if (reason.status === 403) {
+			return fail(403, {
+				portalRowsAction: true,
+				message: ADMIN_MESSAGE,
+				portalRows: rows
+			});
+		}
+		if (reason.status === 400) {
+			return fail(400, {
+				portalRowsAction: true,
+				message: reason.message || 'Las filas del portal no son válidas.',
+				portalRows: rows
+			});
+		}
+	}
+	return fail(502, {
+		portalRowsAction: true,
+		message: 'No se pudieron guardar las filas del portal.',
+		portalRows: rows
+	});
 }
 
 export const load: PageServerLoad = async ({ params, locals, fetch }) => {
@@ -166,6 +234,54 @@ export const actions: Actions = {
 			success: true,
 			message: 'Ajustes guardados.'
 		};
+	},
+
+	portalRows: async ({ request, locals, fetch, params }) => {
+		if (params.section !== 'ui') {
+			return fail(404, { message: 'Sección de ajustes no encontrada.' });
+		}
+		const token = requireSessionToken(locals);
+		const form = await request.formData();
+		const rows = readPortalRows(form);
+		if (!rows) {
+			return fail(400, {
+				portalRowsAction: true,
+				message: 'Las filas del portal no son válidas.'
+			});
+		}
+
+		const move = String(form.get('move') ?? '').trim();
+		const [direction, moveId] = move.includes(':')
+			? [move.slice(0, move.indexOf(':')), move.slice(move.indexOf(':') + 1)]
+			: [move, String(form.get('move_id') ?? form.get('id') ?? '')];
+		if ((direction === 'up' || direction === 'down') && moveId) {
+			const index = rows.findIndex((row) => row.id === moveId);
+			const target = direction === 'up' ? index - 1 : index + 1;
+			if (index >= 0 && target >= 0 && target < rows.length) {
+				[rows[index], rows[target]] = [rows[target], rows[index]];
+			}
+			return {
+				portalRowsAction: true,
+				success: true,
+				message: 'Orden actualizado. Guarda los cambios.',
+				portalRows: rows
+			};
+		}
+
+		try {
+			await createApiClient(fetch).patchSettings(
+				{ 'ui.portal_rows': JSON.stringify(rows) },
+				token
+			);
+			return {
+				portalRowsAction: true,
+				success: true,
+				message: 'Filas del portal guardadas.',
+				portalRows: rows
+			};
+		} catch (reason) {
+			return portalRowsFailure(reason, rows);
+		}
 	},
 
 	reset: async ({ request, locals, fetch, params }) => {

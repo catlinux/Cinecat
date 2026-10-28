@@ -14,6 +14,7 @@ import type {
 } from '$lib/api';
 import AdminNav from '$lib/components/AdminNav.svelte';
 import SettingsForm from '$lib/components/SettingsForm.svelte';
+import { DEFAULT_PORTAL_ROWS } from '$lib/settings';
 import { webVersion } from '$lib/version';
 import AdminLayout from './+layout.svelte';
 import { load as loadAdminLayout } from './+layout.server';
@@ -27,6 +28,7 @@ const reset = settingsActions.reset!;
 const checkUpdates = settingsActions.checkUpdates!;
 const applyUpdate = settingsActions.applyUpdate!;
 const createBackup = settingsActions.backup!;
+const savePortalRows = settingsActions.portalRows!;
 
 function jsonResponse(body: unknown, status = 200): Response {
 	return new Response(JSON.stringify(body), {
@@ -131,6 +133,14 @@ function uiSection(): SettingsSection {
 				label: 'Mostrar series',
 				default: true,
 				value: true
+			}),
+			makeSetting({
+				key: 'ui.portal_rows',
+				type: 'json',
+				label: 'Filas del portal',
+				default: JSON.stringify(DEFAULT_PORTAL_ROWS),
+				value: JSON.stringify(DEFAULT_PORTAL_ROWS),
+				max: 4000
 			})
 		]
 	};
@@ -731,6 +741,118 @@ describe('acciones de ajustes', () => {
 		expect(result.message).toBe('Ajuste restablecido.');
 	});
 
+	it('guarda las filas del portal como JSON', async () => {
+		const response = settingsResponse();
+		let patchBody: Record<string, unknown> | null = null;
+		const fetchMock = sectionFetch(response, (url, init) => {
+			if (url.pathname === '/api/v1/settings' && init?.method === 'PATCH') {
+				patchBody = JSON.parse(String(init.body));
+				return jsonResponse(response);
+			}
+			return undefined;
+		});
+		const rows = [
+			{ id: 'favorites', visible: false, title: '  Mi selección  ', kicker: '  Lo mejor  ' },
+			{ id: 'recent_movies', visible: true, title: '', kicker: '' }
+		];
+		const result = (await savePortalRows(
+			actionEvent(
+				fetchMock,
+				'portalRows',
+				{ portal_rows: JSON.stringify(rows) },
+				'ui'
+			) as never
+		)) as {
+			portalRowsAction?: boolean;
+			success?: boolean;
+			message?: string;
+			portalRows: Array<{ id: string; title: string }>;
+		};
+		expect(result.portalRowsAction).toBe(true);
+		expect(result.success).toBe(true);
+		expect(result.message).toBe('Filas del portal guardadas.');
+		expect(result.portalRows).toHaveLength(DEFAULT_PORTAL_ROWS.length);
+		const sent = JSON.parse(String(patchBody?.['ui.portal_rows']));
+		expect(sent[0]).toEqual({
+			id: 'favorites',
+			visible: false,
+			title: 'Mi selección',
+			kicker: 'Lo mejor'
+		});
+		expect(sent[1]).toMatchObject({
+			id: 'recent_movies',
+			title: 'Películas recién añadidas',
+			kicker: ''
+		});
+	});
+
+	it('reordena sin guardar con los botones Subir y Bajar', async () => {
+		const fetchMock = vi.fn();
+		const fields = {
+			row_count: '3',
+			row_id_0: 'favorites',
+			row_visible_0: '1',
+			row_title_0: 'Favoritos',
+			row_kicker_0: 'Selección',
+			row_id_1: 'recent_movies',
+			row_visible_1: '1',
+			row_title_1: 'Recientes',
+			row_kicker_1: 'Estrenos',
+			row_id_2: 'continue_movies',
+			row_visible_2: '1',
+			row_title_2: 'Continuar',
+			row_kicker_2: 'Pausa',
+			move: 'up:recent_movies'
+		};
+		const result = (await savePortalRows(
+			actionEvent(fetchMock, 'portalRows', fields, 'ui') as never
+		)) as {
+			portalRowsAction?: boolean;
+			message?: string;
+			portalRows: Array<{ id: string }>;
+		};
+		expect(result.portalRowsAction).toBe(true);
+		expect(result.message).toBe('Orden actualizado. Guarda los cambios.');
+		expect(result.portalRows[0].id).toBe('recent_movies');
+		expect(result.portalRows[1].id).toBe('favorites');
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	it('muestra el error del servidor al guardar filas no válidas', async () => {
+		const response = settingsResponse();
+		const fetchMock = sectionFetch(response, (url, init) => {
+			if (url.pathname === '/api/v1/settings' && init?.method === 'PATCH') {
+				return jsonResponse({ error: 'filas no válidas' }, 400);
+			}
+			return undefined;
+		});
+		const result = (await savePortalRows(
+			actionEvent(
+				fetchMock,
+				'portalRows',
+				{ portal_rows: JSON.stringify([{ id: 'favorites', visible: true }]) },
+				'ui'
+			) as never
+		)) as {
+			status: number;
+			data: { portalRowsAction: boolean; message: string; portalRows: unknown[] };
+		};
+		expect(result.status).toBe(400);
+		expect(result.data.portalRowsAction).toBe(true);
+		expect(result.data.message).toBe('filas no válidas');
+		expect(result.data.portalRows).toHaveLength(DEFAULT_PORTAL_ROWS.length);
+
+		const brokenJson = (await savePortalRows(
+			actionEvent(fetchMock, 'portalRows', { portal_rows: '{' }, 'ui') as never
+		)) as { status: number };
+		expect(brokenJson.status).toBe(400);
+
+		const otherSection = (await savePortalRows(
+			actionEvent(fetchMock, 'portalRows', { portal_rows: '[]' }, 'scan') as never
+		)) as { status: number };
+		expect(otherSection.status).toBe(404);
+	});
+
 	it('traduce los errores de las acciones', async () => {
 		const response = settingsResponse();
 		const broken = sectionFetch(response, (url, init) => {
@@ -1018,6 +1140,34 @@ describe('sistema y actualizaciones', () => {
 		expect(html).toContain('No se pudieron cargar las copias de seguridad');
 		expect(html).toContain('Ya hay una copia en curso');
 		expect(html).toContain('Hacer copia ahora');
+	});
+});
+
+describe('editor de filas del portal', () => {
+	it('muestra las filas, sus controles y los botones', () => {
+		const html = render(SettingsPage, {
+			props: {
+				data: {
+					section: uiSection(),
+					serverInfo: null,
+					updateInfo: null,
+					backupInfo: null,
+					backupLoadError: false,
+					webVersion
+				} as never,
+				form: null
+			}
+		}).body;
+
+		expect(html).toContain('Filas del portal');
+		expect(html).toContain('Películas recién añadidas');
+		expect(html).toContain('Vistas hace poco');
+		expect(html).toContain('Guardar filas');
+		expect(html).toContain('Restablecer por defecto');
+		expect(html).toContain('action="?/portalRows"');
+		expect(html.match(/aria-label="Subir /g) ?? []).toHaveLength(DEFAULT_PORTAL_ROWS.length);
+		expect(html).toContain('aria-live="polite"');
+		expect(html).not.toContain('name="ui.portal_rows"');
 	});
 });
 

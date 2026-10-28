@@ -18,6 +18,7 @@
 	} = $props();
 
 	const errors = $derived(form?.fields ?? {});
+	const visibleSettings = $derived(settings.filter((setting) => setting.type !== 'json'));
 	const enteredValues = $derived(form?.values ?? {});
 
 	function valueFor(setting: Setting): unknown {
@@ -49,7 +50,7 @@
 		</p>
 	{/if}
 
-	{#each settings as setting (setting.key)}
+	{#each visibleSettings as setting (setting.key)}
 		<div class="setting-row" class:setting-row--error={Boolean(errors[setting.key])}>
 			{#if setting.type === 'bool'}
 				<label class="setting-check" for={settingControlId(setting.key)}>

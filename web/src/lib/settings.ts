@@ -10,6 +10,25 @@ import type { ThemePreference } from './theme';
 export type NavLayout = 'side' | 'top';
 export type Accent = 'granate' | 'naranja' | 'dorado';
 
+export interface PortalRow {
+	id: string;
+	visible: boolean;
+	title: string;
+	kicker: string;
+}
+
+export const DEFAULT_PORTAL_ROWS: PortalRow[] = [
+	{ id: 'recent_movies', visible: true, title: 'Películas recién añadidas', kicker: 'Estrenos' },
+	{ id: 'continue_movies', visible: true, title: 'Continuar viendo películas', kicker: 'En pausa' },
+	{ id: 'watchlist_movies', visible: true, title: 'Películas por ver', kicker: 'Para más tarde' },
+	{ id: 'watched_movies', visible: true, title: 'Vistas hace poco', kicker: 'Tu historial' },
+	{ id: 'recent_series', visible: true, title: 'Series recién añadidas', kicker: 'Estrenos' },
+	{ id: 'continue_series', visible: true, title: 'Continuar viendo series', kicker: 'En pausa' },
+	{ id: 'next_up', visible: true, title: 'Siguiente episodio', kicker: 'Series' },
+	{ id: 'watchlist_series', visible: true, title: 'Series por ver', kicker: 'Para más tarde' },
+	{ id: 'favorites', visible: true, title: 'Tus favoritos', kicker: 'Tu selección' }
+];
+
 export interface PublicUI {
 	server_name: string;
 	tagline: string;
@@ -23,6 +42,7 @@ export interface PublicUI {
 	grid_columns: number;
 	grid_rows: number;
 	row_columns: number;
+	portal_rows: PortalRow[];
 }
 
 export const DEFAULT_PUBLIC_UI: PublicUI = {
@@ -38,7 +58,8 @@ export const DEFAULT_PUBLIC_UI: PublicUI = {
 	accent: 'granate',
 	grid_columns: 6,
 	grid_rows: 8,
-	row_columns: 6
+	row_columns: 6,
+	portal_rows: DEFAULT_PORTAL_ROWS
 };
 
 function publicText(value: unknown, fallback: string, allowEmpty = false): string {
@@ -58,6 +79,69 @@ function publicInt(value: unknown, fallback: number, minimum: number, maximum: n
 		return fallback;
 	}
 	return value >= minimum && value <= maximum ? value : fallback;
+}
+
+function portalRowsFallback(): PortalRow[] {
+	return DEFAULT_PORTAL_ROWS.map((row) => ({ ...row }));
+}
+
+export function parsePortalRows(raw: unknown): PortalRow[] {
+	let value: unknown = raw;
+	if (typeof raw === 'string') {
+		try {
+			value = JSON.parse(raw);
+		} catch {
+			return portalRowsFallback();
+		}
+	}
+	if (!Array.isArray(value)) {
+		return portalRowsFallback();
+	}
+
+	const defaults = new Map(DEFAULT_PORTAL_ROWS.map((row) => [row.id, row]));
+	const seen = new Set<string>();
+	const rows: PortalRow[] = [];
+	for (const item of value) {
+		if (!item || typeof item !== 'object' || Array.isArray(item)) {
+			continue;
+		}
+		const source = item as Record<string, unknown>;
+		const id = typeof source.id === 'string' ? source.id : '';
+		const fallback = defaults.get(id);
+		if (!fallback || seen.has(id)) {
+			continue;
+		}
+		seen.add(id);
+		const visible = typeof source.visible === 'boolean' ? source.visible : fallback.visible;
+		let title = typeof source.title === 'string' ? source.title.trim() : fallback.title;
+		if (title === '') {
+			title = fallback.title;
+		}
+		const kicker =
+			typeof source.kicker === 'string' ? source.kicker.trim() : fallback.kicker;
+		rows.push({ id, visible, title, kicker });
+	}
+	for (const fallback of DEFAULT_PORTAL_ROWS) {
+		if (!seen.has(fallback.id)) {
+			rows.push({ ...fallback });
+		}
+	}
+	return rows;
+}
+
+export function movePortalRow(
+	rows: PortalRow[],
+	id: string,
+	direction: -1 | 1
+): PortalRow[] | null {
+	const index = rows.findIndex((row) => row.id === id);
+	const target = index + direction;
+	if (index < 0 || target < 0 || target >= rows.length) {
+		return null;
+	}
+	const next = [...rows];
+	[next[index], next[target]] = [next[target], next[index]];
+	return next;
 }
 
 export function listPageSize(ui?: Partial<PublicUI> | null): number {
@@ -97,7 +181,8 @@ export function parsePublicUI(raw: Record<string, unknown> | null | undefined): 
 				: DEFAULT_PUBLIC_UI.accent,
 		grid_columns: publicInt(source['ui.grid_columns'], DEFAULT_PUBLIC_UI.grid_columns, 4, 8),
 		grid_rows: publicInt(source['ui.grid_rows'], DEFAULT_PUBLIC_UI.grid_rows, 2, 12),
-		row_columns: publicInt(source['ui.row_columns'], DEFAULT_PUBLIC_UI.row_columns, 3, 8)
+		row_columns: publicInt(source['ui.row_columns'], DEFAULT_PUBLIC_UI.row_columns, 3, 8),
+		portal_rows: parsePortalRows(source['ui.portal_rows'])
 	};
 }
 

@@ -6,7 +6,7 @@
 	import SeriesCard from '$lib/components/SeriesCard.svelte';
 	import SeriesRow from '$lib/components/SeriesRow.svelte';
 	import VideoCard from '$lib/components/VideoCard.svelte';
-	import { DEFAULT_PUBLIC_UI } from '$lib/settings';
+	import { DEFAULT_PORTAL_ROWS, DEFAULT_PUBLIC_UI } from '$lib/settings';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -14,6 +14,10 @@
 	const continueEpisodes = $derived(data.continueWatching.filter((item) => item.kind === 'episode'));
 	const continueMovies = $derived(data.continueWatching.filter((item) => item.kind !== 'episode'));
 	const ui = $derived({ ...DEFAULT_PUBLIC_UI, ...(data.ui ?? {}) });
+	const portalRows = $derived(
+		ui.portal_rows?.length ? ui.portal_rows : DEFAULT_PORTAL_ROWS
+	);
+	const recentlyWatched = $derived(data.recentlyWatched ?? []);
 
 	type PortalCategory = {
 		id: string;
@@ -116,6 +120,12 @@
 			entry.kind === 'series' ? ui.show_series && Boolean(entry.series) : Boolean(entry.item)
 		)
 	);
+	const watchlistMovieEntries = $derived(
+		watchlistEntries.filter((entry) => entry.kind === 'item')
+	);
+	const watchlistSeriesEntries = $derived(
+		watchlistEntries.filter((entry) => entry.kind === 'series')
+	);
 	const favoriteEntries = $derived(
 		(data.favorites ?? []).filter((entry) =>
 			entry.kind === 'series' ? ui.show_series && Boolean(entry.series) : Boolean(entry.item)
@@ -190,82 +200,79 @@
 
 	{#if !data.errorMessage}
 		<div class="portal-rows">
-			{#if continueMovies.length > 0}
-				<PosterRow
-					title="Continuar viendo películas"
-					kicker="En pausa"
-					items={continueMovies}
-				/>
-			{/if}
-
-			{#if continueEpisodes.length > 0}
-				<PosterRow
-					title="Continuar viendo series"
-					kicker="En pausa"
-					items={continueEpisodes}
-				/>
-			{/if}
-
-			{#if watchlistEntries.length > 0}
-				<RowScroller title="Próximas a ver" kicker="Para más tarde" href="/watchlist">
-					{#snippet children()}
-						{#each watchlistEntries as entry, index (`watch-${entry.kind}-${entry.item?.id ?? entry.series?.id ?? index}`)}
-							<li class:row-wide={entry.kind === 'item' && entry.item?.library_kind === 'clips'}>
-								{#if entry.kind === 'item' && entry.item}
-									{#if entry.item.library_kind === 'clips'}
-										<VideoCard item={entry.item} />
-									{:else}
-										<PosterCard item={entry.item} posterUrl={entry.item.poster_url} />
-									{/if}
-								{:else if entry.kind === 'series' && entry.series}
-									<SeriesCard series={entry.series} />
-								{/if}
-							</li>
-						{/each}
-					{/snippet}
-				</RowScroller>
-			{/if}
-
-			{#if data.nextUp.length > 0}
-				<PosterRow title="Siguiente episodio" kicker="Series" items={data.nextUp} />
-			{/if}
-
-			<PosterRow
-				title="Películas añadidas recientemente"
-				kicker="Estrenos"
-				items={data.recent}
-				href="/movies?sort=added"
-				emptyMessage="Todavía no hay películas recientes. La cartelera está esperando."
-			/>
-
-			{#if ui.show_series && data.recentSeries.length > 0}
-				<SeriesRow
-					title="Series añadidas recientemente"
-					kicker="Estrenos"
-					items={data.recentSeries}
-					href="/series?sort=added"
-				/>
-			{/if}
-
-			{#if favoriteEntries.length > 0}
-				<RowScroller title="Tus favoritos" kicker="Tu selección" href="/favorites">
-					{#snippet children()}
-						{#each favoriteEntries as entry, index (`favorite-${entry.kind}-${entry.item?.id ?? entry.series?.id ?? index}`)}
-							<li class:row-wide={entry.kind === 'item' && entry.item?.library_kind === 'clips'}>
-								{#if entry.kind === 'item' && entry.item}
-									{#if entry.item.library_kind === 'clips'}
-										<VideoCard item={entry.item} />
-									{:else}
-										<PosterCard item={entry.item} posterUrl={entry.item.poster_url} />
-									{/if}
-								{:else if entry.kind === 'series' && entry.series}
-									<SeriesCard series={entry.series} />
-								{/if}
-							</li>
-						{/each}
-					{/snippet}
-				</RowScroller>
-			{/if}
+			{#each portalRows as row (row.id)}
+				{#if row.visible}
+					{#if row.id === 'recent_movies' && data.recent.length > 0}
+						<PosterRow
+							title={row.title}
+							kicker={row.kicker}
+							items={data.recent}
+							href="/movies?sort=added"
+						/>
+					{:else if row.id === 'continue_movies' && continueMovies.length > 0}
+						<PosterRow title={row.title} kicker={row.kicker} items={continueMovies} />
+					{:else if row.id === 'watchlist_movies' && watchlistMovieEntries.length > 0}
+						<RowScroller title={row.title} kicker={row.kicker} href="/watchlist">
+							{#snippet children()}
+								{#each watchlistMovieEntries as entry, index (`watch-movie-${entry.item?.id ?? index}`)}
+									<li class:row-wide={entry.item?.library_kind === 'clips'}>
+										{#if entry.item}
+											{#if entry.item.library_kind === 'clips'}
+												<VideoCard item={entry.item} />
+											{:else}
+												<PosterCard item={entry.item} posterUrl={entry.item.poster_url} />
+											{/if}
+										{/if}
+									</li>
+								{/each}
+							{/snippet}
+						</RowScroller>
+					{:else if row.id === 'watched_movies' && recentlyWatched.length > 0}
+						<PosterRow title={row.title} kicker={row.kicker} items={recentlyWatched} />
+					{:else if row.id === 'recent_series' && ui.show_series && data.recentSeries.length > 0}
+						<SeriesRow
+							title={row.title}
+							kicker={row.kicker}
+							items={data.recentSeries}
+							href="/series?sort=added"
+						/>
+					{:else if row.id === 'continue_series' && continueEpisodes.length > 0}
+						<PosterRow title={row.title} kicker={row.kicker} items={continueEpisodes} />
+					{:else if row.id === 'next_up' && data.nextUp.length > 0}
+						<PosterRow title={row.title} kicker={row.kicker} items={data.nextUp} />
+					{:else if row.id === 'watchlist_series' && watchlistSeriesEntries.length > 0}
+						<RowScroller title={row.title} kicker={row.kicker} href="/watchlist">
+							{#snippet children()}
+								{#each watchlistSeriesEntries as entry, index (`watch-series-${entry.series?.id ?? index}`)}
+									<li>
+										{#if entry.series}
+											<SeriesCard series={entry.series} />
+										{/if}
+									</li>
+								{/each}
+							{/snippet}
+						</RowScroller>
+					{:else if row.id === 'favorites' && favoriteEntries.length > 0}
+						<RowScroller title={row.title} kicker={row.kicker} href="/favorites">
+							{#snippet children()}
+								{#each favoriteEntries as entry, index (`favorite-${entry.kind}-${entry.item?.id ?? entry.series?.id ?? index}`)}
+									<li class:row-wide={entry.kind === 'item' && entry.item?.library_kind === 'clips'}>
+										{#if entry.kind === 'item' && entry.item}
+											{#if entry.item.library_kind === 'clips'}
+												<VideoCard item={entry.item} />
+											{:else}
+												<PosterCard item={entry.item} posterUrl={entry.item.poster_url} />
+											{/if}
+										{:else if entry.kind === 'series' && entry.series}
+											<SeriesCard series={entry.series} />
+										{/if}
+									</li>
+								{/each}
+							{/snippet}
+						</RowScroller>
+					{/if}
+				{/if}
+			{/each}
 		</div>
 	{/if}
 	{/if}

@@ -1,9 +1,10 @@
 <script lang="ts">
 	import BackupPanel from '$lib/components/BackupPanel.svelte';
+	import PortalRowsEditor from '$lib/components/PortalRowsEditor.svelte';
 	import SettingsForm from '$lib/components/SettingsForm.svelte';
 	import UpdatePanel from '$lib/components/UpdatePanel.svelte';
 	import { formatDateTime } from '$lib/media';
-	import type { SettingsFormState } from '$lib/settings';
+	import { parsePortalRows, type PortalRow, type SettingsFormState } from '$lib/settings';
 	import type { UpdateActionState } from '$lib/updates';
 	import type { PageData } from './$types';
 
@@ -13,13 +14,25 @@
 		message?: string;
 	}
 
-	interface SettingsPageForm extends SettingsFormState, UpdateActionState, BackupActionState {}
+	interface PortalRowsActionState {
+		portalRowsAction?: boolean;
+		success?: boolean;
+		message?: string;
+		portalRows?: PortalRow[];
+	}
+
+	interface SettingsPageForm
+		extends SettingsFormState,
+			UpdateActionState,
+			BackupActionState,
+			PortalRowsActionState {}
 
 	let { data, form = null }: { data: PageData; form?: SettingsPageForm | null } = $props();
 
 	const section = $derived(data.section);
 	const updateForm = $derived(form?.updateAction ? form : null);
 	const backupForm = $derived(form?.backupAction ? form : null);
+	const portalRowsForm = $derived(form?.portalRowsAction ? form : null);
 	const settingsForm = $derived(
 		updateForm
 			? {
@@ -27,10 +40,14 @@
 					fields: updateForm.fields,
 					values: updateForm.values
 				}
-			: backupForm
+			: backupForm || portalRowsForm
 				? null
 				: form
 	);
+	const portalRows = $derived.by(() => {
+		const setting = section.settings.find((item) => item.key === 'ui.portal_rows');
+		return parsePortalRows(setting?.value);
+	});
 </script>
 
 <svelte:head>
@@ -45,6 +62,17 @@
 	</div>
 
 	<SettingsForm settings={section.settings} form={settingsForm as SettingsFormState | null} />
+
+	{#if section.key === 'ui'}
+		<section class="admin-card system-card">
+			<p class="kicker">Interfaz</p>
+			<h2>Filas del portal</h2>
+			<p class="admin-note">
+				Ordena, oculta o cambia los títulos de las filas de la página de inicio.
+			</p>
+			<PortalRowsEditor rows={portalRows} form={portalRowsForm} />
+		</section>
+	{/if}
 
 	{#if section.key === 'system'}
 		<section class="admin-card system-card">
