@@ -11,6 +11,8 @@
 
 	let { data }: { data: PageData } = $props();
 
+	const continueEpisodes = $derived(data.continueWatching.filter((item) => item.kind === 'episode'));
+	const continueMovies = $derived(data.continueWatching.filter((item) => item.kind !== 'episode'));
 	const ui = $derived({ ...DEFAULT_PUBLIC_UI, ...(data.ui ?? {}) });
 
 	type PortalCategory = {
@@ -188,11 +190,19 @@
 
 	{#if !data.errorMessage}
 		<div class="portal-rows">
-			{#if data.continueWatching.length > 0}
+			{#if continueMovies.length > 0}
 				<PosterRow
-					title="Continuar viendo"
+					title="Continuar viendo películas"
 					kicker="En pausa"
-					items={data.continueWatching}
+					items={continueMovies}
+				/>
+			{/if}
+
+			{#if continueEpisodes.length > 0}
+				<PosterRow
+					title="Continuar viendo series"
+					kicker="En pausa"
+					items={continueEpisodes}
 				/>
 			{/if}
 

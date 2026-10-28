@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.24.1] - 2026-10-28
+
+### Fixed
+
+- The portal's "Continue watching" no longer mixes movies and episodes in one row: there are now two, "Continue watching movies" and "Continue watching series".
+
 ## [0.24.0] - 2026-10-28
 
 ### Security

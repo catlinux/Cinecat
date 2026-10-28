@@ -433,6 +433,21 @@ describe('portal', () => {
 		expect(body).toContain('Entrar');
 	});
 
+	it('separa Continuar viendo en películas y series', () => {
+		const episode: MediaItem = { ...continueItem, id: 11, title: 'Piloto', kind: 'episode' };
+		const both = render(PortalPage, {
+			props: { data: portalData({ continueWatching: [continueItem, episode] }) }
+		}).body;
+		expect(both).toContain('Continuar viendo películas');
+		expect(both).toContain('Continuar viendo series');
+
+		const onlyMovies = render(PortalPage, {
+			props: { data: portalData({ continueWatching: [continueItem] }) }
+		}).body;
+		expect(onlyMovies).toContain('Continuar viendo películas');
+		expect(onlyMovies).not.toContain('Continuar viendo series');
+	});
+
 	it('no muestra Continuar viendo si no hay elementos', () => {
 		const { body } = render(PortalPage, {
 			props: { data: portalData({ continueWatching: [] }) }

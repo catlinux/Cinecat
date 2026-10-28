@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.24.1] - 2026-10-28
+
+### Corregido
+
+- «Continuar viendo» del portal ya no mezcla películas y episodios en una sola fila: ahora hay dos, «Continuar viendo películas» y «Continuar viendo series».
+
 ## [0.24.0] - 2026-10-28
 
 ### Seguridad
