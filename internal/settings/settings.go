@@ -39,6 +39,9 @@ func (t Type) String() string {
 // KeyScanInterval es la clave del intervalo de escaneo.
 const KeyScanInterval = "scan.interval"
 
+// KeyPlaybackHardware activa o desactiva la codificación por hardware.
+const KeyPlaybackHardware = "playback.hardware"
+
 // Claves de la gestión de archivos de la biblioteca.
 const (
 	KeyAllowFileChanges = "library.allow_file_changes"
@@ -301,6 +304,18 @@ var definitions = []Definition{
 		},
 		Min: 480,
 		Max: 1080,
+	},
+	{
+		Key:         KeyPlaybackHardware,
+		Section:     "playback",
+		Label:       "Aceleración por hardware",
+		Description: "Usa la gráfica Intel integrada si está disponible; exige el archivo docker-compose.gpu.yml.",
+		Type:        TypeEnum,
+		Default:     "auto",
+		Options: []Option{
+			{Value: "auto", Label: "Automática"},
+			{Value: "off", Label: "Desactivada"},
+		},
 	},
 	{
 		Key:         "playback.crf",

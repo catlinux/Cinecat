@@ -180,7 +180,11 @@
 			role={file.playback.supported ? undefined : 'status'}
 		>
 			<span>Reproducción:</span>
-			{file.playback.description || '—'}
+			{#if file.playback.hardware && file.playback.method === 'transcode'}
+				Recodificación (gráfica)
+			{:else}
+				{file.playback.description || '—'}
+			{/if}
 		</p>
 	{:else}
 		<p class="error file-panel-error" role="alert">

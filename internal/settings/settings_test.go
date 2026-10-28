@@ -48,8 +48,8 @@ func raw(value string) json.RawMessage {
 
 func TestDefinitions(t *testing.T) {
 	definitions := Definitions()
-	if len(definitions) != 26 {
-		t.Fatalf("ajustes = %d, se esperaban 26", len(definitions))
+	if len(definitions) != 27 {
+		t.Fatalf("ajustes = %d, se esperaban 27", len(definitions))
 	}
 
 	seen := make(map[string]bool)
@@ -122,6 +122,12 @@ func TestDefinitions(t *testing.T) {
 		layout.Options[1].Label != "Superior" {
 		t.Fatalf("opciones de ui.nav_layout inesperadas: %+v, %v", layout, ok)
 	}
+	hardware, ok := Lookup(KeyPlaybackHardware)
+	if !ok || hardware.Default != "auto" || len(hardware.Options) != 2 ||
+		hardware.Options[0].Value != "auto" || hardware.Options[0].Label != "Automática" ||
+		hardware.Options[1].Value != "off" || hardware.Options[1].Label != "Desactivada" {
+		t.Fatalf("playback.hardware inesperado: %+v, %v", hardware, ok)
+	}
 }
 
 func TestValidate(t *testing.T) {
@@ -161,6 +167,8 @@ func TestValidate(t *testing.T) {
 		{"enum numérico mínimo", "playback.max_height", "480", 480},
 		{"transcodificaciones mínimo", "playback.max_transcodes", "1", 1},
 		{"transcodificaciones máximo", "playback.max_transcodes", "8", 8},
+		{"hardware automático", KeyPlaybackHardware, `"auto"`, "auto"},
+		{"hardware desactivado", KeyPlaybackHardware, `"off"`, "off"},
 		{"cambiar archivos", KeyAllowFileChanges, "true", true},
 		{"subida mínima", KeyUploadMaxGB, "1", 1},
 		{"subida máxima", KeyUploadMaxGB, "500", 500},
@@ -214,6 +222,7 @@ func TestValidate(t *testing.T) {
 		{"transcodificaciones fuera por abajo", "playback.max_transcodes", "0"},
 		{"transcodificaciones fuera por arriba", "playback.max_transcodes", "9"},
 		{"transcodificaciones decimal", "playback.max_transcodes", "2.5"},
+		{"hardware desconocido", KeyPlaybackHardware, `"on"`},
 		{"subida fuera por abajo", KeyUploadMaxGB, "0"},
 		{"subida fuera por arriba", KeyUploadMaxGB, "501"},
 		{"retención fuera por abajo", KeyTrashRetention, "0"},

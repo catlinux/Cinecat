@@ -160,6 +160,17 @@ func TestFileInfoDirectoYCache(t *testing.T) {
 	}
 }
 
+func TestPlaybackInfoHardware(t *testing.T) {
+	info := fileInfoFixture()
+	info.Video[0].Profile = "High 10"
+	info.Video[0].PixelFormat = "yuv420p10le"
+	info.Video[0].BitDepth = 10
+	result := playbackInfo("Pelicula.mkv", info, playback.Capabilities{}, 1080, func() bool { return true })
+	if result.Mode != "hls" || result.Method != "transcode" || !result.Hardware {
+		t.Fatalf("playback hardware = %+v", result)
+	}
+}
+
 func TestFileInfoHLSYContenedorNoSoportado(t *testing.T) {
 	ts := newLibraryHTTPTestServer(t)
 	id, _ := insertFileInfoItem(t, ts, "Pelicula.mkv", true)

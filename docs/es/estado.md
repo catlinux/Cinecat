@@ -41,9 +41,10 @@ Versión actual: **0.20.0**. Esta página resume el estado real del código, no 
 | Reproducción | Reproducción directa de MP4/M4V | ✅ 0.1.0 | Sirve el archivo con soporte de rangos HTTP. |
 | Reproducción | HLS para MKV, AVI, MOV, TS y M2TS | ✅ 0.12.0 / 0.23.0 | Copia el vídeo si el contenedor, el códec, la altura y el índice de claves lo permiten; si no, recodifica a H.264 + AAC estéreo. Segmentos MPEG-TS, saltos y límites de procesos. |
 | Reproducción | Modo copia sin recodificar | ✅ 0.23.0 | Cortes en fotogramas clave reales; H.265 por MSE. |
+| Reproducción | Aceleración por hardware Intel (VA-API) | ✅ 0.23.0 | H.264 VA-API con decodificación CPU o GPU; vuelta automática a libx264. |
 | Reproducción | Audio, subtítulos de texto y calidad | ✅ 0.13.0 | Subtítulos incrustados de texto y `.srt`/`.vtt`/`.ass` como WebVTT; preferencias por usuario y película. |
 | Reproducción | Reproductor propio con controles, atajos y siguiente episodio | ✅ 0.13.0 | hls.js para HLS y `<video>` nativo para directa. |
-| Reproducción | Perfiles por dispositivo, hardware, HDR/10 bits, subtítulos de imagen y ABR | ⬜ | La copia existe; la recodificación sigue siendo software H.264 + AAC estéreo. |
+| Reproducción | Perfiles por dispositivo, HDR/10 bits, subtítulos de imagen y ABR | ⬜ | La copia existe; la recodificación usa VA-API o software, todavía H.264 + AAC estéreo. |
 | Interfaz web | Inicio de sesión, sesión en cookie httpOnly, cierre y cambio de contraseña | ✅ 0.2.0 / 0.3.5 | El cierre de sesión está en `/login`. |
 | Interfaz web | Portal, cartelera, series y colecciones con búsqueda, filtros, orden y paginación | ✅ 0.11.0 / 0.15.0 | Columnas × filas por página; filtros por letra, género y visto en películas. |
 | Interfaz web | Temas claro/oscuro/sistema, menú lateral o superior y diseño adaptable | ✅ 0.2.0 / 0.14.0 | La preferencia de tema se guarda en el navegador. |
@@ -78,7 +79,7 @@ El orden sale de los planes de `.agents/plans`; no hay fechas ni versiones compr
 - **Sin permisos por biblioteca:** cualquier usuario autenticado puede ver todas las bibliotecas, ítems, series y colecciones. Es un riesgo para uso multiusuario.
 - **Sin creación de usuarios:** solo existe el `admin` inicial y el flag `--hash-password`; no hay pantalla ni endpoint de usuarios.
 - **Series corregidas a mano:** el escaneo no vuelve a tocar las series `manual` ni `none`; si faltan temporadas o episodios, no se rellenan solos.
-- **HLS:** la recodificación usa libx264 (software); no hay Quick Sync/VAAPI, tone mapping HDR, desentrelazado, subtítulos de imagen ni ABR. La copia de vídeo no recodifica y apenas usa CPU. En 1080p/HEVC el procesador puede ir justo al recodificar.
+- **HLS:** la recodificación usa VA-API si se monta `/dev/dri` y la comprobación funciona; si no, usa libx264 (software). No hay tone mapping HDR, desentrelazado, subtítulos de imagen ni ABR. La copia de vídeo no recodifica y apenas usa CPU.
 - **La API sigue llamando `remux` al HLS** aunque copie o recodifique; el cliente recibe HLS en ambos casos.
 - **Si no se puede leer la duración**, se usa la playlist `event` de FFmpeg y los saltos lejanos no son rápidos.
 - **Subtítulos:** solo de texto; PGS/VobSub se ignoran. El HLS no lleva una pista de subtítulos separada, se sirven como WebVTT.

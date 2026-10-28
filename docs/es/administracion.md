@@ -15,7 +15,7 @@ Solo los usuarios con rol `admin` pueden entrar en `/admin`. El servidor comprue
 | `/admin/settings/metadata` | Metadatos | Idioma de TMDB y umbral de identificación. |
 | `/admin/settings/ui` | Interfaz | Nombre, textos, menú, rejilla, orden, colecciones, series, tema y acento. |
 | `/admin/settings/library` | Biblioteca | Permitir cambiar archivos, días en la papelera y tamaño máximo de subida. |
-| `/admin/settings/playback` | Reproducción | Altura máxima, CRF, preset y transcodificaciones simultáneas. |
+| `/admin/settings/playback` | Reproducción | Altura máxima, CRF, preset, aceleración por hardware y transcodificaciones simultáneas. |
 | `/admin/settings/system` | Sistema | Búsqueda de actualizaciones, versiones y panel «Actualizar ahora». |
 | `/admin/update` | — | Endpoint JSON que usa el panel de Sistema para seguir el estado; no es una pantalla. |
 | `/admin/users` | — | No existe todavía. La navegación muestra «Usuarios · Pronto». |
@@ -104,6 +104,7 @@ Los ajustes se guardan en la base de datos con validación por tipo. Se aplican 
 | `ui.accent` | Color de acento | Color de acento de la interfaz. | `granate`, `naranja`, `dorado` | `granate` | En caliente; siguiente página. |
 | `playback.max_height` | Altura máxima | Resolución máxima de los remux. | `480`, `720`, `1080` | `1080` | En caliente; nuevas transcodificaciones. |
 | `playback.crf` | Calidad (CRF) | Calidad de compresión del remux; un valor menor da más calidad y tamaño. | Entero 18–28 | `20` | En caliente; nuevas transcodificaciones. |
+| `playback.hardware` | Aceleración por hardware | Usa la gráfica Intel integrada mediante VA-API si está disponible; exige `docker-compose.gpu.yml`. | `auto`, `off` | `auto` | En caliente; nuevas reproducciones. |
 | `playback.preset` | Velocidad de codificación | Preset de x264 usado al remuxear. | `veryfast`, `faster`, `fast` | `veryfast` | En caliente; nuevas transcodificaciones. |
 | `playback.max_transcodes` | Transcodificaciones simultáneas | Cuántas películas se pueden recodificar a la vez. Más de las que aguante el procesador provoca cortes al avanzar. | Entero 1–8 | `2` | En caliente; siguiente proceso. |
 | `library.allow_file_changes` | Permitir cambiar archivos | Permite subir archivos y moverlos a la papelera; exige montar la biblioteca en lectura y escritura. | Booleano | `false` | En caliente. |

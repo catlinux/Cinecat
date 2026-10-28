@@ -133,6 +133,7 @@ function makeFileInfo(overrides: Partial<FileInfo> = {}): FileInfo {
 		playback: {
 			mode: 'hls',
 			method: 'transcode',
+			hardware: false,
 			description: 'Se recodifica a H.264 + AAC estéreo por HLS',
 			supported: true
 		},
@@ -299,6 +300,23 @@ describe('FilePanel', () => {
 		expect(body).toContain('Se recodifica a H.264 + AAC estéreo por HLS');
 	});
 
+	it('indica cuando la recodificación usa la gráfica', () => {
+		const body = renderFilePanel(
+			fileInfoResult(
+				makeFileInfo({
+					playback: {
+						mode: 'hls',
+						method: 'transcode',
+						hardware: true,
+						description: 'Se recodifica a H.264 + AAC estéreo por HLS',
+						supported: true
+					}
+				})
+			)
+		);
+		expect(body).toContain('Recodificación (gráfica)');
+	});
+
 	it('muestra un AVI antiguo sin subtítulos', () => {
 		const body = renderFilePanel(
 			fileInfoResult(
@@ -333,6 +351,7 @@ describe('FilePanel', () => {
 					playback: {
 						mode: 'direct',
 						method: 'direct',
+						hardware: false,
 						description: 'Reproducción directa (AVI)',
 						supported: true
 					}
@@ -388,6 +407,7 @@ describe('FilePanel', () => {
 					playback: {
 						mode: '',
 						method: '',
+						hardware: false,
 						description: 'Contenedor no soportado para reproducción',
 						supported: false
 					}

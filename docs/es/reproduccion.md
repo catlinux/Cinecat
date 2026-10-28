@@ -43,7 +43,7 @@ Los dos modos comparten los segmentos MPEG-TS, los saltos y los límites de proc
 
 | | Copia | Recodificación |
 |---|---|---|
-| Vídeo | `-c:v copy`, sin escalar ni perder calidad. | `libx264` con preset, CRF y altura máxima configurables, `yuv420p`. |
+| Vídeo | `-c:v copy`, sin escalar ni perder calidad. | `libx264` o VA-API, con preset/CRF o `qp` y altura máxima configurables. |
 | Audio | Una pista a AAC estéreo de 160 kbps. | Una pista a AAC estéreo de 160 kbps. |
 | Cortes | Fotogramas clave reales, con `-copyts`, `-output_ts_offset` de 10 s y `-segment_times`; la playlist usa duraciones reales. | Keyframes forzados cada 6 s y segmentos de 6 s. |
 | Cuándo | Códec admitido, altura dentro del máximo e índice listo. | En el resto de casos. |
@@ -59,6 +59,30 @@ El resto del flujo es común:
 - Los procesos van con prioridad baja y número de hilos limitado.
 
 En el servidor del autor, la copia va a unas 37× tiempo real y casi no usa CPU.
+
+## Aceleración por hardware
+
+La recodificación puede usar la gráfica Intel integrada mediante **VA-API**. No cambia la copia, que sigue sin tocar el vídeo, ni la decisión directo/HLS.
+
+Requisitos:
+
+- La imagen incluye `intel-media-va-driver` y fija `LIBVA_DRIVER_NAME=iHD`.
+- El host expone `/dev/dri/renderD128` (se puede cambiar con `CINECAT_VAAPI_DEVICE`) y se usa `docker-compose.gpu.yml` para montarlo en el contenedor `servidor`. Sin ese archivo, `docker-compose.yml` sigue arrancando y todo funciona por software.
+- En el `.env` del despliegue se activa `COMPOSE_FILE=docker-compose.yml:docker-compose.gpu.yml` (el actualizador lo respeta).
+- El ajuste `playback.hardware` está en `auto` (valor por defecto). Con `off` se desactiva siempre. Se lee al preparar cada reproducción, así que el cambio se aplica a las nuevas.
+
+La primera vez que hace falta, el servidor comprueba VA-API con un vídeo sintético de un segundo y un límite de 15 s. El resultado se recuerda hasta reiniciar y se registra una vez en el log, tanto si se activa como si no.
+
+Hay dos rutas:
+
+- **CPU+GPU:** la CPU decodifica y escala; la gráfica codifica con `h264_vaapi`. Es la ruta general, también para DivX/Xvid, H.264 de 10 bits, entrelazados, H.265 de 10 bits o cuando hay que reducir la altura.
+- **GPU completa:** la gráfica decodifica y codifica, sin filtro de escala. Solo se usa con H.264 de 8 bits (`yuv420p`/`yuvj420p`, perfiles no High 10/4:2:2/4:4:4) o H.265 Main de 8 bits, progresivo o con orden de campo desconocido, y cuando la altura de origen no supera la de salida.
+
+No se usa la unidad de escalado de la gráfica: `scale_vaapi` y `scale_qsv` no están disponibles en esta gráfica y nunca se invocan. La codificación usa `qp = CRF + 2`, `-g 250` y los mismos cortes forzados cada 6 s; el audio y el resto del flujo HLS no cambian.
+
+En el servidor del autor, 60 s de película 1080p→720p pasan de 44 s de CPU con libx264 (HEVC de origen) a 19 s con CPU+GPU, y de 39 s a 18 s con H.264; con todo en la gráfica y sin escalar, 0,6 s (unas 14×). Son medidas de ese servidor, no una promesa para otro hardware.
+
+Si el proceso con hardware falla antes de generar el segmento pedido, se registra, se marca el archivo (ruta, tamaño y fecha) como no apto para hardware y se reintenta el mismo segmento por software sin que el cliente vea el error. Si falla la comprobación general, el hardware queda desactivado hasta reiniciar. Las recodificaciones con hardware cuentan para «Transcodificaciones simultáneas» como las demás.
 
 ## Límites de procesos
 
@@ -115,17 +139,16 @@ El reproductor ofrece `auto`, 480p, 720p, 1080p (sin superar la altura original 
 |---|---|
 | **H.265 de 8 bits**, en MKV o MP4 | Es el mejor equilibrio: se copia si el navegador lo admite por MSE y ocupa menos que H.264. Ahorro orientativo del 30–50 % frente a H.264 con calidad parecida, sin cifras garantizadas. |
 | **H.264 de 8 bits**, en MP4 o MKV | Sigue siendo muy compatible: MP4 con AAC/MP3 se sirve directo y MKV/MOV se copia sin recodificar. |
-| Evitar **H.265 de 10 bits** salvo que todos los dispositivos lo necesiten | Muchos navegadores y equipos no lo reproducen; en el servidor no hay decodificación por hardware. Solo se copia si el navegador declara `hevc10mse`. |
+| Evitar **H.265 de 10 bits** salvo que todos los dispositivos lo necesiten | Muchos navegadores y equipos no lo reproducen; la gráfica del servidor no decodifica HEVC de 10 bits entero. Solo se copia si el navegador declara `hevc10mse`. |
 | **Audio original** (AAC, MP3, AC-3…) | En directa se conserva; en HLS solo se recodifica el audio a AAC estéreo, un coste pequeño. |
 | **Subtítulos de texto** incrustados en el MKV o en `.srt` junto al vídeo | Se convierten a WebVTT; los de imagen (PGS/VobSub) no se pueden mostrar. |
 | **Fotogramas clave cada 2–10 s** | Es lo habitual y permite segmentos y saltos razonables en la copia. Intervalos muy largos hacen segmentos más largos y saltos menos precisos. |
 | Evitar **AVI y TS/M2TS** para la biblioteca | Se recodifican siempre; convertir a MKV/MP4 conserva mejor el códec y evita trabajo al servidor. |
 
-No hay aceleración por hardware todavía: la recodificación usa la CPU. La copia apenas consume CPU porque no decodifica ni codifica el vídeo.
+La recodificación usa VA-API cuando está disponible y libx264 cuando no. La copia apenas consume CPU porque no decodifica ni codifica el vídeo.
 
 ## Qué falta para la reproducción avanzada
 
-- Aceleración por hardware (Quick Sync/VA-API). El servidor tiene `/dev/dri`, pero no se pasa al contenedor ni está implementada.
 - Perfiles por dispositivo y elección automática entre calidades.
 - HDR con tone mapping y tratamiento de 10 bits más allá del H.265 que el navegador ya admita por MSE.
 - Desentrelazado.

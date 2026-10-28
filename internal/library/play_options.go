@@ -301,6 +301,7 @@ func (a *API) streamSelection(
 	result := playback.StreamSelection{
 		Quality: "auto",
 		Caps:    playback.ParseCapabilities(firstQueryValue(query, "caps")).QueryValue(),
+		Info:    info,
 	}
 	if mode == playback.ModeDirect {
 		result.Quality = "original"

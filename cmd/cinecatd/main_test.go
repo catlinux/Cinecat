@@ -137,6 +137,7 @@ func newTestServer(t *testing.T) *testServer {
 				MaxHeight: settingsStore.Int("playback.max_height"),
 				CRF:       settingsStore.Int("playback.crf"),
 				Preset:    settingsStore.String("playback.preset"),
+				Hardware:  settingsStore.String(settings.KeyPlaybackHardware) != "off",
 			}
 		},
 		MaxTranscodesFunc: func() int {

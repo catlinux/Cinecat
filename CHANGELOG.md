@@ -9,6 +9,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ### Añadido
 
+- Aceleración por hardware (Intel VA-API) en la recodificación: cuando se activa `docker-compose.gpu.yml`, la gráfica integrada codifica el vídeo a H.264 y, si no hay que escalar, también lo decodifica (H.264 y H.265 de 8 bits), con un uso de CPU mucho menor. Si no hay gráfica, el ajuste «Aceleración por hardware» está en «Desactivada» o algo falla, se recodifica con `libx264` como antes. La ficha del archivo indica «Recodificación (gráfica)». La imagen incluye el controlador `intel-media-va-driver`. Es opcional: sin `COMPOSE_FILE=docker-compose.yml:docker-compose.gpu.yml` en el `.env` no cambia nada.
 - Modo copia en la reproducción: si el navegador admite el códec (H.264 de 8 bits, o H.265 cuando el navegador lo reproduce por MSE), los MKV y MP4 se reempaquetan a HLS copiando el vídeo sin recodificarlo; solo se convierte el audio a AAC. Casi no consume CPU y no pierde calidad. Los segmentos se cortan en los fotogramas clave reales, que se leen del índice interno de los MKV en milisegundos o, en el resto, con ffprobe en segundo plano la primera vez (se guardan en `cache/keyframes`); mientras tanto, y ante cualquier fallo, se recodifica como antes. Los AVI y TS siempre se recodifican. Las copias no cuentan para «Transcodificaciones simultáneas». La ficha del archivo indica el método: directo, copia o recodificación.
 - La web declara si el navegador reproduce H.265 por MSE (`hevcmse`, `hevc10mse` en la cookie `cinecat_caps`).
 

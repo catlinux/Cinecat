@@ -39,6 +39,8 @@ type TranscodeSettings struct {
 	Threads int
 	// Audio es la posición de la pista de audio que se mapea.
 	Audio int
+	// Hardware permite usar la codificación VA-API cuando esté disponible.
+	Hardware bool
 }
 
 // StreamSelection son las opciones de una reproducción HLS concreta. La
@@ -60,6 +62,9 @@ type StreamSelection struct {
 	// ForceTranscode viene de un segmento con m=transcode y mantiene la
 	// decisión que tomó la playlist.
 	ForceTranscode bool
+	// Info es la ficha de ffprobe; decide si la ruta de hardware puede
+	// decodificar y escalar sin pasar por la CPU.
+	Info *FileInfo
 }
 
 func defaultTranscodeSettings() TranscodeSettings {
@@ -178,9 +183,15 @@ type Service struct {
 	// mientras otra goroutine puede estar esperando su final con Service.mu.
 	copyMu       sync.Mutex
 	copyDisabled map[string]bool
-	stop         chan struct{}
-	done         chan struct{}
-	closeOnce    sync.Once
+	// hardwareOnce comprueba VA-API una sola vez por proceso. Si falla, el
+	// hardware queda descartado hasta reiniciar.
+	hardwareOnce      sync.Once
+	hardwareAvailable bool
+	hardwareMu        sync.Mutex
+	hardwareDisabled  map[string]bool
+	stop              chan struct{}
+	done              chan struct{}
+	closeOnce         sync.Once
 }
 
 type hlsEntryKey struct {
@@ -213,6 +224,11 @@ type hlsEntry struct {
 	// copyBounds son los inicios de segmento del índice de claves; solo se
 	// usan en modo copia.
 	copyBounds []float64
+	// hardware indica que esta entrada recodifica con VA-API; hardwareFull
+	// usa además la decodificación y el escalado de la gráfica.
+	hardware       bool
+	hardwareFull   bool
+	hardwareDevice string
 	// highestRequested es el mayor segmento que ha pedido el cliente.
 	highestRequested int
 	// segments es el total de la playlist VOD propia; 0 si se sirve la de
@@ -243,6 +259,8 @@ type hlsRun struct {
 	mode hlsMode
 	// copyCounted indica que este proceso suma en Service.liveCopies.
 	copyCounted bool
+	// hardware indica que el proceso usa VA-API.
+	hardware bool
 }
 
 func (r *hlsRun) isCopy() bool {
@@ -344,6 +362,7 @@ func New(opts Options) (*Service, error) {
 		procCancel:        procCancel,
 		entries:           make(map[hlsEntryKey]*hlsEntry),
 		copyDisabled:      make(map[string]bool),
+		hardwareDisabled:  make(map[string]bool),
 		stop:              make(chan struct{}),
 		done:              make(chan struct{}),
 	}

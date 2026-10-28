@@ -141,7 +141,7 @@ function fileInfo(): FileInfo {
 		subtitles: [],
 		chapters: 0,
 		quality: '1080p',
-		playback: { mode: 'direct', method: 'direct', description: '', supported: true }
+		playback: { mode: 'direct', method: 'direct', hardware: false, description: '', supported: true }
 	};
 }
 

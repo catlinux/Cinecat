@@ -424,6 +424,7 @@ export interface CandidatesResponse {
 export interface PlaybackInfo {
 	mode: 'direct' | 'hls' | '';
 	method: 'direct' | 'copy' | 'transcode' | '';
+	hardware: boolean;
 	description: string;
 	supported: boolean;
 }

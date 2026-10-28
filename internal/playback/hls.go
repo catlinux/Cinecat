@@ -134,6 +134,60 @@ func hlsTranscodeArgs(inputPath string, startSegment int, transcode ...Transcode
 	)
 }
 
+// hlsHardwareArgs construye la recodificación VA-API. En la ruta CPU+GPU se
+// decodifica y se escala en la CPU y solo se codifica en la gráfica; en la
+// ruta completa la gráfica decodifica y codifica, sin filtro de escala.
+func hlsHardwareArgs(inputPath string, startSegment int, settings TranscodeSettings, fullGPU bool, device string) []string {
+	settings = normalizeTranscodeSettings(settings)
+	startSeconds := startSegment * hlsSegmentSeconds
+	args := []string{
+		"-hide_banner",
+		"-loglevel", "error",
+		"-nostdin",
+		"-y",
+	}
+	if fullGPU {
+		args = append(args,
+			"-hwaccel", "vaapi",
+			"-hwaccel_device", device,
+			"-hwaccel_output_format", "vaapi",
+		)
+	} else {
+		args = append(args, "-vaapi_device", device)
+	}
+	if startSeconds > 0 {
+		args = append(args, "-ss", strconv.Itoa(startSeconds))
+	}
+	args = append(args,
+		"-i", inputPath,
+		"-map", "0:V:0",
+		"-map", fmt.Sprintf("0:a:%d?", settings.Audio),
+	)
+	if !fullGPU {
+		args = append(args,
+			"-vf", fmt.Sprintf(`scale=-2:trunc(min(%d\,ih)/2)*2,format=nv12,hwupload`, settings.MaxHeight),
+		)
+	}
+	return append(args,
+		"-c:v", "h264_vaapi",
+		"-qp", strconv.Itoa(settings.CRF+2),
+		"-g", "250",
+		"-force_key_frames", "expr:gte(t,n_forced*"+strconv.Itoa(hlsSegmentSeconds)+")",
+		"-c:a", "aac",
+		"-ac", "2",
+		"-b:a", "160k",
+		"-output_ts_offset", strconv.Itoa(startSeconds+hlsTimestampOffsetSeconds),
+		"-f", "hls",
+		"-hls_time", strconv.Itoa(hlsSegmentSeconds),
+		"-hls_playlist_type", "event",
+		"-hls_flags", "temp_file",
+		"-hls_segment_type", "mpegts",
+		"-start_number", strconv.Itoa(startSegment),
+		"-hls_segment_filename", "segment_%05d.ts",
+		ffmpegPlaylistFile,
+	)
+}
+
 // hlsCopyArgs construye los argumentos de FFmpeg para copiar el vídeo y
 // reempaquetarlo en segmentos MPEG-TS. Los cortes son los fotogramas clave
 // reales: -copyts conserva las marcas absolutas y -segment_times las recibe ya
@@ -347,6 +401,16 @@ func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string, s
 		}
 	}
 
+	hardware := false
+	hardwareFull := false
+	hardwareDevice := ""
+	if mode != hlsModeCopy && transcode.Hardware && !s.hardwareDisabledLocked(absInput) && s.hardwareReady() {
+		hardware = true
+		hardwareDevice = hardwareDevicePath()
+		hardwareFull = hardwareFullRoute(selection.Info, transcode.MaxHeight)
+		stream = baseStream + "-hw"
+	}
+
 	key := hlsEntryKey{itemID: itemID, transcode: stream}
 	if entry, handled, err := s.reuseEntryLocked(ctx, key); handled {
 		return entry, err
@@ -374,6 +438,9 @@ func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string, s
 		transcode:        transcode,
 		mode:             mode,
 		copyBounds:       copyBounds,
+		hardware:         hardware,
+		hardwareFull:     hardwareFull,
+		hardwareDevice:   hardwareDevice,
 		highestRequested: -1,
 	}
 
@@ -558,12 +625,17 @@ func (s *Service) startRunLocked(entry *hlsEntry, start int) error {
 	args := hlsTranscodeArgs(entry.inputPath, start, entry.transcode)
 	if entry.mode == hlsModeCopy {
 		args = hlsCopyArgs(entry.inputPath, start, entry.copyBounds, entry.transcode)
+	} else if entry.hardware {
+		args = hlsHardwareArgs(entry.inputPath, start, entry.transcode, entry.hardwareFull, entry.hardwareDevice)
 	}
 	var cmd *exec.Cmd
 	if s.command != nil {
 		cmd = s.command(procCtx, "ffmpeg", args...)
 		if cmd == nil {
 			cancel()
+			if entry.hardware {
+				return s.fallbackHardwareLocked(entry, start, "el comando de prueba devolvió nil")
+			}
 			return fmt.Errorf("%w: comando de prueba vacío", ErrFFmpegFailed)
 		}
 	} else {
@@ -580,6 +652,9 @@ func (s *Service) startRunLocked(entry *hlsEntry, start int) error {
 
 	if err := cmd.Start(); err != nil {
 		cancel()
+		if entry.hardware {
+			return s.fallbackHardwareLocked(entry, start, err.Error())
+		}
 		return fmt.Errorf("%w: %v", ErrFFmpegFailed, err)
 	}
 
@@ -591,6 +666,7 @@ func (s *Service) startRunLocked(entry *hlsEntry, start int) error {
 		counted:     entry.mode != hlsModeCopy,
 		mode:        entry.mode,
 		copyCounted: entry.mode == hlsModeCopy,
+		hardware:    entry.hardware,
 	}
 	entry.run = run
 	if run.isCopy() {
@@ -634,6 +710,17 @@ func (s *Service) startRunLocked(entry *hlsEntry, start int) error {
 		s.mu.Unlock()
 	}()
 	return nil
+}
+
+// fallbackHardwareLocked deja el archivo marcado y reintenta el mismo
+// segmento por software. El error del hardware no llega al cliente si la ruta
+// software arranca.
+func (s *Service) fallbackHardwareLocked(entry *hlsEntry, start int, reason string) error {
+	log.Printf("playback: el hardware falló en el ítem %d (%s); se reintenta por software", entry.itemID, reason)
+	s.markHardwareDisabled(entry.inputPath)
+	entry.hardware = false
+	entry.hardwareFull = false
+	return s.startRunLocked(entry, start)
 }
 
 // reserveTranscodeSlotLocked deja sitio para un proceso nuevo. Si se alcanzó
@@ -824,6 +911,17 @@ func (s *Service) checkSegmentLocked(entry *hlsEntry, index int) (bool, error) {
 
 	if exists && (!inRun || index <= last) {
 		return true, nil
+	}
+	if run != nil && run.hardware && run.err != nil && !run.interrupted && !exists {
+		log.Printf("playback: el hardware falló en el ítem %d antes del segmento %d; se reintenta por software: %v",
+			entry.itemID, index, run.err)
+		s.markHardwareDisabled(entry.inputPath)
+		entry.hardware = false
+		entry.hardwareFull = false
+		if err := s.startRunLocked(entry, index); err != nil {
+			return false, err
+		}
+		return false, nil
 	}
 
 	if inRun {

@@ -43,7 +43,7 @@ Both modes share MPEG-TS segments, seeking and process limits; the VOD playlist 
 
 | | Copy | Re-encode |
 |---|---|---|
-| Video | `-c:v copy`, without scaling or quality loss. | `libx264` with configurable preset, CRF and maximum height, `yuv420p`. |
+| Video | `-c:v copy`, without scaling or quality loss. | `libx264` or VA-API, with configurable preset/CRF or `qp` and maximum height. |
 | Audio | One track to stereo AAC at 160 kbps. | One track to stereo AAC at 160 kbps. |
 | Cuts | Real keyframes, with `-copyts`, a 10 s `-output_ts_offset` and `-segment_times`; the playlist uses real durations. | Keyframes forced every 6 s and 6 s segments. |
 | When | Supported codec, height within the maximum and ready index. | Every other case. |
@@ -59,6 +59,30 @@ The rest of the flow is shared:
 - Processes run at low priority with a limited number of threads.
 
 On the author's server, copying runs at about 37× real time and uses almost no CPU.
+
+## Hardware acceleration
+
+Re-encoding can use the integrated Intel GPU through **VA-API**. It does not change copying, which still leaves the video untouched, or the direct/HLS decision.
+
+Requirements:
+
+- The image includes `intel-media-va-driver` and sets `LIBVA_DRIVER_NAME=iHD`.
+- The host exposes `/dev/dri/renderD128` (it can be changed with `CINECAT_VAAPI_DEVICE`) and `docker-compose.gpu.yml` mounts it into the `servidor` container. Without that file, `docker-compose.yml` still starts and everything runs in software.
+- The deployment's `.env` enables `COMPOSE_FILE=docker-compose.yml:docker-compose.gpu.yml` (the updater respects it).
+- The `playback.hardware` setting is `auto` (the default). `off` always disables it. It is read when preparing each playback, so changes apply to new playbacks.
+
+The first time it is needed, the server checks VA-API with a one-second synthetic video and a 15 s limit. The result is remembered until restart and logged once, whether it succeeds or not.
+
+There are two routes:
+
+- **CPU+GPU:** the CPU decodes and scales; the GPU encodes with `h264_vaapi`. This is the general route, including DivX/Xvid, 10-bit H.264, interlaced video, 10-bit H.265 or when the height must be reduced.
+- **Full GPU:** the GPU decodes and encodes, with no scaling filter. It is only used for 8-bit H.264 (`yuv420p`/`yuvj420p`, not High 10/4:2:2/4:4:4) or 8-bit H.265 Main, progressive or with unknown field order, and when the source height does not exceed the output height.
+
+The GPU's scaling unit is not used: `scale_vaapi` and `scale_qsv` are unavailable on this GPU and are never invoked. Encoding uses `qp = CRF + 2`, `-g 250` and the same forced cuts every 6 s; audio and the rest of the HLS flow are unchanged.
+
+On the author's server, 60 s of 1080p→720p movie goes from 44 s of CPU with libx264 (HEVC source) to 19 s with CPU+GPU, and from 39 s to 18 s with H.264; with everything on the GPU and no scaling, 0.6 s (about 14×). These are measurements from that server, not a promise for other hardware.
+
+If the hardware process fails before generating the requested segment, it is logged, the file (path, size and date) is marked as unsuitable for hardware and the same segment is retried in software without the client seeing an error. If the general check fails, hardware stays disabled until restart. Hardware re-encodes count towards "Simultaneous transcodes" like the others.
 
 ## Process limits
 
@@ -115,17 +139,16 @@ The player offers `auto`, 480p, 720p, 1080p (never above the original height or 
 |---|---|
 | **8-bit H.265**, in MKV or MP4 | Best balance: it is copied when the browser supports it through MSE and takes less space than H.264. Roughly 30–50 % smaller than H.264 at similar quality, with no guaranteed figures. |
 | **8-bit H.264**, in MP4 or MKV | Still very compatible: MP4 with AAC/MP3 is served directly and MKV/MOV is copied without re-encoding. |
-| Avoid **10-bit H.265** unless every device needs it | Many browsers and devices cannot play it; the server has no hardware decoding. It is only copied if the browser declares `hevc10mse`. |
+| Avoid **10-bit H.265** unless every device needs it | Many browsers and devices cannot play it; the server GPU does not fully decode 10-bit HEVC. It is only copied if the browser declares `hevc10mse`. |
 | **Original audio** (AAC, MP3, AC-3…) | Direct playback keeps it; in HLS only the audio is re-encoded to stereo AAC, at a small cost. |
 | **Text subtitles** embedded in the MKV or in `.srt` next to the video | They are converted to WebVTT; image subtitles (PGS/VobSub) cannot be shown. |
 | **Keyframes every 2–10 s** | This is common and allows reasonable segments and seeks when copying. Very long intervals make segments longer and seeks less precise. |
 | Avoid **AVI and TS/M2TS** in the library | They are always re-encoded; converting to MKV/MP4 preserves the codec better and saves server work. |
 
-There is no hardware acceleration yet: re-encoding uses the CPU. Copying uses almost no CPU because it neither decodes nor encodes the video.
+Re-encoding uses VA-API when available and libx264 when not. Copying uses almost no CPU because it neither decodes nor encodes the video.
 
 ## What advanced playback still needs
 
-- Hardware acceleration (Quick Sync/VA-API). The server has `/dev/dri`, but it is not passed to the container and the feature is not implemented.
 - Per-device profiles and automatic quality selection.
 - HDR with tone mapping and 10-bit handling beyond the H.265 that the browser already supports through MSE.
 - Deinterlacing.

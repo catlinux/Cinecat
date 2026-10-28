@@ -26,7 +26,9 @@ type FileInspector interface {
 type PlaybackInfo struct {
 	Mode string `json:"mode"`
 	// Method distingue dentro de HLS si se copia el vídeo o se recodifica.
-	Method      string `json:"method"`
+	Method string `json:"method"`
+	// Hardware indica que la recodificación prevista usaría la gráfica.
+	Hardware    bool   `json:"hardware"`
 	Description string `json:"description"`
 	Supported   bool   `json:"supported"`
 }
@@ -135,7 +137,12 @@ func (a *API) handleItemFileInfo(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, fileInfoResponse{
 		FileInfo: &info,
 		Path:     relative,
-		Playback: playbackInfo(safePath, &info, caps, a.maxPlaybackHeight()),
+		Playback: playbackInfo(safePath, &info, caps, a.maxPlaybackHeight(), func() bool {
+			if a.playback == nil {
+				return false
+			}
+			return a.playback.HardwareAvailableFor(r.Context(), safePath)
+		}),
 	})
 }
 
@@ -188,7 +195,7 @@ func normalizedFileInfo(info *playback.FileInfo) playback.FileInfo {
 	return result
 }
 
-func playbackInfo(path string, info *playback.FileInfo, caps playback.Capabilities, maxHeight int) PlaybackInfo {
+func playbackInfo(path string, info *playback.FileInfo, caps playback.Capabilities, maxHeight int, hardware ...func() bool) PlaybackInfo {
 	mode, err := playback.DecideFor(path, info, caps)
 	if errors.Is(err, playback.ErrUnsupportedContainer) {
 		return PlaybackInfo{
@@ -233,9 +240,11 @@ func playbackInfo(path string, info *playback.FileInfo, caps playback.Capabiliti
 				Supported:   true,
 			}
 		}
+		hardwareUsed := len(hardware) > 0 && hardware[0] != nil && hardware[0]()
 		return PlaybackInfo{
 			Mode:        "hls",
 			Method:      "transcode",
+			Hardware:    hardwareUsed,
 			Description: "Se recodifica a H.264 + AAC estéreo por HLS",
 			Supported:   true,
 		}

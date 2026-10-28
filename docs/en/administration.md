@@ -15,7 +15,7 @@ Only users with the `admin` role can open `/admin`. The server checks the role o
 | `/admin/settings/metadata` | Metadata | TMDB language and identification threshold. |
 | `/admin/settings/ui` | Interface | Name, texts, menu, grid, order, collections, series, theme and accent. |
 | `/admin/settings/library` | Library | Allow file changes, days in the trash and maximum upload size. |
-| `/admin/settings/playback` | Playback | Maximum height, CRF, preset and simultaneous transcodes. |
+| `/admin/settings/playback` | Playback | Maximum height, CRF, preset, hardware acceleration and simultaneous transcodes. |
 | `/admin/settings/system` | System | Update check, versions and the "Update now" panel. |
 | `/admin/update` | — | JSON endpoint used by the System panel to follow progress; not a screen. |
 | `/admin/users` | — | Does not exist yet. Navigation shows "Usuarios · Pronto". |
@@ -104,6 +104,7 @@ Settings are stored in the database with per-type validation. They apply without
 | `ui.accent` | Color de acento | Interface accent colour. | `granate`, `naranja`, `dorado` | `granate` | Hot; next page. |
 | `playback.max_height` | Altura máxima | Maximum resolution for HLS output. | `480`, `720`, `1080` | `1080` | Hot; new transcodes. |
 | `playback.crf` | Calidad (CRF) | Compression quality for transcoding; a lower value means more quality and size. | Integer 18–28 | `20` | Hot; new transcodes. |
+| `playback.hardware` | Hardware acceleration | Uses the integrated Intel GPU through VA-API when available; requires `docker-compose.gpu.yml`. | `auto`, `off` | `auto` | Hot; new playbacks. |
 | `playback.preset` | Velocidad de codificación | x264 preset used for transcoding. | `veryfast`, `faster`, `fast` | `veryfast` | Hot; new transcodes. |
 | `playback.max_transcodes` | Transcodificaciones simultáneas | How many movies can be transcoded at once. More than the CPU can handle causes stalls when seeking. | Integer 1–8 | `2` | Hot; next process. |
 | `library.allow_file_changes` | Permitir cambiar archivos | Allows uploading files and moving them to the trash; requires mounting the library read-write. | Boolean | `false` | Hot. |

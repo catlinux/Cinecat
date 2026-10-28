@@ -1,0 +1,4 @@
+services:
+  servidor:
+    devices:
+      - /dev/dri:/dev/dri

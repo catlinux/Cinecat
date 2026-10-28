@@ -18,7 +18,7 @@ This file contains only work that is still open. Published work is in the [CHANG
 - **Users and profile:** user CRUD, own profile, portal customisation, open sessions and history.
 - **Sessions, devices, activity and backups** in administration.
 - **User-uploaded subtitles:** needs a design first; today only embedded text and `.srt`/`.vtt`/`.ass` files next to the video are read.
-- **Advanced playback:** Quick Sync/VAAPI, per-device profiles, HDR/10-bit, deinterlacing, image subtitles and unsupported audio.
+- **Advanced playback:** per-device profiles, HDR/10-bit, deinterlacing, image subtitles and unsupported audio.
 - **Real HLS tests and CI:** tests are skipped without `ffmpeg`/`ffprobe`; no automated Linux job runs them.
 - **Review the 7-day TMDB TTL** against the current terms before accepting the production cache.
 - **Expose a `transcode` playback mode** in the API; copied or re-encoded HLS still reports `remux`.
@@ -50,7 +50,7 @@ This file contains only work that is still open. Published work is in the [CHANG
 - An inactive Android app from 2015 called "CineCat" exists (F-Droid, Catalan film catalogue; no trademark). The Cinecat name is kept; minor confusion risk.
 - **No CORS:** the server sends no `Access-Control-*` headers; the deployment relies on Apache serving the API and web app under the same origin.
 - **Writing to disks:** uploads and the trash require `CINECAT_MEDIA_MODE=rw`; music cannot be uploaded or moved to the trash.
-- **Software only for re-encoding:** transcoding uses libx264; there is no hardware acceleration. Copying video does not re-encode and uses almost no CPU.
+- **Re-encoding:** uses VA-API when available and libx264 otherwise. Copying video does not re-encode and uses almost no CPU.
 - **Cache and quotas:** the TMDB TTL is a starting value and OMDb has a daily quota; TMDB requires attribution (the "About" screen is missing).
 - **Manually corrected series:** scans do not touch them; missing seasons or episodes are not filled automatically.
 - **Playback URLs:** valid for 8 hours, not bound to the user, and invalid after a server restart.

@@ -37,6 +37,7 @@ func TestParseFFprobeJSONMKV(t *testing.T) {
 	      "height": 1080,
 	      "display_aspect_ratio": "16:9",
 	      "pix_fmt": "yuv420p",
+	      "field_order": "progressive",
 	      "bits_per_raw_sample": "8",
 	      "avg_frame_rate": "24000/1001",
 	      "r_frame_rate": "24000/1001",
@@ -113,7 +114,8 @@ func TestParseFFprobeJSONMKV(t *testing.T) {
 	if video.Codec != "h264" || video.Profile != "High" || video.Width != 1920 ||
 		video.Height != 1080 || video.DisplayAspectRatio != "16:9" ||
 		video.BitRate != 5000000 || video.PixelFormat != "yuv420p" ||
-		video.BitDepth != 8 || video.HDR != "" || video.Language != "eng" ||
+		video.BitDepth != 8 || video.HDR != "" || video.FieldOrder != "progressive" ||
+		video.Language != "eng" ||
 		video.Title != "Principal" || !video.Default {
 		t.Fatalf("vídeo inesperado: %+v", video)
 	}
