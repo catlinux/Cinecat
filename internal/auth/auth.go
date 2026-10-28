@@ -65,11 +65,17 @@ var (
 // minPasswordLength es la longitud mínima de una contraseña nueva, en caracteres.
 const minPasswordLength = 8
 
-// User es un usuario autenticado.
+// User es un usuario autenticado o una cuenta gestionada por el
+// administrador.
 type User struct {
-	ID       int64
-	Username string
-	Role     string
+	ID             int64
+	Username       string
+	Role           string
+	Disabled       bool
+	AllLibraries   bool
+	LibraryIDs     []int64
+	CreatedAt      string
+	ActiveSessions int
 }
 
 // Service agrupa las operaciones de autenticación sobre una base de datos.
@@ -267,13 +273,12 @@ func (s *Service) LoginFrom(ctx context.Context, username, password, clientIP st
 	}
 	now := s.now()
 
-	if s.isLockedFor(key, ipKey, now) {
-		return "", time.Time{}, ErrAccountLocked
-	}
-
 	user, passwordHash, err := s.findUser(ctx, username)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
+		if s.isLockedFor(key, ipKey, now) {
+			return "", time.Time{}, ErrAccountLocked
+		}
 		// Mismo coste que una verificación real, para no delatar por tiempo si
 		// el usuario existe.
 		_, _ = VerifyPassword(dummyHash(), password)
@@ -281,6 +286,17 @@ func (s *Service) LoginFrom(ctx context.Context, username, password, clientIP st
 		return "", time.Time{}, ErrInvalidCredentials
 	case err != nil:
 		return "", time.Time{}, err
+	}
+
+	if user.Disabled {
+		// Se verifica igualmente para no delatar por tiempo que la cuenta existe,
+		// pero no se cuenta el intento: una cuenta desactivada no debe bloquear
+		// a nadie.
+		_, _ = VerifyPassword(passwordHash, password)
+		return "", time.Time{}, ErrInvalidCredentials
+	}
+	if s.isLockedFor(key, ipKey, now) {
+		return "", time.Time{}, ErrAccountLocked
 	}
 
 	valid, err := VerifyPassword(passwordHash, password)
@@ -321,17 +337,24 @@ func (s *Service) Authenticate(ctx context.Context, token string) (User, error) 
 
 	var user User
 	var expiresRaw string
+	var disabled int
 	err := s.db.QueryRowContext(ctx,
-		`SELECT u.id, u.username, u.role, s.expires_at
+		`SELECT u.id, u.username, u.role, u.disabled, s.expires_at
 		   FROM sessions s
 		   JOIN users u ON u.id = s.user_id
 		  WHERE s.token_hash = ?`, hashed,
-	).Scan(&user.ID, &user.Username, &user.Role, &expiresRaw)
+	).Scan(&user.ID, &user.Username, &user.Role, &disabled, &expiresRaw)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		return User{}, ErrInvalidSession
 	case err != nil:
 		return User{}, fmt.Errorf("auth: consultar sesión: %w", err)
+	}
+	if disabled != 0 {
+		// Una cuenta desactivada no debe seguir usando una sesión que hubiera
+		// sobrevivido al cambio de estado.
+		_, _ = s.db.ExecContext(ctx, `DELETE FROM sessions WHERE token_hash = ?`, hashed)
+		return User{}, ErrInvalidSession
 	}
 
 	expiresAt, err := parseTime(expiresRaw)
@@ -435,12 +458,14 @@ func (s *Service) ChangePassword(ctx context.Context, userID int64, currentPassw
 func (s *Service) findUser(ctx context.Context, username string) (User, string, error) {
 	var user User
 	var passwordHash string
+	var disabled int
 	err := s.db.QueryRowContext(ctx,
-		`SELECT id, username, role, password_hash FROM users WHERE username = ?`, username,
-	).Scan(&user.ID, &user.Username, &user.Role, &passwordHash)
+		`SELECT id, username, role, disabled, password_hash FROM users WHERE username = ?`, username,
+	).Scan(&user.ID, &user.Username, &user.Role, &disabled, &passwordHash)
 	if err != nil {
 		return User{}, "", err
 	}
+	user.Disabled = disabled != 0
 	return user, passwordHash, nil
 }
 

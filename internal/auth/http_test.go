@@ -22,6 +22,7 @@ func newAuthHTTPServer(t *testing.T) (*httptest.Server, *Service, *sql.DB) {
 	mux.Handle("POST /api/v1/auth/logout", svc.LogoutHandler())
 	mux.Handle("POST /api/v1/auth/password", svc.ChangePasswordHandler())
 	mux.Handle("GET /api/v1/auth/me", svc.CurrentUserHandler())
+	svc.RegisterUserRoutes(mux)
 
 	server := httptest.NewServer(mux)
 	t.Cleanup(server.Close)

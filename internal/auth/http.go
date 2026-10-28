@@ -32,8 +32,10 @@ type errorResponse struct {
 }
 
 type currentUserResponse struct {
-	Username string `json:"username"`
-	Role     string `json:"role"`
+	Username     string  `json:"username"`
+	Role         string  `json:"role"`
+	AllLibraries bool    `json:"all_libraries"`
+	LibraryIDs   []int64 `json:"library_ids"`
 }
 
 // CurrentUserHandler atiende GET /api/v1/auth/me y devuelve el usuario de la
@@ -57,9 +59,17 @@ func (s *Service) CurrentUserHandler() http.Handler {
 			return
 		}
 
+		details, err := s.UserByID(r.Context(), user.ID)
+		if err != nil {
+			log.Printf("auth: leer el acceso del usuario actual: %v", err)
+			writeError(w, http.StatusInternalServerError, "error interno")
+			return
+		}
 		writeJSON(w, http.StatusOK, currentUserResponse{
-			Username: user.Username,
-			Role:     user.Role,
+			Username:     details.Username,
+			Role:         details.Role,
+			AllLibraries: details.AllLibraries,
+			LibraryIDs:   details.LibraryIDs,
 		})
 	})
 }

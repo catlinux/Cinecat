@@ -9,6 +9,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ### Seguridad
 
+- Gestión de usuarios en el servidor (solo administradores): `GET/POST /api/v1/users`, `PATCH /api/v1/users/{id}` (rol, desactivar, acceso a todas las bibliotecas), `PUT /api/v1/users/{id}/libraries`, `POST /api/v1/users/{id}/password` y `DELETE /api/v1/users/{id}`. Restablecer la contraseña, desactivar, borrar o cambiar el rol cierra todas las sesiones de esa cuenta; una cuenta desactivada no puede entrar ni usar una sesión anterior; nadie puede borrarse, desactivarse ni quitarse el rol a sí mismo, y siempre queda al menos un administrador activo. Migración 0020 (`disabled`, `all_libraries`, `user_libraries`). La pantalla y el filtrado del contenido por biblioteca llegan en las siguientes versiones.
 - Cambiar la contraseña cierra las demás sesiones abiertas de ese usuario (la actual se mantiene).
 - Las peticiones JSON de la API están limitadas a 1 MiB (respuesta 413 si se supera); la subida de archivos no tiene ese límite.
 - Las rutas de los archivos y de las carpetas de las bibliotecas (en fichas, listados, bibliotecas y la ficha técnica del archivo) solo las reciben los administradores; el resto de usuarios ya no ve cómo está organizado el disco del servidor.

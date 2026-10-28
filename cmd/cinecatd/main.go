@@ -403,6 +403,7 @@ func newHandler(authSvc *auth.Service, api *library.API, updateAPIs ...*update.A
 		mux.Handle("POST /api/v1/auth/logout", authSvc.LogoutHandler())
 		mux.Handle("POST /api/v1/auth/password", authSvc.ChangePasswordHandler())
 		mux.Handle("GET /api/v1/auth/me", authSvc.CurrentUserHandler())
+		authSvc.RegisterUserRoutes(mux)
 	}
 	if api != nil {
 		api.Register(mux)

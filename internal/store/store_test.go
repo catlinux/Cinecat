@@ -60,6 +60,7 @@ func TestMigrateCreaTablas(t *testing.T) {
 		"playback_state", "playback_progress", "collections", "collection_items", "series",
 		"series_seasons", "settings", "item_preferences", "music_artists", "music_albums",
 		"music_tracks", "item_lists", "series_lists", "collection_lists", "trash_items",
+		"user_libraries",
 	} {
 		if !got[name] {
 			t.Errorf("falta la tabla %q", name)
@@ -175,6 +176,33 @@ func TestMigracionBloqueosImagen(t *testing.T) {
 	}
 	if found != 2 {
 		t.Fatalf("columnas de bloqueo = %d, se esperaban 2", found)
+	}
+}
+
+func TestMigracionAccesoUsuarios(t *testing.T) {
+	s, ctx := openTestStore(t, filepath.Join(t.TempDir(), "cinecat.db"))
+
+	userColumns := columns(t, ctx, s, "users")
+	for _, name := range []string{"disabled", "all_libraries"} {
+		if !userColumns[name] {
+			t.Errorf("users: falta la columna %q", name)
+		}
+	}
+
+	libraryColumns := columns(t, ctx, s, "user_libraries")
+	for _, name := range []string{"user_id", "library_id"} {
+		if !libraryColumns[name] {
+			t.Errorf("user_libraries: falta la columna %q", name)
+		}
+	}
+	var script string
+	if err := s.DB().QueryRowContext(ctx,
+		`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'user_libraries'`).
+		Scan(&script); err != nil {
+		t.Fatalf("leer definición de user_libraries: %v", err)
+	}
+	if !strings.Contains(script, "STRICT") {
+		t.Fatalf("user_libraries debe ser STRICT: %s", script)
 	}
 }
 

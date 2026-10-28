@@ -9,6 +9,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ### Security
 
+- User management on the server (administrators only): `GET/POST /api/v1/users`, `PATCH /api/v1/users/{id}` (role, disable, access to all libraries), `PUT /api/v1/users/{id}/libraries`, `POST /api/v1/users/{id}/password` and `DELETE /api/v1/users/{id}`. Resetting the password, disabling, deleting or changing the role closes all of that account's sessions; a disabled account cannot sign in or use an earlier session; nobody can delete, disable or demote themselves, and at least one active administrator always remains. Migration 0020 (`disabled`, `all_libraries`, `user_libraries`). The screen and per-library content filtering arrive in later versions.
 - Changing the password closes that user's other open sessions (the current one is kept).
 - JSON API requests are limited to 1 MiB (413 response when exceeded); file uploads do not have that limit.
 - File and library folder paths (on detail pages, listings, libraries and the file technical details) are only sent to administrators; other users no longer see how the server disk is organised.
