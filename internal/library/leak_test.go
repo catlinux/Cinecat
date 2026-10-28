@@ -719,7 +719,7 @@ func checkLeakRouteCoverage(t *testing.T, covered map[string]bool) {
 	if err != nil {
 		t.Fatalf("listar archivos de library: %v", err)
 	}
-	pattern := regexp.MustCompile(`mux\.Handle\("GET ([^"]+)"`)
+	pattern := regexp.MustCompile(`mux\.Handle\("(?:GET|POST|PUT|PATCH|DELETE) ([^"]+)"`)
 	for _, file := range files {
 		if strings.HasSuffix(file, "_test.go") {
 			continue
@@ -737,7 +737,7 @@ func checkLeakRouteCoverage(t *testing.T, covered map[string]bool) {
 				continue
 			}
 			if !covered[match[1]] {
-				t.Errorf("la ruta GET %s de %s no está cubierta por la prueba de fugas",
+				t.Errorf("la ruta %s de %s no está cubierta por la prueba de fugas",
 					match[1], filepath.Base(file))
 			}
 		}
