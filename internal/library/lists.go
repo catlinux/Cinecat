@@ -46,12 +46,22 @@ func validListName(value string) bool {
 	return value == listFavorite || value == listWatchlist
 }
 
-func queryListTotals(ctx context.Context, db *sql.DB, userID int64, list string) (listsTotals, error) {
+func queryListTotals(ctx context.Context, db *sql.DB, userID int64, list string, access ...libraryAccess) (listsTotals, error) {
+	mediaClause := "1 = 1"
+	seriesClause := "1 = 1"
+	if len(access) > 0 {
+		mediaClause = access[0].Clause("mi")
+		seriesClause = access[0].Clause("s")
+	}
 	var totals listsTotals
 	err := db.QueryRowContext(ctx, `
 		SELECT
-		  (SELECT count(*) FROM item_lists WHERE user_id = ? AND list = ?),
-		  (SELECT count(*) FROM series_lists WHERE user_id = ? AND list = ?),
+		  (SELECT count(*) FROM item_lists il
+		     JOIN media_items mi ON mi.id = il.media_item_id
+		    WHERE il.user_id = ? AND il.list = ? AND `+mediaClause+`),
+		  (SELECT count(*) FROM series_lists sl
+		     JOIN series s ON s.id = sl.series_id
+		    WHERE sl.user_id = ? AND sl.list = ? AND `+seriesClause+`),
 		  (SELECT count(*) FROM collection_lists cl
 		     JOIN collections c ON c.id = cl.collection_id AND c.deleted = 0
 		    WHERE cl.user_id = ? AND cl.list = ?)`,
@@ -60,10 +70,16 @@ func queryListTotals(ctx context.Context, db *sql.DB, userID int64, list string)
 	return totals, err
 }
 
-func queryListItems(ctx context.Context, db *sql.DB, userID int64, list string, limit, offset int) ([]listedItem, int64, error) {
+func queryListItems(ctx context.Context, db *sql.DB, userID int64, list string, limit, offset int, access ...libraryAccess) ([]listedItem, int64, error) {
+	accessClause := "1 = 1"
+	if len(access) > 0 {
+		accessClause = access[0].Clause("media_items")
+	}
 	var total int64
 	if err := db.QueryRowContext(ctx,
-		`SELECT count(*) FROM item_lists WHERE user_id = ? AND list = ?`, userID, list).
+		`SELECT count(*) FROM item_lists il
+		   JOIN media_items ON media_items.id = il.media_item_id
+		  WHERE il.user_id = ? AND il.list = ? AND `+accessClause, userID, list).
 		Scan(&total); err != nil {
 		return nil, 0, err
 	}
@@ -76,6 +92,7 @@ func queryListItems(ctx context.Context, db *sql.DB, userID int64, list string, 
 		  LEFT JOIN playback_progress pp
 		    ON pp.media_item_id = media_items.id AND pp.user_id = ?
 		 WHERE il.user_id = ? AND il.list = ?
+		   AND `+accessClause+`
 		 ORDER BY il.added_at DESC, il.media_item_id DESC
 		 LIMIT ? OFFSET ?`,
 		userID, userID, userID, userID, userID, list, limit, offset)
@@ -118,10 +135,16 @@ func queryListItems(ctx context.Context, db *sql.DB, userID int64, list string, 
 	return items, total, nil
 }
 
-func queryListSeries(ctx context.Context, db *sql.DB, userID int64, list string, limit, offset int) ([]listedSeries, int64, error) {
+func queryListSeries(ctx context.Context, db *sql.DB, userID int64, list string, limit, offset int, access ...libraryAccess) ([]listedSeries, int64, error) {
+	accessClause := "1 = 1"
+	if len(access) > 0 {
+		accessClause = access[0].Clause("s")
+	}
 	var total int64
 	if err := db.QueryRowContext(ctx,
-		`SELECT count(*) FROM series_lists WHERE user_id = ? AND list = ?`, userID, list).
+		`SELECT count(*) FROM series_lists sl
+		   JOIN series s ON s.id = sl.series_id
+		  WHERE sl.user_id = ? AND sl.list = ? AND `+accessClause, userID, list).
 		Scan(&total); err != nil {
 		return nil, 0, err
 	}
@@ -148,6 +171,7 @@ func queryListSeries(ctx context.Context, db *sql.DB, userID int64, list string,
 		  FROM series_lists sl
 		  JOIN series s ON s.id = sl.series_id
 		 WHERE sl.user_id = ? AND sl.list = ?
+		   AND `+accessClause+`
 		 ORDER BY sl.added_at DESC, sl.series_id DESC
 		 LIMIT ? OFFSET ?`,
 		userID, userID, userID, userID, list, limit, offset)

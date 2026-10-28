@@ -187,8 +187,9 @@ func (a *API) handleLists(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	userID := sessionUserID(r)
+	access := accessFromRequest(r)
 
-	totals, err := queryListTotals(r.Context(), a.db, userID, list)
+	totals, err := queryListTotals(r.Context(), a.db, userID, list, access)
 	if err != nil {
 		log.Printf("library: contar listas de %d: %v", userID, err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
@@ -211,7 +212,7 @@ func (a *API) handleLists(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if queryKind == "all" || queryKind == "items" {
-		items, total, err := queryListItems(r.Context(), a.db, userID, list, limit, offset)
+		items, total, err := queryListItems(r.Context(), a.db, userID, list, limit, offset, access)
 		if err != nil {
 			log.Printf("library: listar ítems de %q: %v", list, err)
 			writeJSONError(w, http.StatusInternalServerError, "error interno")
@@ -225,7 +226,7 @@ func (a *API) handleLists(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if queryKind == "all" || queryKind == "series" {
-		series, total, err := queryListSeries(r.Context(), a.db, userID, list, limit, offset)
+		series, total, err := queryListSeries(r.Context(), a.db, userID, list, limit, offset, access)
 		if err != nil {
 			log.Printf("library: listar series de %q: %v", list, err)
 			writeJSONError(w, http.StatusInternalServerError, "error interno")

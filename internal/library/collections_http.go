@@ -374,7 +374,7 @@ func (a *API) collectionMovieItems(ctx context.Context, collectionID, userID int
 		    ON ws.media_item_id = media_items.id AND ws.user_id = ?
 		  LEFT JOIN playback_progress pp
 		    ON pp.media_item_id = media_items.id AND pp.user_id = ?
-		 WHERE `+videoLibraryClause("media_items")+`
+		 WHERE `+unrestrictedLibraryAccess().VideoClause("media_items")+`
 		 ORDER BY ci.position IS NULL, ci.position ASC,
 		          media_items.year IS NULL, media_items.year ASC, media_items.id`,
 		userID, userID, collectionID, userID, userID)

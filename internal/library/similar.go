@@ -198,7 +198,7 @@ func scanSimilarProfile(
 	return profile, nil
 }
 
-func loadMovieSimilarProfile(ctx context.Context, db *sql.DB, id int64) (similarProfile, error) {
+func loadMovieSimilarProfile(ctx context.Context, db *sql.DB, id int64, access libraryAccess) (similarProfile, error) {
 	row := db.QueryRowContext(ctx, `
 		SELECT id, genres, cast_names, directors, year, rating, credits,
 		       (SELECT group_concat(ci.collection_id)
@@ -206,7 +206,9 @@ func loadMovieSimilarProfile(ctx context.Context, db *sql.DB, id int64) (similar
 		          JOIN collections c ON c.id = ci.collection_id
 		         WHERE ci.media_item_id = media_items.id
 		           AND ci.excluded = 0 AND c.deleted = 0), kind
-		  FROM media_items WHERE id = ?`, id)
+		  FROM media_items
+		 WHERE id = ?
+		   AND `+access.Clause("media_items"), id)
 	return scanSimilarProfile(row.Scan, true)
 }
 
@@ -222,6 +224,7 @@ func loadSimilarCandidates(
 	db *sql.DB,
 	excludeID int64,
 	series bool,
+	access libraryAccess,
 ) ([]similarProfile, error) {
 	query := `
 		SELECT id, genres, cast_names, directors, year, rating, credits,
@@ -232,13 +235,14 @@ func loadSimilarCandidates(
 		           AND ci.excluded = 0 AND c.deleted = 0)
 		  FROM media_items
 		 WHERE kind = 'movie' AND id <> ?
-		   AND ` + videoLibraryClause("media_items") + `
+		   AND ` + access.VideoClause("media_items") + `
 		   AND poster_url IS NOT NULL AND trim(poster_url) <> ''`
 	if series {
 		query = `
 			SELECT id, genres, cast_names, directors, year, rating, credits, NULL
 			  FROM series
 			 WHERE id <> ?
+			   AND ` + access.Clause("series") + `
 			   AND poster_url IS NOT NULL AND trim(poster_url) <> ''`
 	}
 	rows, err := db.QueryContext(ctx, query, excludeID)
@@ -301,7 +305,8 @@ func (a *API) handleSimilarItems(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	current, err := loadMovieSimilarProfile(r.Context(), a.db, id)
+	access := accessFromRequest(r)
+	current, err := loadMovieSimilarProfile(r.Context(), a.db, id, access)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		writeJSONError(w, http.StatusNotFound, "ítem no encontrado")
@@ -335,7 +340,7 @@ func (a *API) handleSimilarItems(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	candidates, err := loadSimilarCandidates(r.Context(), a.db, id, false)
+	candidates, err := loadSimilarCandidates(r.Context(), a.db, id, false, access)
 	if err != nil {
 		log.Printf("library: leer similares del ítem %d: %v", id, err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
@@ -390,7 +395,7 @@ func (a *API) handleSimilarSeries(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	candidates, err := loadSimilarCandidates(r.Context(), a.db, id, true)
+	candidates, err := loadSimilarCandidates(r.Context(), a.db, id, true, unrestrictedLibraryAccess())
 	if err != nil {
 		log.Printf("library: leer similares de la serie %d: %v", id, err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")

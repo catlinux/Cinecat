@@ -20,14 +20,6 @@ func clipTitle(name string) string {
 	return title
 }
 
-func videoLibraryClause(alias string) string {
-	return alias + ".library_id IN (SELECT id FROM libraries WHERE kind = 'video')"
-}
-
-func clipsLibraryClause(alias string) string {
-	return alias + ".library_id IN (SELECT id FROM libraries WHERE kind = 'clips')"
-}
-
 // upsertClipItem guarda un vídeo sin metadatos. No toca una ficha existente:
 // los clips no se reidentifican en escaneos posteriores.
 func upsertClipItem(ctx context.Context, db *sql.DB, libraryID int64, path, title string) error {

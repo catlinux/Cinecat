@@ -83,6 +83,10 @@ func (a *API) handleClipBrowse(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusNotFound, "biblioteca no encontrada")
 		return
 	}
+	if !accessFromRequest(r).Allows(libraryID) {
+		writeJSONError(w, http.StatusNotFound, "biblioteca no encontrada")
+		return
+	}
 
 	var libraryName, libraryKind, libraryPath string
 	err := a.db.QueryRowContext(r.Context(), `

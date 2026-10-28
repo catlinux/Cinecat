@@ -227,7 +227,11 @@ func querySeriesList(
 	args []any,
 	limit int,
 	offset int,
+	access ...libraryAccess,
 ) ([]seriesListDTO, error) {
+	if len(access) > 0 {
+		where += " AND (" + access[0].Clause("s") + ")"
+	}
 	queryArgs := append([]any{userID, userID, userID}, args...)
 	queryArgs = append(queryArgs, limit, offset)
 	rows, err := db.QueryContext(ctx, `
@@ -270,7 +274,7 @@ func querySeriesList(
 	return series, nil
 }
 
-func queryRecentSeries(ctx context.Context, db *sql.DB, userID int64, limit int) ([]seriesListDTO, error) {
+func queryRecentSeries(ctx context.Context, db *sql.DB, userID int64, access libraryAccess, limit int) ([]seriesListDTO, error) {
 	return querySeriesList(
 		ctx,
 		db,
@@ -280,6 +284,7 @@ func queryRecentSeries(ctx context.Context, db *sql.DB, userID int64, limit int)
 		nil,
 		limit,
 		0,
+		access,
 	)
 }
 

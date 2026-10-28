@@ -38,6 +38,7 @@ func (a *API) handleHome(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusUnauthorized, "falta el token de sesión")
 		return
 	}
+	access := accessFromRequest(r)
 
 	continueItems, err := queryHomeItems(r.Context(), a.db, `
 		SELECT `+mediaItemColumns+watchedColumn+progressColumn+itemListColumns+`
@@ -47,6 +48,7 @@ func (a *API) handleHome(w http.ResponseWriter, r *http.Request) {
 		  LEFT JOIN watch_state ws
 		    ON ws.media_item_id = media_items.id AND ws.user_id = ?
 		 WHERE media_items.kind IN ('movie', 'episode')
+		   AND `+access.Clause("media_items")+`
 		 ORDER BY pp.updated_at DESC, media_items.id DESC
 		 LIMIT 20`, user.ID, user.ID, user.ID, user.ID)
 	if err != nil {
@@ -63,7 +65,7 @@ func (a *API) handleHome(w http.ResponseWriter, r *http.Request) {
 		  LEFT JOIN playback_progress pp
 		    ON pp.media_item_id = media_items.id AND pp.user_id = ?
 		 WHERE media_items.kind = 'movie'
-		   AND `+videoLibraryClause("media_items")+`
+		   AND `+access.VideoClause("media_items")+`
 		 ORDER BY media_items.id DESC
 		 LIMIT 20`, user.ID, user.ID, user.ID, user.ID)
 	if err != nil {
@@ -72,27 +74,27 @@ func (a *API) handleHome(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	recentSeries, err := queryRecentSeries(r.Context(), a.db, user.ID, 20)
+	recentSeries, err := queryRecentSeries(r.Context(), a.db, user.ID, access, 20)
 	if err != nil {
 		log.Printf("library: listar series recientes: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
 		return
 	}
 
-	nextUp, err := queryHomeNextUp(r.Context(), a.db, user.ID, a.collectionMin())
+	nextUp, err := queryHomeNextUp(r.Context(), a.db, user.ID, access, a.collectionMin())
 	if err != nil {
 		log.Printf("library: listar siguientes episodios: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
 		return
 	}
 
-	watchlist, err := queryHomeList(r.Context(), a.db, user.ID, listWatchlist)
+	watchlist, err := queryHomeList(r.Context(), a.db, user.ID, listWatchlist, access)
 	if err != nil {
 		log.Printf("library: listar próximas a ver: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
 		return
 	}
-	favorites, err := queryHomeList(r.Context(), a.db, user.ID, listFavorite)
+	favorites, err := queryHomeList(r.Context(), a.db, user.ID, listFavorite, access)
 	if err != nil {
 		log.Printf("library: listar favoritos: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
@@ -101,10 +103,11 @@ func (a *API) handleHome(w http.ResponseWriter, r *http.Request) {
 
 	var counts homeCounts
 	if err := a.db.QueryRowContext(r.Context(), `
-		SELECT COALESCE(SUM(CASE WHEN kind = 'movie' AND `+videoLibraryClause("media_items")+` THEN 1 ELSE 0 END), 0),
-		       COALESCE(SUM(CASE WHEN kind = 'episode' AND `+videoLibraryClause("media_items")+` THEN 1 ELSE 0 END), 0),
+		SELECT COALESCE(SUM(CASE WHEN kind = 'movie' AND `+access.VideoClause("media_items")+` THEN 1 ELSE 0 END), 0),
+		       COALESCE(SUM(CASE WHEN kind = 'episode' AND `+access.VideoClause("media_items")+` THEN 1 ELSE 0 END), 0),
 		       (SELECT count(*) FROM series s
-		         JOIN libraries l ON l.id = s.library_id AND l.kind = 'video')
+		         JOIN libraries l ON l.id = s.library_id AND l.kind = 'video'
+		        WHERE `+access.Clause("s")+`)
 		  FROM media_items`).Scan(&counts.Movies, &counts.Episodes, &counts.Series); err != nil {
 		log.Printf("library: contar ítems del portal: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
@@ -116,6 +119,7 @@ func (a *API) handleHome(w http.ResponseWriter, r *http.Request) {
 		SELECT EXISTS (
 			SELECT 1 FROM libraries l
 			 WHERE l.kind = 'clips'
+			   AND `+access.LibraryClause("l")+`
 			   AND EXISTS (SELECT 1 FROM media_items mi WHERE mi.library_id = l.id)
 		)`).Scan(&hasClips); err != nil {
 		log.Printf("library: comprobar bibliotecas de vídeos: %v", err)
@@ -129,6 +133,7 @@ func (a *API) handleHome(w http.ResponseWriter, r *http.Request) {
 			SELECT 1 FROM music_tracks mt
 			  JOIN libraries l ON l.id = mt.library_id
 			 WHERE l.kind = 'music'
+			   AND `+access.LibraryClause("l")+`
 		)`).Scan(&hasMusic); err != nil {
 		log.Printf("library: comprobar bibliotecas de música: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
@@ -164,6 +169,7 @@ func queryHomeNextUp(
 	ctx context.Context,
 	db *sql.DB,
 	userID int64,
+	access libraryAccess,
 	minCollectionItems ...int,
 ) ([]mediaItemDTO, error) {
 	minimum := collectionMinimum(minCollectionItems...)
@@ -174,7 +180,7 @@ func queryHomeNextUp(
 			  JOIN watch_state ws
 			    ON ws.media_item_id = mi.id AND ws.user_id = ?
 			 WHERE mi.series_id IS NOT NULL
-			   AND `+videoLibraryClause("mi")+`
+			   AND `+access.VideoClause("mi")+`
 			 GROUP BY mi.series_id
 		),
 		in_progress AS (
@@ -183,14 +189,14 @@ func queryHomeNextUp(
 			  JOIN playback_progress pp
 			    ON pp.media_item_id = mi.id AND pp.user_id = ?
 			 WHERE mi.series_id IS NOT NULL
-			   AND `+videoLibraryClause("mi")+`
+			   AND `+access.VideoClause("mi")+`
 		),
 		next_episode AS (
 			SELECT watched.series_id, watched.activity,
 			       (SELECT mi.id
 			          FROM media_items mi
 			         WHERE mi.series_id = watched.series_id
-			           AND `+videoLibraryClause("mi")+`
+			           AND `+access.VideoClause("mi")+`
 			           AND NOT EXISTS (
 			               SELECT 1 FROM watch_state w2
 			                WHERE w2.media_item_id = mi.id AND w2.user_id = ?)
@@ -260,12 +266,12 @@ func queryHomeItems(ctx context.Context, db *sql.DB, query string, args ...any) 
 	return items, nil
 }
 
-func queryHomeList(ctx context.Context, db *sql.DB, userID int64, list string) ([]homeListEntry, error) {
-	items, _, err := queryListItems(ctx, db, userID, list, 20, 0)
+func queryHomeList(ctx context.Context, db *sql.DB, userID int64, list string, access libraryAccess) ([]homeListEntry, error) {
+	items, _, err := queryListItems(ctx, db, userID, list, 20, 0, access)
 	if err != nil {
 		return nil, err
 	}
-	series, _, err := queryListSeries(ctx, db, userID, list, 20, 0)
+	series, _, err := queryListSeries(ctx, db, userID, list, 20, 0, access)
 	if err != nil {
 		return nil, err
 	}

@@ -202,7 +202,16 @@ func (a *API) requireRole(role string, next sessionHandler) http.Handler {
 			writeJSONError(w, http.StatusForbidden, "se requiere rol de administrador")
 			return
 		}
-		next(w, r.WithContext(withSessionUser(r.Context(), user)))
+		access, err := loadLibraryAccess(r.Context(), a.db, user)
+		if err != nil {
+			// Ante cualquier error se deniega todo; nunca se abre el acceso por
+			// defecto.
+			log.Printf("library: calcular acceso del usuario %d: %v", user.ID, err)
+			access = libraryAccess{}
+		}
+		ctx := withSessionUser(r.Context(), user)
+		ctx = withLibraryAccess(ctx, access)
+		next(w, r.WithContext(ctx))
 	})
 }
 
@@ -232,7 +241,8 @@ func (a *API) handleItems(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userID := sessionUserID(r)
-	where, args, err := itemFilters(r, userID, a.collectionMin())
+	access := accessFromRequest(r)
+	where, args, err := itemFilters(r, userID, access, a.collectionMin())
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return

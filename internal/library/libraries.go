@@ -252,7 +252,7 @@ func registeredLibraryPaths(ctx context.Context, db *sql.DB, excludeLibraryID in
 }
 
 func (a *API) handleLibraries(w http.ResponseWriter, r *http.Request) {
-	libraries, err := a.listLibraries(r.Context())
+	libraries, err := a.listLibraries(r.Context(), accessFromRequest(r))
 	if err != nil {
 		logLibraryError("listar bibliotecas", err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
@@ -267,7 +267,11 @@ func (a *API) handleLibraries(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, librariesResponse{Libraries: libraries})
 }
 
-func (a *API) listLibraries(ctx context.Context) ([]libraryDTO, error) {
+func (a *API) listLibraries(ctx context.Context, access ...libraryAccess) ([]libraryDTO, error) {
+	accessClause := "1 = 1"
+	if len(access) > 0 {
+		accessClause = access[0].LibraryClause("l")
+	}
 	rows, err := a.db.QueryContext(ctx, `
 		SELECT l.id, l.name, l.kind, l.path,
 		       CASE WHEN l.kind = 'music'
@@ -275,6 +279,7 @@ func (a *API) listLibraries(ctx context.Context) ([]libraryDTO, error) {
 		            ELSE (SELECT count(*) FROM media_items mi WHERE mi.library_id = l.id)
 		       END
 		  FROM libraries l
+		 WHERE `+accessClause+`
 		 ORDER BY l.name COLLATE NOCASE, l.id`)
 	if err != nil {
 		return nil, err

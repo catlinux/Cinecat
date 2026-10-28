@@ -363,11 +363,11 @@ func floatPointer(v sql.NullFloat64) *float64 {
 	return &value
 }
 
-func itemFilters(r *http.Request, userID int64, minCollectionItems ...int) (string, []any, error) {
+func itemFilters(r *http.Request, userID int64, access libraryAccess, minCollectionItems ...int) (string, []any, error) {
 	query := r.URL.Query()
 	// Los clips viven en media_items como kind=movie; el listado de películas
-	// solo debe ver los ítems de bibliotecas de vídeo.
-	clauses := []string{videoLibraryClause("media_items")}
+	// solo debe ver los ítems de bibliotecas de vídeo visibles.
+	clauses := []string{access.VideoClause("media_items")}
 	var args []any
 
 	field := strings.TrimSpace(query.Get("field"))
@@ -558,12 +558,14 @@ func (a *API) handleGenres(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	access := accessFromRequest(r)
 	rows, err := a.db.QueryContext(r.Context(), `
 		SELECT je.value, COUNT(DISTINCT mi.id)
 		  FROM media_items mi
 		  JOIN libraries l ON l.id = mi.library_id AND l.kind = 'video'
 		  JOIN json_each(CASE WHEN mi.genres IS NOT NULL AND json_valid(mi.genres) THEN mi.genres ELSE '[]' END) je
 		 WHERE mi.kind = ?
+		   AND `+access.VideoClause("mi")+`
 		 GROUP BY je.value
 		 ORDER BY je.value COLLATE NOCASE, je.value`, kind)
 	if err != nil {
