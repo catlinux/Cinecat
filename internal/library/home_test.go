@@ -19,11 +19,11 @@ func TestHomeBaseVacia(t *testing.T) {
 		t.Fatalf("respuesta de home: %v", err)
 	}
 	if home.Continue == nil || home.NextUp == nil || home.RecentMovies == nil ||
-		home.RecentSeries == nil {
+		home.RecentlyWatched == nil || home.RecentSeries == nil {
 		t.Fatalf("los arrays deben ser [] y no null: %+v", home)
 	}
 	if len(home.Continue) != 0 || len(home.NextUp) != 0 || len(home.RecentMovies) != 0 ||
-		len(home.RecentSeries) != 0 {
+		len(home.RecentlyWatched) != 0 || len(home.RecentSeries) != 0 {
 		t.Fatalf("home vacío con ítems: %+v", home)
 	}
 	if home.Counts.Movies != 0 || home.Counts.Episodes != 0 || home.Counts.Series != 0 {
@@ -177,6 +177,80 @@ func TestHomeRecientesContadoresYAislamiento(t *testing.T) {
 	}
 	if beaWatched.Watched {
 		t.Fatalf("bea no debe heredar el visionado de ana: %+v", beaWatched)
+	}
+}
+
+func TestHomeVistasHacePocoOrdenLimiteYAcceso(t *testing.T) {
+	ts := newLibraryHTTPTestServer(t)
+	visibleLibrary := createLibrary(t, ts.db, t.TempDir())
+	hiddenLibrary := createLibrary(t, ts.db, t.TempDir())
+	beaToken := nonAdminToken(t, ts)
+
+	var beaID int64
+	if err := ts.db.QueryRow(`SELECT id FROM users WHERE username = 'bea'`).Scan(&beaID); err != nil {
+		t.Fatalf("id de bea: %v", err)
+	}
+	if _, err := ts.db.Exec(`UPDATE users SET all_libraries = 0 WHERE id = ?`, beaID); err != nil {
+		t.Fatalf("restringir bea: %v", err)
+	}
+	if _, err := ts.db.Exec(
+		`INSERT INTO user_libraries (user_id, library_id) VALUES (?, ?)`,
+		beaID, visibleLibrary,
+	); err != nil {
+		t.Fatalf("asignar biblioteca visible: %v", err)
+	}
+
+	movieIDs := make([]int64, 0, 22)
+	for i := 0; i < 22; i++ {
+		id := progressItem(t, ts, visibleLibrary, fmt.Sprintf("Vista %02d", i), KindMovie)
+		movieIDs = append(movieIDs, id)
+		if _, err := ts.db.Exec(
+			`INSERT INTO watch_state (user_id, media_item_id, watched_at) VALUES (?, ?, ?)`,
+			beaID, id, fmt.Sprintf("2026-10-26T10:%02d:00Z", i),
+		); err != nil {
+			t.Fatalf("marcar película %d como vista: %v", i, err)
+		}
+	}
+
+	hiddenMovie := progressItem(t, ts, hiddenLibrary, "Oculta vista", KindMovie)
+	if _, err := ts.db.Exec(
+		`INSERT INTO watch_state (user_id, media_item_id, watched_at) VALUES (?, ?, ?)`,
+		beaID, hiddenMovie, "2026-10-27T00:00:00Z",
+	); err != nil {
+		t.Fatalf("marcar película oculta como vista: %v", err)
+	}
+	episode := progressItem(t, ts, visibleLibrary, "Episodio visto", KindEpisode)
+	if _, err := ts.db.Exec(
+		`INSERT INTO watch_state (user_id, media_item_id, watched_at) VALUES (?, ?, ?)`,
+		beaID, episode, "2026-10-27T00:01:00Z",
+	); err != nil {
+		t.Fatalf("marcar episodio como visto: %v", err)
+	}
+
+	status, body := libraryHTTPGet(t, ts.URL+"/api/v1/home", beaToken)
+	if status != http.StatusOK {
+		t.Fatalf("home: código = %d, cuerpo = %s", status, body)
+	}
+	var home homeResponse
+	if err := json.Unmarshal(body, &home); err != nil {
+		t.Fatalf("home: %v", err)
+	}
+	if len(home.RecentlyWatched) != 20 {
+		t.Fatalf("vistas hace poco = %d, se esperaban 20", len(home.RecentlyWatched))
+	}
+	for i, item := range home.RecentlyWatched {
+		expected := movieIDs[len(movieIDs)-1-i]
+		if item.ID != expected || item.Kind != KindMovie || !item.Watched {
+			t.Fatalf("vista reciente %d inesperada: %+v, se esperaba %d", i, item, expected)
+		}
+	}
+	for _, item := range home.RecentlyWatched {
+		if item.ID == hiddenMovie {
+			t.Fatalf("una película de una biblioteca oculta no debe aparecer: %+v", item)
+		}
+		if item.ID == episode {
+			t.Fatalf("un episodio no debe aparecer en películas vistas: %+v", item)
+		}
 	}
 }
 

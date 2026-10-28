@@ -30,6 +30,7 @@ const (
 	TypeString   Type = "string"
 	TypeDuration Type = "duration"
 	TypeEnum     Type = "enum"
+	TypeJSON     Type = "json"
 )
 
 func (t Type) String() string {
@@ -85,6 +86,8 @@ type Definition struct {
 	Min         float64
 	Max         float64
 	Public      bool
+	// Validate normaliza y valida los tipos que necesitan lógica propia.
+	Validate func(string) (string, error)
 }
 
 var sections = []Section{
@@ -94,6 +97,141 @@ var sections = []Section{
 	{Key: "playback", Label: "Reproducción"},
 	{Key: "library", Label: "Biblioteca"},
 	{Key: "system", Label: "Sistema"},
+}
+
+// PortalRow describe una fila configurable del portal.
+type PortalRow struct {
+	ID      string `json:"id"`
+	Visible bool   `json:"visible"`
+	Title   string `json:"title"`
+	Kicker  string `json:"kicker"`
+}
+
+var defaultPortalRows = []PortalRow{
+	{ID: "recent_movies", Visible: true, Title: "Películas recién añadidas", Kicker: "Estrenos"},
+	{ID: "continue_movies", Visible: true, Title: "Continuar viendo películas", Kicker: "En pausa"},
+	{ID: "watchlist_movies", Visible: true, Title: "Películas por ver", Kicker: "Para más tarde"},
+	{ID: "watched_movies", Visible: true, Title: "Vistas hace poco", Kicker: "Tu historial"},
+	{ID: "recent_series", Visible: true, Title: "Series recién añadidas", Kicker: "Estrenos"},
+	{ID: "continue_series", Visible: true, Title: "Continuar viendo series", Kicker: "En pausa"},
+	{ID: "next_up", Visible: true, Title: "Siguiente episodio", Kicker: "Series"},
+	{ID: "watchlist_series", Visible: true, Title: "Series por ver", Kicker: "Para más tarde"},
+	{ID: "favorites", Visible: true, Title: "Tus favoritos", Kicker: "Tu selección"},
+}
+
+var defaultPortalRowsJSON = func() string {
+	data, err := json.Marshal(defaultPortalRows)
+	if err != nil {
+		panic(err)
+	}
+	return string(data)
+}()
+
+// PortalRowsDefault devuelve una copia de las filas del portal por defecto.
+func PortalRowsDefault() []PortalRow {
+	return append([]PortalRow(nil), defaultPortalRows...)
+}
+
+// PortalRows interpreta el valor normalizado de ui.portal_rows. Ante un valor
+// inválido devuelve las filas por defecto.
+func PortalRows(raw string) []PortalRow {
+	normalized, err := normalizePortalRows(raw)
+	if err != nil {
+		return PortalRowsDefault()
+	}
+	rows := make([]PortalRow, 0)
+	if err := json.Unmarshal([]byte(normalized), &rows); err != nil {
+		return PortalRowsDefault()
+	}
+	return rows
+}
+
+func normalizePortalRows(raw string) (string, error) {
+	type inputRow struct {
+		ID      json.RawMessage `json:"id"`
+		Visible json.RawMessage `json:"visible"`
+		Title   json.RawMessage `json:"title"`
+		Kicker  json.RawMessage `json:"kicker"`
+	}
+
+	var input []inputRow
+	if err := json.Unmarshal([]byte(raw), &input); err != nil {
+		return "", errors.New("las filas del portal deben ser un array JSON válido")
+	}
+	if input == nil {
+		return "", errors.New("las filas del portal deben ser un array JSON")
+	}
+
+	defaults := make(map[string]PortalRow, len(defaultPortalRows))
+	for _, row := range defaultPortalRows {
+		defaults[row.ID] = row
+	}
+	seen := make(map[string]bool, len(input))
+	rows := make([]PortalRow, 0, len(defaultPortalRows))
+	for _, item := range input {
+		if len(item.ID) == 0 {
+			continue
+		}
+		var id *string
+		if err := json.Unmarshal(item.ID, &id); err != nil || id == nil {
+			return "", errors.New("el id de una fila debe ser un texto")
+		}
+		fallback, ok := defaults[*id]
+		if !ok || seen[*id] {
+			continue
+		}
+		seen[*id] = true
+
+		visible := fallback.Visible
+		if len(item.Visible) > 0 {
+			var value *bool
+			if err := json.Unmarshal(item.Visible, &value); err != nil || value == nil {
+				return "", errors.New("la visibilidad de una fila debe ser booleana")
+			}
+			visible = *value
+		}
+		title := fallback.Title
+		if len(item.Title) > 0 {
+			var value *string
+			if err := json.Unmarshal(item.Title, &value); err != nil || value == nil {
+				return "", errors.New("el título de una fila debe ser un texto")
+			}
+			title = strings.TrimSpace(*value)
+			if title == "" {
+				title = fallback.Title
+			}
+		}
+		kicker := fallback.Kicker
+		if len(item.Kicker) > 0 {
+			var value *string
+			if err := json.Unmarshal(item.Kicker, &value); err != nil || value == nil {
+				return "", errors.New("el antetítulo de una fila debe ser un texto")
+			}
+			kicker = strings.TrimSpace(*value)
+		}
+		if utf8.RuneCountInString(title) > 60 {
+			return "", errors.New("el título de una fila no puede superar los 60 caracteres")
+		}
+		if utf8.RuneCountInString(kicker) > 40 {
+			return "", errors.New("el antetítulo de una fila no puede superar los 40 caracteres")
+		}
+		rows = append(rows, PortalRow{
+			ID:      *id,
+			Visible: visible,
+			Title:   title,
+			Kicker:  kicker,
+		})
+	}
+	for _, fallback := range defaultPortalRows {
+		if !seen[fallback.ID] {
+			rows = append(rows, fallback)
+		}
+	}
+	data, err := json.Marshal(rows)
+	if err != nil {
+		return "", errors.New("no se pudieron serializar las filas del portal")
+	}
+	return string(data), nil
 }
 
 var definitions = []Definition{
@@ -267,6 +405,17 @@ var definitions = []Definition{
 		Min:         1,
 		Max:         10,
 		Public:      true,
+	},
+	{
+		Key:         "ui.portal_rows",
+		Section:     "ui",
+		Label:       "Filas del portal",
+		Description: "Orden, visibilidad y títulos de las filas de la página de inicio.",
+		Type:        TypeJSON,
+		Default:     defaultPortalRowsJSON,
+		Max:         4000,
+		Public:      true,
+		Validate:    normalizePortalRows,
 	},
 	{
 		Key:         "ui.theme_default",
@@ -533,6 +682,23 @@ func Validate(key string, raw json.RawMessage) (any, error) {
 
 	case TypeEnum:
 		return validateEnum(definition, value)
+
+	case TypeJSON:
+		text, ok := value.(string)
+		if !ok {
+			return nil, errors.New("el valor debe ser un texto JSON")
+		}
+		if definition.Validate == nil {
+			return nil, errors.New("el ajuste JSON no tiene validador")
+		}
+		normalized, err := definition.Validate(text)
+		if err != nil {
+			return nil, err
+		}
+		if definition.Max > 0 && utf8.RuneCountInString(normalized) > int(definition.Max) {
+			return nil, fmt.Errorf("el valor no puede superar los %d caracteres", int(definition.Max))
+		}
+		return normalized, nil
 	}
 
 	return nil, errors.New("tipo de ajuste no válido")

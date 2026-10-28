@@ -48,8 +48,8 @@ func raw(value string) json.RawMessage {
 
 func TestDefinitions(t *testing.T) {
 	definitions := Definitions()
-	if len(definitions) != 29 {
-		t.Fatalf("ajustes = %d, se esperaban 29", len(definitions))
+	if len(definitions) != 30 {
+		t.Fatalf("ajustes = %d, se esperaban 30", len(definitions))
 	}
 
 	seen := make(map[string]bool)
@@ -77,8 +77,8 @@ func TestDefinitions(t *testing.T) {
 			t.Fatalf("el defecto de %q se normaliza a %#v", definition.Key, normalized)
 		}
 	}
-	if public != 14 {
-		t.Fatalf("ajustes públicos = %d, se esperaban 14", public)
+	if public != 15 {
+		t.Fatalf("ajustes públicos = %d, se esperaban 15", public)
 	}
 
 	sectionKeys := make([]string, 0, len(Sections()))
@@ -127,6 +127,94 @@ func TestDefinitions(t *testing.T) {
 		hardware.Options[0].Value != "auto" || hardware.Options[0].Label != "Automática" ||
 		hardware.Options[1].Value != "off" || hardware.Options[1].Label != "Desactivada" {
 		t.Fatalf("playback.hardware inesperado: %+v, %v", hardware, ok)
+	}
+}
+
+func TestPortalRows(t *testing.T) {
+	definition, ok := Lookup("ui.portal_rows")
+	if !ok {
+		t.Fatal("falta ui.portal_rows")
+	}
+	if definition.Type != TypeJSON || !definition.Public || definition.Max != 4000 ||
+		definition.Validate == nil {
+		t.Fatalf("definición de ui.portal_rows inesperada: %+v", definition)
+	}
+	defaultRaw, ok := definition.Default.(string)
+	if !ok {
+		t.Fatalf("el defecto debe ser un string JSON: %#v", definition.Default)
+	}
+	defaults := PortalRowsDefault()
+	if !reflect.DeepEqual(PortalRows(defaultRaw), defaults) {
+		t.Fatalf("el defecto no se interpreta: %+v", PortalRows(defaultRaw))
+	}
+	if len(defaults) != 9 || defaults[0].ID != "recent_movies" ||
+		defaults[3].ID != "watched_movies" || defaults[8].ID != "favorites" {
+		t.Fatalf("filas por defecto inesperadas: %+v", defaults)
+	}
+
+	raw := `[
+		{"id":"favorites","visible":false,"title":"  Mi selección  ","kicker":"  Lo mejor  "},
+		{"id":"desconocida","visible":true,"title":"Oculta","kicker":"Nada"},
+		{"id":"recent_movies","title":"   ","kicker":""},
+		{"id":"favorites","visible":true,"title":"Duplicada","kicker":"Duplicada"}
+	]`
+	encoded, err := json.Marshal(raw)
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
+	normalized, err := Validate("ui.portal_rows", encoded)
+	if err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	rows := PortalRows(normalized.(string))
+	if len(rows) != len(defaults) {
+		t.Fatalf("filas normalizadas = %d, se esperaban %d", len(rows), len(defaults))
+	}
+	if rows[0].ID != "favorites" || rows[0].Visible || rows[0].Title != "Mi selección" ||
+		rows[0].Kicker != "Lo mejor" {
+		t.Fatalf("fila favorites inesperada: %+v", rows[0])
+	}
+	if rows[1].ID != "recent_movies" || rows[1].Title != "Películas recién añadidas" ||
+		rows[1].Kicker != "" || !rows[1].Visible {
+		t.Fatalf("fila recent_movies inesperada: %+v", rows[1])
+	}
+	if rows[2].ID != "continue_movies" {
+		t.Fatalf("las filas que faltan deben añadirse al final: %+v", rows)
+	}
+	for _, row := range rows {
+		if row.ID == "desconocida" || row.Title == "Duplicada" {
+			t.Fatalf("no se deben conservar ids desconocidos ni duplicados: %+v", row)
+		}
+	}
+
+	emptyEncoded, err := json.Marshal("[]")
+	if err != nil {
+		t.Fatalf("json.Marshal: %v", err)
+	}
+	emptyNormalized, err := Validate("ui.portal_rows", emptyEncoded)
+	if err != nil {
+		t.Fatalf("Validate array vacío: %v", err)
+	}
+	if emptyNormalized != defaultRaw {
+		t.Fatalf("un array vacío debe normalizarse al defecto")
+	}
+
+	for _, invalid := range []string{
+		"{",
+		`[{"id":"favorites","visible":"sí"}]`,
+		`[{"id":"favorites","visible":null}]`,
+		`[{"id":"favorites","title":3}]`,
+		`[{"id":"favorites","title":null}]`,
+		`[{"id":"favorites","title":"` + strings.Repeat("x", 61) + `"}]`,
+		`[{"id":"favorites","kicker":"` + strings.Repeat("x", 41) + `"}]`,
+	} {
+		encoded, err := json.Marshal(invalid)
+		if err != nil {
+			t.Fatalf("json.Marshal: %v", err)
+		}
+		if _, err := Validate("ui.portal_rows", encoded); err == nil {
+			t.Fatalf("se esperaba error para %q", invalid)
+		}
 	}
 }
 

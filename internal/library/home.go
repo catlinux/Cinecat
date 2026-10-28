@@ -21,15 +21,16 @@ type homeListEntry struct {
 }
 
 type homeResponse struct {
-	Continue     []mediaItemDTO  `json:"continue"`
-	NextUp       []mediaItemDTO  `json:"next_up"`
-	RecentMovies []mediaItemDTO  `json:"recent_movies"`
-	RecentSeries []seriesListDTO `json:"recent_series"`
-	Watchlist    []homeListEntry `json:"watchlist"`
-	Favorites    []homeListEntry `json:"favorites"`
-	HasClips     bool            `json:"has_clips"`
-	HasMusic     bool            `json:"has_music"`
-	Counts       homeCounts      `json:"counts"`
+	Continue        []mediaItemDTO  `json:"continue"`
+	NextUp          []mediaItemDTO  `json:"next_up"`
+	RecentMovies    []mediaItemDTO  `json:"recent_movies"`
+	RecentlyWatched []mediaItemDTO  `json:"recently_watched"`
+	RecentSeries    []seriesListDTO `json:"recent_series"`
+	Watchlist       []homeListEntry `json:"watchlist"`
+	Favorites       []homeListEntry `json:"favorites"`
+	HasClips        bool            `json:"has_clips"`
+	HasMusic        bool            `json:"has_music"`
+	Counts          homeCounts      `json:"counts"`
 }
 
 func (a *API) handleHome(w http.ResponseWriter, r *http.Request) {
@@ -70,6 +71,23 @@ func (a *API) handleHome(w http.ResponseWriter, r *http.Request) {
 		 LIMIT 20`, user.ID, user.ID, user.ID, user.ID)
 	if err != nil {
 		log.Printf("library: listar películas recientes: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
+
+	recentlyWatched, err := queryHomeItems(r.Context(), a.db, `
+		SELECT `+mediaItemColumns+watchedColumn+progressColumn+itemListColumns+`
+		  FROM media_items
+		  JOIN watch_state ws
+		    ON ws.media_item_id = media_items.id AND ws.user_id = ?
+		  LEFT JOIN playback_progress pp
+		    ON pp.media_item_id = media_items.id AND pp.user_id = ?
+		 WHERE media_items.kind = 'movie'
+		   AND `+access.VideoClause("media_items")+`
+		 ORDER BY ws.watched_at DESC, media_items.id DESC
+		 LIMIT 20`, user.ID, user.ID, user.ID, user.ID)
+	if err != nil {
+		log.Printf("library: listar películas vistas hace poco: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
 		return
 	}
@@ -144,6 +162,7 @@ func (a *API) handleHome(w http.ResponseWriter, r *http.Request) {
 	compactMediaItemListSlice(continueItems, admin)
 	compactMediaItemListSlice(nextUp, admin)
 	compactMediaItemListSlice(recentMovies, admin)
+	compactMediaItemListSlice(recentlyWatched, admin)
 	for _, list := range [][]homeListEntry{watchlist, favorites} {
 		for i := range list {
 			if list[i].Item != nil {
@@ -153,15 +172,16 @@ func (a *API) handleHome(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, homeResponse{
-		Continue:     continueItems,
-		NextUp:       nextUp,
-		RecentMovies: recentMovies,
-		RecentSeries: recentSeries,
-		Watchlist:    watchlist,
-		Favorites:    favorites,
-		HasClips:     hasClips != 0,
-		HasMusic:     hasMusic != 0,
-		Counts:       counts,
+		Continue:        continueItems,
+		NextUp:          nextUp,
+		RecentMovies:    recentMovies,
+		RecentlyWatched: recentlyWatched,
+		RecentSeries:    recentSeries,
+		Watchlist:       watchlist,
+		Favorites:       favorites,
+		HasClips:        hasClips != 0,
+		HasMusic:        hasMusic != 0,
+		Counts:          counts,
 	})
 }
 

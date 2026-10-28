@@ -1165,6 +1165,8 @@ paths:
         `next_up` incluye el siguiente episodio por ver de cada serie, con el
         nombre de la serie, el fotograma y los carteles de la serie.
         `recent_movies` son las 20 últimas películas añadidas.
+        `recently_watched` son las 20 últimas películas vistas por el usuario,
+        ordenadas por la fecha en que se marcaron como vistas.
         `recent_series` son las 20 últimas series con episodios, por fecha de alta.
       security:
         - bearerAuth: []
@@ -3991,8 +3993,9 @@ paths:
         consultar sin ser administrador. Entre las claves de interfaz están
         `ui.server_name`, `ui.tagline`, `ui.portal_title`, `ui.portal_intro`,
         `ui.nav_layout`, `ui.show_collections`, `ui.show_series`,
-        `ui.theme_default`, `ui.accent`, `ui.grid_columns`, `ui.grid_rows` y
-        `ui.row_columns`.
+        `ui.theme_default`, `ui.accent`, `ui.grid_columns`, `ui.grid_rows`,
+        `ui.row_columns` y `ui.portal_rows`. `ui.portal_rows` es una cadena con
+        un array JSON de filas del portal.
       security:
         - bearerAuth: []
       responses:
@@ -5607,6 +5610,7 @@ components:
         - continue
         - next_up
         - recent_movies
+        - recently_watched
         - recent_series
         - watchlist
         - favorites
@@ -5627,6 +5631,11 @@ components:
         recent_movies:
           type: array
           description: Las 20 últimas películas añadidas, por id descendente.
+          items:
+            $ref: '#/components/schemas/MediaItem'
+        recently_watched:
+          type: array
+          description: Las 20 últimas películas vistas por el usuario, por fecha de visionado descendente.
           items:
             $ref: '#/components/schemas/MediaItem'
         recent_series:
@@ -6570,6 +6579,7 @@ components:
             - string
             - duration
             - enum
+            - json
         options:
           type: array
           items:
@@ -6583,10 +6593,41 @@ components:
         default:
           description: Valor por defecto efectivo.
         value:
-          description: Valor efectivo actual.
+          description: |
+            Valor efectivo actual. En `ui.portal_rows` es una cadena con un
+            array JSON de objetos `PortalRow`.
         modified:
           type: boolean
           description: Hay un valor guardado en la base de datos para este ajuste.
+      additionalProperties: false
+    PortalRow:
+      type: object
+      required:
+        - id
+        - visible
+        - title
+        - kicker
+      properties:
+        id:
+          type: string
+          enum:
+            - recent_movies
+            - continue_movies
+            - watchlist_movies
+            - watched_movies
+            - recent_series
+            - continue_series
+            - next_up
+            - watchlist_series
+            - favorites
+        visible:
+          type: boolean
+        title:
+          type: string
+          maxLength: 60
+        kicker:
+          type: string
+          maxLength: 40
       additionalProperties: false
     Option:
       type: object

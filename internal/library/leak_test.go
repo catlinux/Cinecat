@@ -212,7 +212,7 @@ func newLeakFixture(t *testing.T, ts *libraryTestServer) (leakFixture, string) {
 			(user_id, media_item_id, position_seconds, duration_seconds) VALUES (?, ?, 1, 2)`,
 			userID, itemID)
 	}
-	for _, itemID := range []int64{f.visibleEpisode, f.hiddenEpisode} {
+	for _, itemID := range []int64{f.visibleEpisode, f.hiddenEpisode, f.hiddenMovie} {
 		leakExec(t, ts.db, `INSERT INTO watch_state (user_id, media_item_id) VALUES (?, ?)`,
 			userID, itemID)
 	}

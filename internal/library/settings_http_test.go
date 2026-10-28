@@ -243,8 +243,8 @@ func TestSettingsPublic(t *testing.T) {
 	if err := json.Unmarshal(body, &values); err != nil {
 		t.Fatalf("respuesta pública: %v", err)
 	}
-	if len(values) != 14 {
-		t.Fatalf("ajustes públicos = %d, se esperaban 14: %v", len(values), values)
+	if len(values) != 15 {
+		t.Fatalf("ajustes públicos = %d, se esperaban 15: %v", len(values), values)
 	}
 	defaults := map[string]any{
 		"ui.server_name":      "Cinecat",
@@ -264,6 +264,10 @@ func TestSettingsPublic(t *testing.T) {
 		if values[key] != want {
 			t.Fatalf("%s = %v, se esperaba %v", key, values[key], want)
 		}
+	}
+	portalRaw, ok := values["ui.portal_rows"].(string)
+	if !ok || len(settings.PortalRows(portalRaw)) != 9 {
+		t.Fatalf("ui.portal_rows inesperado: %#v", values["ui.portal_rows"])
 	}
 	if _, ok := values[settings.KeyScanInterval]; ok {
 		t.Fatal("scan.interval no es público")
