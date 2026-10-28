@@ -1,0 +1,44 @@
+# Instancia de prueba de Cinecat (H3c). Aparte de producción: otro proyecto,
+# otros volúmenes, biblioteca en solo lectura y sin acceso desde la red.
+name: cinecat-prueba
+
+services:
+  servidor:
+    build:
+      context: ./codigo
+      dockerfile: Dockerfile
+    volumes:
+      - ./data:/data
+      - /media:/media:ro
+      - ./run:/run/cinecat-update
+    environment:
+      CINECAT_DB_PATH: /data/cinecat.db
+      CINECAT_RUN_DIR: /run/cinecat-update
+      CINECAT_MEDIA_ROOTS: /media
+      CINECAT_SCAN_INTERVAL: "0"
+      CINECAT_TMDB_API_KEY: ${CINECAT_TMDB_API_KEY:-}
+
+  proxy:
+    image: nginx:alpine
+    ports:
+      - "127.0.0.1:18090:18090"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - servidor
+
+  web:
+    build:
+      context: ./codigo
+      dockerfile: web/Dockerfile
+    # Comparte la red del proxy: así la web llama a la API por
+    # http://localhost:18090, el mismo origen que ve el navegador.
+    network_mode: "service:proxy"
+    environment:
+      PUBLIC_API_URL: ""
+      PROTOCOL_HEADER: x-forwarded-proto
+      ADDRESS_HEADER: X-Forwarded-For
+      XFF_DEPTH: "1"
+      BODY_SIZE_LIMIT: Infinity
+    depends_on:
+      - proxy
