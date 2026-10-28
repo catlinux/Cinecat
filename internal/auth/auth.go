@@ -34,8 +34,10 @@ const (
 )
 
 const (
-	// DefaultSessionTTL es la vida de una sesión recién creada.
+	// DefaultSessionTTL es la vida de una sesión web recién creada.
 	DefaultSessionTTL = 24 * time.Hour
+	// NativeSessionTTL es la vida de una sesión creada por un cliente nativo.
+	NativeSessionTTL = 90 * 24 * time.Hour
 	// DefaultMaxAttempts es el número de fallos seguidos que bloquea una
 	// pareja usuario+IP.
 	DefaultMaxAttempts = 5
@@ -60,6 +62,8 @@ var (
 	ErrSessionExpired         = errors.New("auth: sesión caducada")
 	ErrInvalidCurrentPassword = errors.New("auth: la contraseña actual no es correcta")
 	ErrPasswordTooShort       = errors.New("auth: la contraseña nueva es demasiado corta")
+	ErrInvalidClient          = errors.New("auth: el cliente de la sesión no es válido")
+	ErrSessionNotFound        = errors.New("auth: sesión no encontrada")
 )
 
 // minPasswordLength es la longitud mínima de una contraseña nueva, en caracteres.
@@ -76,6 +80,8 @@ type User struct {
 	LibraryIDs     []int64
 	CreatedAt      string
 	ActiveSessions int
+	// SessionID identifica la sesión usada para autenticar la petición.
+	SessionID int64
 }
 
 // Service agrupa las operaciones de autenticación sobre una base de datos.
@@ -111,7 +117,7 @@ func WithClock(now func() time.Time) Option {
 	}
 }
 
-// WithSessionTTL cambia la vida de las sesiones.
+// WithSessionTTL cambia la vida de las sesiones web.
 func WithSessionTTL(d time.Duration) Option {
 	return func(s *Service) {
 		if d > 0 {
@@ -154,12 +160,13 @@ func WithTrustedProxies(prefixes []netip.Prefix) Option {
 	}
 }
 
-// New crea el servicio de autenticación. Las sesiones duran 24 horas y, si
-// quedan menos de 12, se renuevan en cada uso (caducidad deslizante). Tras 5
-// intentos fallidos seguidos para una misma pareja usuario+IP, el login de esa
-// pareja se bloquea 15 minutos; además, 20 fallos desde una IP bloquean todas
-// las peticiones de esa IP. El bloqueo vive en memoria del proceso y se pierde
-// al reiniciar, algo asumible en un servidor personal.
+// New crea el servicio de autenticación. Las sesiones web duran 24 horas y
+// las de los clientes nativos 90 días; cuando les queda menos de la mitad de
+// su vida se renuevan en cada uso (caducidad deslizante). Tras 5 intentos
+// fallidos seguidos para una misma pareja usuario+IP, el login de esa pareja se
+// bloquea 15 minutos; además, 20 fallos desde una IP bloquean todas las
+// peticiones de esa IP. El bloqueo vive en memoria del proceso y se pierde al
+// reiniciar, algo asumible en un servidor personal.
 func New(db *sql.DB, opts ...Option) *Service {
 	s := &Service{
 		db:            db,
@@ -257,15 +264,42 @@ func parseHash(encodedHash string) (hashParams, []byte, []byte, error) {
 	return params, salt, key, nil
 }
 
+// LoginResult es el resultado de crear una sesión.
+type LoginResult struct {
+	Token     string
+	ExpiresAt time.Time
+	SessionID int64
+}
+
 // Login comprueba las credenciales sin IP de cliente. Se conserva para los
 // llamadores que no pasan por HTTP; equivale a una IP desconocida.
 func (s *Service) Login(ctx context.Context, username, password string) (string, time.Time, error) {
-	return s.LoginFrom(ctx, username, password, "")
+	result, err := s.LoginWithDevice(ctx, username, password, "", "", ClientWeb, "")
+	return result.Token, result.ExpiresAt, err
 }
 
 // LoginFrom comprueba las credenciales contando los fallos por pareja
 // usuario+IP y por IP. Un login correcto limpia solo la pareja.
 func (s *Service) LoginFrom(ctx context.Context, username, password, clientIP string) (string, time.Time, error) {
+	result, err := s.LoginWithDevice(ctx, username, password, clientIP, "", ClientWeb, "")
+	return result.Token, result.ExpiresAt, err
+}
+
+// LoginWithDevice crea una sesión con el nombre y el tipo de dispositivo
+// indicados. Los clientes nativos reciben una vida de 90 días.
+func (s *Service) LoginWithDevice(
+	ctx context.Context,
+	username, password, clientIP, deviceName, client, userAgent string,
+) (LoginResult, error) {
+	client, err := normalizeClient(client)
+	if err != nil {
+		return LoginResult{}, err
+	}
+	deviceName = cleanDeviceName(deviceName)
+	if deviceName == "" && client == ClientWeb {
+		deviceName = deviceLabel(userAgent)
+	}
+
 	key := loginPairKey(username, clientIP)
 	ipKey := ""
 	if strings.TrimSpace(clientIP) != "" {
@@ -277,15 +311,15 @@ func (s *Service) LoginFrom(ctx context.Context, username, password, clientIP st
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		if s.isLockedFor(key, ipKey, now) {
-			return "", time.Time{}, ErrAccountLocked
+			return LoginResult{}, ErrAccountLocked
 		}
 		// Mismo coste que una verificación real, para no delatar por tiempo si
 		// el usuario existe.
 		_, _ = VerifyPassword(dummyHash(), password)
 		s.registerFailureFor(key, ipKey, now)
-		return "", time.Time{}, ErrInvalidCredentials
+		return LoginResult{}, ErrInvalidCredentials
 	case err != nil:
-		return "", time.Time{}, err
+		return LoginResult{}, err
 	}
 
 	if user.Disabled {
@@ -293,36 +327,44 @@ func (s *Service) LoginFrom(ctx context.Context, username, password, clientIP st
 		// pero no se cuenta el intento: una cuenta desactivada no debe bloquear
 		// a nadie.
 		_, _ = VerifyPassword(passwordHash, password)
-		return "", time.Time{}, ErrInvalidCredentials
+		return LoginResult{}, ErrInvalidCredentials
 	}
 	if s.isLockedFor(key, ipKey, now) {
-		return "", time.Time{}, ErrAccountLocked
+		return LoginResult{}, ErrAccountLocked
 	}
 
 	valid, err := VerifyPassword(passwordHash, password)
 	if err != nil {
-		return "", time.Time{}, err
+		return LoginResult{}, err
 	}
 	if !valid {
 		s.registerFailureFor(key, ipKey, now)
-		return "", time.Time{}, ErrInvalidCredentials
+		return LoginResult{}, ErrInvalidCredentials
 	}
 	s.resetFailures(key)
 
 	token, err := newToken()
 	if err != nil {
-		return "", time.Time{}, err
+		return LoginResult{}, err
 	}
-	expiresAt := now.Add(s.sessionTTL).UTC().Truncate(time.Millisecond)
+	expiresAt := now.Add(s.sessionTTLFor(client)).UTC().Truncate(time.Millisecond)
+	createdAt := formatTime(now)
 
-	if _, err := s.db.ExecContext(ctx,
-		`INSERT INTO sessions (user_id, token_hash, expires_at) VALUES (?, ?, ?)`,
-		user.ID, hashToken(token), formatTime(expiresAt),
-	); err != nil {
-		return "", time.Time{}, fmt.Errorf("auth: crear sesión: %w", err)
+	result, err := s.db.ExecContext(ctx,
+		`INSERT INTO sessions (
+			user_id, token_hash, expires_at, device_name, client, created_at, last_seen_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		user.ID, hashToken(token), formatTime(expiresAt), deviceName, client, createdAt, createdAt,
+	)
+	if err != nil {
+		return LoginResult{}, fmt.Errorf("auth: crear sesión: %w", err)
+	}
+	sessionID, err := result.LastInsertId()
+	if err != nil {
+		return LoginResult{}, fmt.Errorf("auth: id de la sesión creada: %w", err)
 	}
 
-	return token, expiresAt, nil
+	return LoginResult{Token: token, ExpiresAt: expiresAt, SessionID: sessionID}, nil
 }
 
 // Authenticate valida un token de sesión y devuelve el usuario. Si la sesión
@@ -336,14 +378,16 @@ func (s *Service) Authenticate(ctx context.Context, token string) (User, error) 
 	now := s.now().UTC()
 
 	var user User
-	var expiresRaw string
+	var expiresRaw, lastSeenRaw, clientRaw string
 	var disabled int
 	err := s.db.QueryRowContext(ctx,
-		`SELECT u.id, u.username, u.role, u.disabled, s.expires_at
+		`SELECT u.id, u.username, u.role, u.disabled,
+		        s.id, s.client, s.last_seen_at, s.expires_at
 		   FROM sessions s
 		   JOIN users u ON u.id = s.user_id
 		  WHERE s.token_hash = ?`, hashed,
-	).Scan(&user.ID, &user.Username, &user.Role, &disabled, &expiresRaw)
+	).Scan(&user.ID, &user.Username, &user.Role, &disabled,
+		&user.SessionID, &clientRaw, &lastSeenRaw, &expiresRaw)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		return User{}, ErrInvalidSession
@@ -367,12 +411,24 @@ func (s *Service) Authenticate(ctx context.Context, token string) (User, error) 
 		return User{}, ErrSessionExpired
 	}
 
-	if expiresAt.Sub(now) < s.sessionTTL/2 {
-		renewed := now.Add(s.sessionTTL).Truncate(time.Millisecond)
+	client, err := normalizeClient(clientRaw)
+	if err != nil {
+		client = ClientWeb
+	}
+	ttl := s.sessionTTLFor(client)
+	if expiresAt.Sub(now) < ttl/2 {
+		renewed := now.Add(ttl).Truncate(time.Millisecond)
 		if _, err := s.db.ExecContext(ctx,
-			`UPDATE sessions SET expires_at = ? WHERE token_hash = ?`, formatTime(renewed), hashed,
+			`UPDATE sessions SET expires_at = ? WHERE id = ?`, formatTime(renewed), user.SessionID,
 		); err != nil {
 			return User{}, fmt.Errorf("auth: renovar sesión: %w", err)
+		}
+	}
+	if lastSeen, err := parseTime(lastSeenRaw); err != nil || now.Sub(lastSeen) >= sessionTouchInterval {
+		if _, err := s.db.ExecContext(ctx,
+			`UPDATE sessions SET last_seen_at = ? WHERE id = ?`, formatTime(now), user.SessionID,
+		); err != nil {
+			return User{}, fmt.Errorf("auth: actualizar última actividad: %w", err)
 		}
 	}
 

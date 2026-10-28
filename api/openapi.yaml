@@ -14,10 +14,11 @@ paths:
     post:
       summary: Inicia sesión
       description: |
-        Comprueba usuario y contraseña y devuelve un token de sesión de vida
-        corta. Los fallos se cuentan por usuario y dirección IP, con un límite
-        adicional por IP; al superarlos responde 429 con un bloqueo temporal y
-        la cabecera `Retry-After`.
+        Comprueba usuario y contraseña y devuelve un token de sesión. Las
+        sesiones web duran 24 horas; las de los clientes `android` y
+        `androidtv`, 90 días. Los fallos se cuentan por usuario y dirección IP,
+        con un límite adicional por IP; al superarlos responde 429 con un
+        bloqueo temporal y la cabecera `Retry-After`.
       requestBody:
         required: true
         content:
@@ -136,6 +137,164 @@ paths:
                 $ref: '#/components/schemas/Error'
         '401':
           description: Sesión no válida o `current_password` incorrecta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/auth/sessions:
+    get:
+      summary: Lista las sesiones del usuario autenticado
+      description: |
+        Devuelve las sesiones activas del usuario, de la última actividad a la
+        más antigua. La sesión usada en esta petición se marca con `current`.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Sesiones activas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionsResponse'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/auth/sessions/{id}:
+    delete:
+      summary: Cierra una sesión propia
+      description: |
+        Cierra la sesión indicada si pertenece al usuario autenticado. Si es la
+        sesión actual, el token deja de ser válido. Una sesión ajena o
+        inexistente responde con el mismo 404.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Sesión cerrada
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Sesión inexistente o de otra cuenta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/users/{id}/sessions:
+    get:
+      summary: Lista las sesiones de un usuario
+      description: |
+        Solo administradores. Devuelve las sesiones activas del usuario
+        indicado; `current` siempre es falso en este listado.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Sesiones activas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionsResponse'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Se requiere rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Usuario no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/users/{id}/sessions/{sessionId}:
+    delete:
+      summary: Cierra una sesión de un usuario
+      description: |
+        Solo administradores. Cierra la sesión indicada si pertenece al usuario
+        indicado. Un par usuario/sesión que no coincida responde con 404.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Sesión cerrada
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Se requiere rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Sesión inexistente o que no pertenece al usuario indicado
           content:
             application/json:
               schema:
@@ -4261,6 +4420,21 @@ components:
         password:
           type: string
           format: password
+        device_name:
+          type: string
+          maxLength: 80
+          description: |
+            Nombre visible del dispositivo. Se recorta a 80 caracteres y se
+            eliminan los caracteres de control. Si se omite en una sesión web,
+            se deriva una etiqueta corta del User-Agent.
+        client:
+          type: string
+          enum:
+            - web
+            - android
+            - androidtv
+          default: web
+          description: Cliente que abre la sesión.
       additionalProperties: false
     ChangePasswordRequest:
       type: object
@@ -4281,6 +4455,7 @@ components:
       required:
         - token
         - expires_at
+        - session_id
       properties:
         token:
           type: string
@@ -4288,6 +4463,55 @@ components:
         expires_at:
           type: string
           format: date-time
+        session_id:
+          type: integer
+          format: int64
+          description: Identificador de la sesión creada.
+      additionalProperties: false
+    Session:
+      type: object
+      required:
+        - id
+        - device_name
+        - client
+        - created_at
+        - last_seen_at
+        - expires_at
+        - current
+      properties:
+        id:
+          type: integer
+          format: int64
+        device_name:
+          type: string
+          maxLength: 80
+        client:
+          type: string
+          enum:
+            - web
+            - android
+            - androidtv
+        created_at:
+          type: string
+          format: date-time
+        last_seen_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        current:
+          type: boolean
+      additionalProperties: false
+    SessionsResponse:
+      type: object
+      required:
+        - sessions
+      properties:
+        sessions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Session'
       additionalProperties: false
     CurrentUserResponse:
       type: object

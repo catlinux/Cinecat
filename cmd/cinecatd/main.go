@@ -442,6 +442,7 @@ func newHandlerWithBackup(
 		mux.Handle("POST /api/v1/auth/password", authSvc.ChangePasswordHandler())
 		mux.Handle("GET /api/v1/auth/me", authSvc.CurrentUserHandler())
 		authSvc.RegisterUserRoutes(mux)
+		authSvc.RegisterSessionRoutes(mux)
 	}
 	if api != nil {
 		api.Register(mux)

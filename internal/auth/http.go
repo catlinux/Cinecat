@@ -13,8 +13,10 @@ import (
 const maxRequestBody = 1 << 20 // 1 MiB
 
 type loginRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
+	Username   string `json:"username"`
+	Password   string `json:"password"`
+	DeviceName string `json:"device_name"`
+	Client     string `json:"client"`
 }
 
 type changePasswordRequest struct {
@@ -25,6 +27,7 @@ type changePasswordRequest struct {
 type loginResponse struct {
 	Token     string    `json:"token"`
 	ExpiresAt time.Time `json:"expires_at"`
+	SessionID int64     `json:"session_id"`
 }
 
 type errorResponse struct {
@@ -92,8 +95,13 @@ func (s *Service) LoginHandler() http.Handler {
 		}
 
 		clientIP := ClientIP(r, s.trusted)
-		token, expiresAt, err := s.LoginFrom(r.Context(), req.Username, req.Password, clientIP)
+		result, err := s.LoginWithDevice(
+			r.Context(), req.Username, req.Password, clientIP,
+			req.DeviceName, req.Client, r.UserAgent(),
+		)
 		switch {
+		case errors.Is(err, ErrInvalidClient):
+			writeError(w, http.StatusBadRequest, "cliente no válido")
 		case errors.Is(err, ErrAccountLocked):
 			w.Header().Set("Retry-After", strconv.Itoa(s.retryAfterSeconds()))
 			writeError(w, http.StatusTooManyRequests, "demasiados intentos fallidos; inténtalo más tarde")
@@ -103,7 +111,9 @@ func (s *Service) LoginHandler() http.Handler {
 			log.Printf("auth: error interno en el login: %v", err)
 			writeError(w, http.StatusInternalServerError, "error interno")
 		default:
-			writeJSON(w, http.StatusOK, loginResponse{Token: token, ExpiresAt: expiresAt})
+			writeJSON(w, http.StatusOK, loginResponse{
+				Token: result.Token, ExpiresAt: result.ExpiresAt, SessionID: result.SessionID,
+			})
 		}
 	})
 }
