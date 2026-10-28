@@ -64,6 +64,11 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	signingKey, err := loadSigningKey(cfg.DatabasePath)
+	if err != nil {
+		log.Fatalf("cinecatd: %v", err)
+	}
+
 	st, err := store.Open(ctx, cfg.DatabasePath)
 	if err != nil {
 		log.Fatalf("cinecatd: %v", err)
@@ -121,6 +126,7 @@ func main() {
 			return settingsStore.Int("playback.max_transcodes")
 		},
 		KeyframeCacheDir: keyframeCacheDir(cfg.DatabasePath),
+		Key:              signingKey,
 	})
 	if err != nil {
 		log.Fatalf("cinecatd: %v", err)

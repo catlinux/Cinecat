@@ -431,7 +431,7 @@ func normalizeCollectionOverview(raw string) (any, error) {
 func (a *API) handleCollectionCreate(w http.ResponseWriter, r *http.Request) {
 	var req createCollectionRequest
 	if err := decodeJSONBody(w, r, &req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "petición no válida")
+		writeJSONBodyError(w, err)
 		return
 	}
 	name, err := normalizeCollectionName(req.Name)
@@ -476,7 +476,7 @@ func (a *API) handleCollectionPatch(w http.ResponseWriter, r *http.Request) {
 
 	var req patchCollectionRequest
 	if err := decodeJSONBody(w, r, &req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "petición no válida")
+		writeJSONBodyError(w, err)
 		return
 	}
 	if req.Name == nil && req.Overview == nil && req.PosterURL == nil && req.BackdropURL == nil {
@@ -619,7 +619,7 @@ func (a *API) handleCollectionItemAdd(w http.ResponseWriter, r *http.Request) {
 	}
 	var req collectionItemRequest
 	if err := decodeJSONBody(w, r, &req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "petición no válida")
+		writeJSONBodyError(w, err)
 		return
 	}
 	if req.MediaItemID <= 0 {
@@ -773,7 +773,7 @@ func (a *API) handleCollectionOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	var req collectionOrderRequest
 	if err := decodeJSONBody(w, r, &req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "petición no válida")
+		writeJSONBodyError(w, err)
 		return
 	}
 	if req.MediaItemIDs == nil {

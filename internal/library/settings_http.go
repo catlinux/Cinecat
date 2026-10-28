@@ -70,7 +70,11 @@ func (a *API) handleSettings(w http.ResponseWriter, r *http.Request) {
 
 func (a *API) handleSettingsPatch(w http.ResponseWriter, r *http.Request) {
 	var changes map[string]json.RawMessage
-	if err := decodeJSONBody(w, r, &changes); err != nil || changes == nil {
+	if err := decodeJSONBody(w, r, &changes); err != nil {
+		writeJSONBodyError(w, err)
+		return
+	}
+	if changes == nil {
 		writeJSONError(w, http.StatusBadRequest, "petición no válida")
 		return
 	}

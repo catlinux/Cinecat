@@ -147,11 +147,33 @@ func (a *API) handleCheck(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, a.response(result))
 }
 
+const maxRequestBody = 1 << 20 // 1 MiB
+
+var errBodyTooLarge = errors.New("update: cuerpo de petición demasiado grande")
+
+func decodeJSONBody(w http.ResponseWriter, r *http.Request, dst any) error {
+	if r.ContentLength > maxRequestBody {
+		return errBodyTooLarge
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBody)
+	dec := json.NewDecoder(r.Body)
+	err := dec.Decode(dst)
+	var tooLarge *http.MaxBytesError
+	if errors.As(err, &tooLarge) {
+		return errBodyTooLarge
+	}
+	return err
+}
+
 func (a *API) handleApply(w http.ResponseWriter, r *http.Request) {
 	var request struct {
 		Tag string `json:"tag"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+	if err := decodeJSONBody(w, r, &request); err != nil {
+		if errors.Is(err, errBodyTooLarge) {
+			writeError(w, http.StatusRequestEntityTooLarge, "el cuerpo de la petición supera el límite de 1 MiB")
+			return
+		}
 		writeError(w, http.StatusBadRequest, "petición no válida")
 		return
 	}

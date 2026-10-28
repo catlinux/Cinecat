@@ -60,7 +60,7 @@ func (a *API) handleItemImagePut(w http.ResponseWriter, r *http.Request) {
 
 	var req imageURLRequest
 	if err := decodeJSONBody(w, r, &req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "petición no válida")
+		writeJSONBodyError(w, err)
 		return
 	}
 	if !validImageURL(req.URL) {

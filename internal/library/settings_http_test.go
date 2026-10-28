@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/catlinux/cinecat/internal/settings"
@@ -95,6 +96,16 @@ func TestSettingsGetEstructuraYOrden(t *testing.T) {
 	userToken := nonAdminToken(t, ts.libraryTestServer)
 	if status, body := libraryHTTPGet(t, ts.url+"/api/v1/settings", userToken); status != http.StatusForbidden {
 		t.Fatalf("sin admin: código = %d, cuerpo = %s", status, body)
+	}
+}
+
+func TestSettingsPATCHRechazaCuerpoDemasiadoGrande(t *testing.T) {
+	ts := newSettingsHTTPTestServer(t)
+
+	status, body := libraryHTTPDo(t, http.MethodPatch, ts.url+"/api/v1/settings", ts.token,
+		map[string]any{"ui.grid_columns": strings.Repeat("x", 2<<20)})
+	if status != http.StatusRequestEntityTooLarge {
+		t.Fatalf("código = %d, se esperaba 413; cuerpo = %s", status, body)
 	}
 }
 

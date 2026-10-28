@@ -675,7 +675,7 @@ func (a *API) handleItemMatch(w http.ResponseWriter, r *http.Request) {
 
 	var req matchRequest
 	if err := decodeJSONBody(w, r, &req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "petición no válida")
+		writeJSONBodyError(w, err)
 		return
 	}
 	if len(req.TMDBID) == 0 {

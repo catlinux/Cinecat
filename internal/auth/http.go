@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-const maxRequestBody = 8 << 10 // 8 KiB
+const maxRequestBody = 1 << 20 // 1 MiB
 
 type loginRequest struct {
 	Username string `json:"username"`
@@ -69,6 +69,10 @@ func (s *Service) LoginHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req loginRequest
 		if err := decodeJSON(w, r, &req); err != nil {
+			if errors.Is(err, errBodyTooLarge) {
+				writeError(w, http.StatusRequestEntityTooLarge, "el cuerpo de la petición supera el límite de 1 MiB")
+				return
+			}
 			writeError(w, http.StatusBadRequest, "petición no válida")
 			return
 		}
@@ -117,11 +121,15 @@ func (s *Service) ChangePasswordHandler() http.Handler {
 
 		var req changePasswordRequest
 		if err := decodeJSON(w, r, &req); err != nil {
+			if errors.Is(err, errBodyTooLarge) {
+				writeError(w, http.StatusRequestEntityTooLarge, "el cuerpo de la petición supera el límite de 1 MiB")
+				return
+			}
 			writeError(w, http.StatusBadRequest, "petición no válida")
 			return
 		}
 
-		if err := s.ChangePassword(r.Context(), user.ID, req.CurrentPassword, req.NewPassword); err != nil {
+		if err := s.ChangePassword(r.Context(), user.ID, req.CurrentPassword, req.NewPassword, token); err != nil {
 			switch {
 			case errors.Is(err, ErrPasswordTooShort):
 				writeError(w, http.StatusBadRequest, "la contraseña nueva debe tener al menos 8 caracteres")
@@ -168,11 +176,21 @@ func bearerToken(r *http.Request) string {
 	return strings.TrimSpace(header[len(prefix):])
 }
 
+var errBodyTooLarge = errors.New("auth: cuerpo de petición demasiado grande")
+
 func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) error {
+	if r.ContentLength > maxRequestBody {
+		return errBodyTooLarge
+	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBody)
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
-	return dec.Decode(dst)
+	err := dec.Decode(dst)
+	var tooLarge *http.MaxBytesError
+	if errors.As(err, &tooLarge) {
+		return errBodyTooLarge
+	}
+	return err
 }
 
 func writeJSON(w http.ResponseWriter, status int, body any) {

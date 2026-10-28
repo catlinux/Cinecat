@@ -127,7 +127,11 @@ func (a *API) handleItemPreferencesPut(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var patch map[string]json.RawMessage
-	if err := json.NewDecoder(r.Body).Decode(&patch); err != nil || patch == nil {
+	if err := decodeJSONBody(w, r, &patch); err != nil {
+		writeJSONBodyError(w, err)
+		return
+	}
+	if patch == nil {
 		writeJSONError(w, http.StatusBadRequest, "cuerpo no válido")
 		return
 	}

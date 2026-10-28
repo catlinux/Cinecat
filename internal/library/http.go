@@ -206,8 +206,6 @@ func (a *API) requireRole(role string, next sessionHandler) http.Handler {
 	})
 }
 
-const maxLibraryBody = 8 << 10 // 8 KiB
-
 func (a *API) handleScanLibraries(w http.ResponseWriter, r *http.Request) {
 	// El escaneo debe sobrevivir a esta petición; no se le pasa r.Context().
 	if !a.scanJob.StartService() {
@@ -219,13 +217,6 @@ func (a *API) handleScanLibraries(w http.ResponseWriter, r *http.Request) {
 
 func (a *API) handleScanStatus(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, a.scanJob.Status())
-}
-
-func decodeJSONBody(w http.ResponseWriter, r *http.Request, dst any) error {
-	r.Body = http.MaxBytesReader(w, r.Body, maxLibraryBody)
-	dec := json.NewDecoder(r.Body)
-	dec.DisallowUnknownFields()
-	return dec.Decode(dst)
 }
 
 func (a *API) handleItems(w http.ResponseWriter, r *http.Request) {

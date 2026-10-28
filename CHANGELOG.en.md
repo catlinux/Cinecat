@@ -9,6 +9,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ### Security
 
+- Changing the password closes that user's other open sessions (the current one is kept).
+- JSON API requests are limited to 1 MiB (413 response when exceeded); file uploads do not have that limit.
 - File and library folder paths (on detail pages, listings, libraries and the file technical details) are only sent to administrators; other users no longer see how the server disk is organised.
 - Security headers on the web app and the API: the web app can no longer be embedded in another page (`X-Frame-Options: DENY` and `frame-ancestors 'none'`), `Strict-Transport-Security` over HTTPS, `X-Content-Type-Options: nosniff`, referrer and permissions policies. The CSP is only the minimal one; a full one is left for later. `ServerTokens Prod` is recommended for Apache (see deployment).
 - The server is built with Go 1.26 (before 1.22.12, which no longer receives patches and carried 43 known standard library vulnerabilities: `net/http`, `crypto/tls`, `crypto/x509`, `mime/multipart`…).
@@ -26,6 +28,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ### Fixed
 
+- Playback in progress is no longer cut when the server is updated or restarted: the key used to sign playback URLs is stored next to the database (`signing.key`, permissions 0600) instead of being generated anew on every start.
 - An H.265 MP4 tagged `hev1` (most downloaded ones) is no longer sent directly to a browser that does not accept it (Safari and iOS only accept `hvc1`): the web app also checks that tag and, if not, plays it by copy or re-encode.
 - The collections list is much faster (the count uses `JOIN`).
 - Long uploads no longer fail with `fetch failed`: the web app forwarded the file with a `fetch` that gives up after 300 s without a response, and the server only answers once it has received it. It is now streamed without a time limit and straight to the server over the Docker network (`INTERNAL_API_URL`, already in `docker-compose.yml`), without going out to the internet or through Apache again.

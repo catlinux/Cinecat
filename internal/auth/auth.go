@@ -372,9 +372,9 @@ func (s *Service) Logout(ctx context.Context, token string) error {
 }
 
 // ChangePassword comprueba la contraseña actual del usuario y, si coincide,
-// guarda la nueva. No toca las sesiones: la actual y las demás siguen siendo
-// válidas hasta que caduquen.
-func (s *Service) ChangePassword(ctx context.Context, userID int64, currentPassword, newPassword string) error {
+// guarda la nueva. Si se indica el token de la petición, cierra en la misma
+// transacción las demás sesiones del usuario y conserva solo la actual.
+func (s *Service) ChangePassword(ctx context.Context, userID int64, currentPassword, newPassword string, currentToken ...string) error {
 	if utf8.RuneCountInString(newPassword) < minPasswordLength {
 		return ErrPasswordTooShort
 	}
@@ -402,10 +402,32 @@ func (s *Service) ChangePassword(ctx context.Context, userID int64, currentPassw
 	if err != nil {
 		return err
 	}
-	if _, err := s.db.ExecContext(ctx,
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("auth: iniciar cambio de contraseña: %w", err)
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+	if _, err := tx.ExecContext(ctx,
 		`UPDATE users SET password_hash = ? WHERE id = ?`, newHash, userID,
 	); err != nil {
 		return fmt.Errorf("auth: actualizar la contraseña: %w", err)
+	}
+	if len(currentToken) > 0 {
+		token := strings.TrimSpace(currentToken[0])
+		if token != "" {
+			if _, err := tx.ExecContext(ctx,
+				`DELETE FROM sessions WHERE user_id = ? AND token_hash <> ?`,
+				userID, hashToken(token),
+			); err != nil {
+				return fmt.Errorf("auth: cerrar las demás sesiones: %w", err)
+			}
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("auth: confirmar cambio de contraseña: %w", err)
 	}
 	return nil
 }

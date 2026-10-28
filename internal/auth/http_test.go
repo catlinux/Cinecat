@@ -5,9 +5,11 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -105,6 +107,48 @@ func TestChangePasswordHTTPFlujoCompleto(t *testing.T) {
 	}
 	if status, newToken := httpLogin(t, server.URL, "ana", "Clave-nueva-1"); status != http.StatusOK || newToken == "" {
 		t.Fatalf("login con la contraseña nueva: código = %d", status)
+	}
+}
+
+func TestChangePasswordCierraOtrasSesionesHTTP(t *testing.T) {
+	server, svc, db := newAuthHTTPServer(t)
+	createUser(t, db, "ana", "Clave-vieja-1", "user")
+	createUser(t, db, "bea", "Clave-vieja-1", "user")
+
+	_, current := httpLogin(t, server.URL, "ana", "Clave-vieja-1")
+	_, other := httpLogin(t, server.URL, "ana", "Clave-vieja-1")
+	_, bea := httpLogin(t, server.URL, "bea", "Clave-vieja-1")
+
+	status, body := httpChangePassword(t, server.URL, current, "Clave-vieja-1", "Clave-nueva-1")
+	if status != http.StatusNoContent {
+		t.Fatalf("cambio de contraseña: %d %s", status, body)
+	}
+	if _, err := svc.Authenticate(context.Background(), current); err != nil {
+		t.Fatalf("la sesión actual debe seguir válida: %v", err)
+	}
+	if _, err := svc.Authenticate(context.Background(), other); !errors.Is(err, ErrInvalidSession) {
+		t.Fatalf("la otra sesión debe quedar invalidada: %v", err)
+	}
+	if _, err := svc.Authenticate(context.Background(), bea); err != nil {
+		t.Fatalf("la sesión de otro usuario no debe tocarse: %v", err)
+	}
+}
+
+func TestLoginRechazaCuerpoDemasiadoGrande(t *testing.T) {
+	server, _, _ := newAuthHTTPServer(t)
+	for _, body := range []string{
+		strings.Repeat("x", 2<<20),
+		`{"username":"` + strings.Repeat("x", 2<<20) + `","password":"x"}`,
+	} {
+		req, err := http.NewRequest(http.MethodPost, server.URL+"/api/v1/auth/login", strings.NewReader(body))
+		if err != nil {
+			t.Fatalf("nueva petición: %v", err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+		status, response := doAuthRequest(t, req)
+		if status != http.StatusRequestEntityTooLarge {
+			t.Fatalf("código = %d, se esperaba 413; cuerpo = %s", status, response)
+		}
 	}
 }
 

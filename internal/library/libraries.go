@@ -329,7 +329,7 @@ func (a *API) listLibraries(ctx context.Context) ([]libraryDTO, error) {
 func (a *API) handleCreateLibrary(w http.ResponseWriter, r *http.Request) {
 	var req createLibraryRequest
 	if err := decodeJSONBody(w, r, &req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "petición no válida")
+		writeJSONBodyError(w, err)
 		return
 	}
 	name, err := normalizeLibraryName(req.Name)
@@ -434,7 +434,7 @@ func (a *API) handleUpdateLibrary(w http.ResponseWriter, r *http.Request) {
 	}
 	var req updateLibraryRequest
 	if err := decodeJSONBody(w, r, &req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "petición no válida")
+		writeJSONBodyError(w, err)
 		return
 	}
 	name, err := normalizeLibraryName(req.Name)
@@ -482,7 +482,7 @@ func (a *API) handleAddLibraryPath(w http.ResponseWriter, r *http.Request) {
 	}
 	var req libraryPathRequest
 	if err := decodeJSONBody(w, r, &req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "petición no válida")
+		writeJSONBodyError(w, err)
 		return
 	}
 	path, err := a.checkLibraryPath(req.Path)
