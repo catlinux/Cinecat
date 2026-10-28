@@ -1,0 +1,7 @@
+[Unit]
+Description=Actualiza el registro DynHost de OVH con la IP pública
+
+[Service]
+Type=oneshot
+ExecStart=@REPO@/deploy/dynhost/ovh-dynhost.sh
+TimeoutStartSec=120

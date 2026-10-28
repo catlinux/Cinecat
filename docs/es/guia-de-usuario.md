@@ -6,7 +6,7 @@ Esta guía explica cómo usar la web de Cinecat. Está pensada para una persona 
 
 ## Entrar y salir
 
-1. Abre la dirección de tu Cinecat (por ejemplo, `https://video.warcrafted.com`).
+1. Abre la dirección de tu Cinecat (por ejemplo, `https://media.techmarc.es`).
 2. En la pantalla «Entrar», escribe tu **Usuario** y **Contraseña** y pulsa «Entrar en la sala».
 3. Si los datos son correctos, llegarás al portal. Si fallas varias veces, el servidor puede bloquear temporalmente el intento: espera unos minutos y vuelve a probar.
 

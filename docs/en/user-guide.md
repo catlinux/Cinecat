@@ -6,7 +6,7 @@ This guide explains how to use the Cinecat web app. It is meant for someone who 
 
 ## Signing in and out
 
-1. Open your Cinecat address (for example, `https://video.warcrafted.com`).
+1. Open your Cinecat address (for example, `https://media.techmarc.es`).
 2. On the "Entrar" screen, enter your **Usuario** and **Contraseña** and press "Entrar en la sala".
 3. If the details are correct, you reach the portal. After several failures the server may temporarily block the attempt: wait a few minutes and try again.
 

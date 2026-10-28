@@ -19,6 +19,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ### Añadido
 
+- Cliente de OVH DynHost para quien tiene IP dinámica (`deploy/dynhost/`): un script y un temporizador de usuario comprueban la IP pública cada 5 minutos y avisan a OVH solo si ha cambiado. Opcional y ajeno a la aplicación; la contraseña vive en un archivo 0600 y no aparece en los procesos. Documentado en Despliegue → «IP dinámica con OVH DynHost».
 - Administración → Usuarios: el administrador crea cuentas (rol «Usuario» por defecto), elige las bibliotecas que cada una ve (o «todas, también las futuras»), restablece contraseñas, desactiva o activa cuentas, cambia el rol y borra con confirmación. Tu propia fila no permite desactivarte ni borrarte. Un usuario que no es administrador solo ve en el menú las secciones para las que tiene biblioteca, y si no tiene ninguna, el portal se lo explica.
 - Aceleración por hardware (Intel VA-API) en la recodificación: cuando se activa `docker-compose.gpu.yml`, la gráfica integrada codifica el vídeo a H.264 y, si no hay que escalar, también lo decodifica (H.264 y H.265 de 8 bits), con un uso de CPU mucho menor. Si no hay gráfica, el ajuste «Aceleración por hardware» está en «Desactivada» o algo falla, se recodifica con `libx264` como antes. La ficha del archivo indica «Recodificación (gráfica)». La imagen incluye el controlador `intel-media-va-driver`. Es opcional: sin `COMPOSE_FILE=docker-compose.yml:docker-compose.gpu.yml` en el `.env` no cambia nada.
 - Modo copia en la reproducción: si el navegador admite el códec (H.264 de 8 bits, o H.265 cuando el navegador lo reproduce por MSE), los MKV y MP4 se reempaquetan a HLS copiando el vídeo sin recodificarlo; solo se convierte el audio a AAC. Casi no consume CPU y no pierde calidad. Los segmentos se cortan en los fotogramas clave reales, que se leen del índice interno de los MKV en milisegundos o, en el resto, con ffprobe en segundo plano la primera vez (se guardan en `cache/keyframes`); mientras tanto, y ante cualquier fallo, se recodifica como antes. Los AVI y TS siempre se recodifican. Las copias no cuentan para «Transcodificaciones simultáneas». La ficha del archivo indica el método: directo, copia o recodificación.
@@ -26,6 +27,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ### Cambiado
 
+- El vhost de Apache de ejemplo pasa a llamarse `deploy/media.techmarc.es.conf` y la documentación usa `media.techmarc.es` como dominio. Al cambiar de dominio hay que volver a iniciar sesión (la cookie es del dominio); la documentación lo explica.
 - Los listados (películas, series, portal, listas, similares) ya no incluyen el reparto completo de cada título, que las tarjetas no usan: una página de 48 películas pasa de unos 320 KB a una fracción, y carga más rápido en móvil y en conexiones lentas. La ficha sigue mostrando el reparto completo.
 - «Subir película»: «Crear una carpeta para cada película» viene desmarcado por defecto.
 

@@ -1,0 +1,10 @@
+[Unit]
+Description=Comprueba cada 5 minutos si ha cambiado la IP pública
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=5min
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target
