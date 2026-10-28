@@ -110,6 +110,9 @@
 				{/if}
 				{#if hasSession}
 					<a href="/account">Mi cuenta</a>
+					<form method="POST" action="/login?/logout" class="side-logout-form">
+						<button class="side-link-button" type="submit">Cerrar sesión</button>
+					</form>
 				{/if}
 			</div>
 		{/if}
@@ -169,7 +172,8 @@
 		list-style: none;
 	}
 	.side-links a,
-	.side-account a {
+	.side-account a,
+	.side-account button {
 		display: flex;
 		align-items: center;
 		min-height: 40px;
@@ -183,7 +187,8 @@
 		text-transform: uppercase;
 	}
 	.side-links a:hover,
-	.side-account a:hover {
+	.side-account a:hover,
+	.side-account button:hover {
 		color: var(--granate);
 	}
 	.side-links a[aria-current='page'] {
@@ -227,6 +232,18 @@
 		margin-top: 0.75rem;
 		padding-top: 0.75rem;
 		border-top: 1px solid var(--borde-suave);
+	}
+	.side-logout-form {
+		display: flex;
+		margin: 0;
+	}
+	.side-account .side-link-button {
+		width: 100%;
+		border: 0;
+		border-left: 3px solid transparent;
+		background: transparent;
+		text-align: left;
+		cursor: pointer;
 	}
 	.side-foot {
 		display: flex;
@@ -282,7 +299,8 @@
 			gap: 0.15rem 0.55rem;
 		}
 		.side-links a,
-		.side-account a {
+		.side-account a,
+		.side-account button {
 			padding: 0.45rem 0.1rem;
 			border-left: 0;
 			border-bottom: 2px solid transparent;
@@ -325,8 +343,17 @@
 			margin-top: 0.5rem;
 			padding-top: 0.4rem;
 		}
-		.side-account a {
+		.side-account a,
+		.side-account button {
 			border-bottom: 0;
+		}
+		.side-account .side-logout-form {
+			width: auto;
+		}
+		.side-account .side-link-button {
+			width: auto;
+			border-left: 0;
+			border-bottom: 2px solid transparent;
 		}
 		.side-foot {
 			flex-direction: row;

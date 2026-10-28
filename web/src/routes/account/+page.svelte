@@ -21,8 +21,8 @@
 		<p class="kicker">Taquilla</p>
 		<h1>Tu cuenta</h1>
 		<p class="login-lede">
-			Cambia la contraseña de tu biblioteca. La sesión abierta en este dispositivo seguirá
-			funcionando.
+			Cambia tu contraseña. Se cerrarán tus sesiones abiertas en otros dispositivos; la de este
+			dispositivo seguirá abierta.
 		</p>
 
 		{#if form?.message}
@@ -68,5 +68,9 @@
 		</form>
 
 		<p class="login-note">Mínimo 8 caracteres · Cookie httpOnly</p>
+
+		<form method="POST" action="/login?/logout" class="logout-form">
+			<button type="submit" class="secondary">Cerrar sesión</button>
+		</form>
 	</div>
 </section>

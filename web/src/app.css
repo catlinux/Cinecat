@@ -232,6 +232,21 @@ video:focus-visible,
 	border-color: var(--granate);
 }
 
+.account-logout-form {
+	display: inline-flex;
+	margin: 0;
+}
+
+.account-logout {
+	border-top: 0;
+	border-right: 0;
+	border-left: 0;
+	background: transparent;
+	font-family: 'Inter', system-ui, sans-serif;
+	line-height: inherit;
+	cursor: pointer;
+}
+
 .eyebrow {
 	margin: 0;
 	overflow-wrap: anywhere;

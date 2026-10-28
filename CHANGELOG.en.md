@@ -32,6 +32,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ### Fixed
 
+- "Sign out" is now in the menu (and in My account); before it only existed inside the sign-in page and was hard to find. My account now explains what happens to sessions when you change the password: those on other devices are closed and the current one is kept.
 - Playback in progress is no longer cut when the server is updated or restarted: the key used to sign playback URLs is stored next to the database (`signing.key`, permissions 0600) instead of being generated anew on every start.
 - An H.265 MP4 tagged `hev1` (most downloaded ones) is no longer sent directly to a browser that does not accept it (Safari and iOS only accept `hvc1`): the web app also checks that tag and, if not, plays it by copy or re-encode.
 - The collections list is much faster (the count uses `JOIN`).

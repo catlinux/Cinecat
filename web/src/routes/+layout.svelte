@@ -153,6 +153,9 @@
 					{/if}
 					{#if data.hasSession}
 						<a class="account-link" href="/account">Mi cuenta</a>
+						<form method="POST" action="/login?/logout" class="account-logout-form">
+							<button class="account-link account-logout" type="submit">Cerrar sesión</button>
+						</form>
 					{/if}
 					<ThemeToggle defaultPreference={ui.theme_default} />
 				</div>

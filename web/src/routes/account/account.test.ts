@@ -51,7 +51,9 @@ describe('acción de cambio de contraseña', () => {
 		};
 
 		expect(result.success).toBe(true);
-		expect(result.message).toContain('Contraseña actualizada');
+		expect(result.message).toBe(
+			'Contraseña actualizada. Se han cerrado tus sesiones en otros dispositivos; la de este sigue abierta.'
+		);
 
 		expect(fetchMock).toHaveBeenCalledTimes(1);
 		const [url, init] = fetchMock.mock.calls[0];
@@ -122,11 +124,19 @@ describe('página de cuenta', () => {
 	it('muestra el mensaje de éxito', () => {
 		const { body } = render(AccountPage, {
 			props: {
-				form: { success: true, message: 'Contraseña actualizada. Tu sesión actual sigue abierta.' }
+				form: {
+					success: true,
+					message:
+						'Contraseña actualizada. Se han cerrado tus sesiones en otros dispositivos; la de este sigue abierta.'
+				}
 			}
 		});
 
-		expect(body).toContain('Contraseña actualizada');
+		expect(body).toContain('Se han cerrado tus sesiones en otros dispositivos');
+		expect(body).toContain('action="/login?/logout"');
+		expect(body).toContain('method="POST"');
 		expect(body).toContain('Guardar contraseña');
+		expect(body).toContain('Se cerrarán tus sesiones abiertas en otros dispositivos');
+		expect(body).toContain('Cerrar sesión');
 	});
 });

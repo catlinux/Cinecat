@@ -238,3 +238,27 @@ describe('menú filtrado por bibliotecas visibles', () => {
 		}
 	});
 });
+
+describe('cerrar sesión desde el menú', () => {
+	it('muestra el formulario de cierre en los menús superior y lateral con sesión', () => {
+		for (const nav_layout of ['side', 'top'] as const) {
+			const body = render(Layout, {
+				props: {
+					data: layoutData({ ui: { ...DEFAULT_PUBLIC_UI, nav_layout } }),
+					children
+				}
+			}).body;
+			expect(body).toContain('Cerrar sesión');
+			expect(body).toContain('action="/login?/logout"');
+			expect(body).toContain('method="POST"');
+		}
+	});
+
+	it('no lo muestra sin sesión', () => {
+		const body = render(Layout, {
+			props: { data: layoutData({ hasSession: false }), children }
+		}).body;
+		expect(body).not.toContain('Cerrar sesión');
+		expect(body).not.toContain('/login?/logout');
+	});
+});

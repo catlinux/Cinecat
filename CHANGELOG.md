@@ -32,6 +32,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ### Corregido
 
+- «Cerrar sesión» está ahora en el menú (y en Mi cuenta); antes solo existía dentro de la página de inicio de sesión y no se encontraba. Mi cuenta explica ya qué pasa con las sesiones al cambiar la contraseña: se cierran las de otros dispositivos y se mantiene la actual.
 - Las reproducciones en curso ya no se cortan al actualizar o reiniciar el servidor: la clave con la que se firman las URLs de reproducción se guarda junto a la base de datos (`signing.key`, permisos 0600) en lugar de generarse nueva en cada arranque.
 - Un MP4 con H.265 etiquetado `hev1` (la mayoría de los descargados) ya no se envía en directo a un navegador que no lo acepta (Safari y iOS solo aceptan `hvc1`): la web comprueba también esa etiqueta y, si no, se reproduce por copia o recodificación.
 - El listado de colecciones es mucho más rápido (el recuento usa `JOIN`).

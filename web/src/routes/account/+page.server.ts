@@ -51,7 +51,7 @@ export const actions: Actions = {
 
 		return {
 			success: true,
-			message: 'Contraseña actualizada. Tu sesión actual sigue abierta.'
+			message: 'Contraseña actualizada. Se han cerrado tus sesiones en otros dispositivos; la de este sigue abierta.'
 		};
 	}
 };
