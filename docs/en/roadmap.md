@@ -30,7 +30,7 @@ The agreed order is: favorites and watchlist; collections from the movie page an
 
 ## Phase 4: Android and Android TV — not started
 
-Kotlin + Jetpack Compose + Media3/ExoPlayer, with optional libmpv. There is no code or detailed plan. The web app is the only finished client.
+Kotlin + Jetpack Compose + Media3/ExoPlayer, with optional libmpv. No code yet. The plan is written: first the server (device sessions, TV pairing by code, native capabilities in playback and a stable API contract), then a single APK for phone and TV.
 
 ## Phase 5: first stable release (`1.0.0`) — future
 

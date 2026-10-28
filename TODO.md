@@ -31,7 +31,7 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 - **Complementos**, todavía en diseño.
 - **DLNA/UPnP**, todavía en diseño.
 - **Tipos de biblioteca** distintos de vídeo (música, fotos u otros) cuando se aborde el modelo.
-- **Clientes Android y Android TV.** No hay código ni plan detallado; el cliente web es el único terminado.
+- **Clientes Android y Android TV.** Sin código; plan en `.agents/plans/apps-android/apps-android.PLAN.md` (primero sesiones de dispositivo, vinculación por código, capacidades nativas y contrato estable de la API en el servidor).
 - Fotos y presentaciones, televisión en directo y contenido de internet, segmentos de intro/créditos, descargas sin conexión y sincronización entre dispositivos.
 - Otras plataformas (Apple, televisores Samsung/LG).
 

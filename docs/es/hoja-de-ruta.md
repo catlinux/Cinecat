@@ -30,7 +30,7 @@ El orden acordado es: favoritos y próximas a ver; colecciones desde la ficha e 
 
 ## Fase 4: Android y Android TV — sin empezar
 
-Kotlin + Jetpack Compose + Media3/ExoPlayer, con libmpv opcional. No hay código ni plan detallado. La web es el único cliente terminado.
+Kotlin + Jetpack Compose + Media3/ExoPlayer, con libmpv opcional. Sin código. El plan está escrito: primero el servidor (sesiones de dispositivo, vinculación de la TV por código, capacidades nativas en la reproducción y contrato estable de la API) y después un solo APK para móvil y TV.
 
 ## Fase 5: primera versión estable (`1.0.0`) — futura
 

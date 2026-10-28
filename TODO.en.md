@@ -31,7 +31,7 @@ This file contains only work that is still open. Published work is in the [CHANG
 - **Plugins**, still at the design stage.
 - **DLNA/UPnP**, still at the design stage.
 - **Library types** other than video (music, photos or others) when the model is addressed.
-- **Android and Android TV clients.** No code or detailed plan yet; the web client is the only finished one.
+- **Android and Android TV clients.** No code yet; plan in `.agents/plans/apps-android/apps-android.PLAN.md` (first device sessions, pairing by code, native capabilities and a stable API contract on the server).
 - Photos and slideshows, live TV and internet content, intro/credits segments, offline downloads and cross-device sync.
 - Other platforms (Apple, Samsung/LG TVs).
 
