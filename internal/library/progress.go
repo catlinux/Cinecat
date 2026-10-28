@@ -2,8 +2,6 @@ package library
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"log"
 	"math"
 	"net/http"
@@ -32,6 +30,10 @@ func (a *API) handleItemProgressPut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if _, ok := a.requireVisibleItem(w, r, id); !ok {
+		return
+	}
+
 	var req progressRequest
 	if err := decodeJSONBody(w, r, &req); err != nil {
 		writeJSONBodyError(w, err)
@@ -40,19 +42,6 @@ func (a *API) handleItemProgressPut(w http.ResponseWriter, r *http.Request) {
 	if req.PositionSeconds == nil || req.DurationSeconds == nil ||
 		!validSeconds(*req.PositionSeconds) || !validSeconds(*req.DurationSeconds) {
 		writeJSONError(w, http.StatusBadRequest, "position_seconds y duration_seconds deben ser números finitos mayores o iguales que 0")
-		return
-	}
-
-	var exists int
-	err := a.db.QueryRowContext(r.Context(),
-		`SELECT 1 FROM media_items WHERE id = ?`, id).Scan(&exists)
-	switch {
-	case errors.Is(err, sql.ErrNoRows):
-		writeJSONError(w, http.StatusNotFound, "ítem no encontrado")
-		return
-	case err != nil:
-		log.Printf("library: comprobar ítem %d para el progreso: %v", id, err)
-		writeJSONError(w, http.StatusInternalServerError, "error interno")
 		return
 	}
 
@@ -105,6 +94,9 @@ func (a *API) handleItemProgressDelete(w http.ResponseWriter, r *http.Request) {
 	id, ok := idFromPath(r)
 	if !ok {
 		writeJSONError(w, http.StatusNotFound, "ítem no encontrado")
+		return
+	}
+	if _, ok := a.requireVisibleItem(w, r, id); !ok {
 		return
 	}
 

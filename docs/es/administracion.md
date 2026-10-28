@@ -136,6 +136,12 @@ En Docker, además: `CINECAT_MEDIA_PATH` (ruta del host montada en `/media`), `C
 
 Cada usuario tiene sus propias listas de **Favoritos** y **Próximas a ver**; no se comparten entre cuentas.
 
+## Usuarios y acceso por biblioteca
+
+Cada cuenta de usuario solo ve las bibliotecas que el administrador le haya asignado. El administrador ve siempre todas; una cuenta con la opción «todas las bibliotecas» ve también las que se creen en el futuro. El filtrado se aplica en el servidor a listados, fichas, series, colecciones, personas, música y elementos individuales.
+
+Lo que queda fuera de las bibliotecas visibles responde igual que si no existiera: los listados no lo muestran y las rutas directas devuelven 404. Las colecciones y las fichas de personas solo cuentan el contenido visible. Las URLs de reproducción ya emitidas siguen funcionando hasta que caducan, 8 horas después, aunque se retire el acceso o se cierren las sesiones. La pantalla de administración de usuarios llegará en la siguiente versión.
+
 ## Subir archivos y papelera
 
 Desactivado por defecto. Para usarlo hacen falta dos cosas: montar la biblioteca en lectura y escritura (`CINECAT_MEDIA_MODE=rw` en el `.env` del Debian y volver a levantar los contenedores) y activar **Permitir cambiar archivos** en Administración → Biblioteca. Con cualquiera de las dos apagada, la web muestra el motivo y no toca el disco. Con `rw`, cualquier administrador de Cinecat puede escribir en tus discos: protege bien esa cuenta.
@@ -156,7 +162,7 @@ Desactivado por defecto. Para usarlo hacen falta dos cosas: montar la biblioteca
 ## Limitaciones de seguridad
 
 - El bloqueo de login cuenta por pareja usuario+IP y añade un límite por IP, pero sigue en memoria del proceso y depende de que Apache y la web reenvíen bien la IP real.
-- No hay permisos por biblioteca: cualquier usuario autenticado ve todo el catálogo.
-- No hay pantalla para crear usuarios ni para revocar sesiones.
+- Los permisos por biblioteca se aplican en el servidor; la pantalla para gestionar usuarios llegará en la siguiente versión.
+- Las URLs de reproducción firmadas ya emitidas siguen siendo válidas hasta su caducidad aunque se retire el acceso o se cierren las sesiones.
 - El servidor no envía CORS; el despliegue con Apache funciona por compartir origen.
 - Con `CINECAT_MEDIA_MODE=rw`, un administrador puede subir y mover a la papelera; la eliminación definitiva solo afecta a `.cinecat-papelera`.

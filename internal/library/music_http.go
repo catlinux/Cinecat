@@ -90,13 +90,49 @@ type musicPlayResponse struct {
 	Playable  bool      `json:"playable"`
 }
 
+func musicArtistVisibleSQL(access libraryAccess) string {
+	if access.Unrestricted() {
+		return "1 = 1"
+	}
+	return `(EXISTS (
+		SELECT 1 FROM music_albums ma_visible
+		 WHERE ma_visible.artist_id = ar.id AND ` + access.MusicClause("ma_visible") + `)
+		OR EXISTS (
+		SELECT 1 FROM music_tracks mt_visible
+		 WHERE mt_visible.artist_id = ar.id AND ` + access.MusicClause("mt_visible") + `))`
+}
+
+func musicArtistAlbumCountSQL(access libraryAccess) string {
+	return `(SELECT count(*) FROM music_albums ma
+		WHERE ma.artist_id = ar.id AND ` + access.MusicClause("ma") + `)`
+}
+
+func musicArtistTrackCountSQL(access libraryAccess) string {
+	return `(SELECT count(*) FROM music_tracks mt
+		WHERE mt.artist_id = ar.id AND ` + access.MusicClause("mt") + `)`
+}
+
+func musicAlbumColumnsSQL(access libraryAccess) string {
+	return `a.id, a.title, ar.name, a.artist_id, a.year,
+	(SELECT count(*) FROM music_tracks mt
+	  WHERE mt.album_id = a.id AND ` + access.MusicClause("mt") + `),
+	COALESCE((SELECT SUM(mt.duration_seconds) FROM music_tracks mt
+	  WHERE mt.album_id = a.id AND ` + access.MusicClause("mt") + `), 0),
+	CASE WHEN (a.cover_path IS NOT NULL AND TRIM(a.cover_path) <> '') THEN 1
+	     WHEN EXISTS (SELECT 1 FROM music_tracks mt
+	                   WHERE mt.album_id = a.id AND mt.has_embedded_cover = 1
+	                     AND ` + access.MusicClause("mt") + `) THEN 1
+	     ELSE 0 END`
+}
+
 func (a *API) handleMusicArtists(w http.ResponseWriter, r *http.Request) {
 	limit, offset, err := pagination(r)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	where, args, err := musicArtistWhere(r)
+	access := accessFromRequest(r)
+	where, args, err := musicArtistWhere(r, access)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -111,8 +147,8 @@ func (a *API) handleMusicArtists(w http.ResponseWriter, r *http.Request) {
 	queryArgs := append(append([]any{}, args...), limit, offset)
 	rows, err := a.db.QueryContext(r.Context(), `
 		SELECT ar.id, ar.name,
-		       (SELECT count(*) FROM music_albums ma WHERE ma.artist_id = ar.id),
-		       (SELECT count(*) FROM music_tracks mt WHERE mt.artist_id = ar.id)
+		       `+musicArtistAlbumCountSQL(access)+`,
+		       `+musicArtistTrackCountSQL(access)+`
 		  FROM music_artists ar
 		 WHERE `+where+`
 		 ORDER BY ar.sort_name COLLATE NOCASE, ar.id
@@ -143,8 +179,8 @@ func (a *API) handleMusicArtists(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func musicArtistWhere(r *http.Request) (string, []any, error) {
-	where := "1 = 1"
+func musicArtistWhere(r *http.Request, access libraryAccess) (string, []any, error) {
+	where := musicArtistVisibleSQL(access)
 	args := make([]any, 0)
 	if q := strings.TrimSpace(r.URL.Query().Get("q")); q != "" {
 		where += ` AND LOWER(ar.name) LIKE LOWER(?) ESCAPE '\'`
@@ -203,7 +239,8 @@ func (a *API) handleMusicArtist(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	artist, err := loadMusicArtist(r.Context(), a.db, id)
+	access := accessFromRequest(r)
+	artist, err := loadMusicArtist(r.Context(), a.db, id, access)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		writeJSONError(w, http.StatusNotFound, "artista no encontrado")
@@ -213,8 +250,9 @@ func (a *API) handleMusicArtist(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
 		return
 	}
-	albums, total, err := queryMusicAlbums(r.Context(), a.db, "a.artist_id = ?", []any{id},
-		" ORDER BY a.year IS NULL, a.year, a.title COLLATE NOCASE", limit, offset)
+	albums, total, err := queryMusicAlbums(r.Context(), a.db,
+		"a.artist_id = ? AND "+access.MusicClause("a"), []any{id},
+		" ORDER BY a.year IS NULL, a.year, a.title COLLATE NOCASE", limit, offset, access)
 	if err != nil {
 		log.Printf("library: listar álbumes del artista %d: %v", id, err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
@@ -225,13 +263,14 @@ func (a *API) handleMusicArtist(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func loadMusicArtist(ctx context.Context, db *sql.DB, id int64) (musicArtistDTO, error) {
+func loadMusicArtist(ctx context.Context, db *sql.DB, id int64, access libraryAccess) (musicArtistDTO, error) {
 	var artist musicArtistDTO
 	err := db.QueryRowContext(ctx, `
 		SELECT ar.id, ar.name,
-		       (SELECT count(*) FROM music_albums ma WHERE ma.artist_id = ar.id),
-		       (SELECT count(*) FROM music_tracks mt WHERE mt.artist_id = ar.id)
-		  FROM music_artists ar WHERE ar.id = ?`, id).
+		       `+musicArtistAlbumCountSQL(access)+`,
+		       `+musicArtistTrackCountSQL(access)+`
+		  FROM music_artists ar
+		 WHERE ar.id = ? AND `+musicArtistVisibleSQL(access), id).
 		Scan(&artist.ID, &artist.Name, &artist.AlbumCount, &artist.TrackCount)
 	return artist, err
 }
@@ -242,7 +281,8 @@ func (a *API) handleMusicAlbums(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	where := "1 = 1"
+	access := accessFromRequest(r)
+	where := access.MusicClause("a")
 	args := make([]any, 0)
 	query := r.URL.Query()
 	if q := strings.TrimSpace(query.Get("q")); q != "" {
@@ -293,7 +333,7 @@ func (a *API) handleMusicAlbums(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
 		return
 	}
-	albums, _, err := queryMusicAlbums(r.Context(), a.db, where, args, order, limit, offset)
+	albums, _, err := queryMusicAlbums(r.Context(), a.db, where, args, order, limit, offset, access)
 	if err != nil {
 		log.Printf("library: listar álbumes: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
@@ -304,14 +344,6 @@ func (a *API) handleMusicAlbums(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-const musicAlbumColumns = `
-	a.id, a.title, ar.name, a.artist_id, a.year,
-	(SELECT count(*) FROM music_tracks mt WHERE mt.album_id = a.id),
-	COALESCE((SELECT SUM(mt.duration_seconds) FROM music_tracks mt WHERE mt.album_id = a.id), 0),
-	CASE WHEN (a.cover_path IS NOT NULL AND TRIM(a.cover_path) <> '') THEN 1
-	     WHEN EXISTS (SELECT 1 FROM music_tracks mt WHERE mt.album_id = a.id AND mt.has_embedded_cover = 1) THEN 1
-	     ELSE 0 END`
-
 func queryMusicAlbums(
 	ctx context.Context,
 	db *sql.DB,
@@ -319,10 +351,11 @@ func queryMusicAlbums(
 	args []any,
 	order string,
 	limit, offset int,
+	access libraryAccess,
 ) ([]musicAlbumDTO, int64, error) {
 	queryArgs := append(append([]any{}, args...), limit, offset)
 	rows, err := db.QueryContext(ctx, `
-		SELECT `+musicAlbumColumns+`
+		SELECT `+musicAlbumColumnsSQL(access)+`
 		  FROM music_albums a
 		  JOIN music_artists ar ON ar.id = a.artist_id
 		 WHERE `+where+order+` LIMIT ? OFFSET ?`, queryArgs...)
@@ -374,7 +407,8 @@ func (a *API) handleMusicAlbum(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	album, err := loadMusicAlbum(r.Context(), a.db, id)
+	access := accessFromRequest(r)
+	album, err := loadMusicAlbum(r.Context(), a.db, id, access)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		writeJSONError(w, http.StatusNotFound, "álbum no encontrado")
@@ -386,12 +420,14 @@ func (a *API) handleMusicAlbum(w http.ResponseWriter, r *http.Request) {
 	}
 	var total int64
 	if err := a.db.QueryRowContext(r.Context(),
-		`SELECT count(*) FROM music_tracks mt WHERE mt.album_id = ?`, id).Scan(&total); err != nil {
+		`SELECT count(*) FROM music_tracks mt
+		  WHERE mt.album_id = ? AND `+access.MusicClause("mt"), id).Scan(&total); err != nil {
 		log.Printf("library: contar pistas del álbum %d: %v", id, err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
 		return
 	}
-	tracks, err := queryMusicTracks(r.Context(), a.db, "mt.album_id = ?", []any{id},
+	tracks, err := queryMusicTracks(r.Context(), a.db,
+		"mt.album_id = ? AND "+access.MusicClause("mt"), []any{id},
 		" ORDER BY mt.disc_no, mt.track_no IS NULL, mt.track_no, mt.title COLLATE NOCASE, mt.id", limit, offset)
 	if err != nil {
 		log.Printf("library: listar pistas del álbum %d: %v", id, err)
@@ -403,12 +439,12 @@ func (a *API) handleMusicAlbum(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func loadMusicAlbum(ctx context.Context, db *sql.DB, id int64) (musicAlbumDTO, error) {
+func loadMusicAlbum(ctx context.Context, db *sql.DB, id int64, access libraryAccess) (musicAlbumDTO, error) {
 	row := db.QueryRowContext(ctx, `
-		SELECT `+musicAlbumColumns+`
+		SELECT `+musicAlbumColumnsSQL(access)+`
 		  FROM music_albums a
 		  JOIN music_artists ar ON ar.id = a.artist_id
-		 WHERE a.id = ?`, id)
+		 WHERE a.id = ? AND `+access.MusicClause("a"), id)
 	return scanMusicAlbum(row.Scan)
 }
 
@@ -418,7 +454,8 @@ func (a *API) handleMusicTracks(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	where := "1 = 1"
+	access := accessFromRequest(r)
+	where := access.MusicClause("mt")
 	args := make([]any, 0)
 	if q := strings.TrimSpace(r.URL.Query().Get("q")); q != "" {
 		pattern := likePattern(q)
@@ -518,6 +555,7 @@ func (a *API) handleMusicTrackPlay(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusNotFound, "pista no encontrada")
 		return
 	}
+	access := accessFromRequest(r)
 	var path, libraryRoot string
 	var libraryID int64
 	var channels sql.NullInt64
@@ -525,7 +563,8 @@ func (a *API) handleMusicTrackPlay(w http.ResponseWriter, r *http.Request) {
 		SELECT mt.path, mt.channels, l.id, l.path
 		  FROM music_tracks mt
 		  JOIN libraries l ON l.id = mt.library_id
-		 WHERE mt.id = ? AND l.kind = 'music'`, id).
+		 WHERE mt.id = ? AND l.kind = 'music'
+		   AND `+access.MusicClause("mt"), id).
 		Scan(&path, &channels, &libraryID, &libraryRoot)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
@@ -629,13 +668,14 @@ func (a *API) handleMusicAlbumCover(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusNotFound, "álbum no encontrado")
 		return
 	}
+	access := accessFromRequest(r)
 	var coverPath, libraryRoot string
 	var libraryID int64
 	err := a.db.QueryRowContext(r.Context(), `
 		SELECT COALESCE(a.cover_path, ''), a.library_id, l.path
 		  FROM music_albums a
 		  JOIN libraries l ON l.id = a.library_id
-		 WHERE a.id = ?`, id).
+		 WHERE a.id = ? AND `+access.MusicClause("a"), id).
 		Scan(&coverPath, &libraryID, &libraryRoot)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
@@ -658,9 +698,10 @@ func (a *API) handleMusicAlbumCover(w http.ResponseWriter, r *http.Request) {
 
 	var trackPath string
 	err = a.db.QueryRowContext(r.Context(), `
-		SELECT path FROM music_tracks
-		 WHERE album_id = ? AND has_embedded_cover = 1
-		 ORDER BY disc_no, track_no IS NULL, track_no, id LIMIT 1`, id).
+		SELECT mt.path FROM music_tracks mt
+		 WHERE mt.album_id = ? AND mt.has_embedded_cover = 1
+		   AND `+access.MusicClause("mt")+`
+		 ORDER BY mt.disc_no, mt.track_no IS NULL, mt.track_no, mt.id LIMIT 1`, id).
 		Scan(&trackPath)
 	if errors.Is(err, sql.ErrNoRows) || trackPath == "" {
 		writeJSONError(w, http.StatusNotFound, "carátula no encontrada")

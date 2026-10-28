@@ -31,17 +31,10 @@ func (a *API) setItemList(w http.ResponseWriter, r *http.Request, add bool) {
 		writeJSONError(w, http.StatusNotFound, "ítem no encontrado")
 		return
 	}
-	var exists int
-	err := a.db.QueryRowContext(r.Context(), `SELECT 1 FROM media_items WHERE id = ?`, id).Scan(&exists)
-	switch {
-	case errors.Is(err, sql.ErrNoRows):
-		writeJSONError(w, http.StatusNotFound, "ítem no encontrado")
-		return
-	case err != nil:
-		log.Printf("library: comprobar ítem %d para lista: %v", id, err)
-		writeJSONError(w, http.StatusInternalServerError, "error interno")
+	if _, ok := a.requireVisibleItem(w, r, id); !ok {
 		return
 	}
+	var err error
 	if add {
 		_, err = a.db.ExecContext(r.Context(),
 			`INSERT OR IGNORE INTO item_lists (user_id, media_item_id, list) VALUES (?, ?, ?)`,

@@ -58,19 +58,6 @@ func loadItemPreferences(ctx context.Context, db *sql.DB, userID, itemID int64) 
 	return &preferences, nil
 }
 
-func (a *API) itemExists(ctx context.Context, itemID int64) (bool, error) {
-	var exists int
-	err := a.db.QueryRowContext(ctx,
-		`SELECT 1 FROM media_items WHERE id = ?`, itemID).Scan(&exists)
-	if errors.Is(err, sql.ErrNoRows) {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
 func (a *API) handleItemPreferencesGet(w http.ResponseWriter, r *http.Request) {
 	user, ok := sessionUserFromRequest(r)
 	if !ok {
@@ -82,14 +69,7 @@ func (a *API) handleItemPreferencesGet(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusNotFound, "ítem no encontrado")
 		return
 	}
-	exists, err := a.itemExists(r.Context(), id)
-	if err != nil {
-		log.Printf("library: comprobar el ítem %d: %v", id, err)
-		writeJSONError(w, http.StatusInternalServerError, "error interno")
-		return
-	}
-	if !exists {
-		writeJSONError(w, http.StatusNotFound, "ítem no encontrado")
+	if _, ok := a.requireVisibleItem(w, r, id); !ok {
 		return
 	}
 	preferences, err := loadItemPreferences(r.Context(), a.db, user.ID, id)
@@ -115,14 +95,7 @@ func (a *API) handleItemPreferencesPut(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusNotFound, "ítem no encontrado")
 		return
 	}
-	exists, err := a.itemExists(r.Context(), id)
-	if err != nil {
-		log.Printf("library: comprobar el ítem %d: %v", id, err)
-		writeJSONError(w, http.StatusInternalServerError, "error interno")
-		return
-	}
-	if !exists {
-		writeJSONError(w, http.StatusNotFound, "ítem no encontrado")
+	if _, ok := a.requireVisibleItem(w, r, id); !ok {
 		return
 	}
 
@@ -217,14 +190,7 @@ func (a *API) handleItemPreferencesDelete(w http.ResponseWriter, r *http.Request
 		writeJSONError(w, http.StatusNotFound, "ítem no encontrado")
 		return
 	}
-	exists, err := a.itemExists(r.Context(), id)
-	if err != nil {
-		log.Printf("library: comprobar el ítem %d: %v", id, err)
-		writeJSONError(w, http.StatusInternalServerError, "error interno")
-		return
-	}
-	if !exists {
-		writeJSONError(w, http.StatusNotFound, "ítem no encontrado")
+	if _, ok := a.requireVisibleItem(w, r, id); !ok {
 		return
 	}
 	if _, err := a.db.ExecContext(r.Context(),

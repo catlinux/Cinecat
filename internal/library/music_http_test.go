@@ -469,3 +469,130 @@ func TestMusicItemCountHomeYBorradoConLimpieza(t *testing.T) {
 		}
 	}
 }
+
+func TestMusicFiltraAccesoParcial(t *testing.T) {
+	ts := newMusicAPITestServer(t)
+	visibleRoot := t.TempDir()
+	hiddenRoot := t.TempDir()
+	visibleLibrary := createDirectMusicLibrary(t, ts.db, visibleRoot)
+	hiddenLibrary := createDirectMusicLibrary(t, ts.db, hiddenRoot)
+	visibleArtist, visibleAlbum, _ := insertSeedMusic(t, ts.db, visibleLibrary, insertSeedMusicRow{
+		Artist: "Artista visible", Album: "Álbum visible", Title: "Pista visible 1",
+		Track: 1, Year: 2020, Path: filepath.Join(visibleRoot, "visible1.mp3"),
+	})
+	insertSeedMusic(t, ts.db, visibleLibrary, insertSeedMusicRow{
+		Artist: "Artista visible", Album: "Álbum visible", Title: "Pista visible 2",
+		Track: 2, Year: 2020, Path: filepath.Join(visibleRoot, "visible2.mp3"),
+	})
+	insertSeedMusic(t, ts.db, hiddenLibrary, insertSeedMusicRow{
+		Artist: "Artista visible", Album: "Álbum oculto", Title: "Pista oculta",
+		Track: 1, Year: 2020, Path: filepath.Join(hiddenRoot, "oculta.mp3"),
+	})
+	hiddenArtist, hiddenAlbum, hiddenTrack := insertSeedMusic(t, ts.db, hiddenLibrary, insertSeedMusicRow{
+		Artist: "Artista solo oculto", Album: "Álbum solo oculto", Title: "Pista solo oculta",
+		Track: 1, Year: 2020, Path: filepath.Join(hiddenRoot, "solo-oculta.mp3"),
+	})
+	if _, err := ts.db.Exec(`
+		INSERT INTO music_tracks (
+			library_id, album_id, artist_id, path, title, track_no, disc_no, year,
+			duration_seconds, codec, bitrate, sample_rate, channels, size_bytes,
+			mtime_unix, has_embedded_cover)
+		VALUES (?, ?, ?, ?, ?, 3, 1, 2020, 180, 'mp3', 320000, 44100, 2, 10, 1, 0)`,
+		hiddenLibrary, visibleAlbum, visibleArtist,
+		filepath.Join(hiddenRoot, "pista-oculta-en-album-visible.mp3"), "Pista oculta en álbum visible"); err != nil {
+		t.Fatalf("crear pista oculta en álbum visible: %v", err)
+	}
+
+	userToken, _ := partialAccessToken(t, ts, visibleLibrary)
+
+	status, body, _ := musicTestGET(t, ts.URL+"/api/v1/music/artists", userToken)
+	if status != http.StatusOK {
+		t.Fatalf("artistas parciales: %d %s", status, body)
+	}
+	var artists musicArtistsResponse
+	if err := json.Unmarshal(body, &artists); err != nil {
+		t.Fatalf("artistas parciales: %v", err)
+	}
+	if artists.Total != 1 || len(artists.Artists) != 1 {
+		t.Fatalf("artistas parciales inesperados: %+v", artists)
+	}
+	if got := artists.Artists[0]; got.ID != visibleArtist || got.AlbumCount != 1 || got.TrackCount != 2 {
+		t.Fatalf("recuentos del artista parcial: %+v", got)
+	}
+
+	status, body, _ = musicTestGET(t, ts.URL+"/api/v1/music/artists/"+strconv.FormatInt(visibleArtist, 10), userToken)
+	if status != http.StatusOK {
+		t.Fatalf("artista visible: %d %s", status, body)
+	}
+	var artist musicArtistDetailDTO
+	if err := json.Unmarshal(body, &artist); err != nil {
+		t.Fatalf("artista visible: %v", err)
+	}
+	if artist.AlbumCount != 1 || artist.TrackCount != 2 || len(artist.Albums) != 1 ||
+		artist.Albums[0].ID != visibleAlbum || artist.Albums[0].TrackCount != 2 {
+		t.Fatalf("detalle del artista parcial: %+v", artist)
+	}
+	if status, body, _ := musicTestGET(t, ts.URL+"/api/v1/music/artists/"+strconv.FormatInt(hiddenArtist, 10), userToken); status != http.StatusNotFound {
+		t.Fatalf("artista oculto: %d %s", status, body)
+	}
+
+	status, body, _ = musicTestGET(t, ts.URL+"/api/v1/music/albums/"+strconv.FormatInt(visibleAlbum, 10), userToken)
+	if status != http.StatusOK {
+		t.Fatalf("álbum visible: %d %s", status, body)
+	}
+	var album musicAlbumDetailDTO
+	if err := json.Unmarshal(body, &album); err != nil {
+		t.Fatalf("álbum visible: %v", err)
+	}
+	if album.TrackCount != 2 || album.DurationSeconds != 360 || len(album.Tracks) != 2 {
+		t.Fatalf("recuentos del álbum parcial: %+v", album)
+	}
+	if status, body, _ := musicTestGET(t, ts.URL+"/api/v1/music/albums/"+strconv.FormatInt(hiddenAlbum, 10), userToken); status != http.StatusNotFound {
+		t.Fatalf("álbum oculto: %d %s", status, body)
+	}
+	if status, body, _ := musicTestGET(t, ts.URL+"/api/v1/music/tracks/"+strconv.FormatInt(hiddenTrack, 10)+"/play", userToken); status != http.StatusNotFound {
+		t.Fatalf("pista oculta: %d %s", status, body)
+	}
+
+	status, body, _ = musicTestGET(t, ts.URL+"/api/v1/music/tracks", userToken)
+	if status != http.StatusOK {
+		t.Fatalf("pistas parciales: %d %s", status, body)
+	}
+	var tracks musicTracksResponse
+	if err := json.Unmarshal(body, &tracks); err != nil {
+		t.Fatalf("pistas parciales: %v", err)
+	}
+	if tracks.Total != 2 || len(tracks.Tracks) != 2 {
+		t.Fatalf("pistas parciales inesperadas: %+v", tracks)
+	}
+
+	status, body, _ = musicTestGET(t, ts.URL+"/api/v1/music/artists", ts.token)
+	if status != http.StatusOK {
+		t.Fatalf("artistas admin: %d %s", status, body)
+	}
+	if err := json.Unmarshal(body, &artists); err != nil {
+		t.Fatalf("artistas admin: %v", err)
+	}
+	found := false
+	for _, item := range artists.Artists {
+		if item.ID == visibleArtist {
+			found = true
+			if item.AlbumCount != 2 || item.TrackCount != 4 {
+				t.Fatalf("recuentos admin del artista: %+v", item)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("el admin debe ver el artista visible")
+	}
+	status, body, _ = musicTestGET(t, ts.URL+"/api/v1/music/albums/"+strconv.FormatInt(visibleAlbum, 10), ts.token)
+	if status != http.StatusOK {
+		t.Fatalf("álbum admin: %d %s", status, body)
+	}
+	if err := json.Unmarshal(body, &album); err != nil {
+		t.Fatalf("álbum admin: %v", err)
+	}
+	if album.TrackCount != 3 || album.DurationSeconds != 540 || len(album.Tracks) != 3 {
+		t.Fatalf("recuentos admin del álbum: %+v", album)
+	}
+}

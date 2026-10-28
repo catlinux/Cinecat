@@ -17,6 +17,7 @@ import (
 
 	"github.com/catlinux/cinecat/internal/auth"
 	"github.com/catlinux/cinecat/internal/metadata"
+	"github.com/catlinux/cinecat/internal/playback"
 )
 
 const (
@@ -26,6 +27,7 @@ const (
 )
 
 type leakFixture struct {
+	userID                              int64
 	visibleVideo, hiddenVideo           int64
 	visibleClips, hiddenClips           int64
 	visibleMusic, hiddenMusic           int64
@@ -45,9 +47,10 @@ type leakCase struct {
 	pattern    string
 	path       string
 	method     string
-	pending    string
-	exempt     string
+	body       any
+	wantStatus int
 	notFound   bool
+	wantURL    bool
 	adminMarca bool
 }
 
@@ -94,22 +97,32 @@ func leakItem(t *testing.T, db *sql.DB, libraryID int64, path, title, kind, genr
 func newLeakFixture(t *testing.T, ts *libraryTestServer) (leakFixture, string) {
 	t.Helper()
 	var f leakFixture
-	f.visibleVideo, _ = leakLibrary(t, ts.db, "/media/visible-video", "Vídeo visible", "video")
-	f.hiddenVideo, _ = leakLibrary(t, ts.db, "/media/OCULTO-7f3a-video", leakMarker+" vídeo", "video")
-	f.visibleClips, _ = leakLibrary(t, ts.db, "/media/visible-clips", "Clips visibles", "clips")
-	f.hiddenClips, _ = leakLibrary(t, ts.db, "/media/OCULTO-7f3a-clips", leakMarker+" clips", "clips")
-	f.visibleMusic, _ = leakLibrary(t, ts.db, "/media/visible-music", "Música visible", "music")
-	f.hiddenMusic, _ = leakLibrary(t, ts.db, "/media/OCULTO-7f3a-music", leakMarker+" música", "music")
+	visibleVideoRoot := t.TempDir()
+	hiddenVideoRoot := filepath.Join(t.TempDir(), leakMarker+"-video")
+	visibleClipsRoot := t.TempDir()
+	hiddenClipsRoot := filepath.Join(t.TempDir(), leakMarker+"-clips")
+	visibleMusicRoot := t.TempDir()
+	hiddenMusicRoot := filepath.Join(t.TempDir(), leakMarker+"-music")
+	f.visibleVideo, _ = leakLibrary(t, ts.db, visibleVideoRoot, "Vídeo visible", "video")
+	f.hiddenVideo, _ = leakLibrary(t, ts.db, hiddenVideoRoot, leakMarker+" vídeo", "video")
+	f.visibleClips, _ = leakLibrary(t, ts.db, visibleClipsRoot, "Clips visibles", "clips")
+	f.hiddenClips, _ = leakLibrary(t, ts.db, hiddenClipsRoot, leakMarker+" clips", "clips")
+	f.visibleMusic, _ = leakLibrary(t, ts.db, visibleMusicRoot, "Música visible", "music")
+	f.hiddenMusic, _ = leakLibrary(t, ts.db, hiddenMusicRoot, leakMarker+" música", "music")
 
+	visibleMoviePath := filepath.Join(visibleVideoRoot, "pelicula-visible.mp4")
+	writeFile(t, visibleMoviePath)
+	visibleClipPath := filepath.Join(visibleClipsRoot, "video-visible.mkv")
+	writeFile(t, visibleClipPath)
 	f.visibleMovie = leakItem(t, ts.db, f.visibleVideo,
-		"/media/visible-video/pelicula-visible.mkv", "Película visible", "movie", `["Drama"]`, nil, nil, nil)
+		visibleMoviePath, "Película visible", "movie", `["Drama"]`, nil, nil, nil)
 	f.hiddenMovie = leakItem(t, ts.db, f.hiddenVideo,
-		"/media/OCULTO-7f3a-video/OCULTO-7f3a-pelicula.mkv", leakMarker+" película", "movie",
+		filepath.Join(hiddenVideoRoot, leakMarker+"-pelicula.mkv"), leakMarker+" película", "movie",
 		`["Drama","OCULTO-7f3a"]`, nil, nil, nil)
 	f.visibleClip = leakItem(t, ts.db, f.visibleClips,
-		"/media/visible-clips/video-visible.mkv", "Vídeo visible", "movie", `[]`, nil, nil, nil)
+		visibleClipPath, "Vídeo visible", "movie", `[]`, nil, nil, nil)
 	f.hiddenClip = leakItem(t, ts.db, f.hiddenClips,
-		"/media/OCULTO-7f3a-clips/OCULTO-7f3a-video.mkv", leakMarker+" vídeo", "movie", `[]`, nil, nil, nil)
+		filepath.Join(hiddenClipsRoot, leakMarker+"-video.mkv"), leakMarker+" vídeo", "movie", `[]`, nil, nil, nil)
 
 	f.visibleSeries = leakExec(t, ts.db, `
 		INSERT INTO series (library_id, folder, title, display_title, genres, poster_url, match_status)
@@ -159,16 +172,26 @@ func newLeakFixture(t *testing.T, ts *libraryTestServer) (leakFixture, string) {
 	f.hiddenAlbum = leakExec(t, ts.db,
 		`INSERT INTO music_albums (library_id, artist_id, title) VALUES (?, ?, ?)`,
 		f.hiddenMusic, f.hiddenArtist, leakMarker+" álbum")
+	visibleTrackPath := filepath.Join(visibleMusicRoot, "pista-visible.flac")
+	writeFile(t, visibleTrackPath)
+	visibleCoverPath := filepath.Join(visibleMusicRoot, "cover.jpg")
+	if err := writeTestJPEG(visibleCoverPath, 220); err != nil {
+		t.Fatalf("crear carátula visible: %v", err)
+	}
+	if _, err := ts.db.Exec(`UPDATE music_albums SET cover_path = ? WHERE id = ?`,
+		visibleCoverPath, f.visibleAlbum); err != nil {
+		t.Fatalf("guardar carátula visible: %v", err)
+	}
 	f.visibleTrack = leakExec(t, ts.db, `
 		INSERT INTO music_tracks (library_id, album_id, artist_id, path, title, size_bytes, mtime_unix)
 		VALUES (?, ?, ?, ?, ?, 100, 1)`,
 		f.visibleMusic, f.visibleAlbum, f.visibleArtist,
-		"/media/visible-music/pista-visible.flac", "Pista visible")
+		visibleTrackPath, "Pista visible")
 	f.hiddenTrack = leakExec(t, ts.db, `
 		INSERT INTO music_tracks (library_id, album_id, artist_id, path, title, size_bytes, mtime_unix)
 		VALUES (?, ?, ?, ?, ?, 100, 1)`,
 		f.hiddenMusic, f.hiddenAlbum, f.hiddenArtist,
-		"/media/OCULTO-7f3a-music/OCULTO-7f3a-pista.flac", leakMarker+" pista")
+		filepath.Join(hiddenMusicRoot, leakMarker+"-pista.flac"), leakMarker+" pista")
 
 	hash, err := auth.HashPassword("Clave-user-1")
 	if err != nil {
@@ -177,6 +200,7 @@ func newLeakFixture(t *testing.T, ts *libraryTestServer) (leakFixture, string) {
 	userID := leakExec(t, ts.db, `
 		INSERT INTO users (username, password_hash, role, all_libraries)
 		VALUES ('user', ?, 'user', 0)`, hash)
+	f.userID = userID
 	for _, libraryID := range []int64{f.visibleVideo, f.visibleClips, f.visibleMusic} {
 		leakExec(t, ts.db, `INSERT INTO user_libraries (user_id, library_id) VALUES (?, ?)`,
 			userID, libraryID)
@@ -192,6 +216,15 @@ func newLeakFixture(t *testing.T, ts *libraryTestServer) (leakFixture, string) {
 		leakExec(t, ts.db, `INSERT INTO watch_state (user_id, media_item_id) VALUES (?, ?)`,
 			userID, itemID)
 	}
+	leakExec(t, ts.db, `INSERT INTO playback_progress
+		(user_id, media_item_id, position_seconds, duration_seconds) VALUES (?, ?, 12, 100)`,
+		userID, f.hiddenEpisode2)
+	leakExec(t, ts.db, `INSERT INTO watch_state (user_id, media_item_id) VALUES (?, ?)`,
+		userID, f.hiddenEpisode2)
+	leakExec(t, ts.db, `INSERT INTO item_lists (user_id, media_item_id, list) VALUES (?, ?, 'favorite')`,
+		userID, f.hiddenEpisode2)
+	leakExec(t, ts.db, `INSERT INTO item_preferences (user_id, media_item_id, quality) VALUES (?, ?, '720')`,
+		userID, f.hiddenEpisode2)
 	for _, seriesID := range []int64{f.visibleSeries, f.hiddenSeries} {
 		leakExec(t, ts.db, `INSERT INTO series_lists (user_id, series_id, list) VALUES (?, ?, 'favorite')`,
 			userID, seriesID)
@@ -223,6 +256,22 @@ func leakAllLibrariesToken(t *testing.T, ts *libraryTestServer) string {
 	return token
 }
 
+func leakNoLibrariesToken(t *testing.T, ts *libraryTestServer) string {
+	t.Helper()
+	hash, err := auth.HashPassword("Clave-nadie-1")
+	if err != nil {
+		t.Fatalf("HashPassword: %v", err)
+	}
+	leakExec(t, ts.db, `
+		INSERT INTO users (username, password_hash, role, all_libraries)
+		VALUES ('nobody', ?, 'user', 0)`, hash)
+	token, _, err := ts.auth.Login(context.Background(), "nobody", "Clave-nadie-1")
+	if err != nil {
+		t.Fatalf("Login nobody: %v", err)
+	}
+	return token
+}
+
 func newLeakHTTPServer(t *testing.T) *libraryTestServer {
 	t.Helper()
 	tmdbServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -235,10 +284,10 @@ func newLeakHTTPServer(t *testing.T) *libraryTestServer {
 			"id": leakPersonID, "name": "Persona",
 			"combined_credits": map[string]any{
 				"cast": []map[string]any{
-					{"id": 1001, "media_type": "movie", "title": "Obra visible externa", "release_date": "2000-01-01", "character": "Rol"},
-					{"id": 1002, "media_type": "movie", "title": "Obra oculta externa", "release_date": "2001-01-01", "character": "Rol"},
-					{"id": 2001, "media_type": "tv", "name": "Serie visible externa", "first_air_date": "2002-01-01", "character": "Rol"},
-					{"id": 2002, "media_type": "tv", "name": "Serie oculta externa", "first_air_date": "2003-01-01", "character": "Rol"},
+					{"id": 1001, "media_type": "movie", "title": "Obra externa 1", "release_date": "2000-01-01", "character": "Rol"},
+					{"id": 1002, "media_type": "movie", "title": "Obra externa 2", "release_date": "2001-01-01", "character": "Rol"},
+					{"id": 2001, "media_type": "tv", "name": "Serie externa 1", "first_air_date": "2002-01-01", "character": "Rol"},
+					{"id": 2002, "media_type": "tv", "name": "Serie externa 2", "first_air_date": "2003-01-01", "character": "Rol"},
 				},
 				"crew": []map[string]any{},
 			},
@@ -255,7 +304,29 @@ func newLeakHTTPServer(t *testing.T) *libraryTestServer {
 	if err != nil {
 		t.Fatalf("metadata.New: %v", err)
 	}
-	return newLibraryHTTPTestServer(t, tmdb)
+	base := newLibraryHTTPTestServer(t, tmdb)
+	playSvc, err := playback.New(playback.Options{WorkDir: t.TempDir()})
+	if err != nil {
+		t.Fatalf("playback.New: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := playSvc.Close(); err != nil {
+			t.Errorf("playback.Close: %v", err)
+		}
+	})
+	api := NewAPI(base.db, base.auth, playSvc, base.job, base.api.tmdb).
+		WithSettings(base.api.settingsStore).
+		WithFileInspector(&fakeFileInspector{info: fileInfoFixture()}).
+		WithThumbnails(filepath.Join(t.TempDir(), "thumbs"))
+	runner := &thumbnailRunnerRecord{}
+	api.WithThumbnailRunner(runner.run)
+	mux := http.NewServeMux()
+	api.Register(mux)
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+	base.Server = server
+	base.api = api
+	return base
 }
 
 func leakRoutes() []leakCase {
@@ -266,16 +337,24 @@ func leakRoutes() []leakCase {
 		{name: "items biblioteca oculta", pattern: "/api/v1/items", path: "/api/v1/items?library_id="},
 		{name: "items similares de oculto", pattern: "/api/v1/items/{id}/similar", notFound: true},
 		{name: "items similares de visible", pattern: "/api/v1/items/{id}/similar"},
-		{name: "items oculto", pattern: "/api/v1/items/{id}", pending: "U2c"},
-		{name: "items visible", pattern: "/api/v1/items/{id}", pending: "U2c"},
-		{name: "items miniatura oculta", pattern: "/api/v1/items/{id}/thumbnail", pending: "U2c"},
-		{name: "items miniatura visible", pattern: "/api/v1/items/{id}/thumbnail", pending: "U2c"},
-		{name: "items file-info oculto", pattern: "/api/v1/items/{id}/file-info", pending: "U2c"},
-		{name: "items file-info visible", pattern: "/api/v1/items/{id}/file-info", pending: "U2c"},
-		{name: "items preferencias ocultas", pattern: "/api/v1/items/{id}/preferences", pending: "U2c"},
-		{name: "items preferencias visibles", pattern: "/api/v1/items/{id}/preferences", pending: "U2c"},
-		{name: "items reproducción oculta", pattern: "/api/v1/items/{id}/play", pending: "U2c"},
-		{name: "items reproducción visible", pattern: "/api/v1/items/{id}/play", pending: "U2c"},
+		{name: "items oculto", pattern: "/api/v1/items/{id}", notFound: true},
+		{name: "items visible", pattern: "/api/v1/items/{id}"},
+		{name: "items miniatura oculta", pattern: "/api/v1/items/{id}/thumbnail", notFound: true},
+		{name: "items miniatura visible", pattern: "/api/v1/items/{id}/thumbnail"},
+		{name: "items file-info oculto", pattern: "/api/v1/items/{id}/file-info", notFound: true},
+		{name: "items file-info visible", pattern: "/api/v1/items/{id}/file-info"},
+		{name: "items preferencias ocultas", pattern: "/api/v1/items/{id}/preferences", notFound: true},
+		{name: "items preferencias visibles", pattern: "/api/v1/items/{id}/preferences"},
+		{name: "items reproducción oculta", pattern: "/api/v1/items/{id}/play", notFound: true},
+		{name: "items reproducción visible", pattern: "/api/v1/items/{id}/play", wantURL: true},
+		{name: "progreso oculto PUT", pattern: "/api/v1/items/{id}/progress", path: "/api/v1/items/", method: http.MethodPut, body: map[string]any{"position_seconds": 20, "duration_seconds": 100}, notFound: true},
+		{name: "progreso oculto DELETE", pattern: "/api/v1/items/{id}/progress", path: "/api/v1/items/", method: http.MethodDelete, notFound: true},
+		{name: "visto oculto PUT", pattern: "/api/v1/items/{id}/watched", path: "/api/v1/items/", method: http.MethodPut, notFound: true},
+		{name: "visto oculto DELETE", pattern: "/api/v1/items/{id}/watched", path: "/api/v1/items/", method: http.MethodDelete, notFound: true},
+		{name: "lista oculta PUT", pattern: "/api/v1/items/{id}/lists/{list}", path: "/api/v1/items/", method: http.MethodPut, notFound: true},
+		{name: "lista oculta DELETE", pattern: "/api/v1/items/{id}/lists/{list}", path: "/api/v1/items/", method: http.MethodDelete, notFound: true},
+		{name: "preferencias ocultas PUT", pattern: "/api/v1/items/{id}/preferences", path: "/api/v1/items/", method: http.MethodPut, body: map[string]any{"quality": "1080"}, notFound: true},
+		{name: "preferencias ocultas DELETE", pattern: "/api/v1/items/{id}/preferences", path: "/api/v1/items/", method: http.MethodDelete, notFound: true},
 		{name: "géneros", pattern: "/api/v1/genres", path: "/api/v1/genres", adminMarca: true},
 		{name: "portal", pattern: "/api/v1/home", path: "/api/v1/home", adminMarca: true},
 		{name: "favoritos", pattern: "/api/v1/lists/{list}", path: "/api/v1/lists/favorite?kind=items"},
@@ -302,25 +381,25 @@ func leakRoutes() []leakCase {
 		{name: "similares de serie visible", pattern: "/api/v1/series/{id}/similar"},
 		{name: "temporada de serie oculta", pattern: "/api/v1/series/{id}/seasons/{n}", notFound: true},
 		{name: "temporada de serie visible", pattern: "/api/v1/series/{id}/seasons/{n}"},
-		{name: "artistas", pattern: "/api/v1/music/artists", pending: "U2c"},
-		{name: "artista oculto", pattern: "/api/v1/music/artists/{id}", pending: "U2c"},
-		{name: "artista visible", pattern: "/api/v1/music/artists/{id}", pending: "U2c"},
-		{name: "álbumes", pattern: "/api/v1/music/albums", pending: "U2c"},
-		{name: "álbum oculto", pattern: "/api/v1/music/albums/{id}", pending: "U2c"},
-		{name: "álbum visible", pattern: "/api/v1/music/albums/{id}", pending: "U2c"},
-		{name: "carátula oculta", pattern: "/api/v1/music/albums/{id}/cover", pending: "U2c"},
-		{name: "carátula visible", pattern: "/api/v1/music/albums/{id}/cover", pending: "U2c"},
-		{name: "pistas", pattern: "/api/v1/music/tracks", pending: "U2c"},
-		{name: "reproducción musical oculta", pattern: "/api/v1/music/tracks/{id}/play", pending: "U2c"},
-		{name: "reproducción musical visible", pattern: "/api/v1/music/tracks/{id}/play", pending: "U2c"},
+		{name: "artistas", pattern: "/api/v1/music/artists", path: "/api/v1/music/artists", adminMarca: true},
+		{name: "artista oculto", pattern: "/api/v1/music/artists/{id}", notFound: true},
+		{name: "artista visible", pattern: "/api/v1/music/artists/{id}"},
+		{name: "álbumes", pattern: "/api/v1/music/albums", path: "/api/v1/music/albums", adminMarca: true},
+		{name: "álbum oculto", pattern: "/api/v1/music/albums/{id}", notFound: true},
+		{name: "álbum visible", pattern: "/api/v1/music/albums/{id}"},
+		{name: "carátula oculta", pattern: "/api/v1/music/albums/{id}/cover", notFound: true},
+		{name: "carátula visible", pattern: "/api/v1/music/albums/{id}/cover"},
+		{name: "pistas", pattern: "/api/v1/music/tracks", path: "/api/v1/music/tracks", adminMarca: true},
+		{name: "reproducción musical oculta", pattern: "/api/v1/music/tracks/{id}/play", notFound: true},
+		{name: "reproducción musical visible", pattern: "/api/v1/music/tracks/{id}/play", wantURL: true},
 		{name: "bibliotecas", pattern: "/api/v1/libraries", path: "/api/v1/libraries", adminMarca: true},
 		{name: "navegar clips visibles", pattern: "/api/v1/libraries/{id}/browse"},
 		{name: "navegar clips ocultos", pattern: "/api/v1/libraries/{id}/browse", notFound: true},
-		{name: "ajustes públicos", pattern: "/api/v1/settings/public", path: "/api/v1/settings/public", exempt: "sin contenido de bibliotecas"},
-		{name: "stream de música", pattern: "/api/v1/stream/music/{id}", exempt: "stream firmado sin sesión"},
-		{name: "stream directo", pattern: "/api/v1/stream/{id}", exempt: "stream firmado sin sesión"},
-		{name: "archivo de stream", pattern: "/api/v1/stream/{id}/{file}", exempt: "stream firmado sin sesión"},
-		{name: "subtítulos de stream", pattern: "/api/v1/stream/{id}/subtitles/{file}", exempt: "stream firmado sin sesión"},
+		{name: "ajustes públicos", pattern: "/api/v1/settings/public", path: "/api/v1/settings/public"},
+		{name: "stream de música sin firma", pattern: "/api/v1/stream/music/{id}", path: "/api/v1/stream/music/", wantStatus: http.StatusForbidden},
+		{name: "stream directo sin firma", pattern: "/api/v1/stream/{id}", path: "/api/v1/stream/", wantStatus: http.StatusForbidden},
+		{name: "archivo de stream sin firma", pattern: "/api/v1/stream/{id}/{file}", path: "/api/v1/stream/", wantStatus: http.StatusForbidden},
+		{name: "subtítulos de stream sin firma", pattern: "/api/v1/stream/{id}/subtitles/{file}", path: "/api/v1/stream/", wantStatus: http.StatusForbidden},
 	}
 }
 
@@ -347,10 +426,10 @@ func TestPruebaDeFugas(t *testing.T) {
 			return "/api/v1/items/" + strconv.FormatInt(fixture.visibleMovie, 10)
 		},
 		"items miniatura oculta": func() string {
-			return "/api/v1/items/" + strconv.FormatInt(fixture.hiddenMovie, 10) + "/thumbnail"
+			return "/api/v1/items/" + strconv.FormatInt(fixture.hiddenClip, 10) + "/thumbnail"
 		},
 		"items miniatura visible": func() string {
-			return "/api/v1/items/" + strconv.FormatInt(fixture.visibleMovie, 10) + "/thumbnail"
+			return "/api/v1/items/" + strconv.FormatInt(fixture.visibleClip, 10) + "/thumbnail"
 		},
 		"items file-info oculto": func() string {
 			return "/api/v1/items/" + strconv.FormatInt(fixture.hiddenMovie, 10) + "/file-info"
@@ -369,6 +448,30 @@ func TestPruebaDeFugas(t *testing.T) {
 		},
 		"items reproducción visible": func() string {
 			return "/api/v1/items/" + strconv.FormatInt(fixture.visibleMovie, 10) + "/play"
+		},
+		"progreso oculto PUT": func() string {
+			return "/api/v1/items/" + strconv.FormatInt(fixture.hiddenEpisode2, 10) + "/progress"
+		},
+		"progreso oculto DELETE": func() string {
+			return "/api/v1/items/" + strconv.FormatInt(fixture.hiddenEpisode2, 10) + "/progress"
+		},
+		"visto oculto PUT": func() string {
+			return "/api/v1/items/" + strconv.FormatInt(fixture.hiddenEpisode2, 10) + "/watched"
+		},
+		"visto oculto DELETE": func() string {
+			return "/api/v1/items/" + strconv.FormatInt(fixture.hiddenEpisode2, 10) + "/watched"
+		},
+		"lista oculta PUT": func() string {
+			return "/api/v1/items/" + strconv.FormatInt(fixture.hiddenEpisode2, 10) + "/lists/favorite"
+		},
+		"lista oculta DELETE": func() string {
+			return "/api/v1/items/" + strconv.FormatInt(fixture.hiddenEpisode2, 10) + "/lists/favorite"
+		},
+		"preferencias ocultas PUT": func() string {
+			return "/api/v1/items/" + strconv.FormatInt(fixture.hiddenEpisode2, 10) + "/preferences"
+		},
+		"preferencias ocultas DELETE": func() string {
+			return "/api/v1/items/" + strconv.FormatInt(fixture.hiddenEpisode2, 10) + "/preferences"
 		},
 		"colección oculta": func() string {
 			return "/api/v1/collections/" + strconv.FormatInt(fixture.hiddenCollection, 10)
@@ -448,32 +551,30 @@ func TestPruebaDeFugas(t *testing.T) {
 		"navegar clips ocultos": func() string {
 			return "/api/v1/libraries/" + strconv.FormatInt(fixture.hiddenClips, 10) + "/browse"
 		},
+		"stream de música sin firma": func() string {
+			return "/api/v1/stream/music/" + strconv.FormatInt(fixture.hiddenTrack, 10)
+		},
+		"stream directo sin firma": func() string {
+			return "/api/v1/stream/" + strconv.FormatInt(fixture.hiddenMovie, 10)
+		},
+		"archivo de stream sin firma": func() string {
+			return "/api/v1/stream/" + strconv.FormatInt(fixture.hiddenMovie, 10) + "/playlist.m3u8"
+		},
+		"subtítulos de stream sin firma": func() string {
+			return "/api/v1/stream/" + strconv.FormatInt(fixture.hiddenMovie, 10) + "/subtitles/es0.vtt"
+		},
 	}
 
 	cases := leakRoutes()
 	for i := range cases {
-		if cases[i].path == "" {
-			if build, ok := paths[cases[i].name]; ok {
-				cases[i].path = build()
-			}
+		if build, ok := paths[cases[i].name]; ok {
+			cases[i].path = build()
 		}
 	}
 
 	covered := make(map[string]bool)
 	for _, item := range cases {
 		covered[item.pattern] = true
-		if item.pending != "" {
-			t.Run(item.name, func(t *testing.T) {
-				t.Skip("pendiente " + item.pending)
-			})
-			continue
-		}
-		if item.exempt != "" {
-			t.Run(item.name, func(t *testing.T) {
-				t.Skip("exento: " + item.exempt)
-			})
-			continue
-		}
 		t.Run(item.name, func(t *testing.T) {
 			method := item.method
 			if method == "" {
@@ -484,17 +585,24 @@ func TestPruebaDeFugas(t *testing.T) {
 			if method == http.MethodGet {
 				status, body = libraryHTTPGet(t, ts.URL+item.path, userToken)
 			} else {
-				status, body = libraryHTTPDo(t, method, ts.URL+item.path, userToken, nil)
+				status, body = libraryHTTPDo(t, method, ts.URL+item.path, userToken, item.body)
 			}
-			if item.notFound {
-				if status != http.StatusNotFound {
-					t.Fatalf("usuario: código = %d, se esperaba 404; cuerpo = %s", status, body)
+			want := item.wantStatus
+			if want == 0 {
+				if item.notFound {
+					want = http.StatusNotFound
+				} else {
+					want = http.StatusOK
 				}
-			} else if status != http.StatusOK {
-				t.Fatalf("usuario: código = %d; cuerpo = %s", status, body)
+			}
+			if status != want {
+				t.Fatalf("usuario: código = %d, se esperaba %d; cuerpo = %s", status, want, body)
 			}
 			if bytes.Contains(body, []byte(leakMarker)) {
 				t.Fatalf("fuga en %s: %s", item.path, body)
+			}
+			if item.wantURL && !bytes.Contains(body, []byte("/api/v1/stream/")) {
+				t.Fatalf("se esperaba una URL firmada en %s: %s", item.path, body)
 			}
 			if item.adminMarca && method == http.MethodGet {
 				adminStatus, adminBody := libraryHTTPGet(t, ts.URL+item.path, adminToken)
@@ -533,6 +641,68 @@ func TestPruebaDeFugas(t *testing.T) {
 	status, body = libraryHTTPGet(t, ts.URL+"/api/v1/items", allToken)
 	if status != http.StatusOK || !bytes.Contains(body, []byte(leakMarker)) {
 		t.Fatalf("un usuario con all_libraries debe ver la marca: código = %d, cuerpo = %s", status, body)
+	}
+
+	nobodyToken := leakNoLibrariesToken(t, ts)
+	fixtureTitles := []string{
+		"Película visible", "Vídeo visible", "Serie visible", "Episodio visible",
+		"Colección visible", "Artista visible", "Álbum visible", "Pista visible",
+	}
+	for _, item := range cases {
+		method := item.method
+		if method == "" {
+			method = http.MethodGet
+		}
+		if method != http.MethodGet {
+			continue
+		}
+		status, body := libraryHTTPGet(t, ts.URL+item.path, nobodyToken)
+		if status != http.StatusOK && status != http.StatusNotFound && status != http.StatusForbidden {
+			t.Errorf("sin bibliotecas, %s: código = %d; cuerpo = %s", item.name, status, body)
+		}
+		if bytes.Contains(body, []byte(leakMarker)) {
+			t.Errorf("sin bibliotecas, fuga en %s: %s", item.name, body)
+		}
+		for _, title := range fixtureTitles {
+			if bytes.Contains(body, []byte(title)) {
+				t.Errorf("sin bibliotecas, %s lista %q: %s", item.name, title, body)
+			}
+		}
+	}
+
+	var count int
+	for table, query := range map[string]string{
+		"playback_progress": `SELECT count(*) FROM playback_progress WHERE user_id = ? AND media_item_id = ?`,
+		"watch_state":       `SELECT count(*) FROM watch_state WHERE user_id = ? AND media_item_id = ?`,
+		"item_lists":        `SELECT count(*) FROM item_lists WHERE user_id = ? AND media_item_id = ?`,
+		"item_preferences":  `SELECT count(*) FROM item_preferences WHERE user_id = ? AND media_item_id = ?`,
+	} {
+		if err := ts.db.QueryRow(query, fixture.userID, fixture.hiddenEpisode2).Scan(&count); err != nil {
+			t.Fatalf("contar %s del ítem oculto: %v", table, err)
+		}
+		if count != 1 {
+			t.Errorf("los PUT/DELETE ocultos modificaron %s: quedan %d filas", table, count)
+		}
+	}
+	var position float64
+	if err := ts.db.QueryRow(`
+		SELECT position_seconds FROM playback_progress
+		 WHERE user_id = ? AND media_item_id = ?`, fixture.userID, fixture.hiddenEpisode2).
+		Scan(&position); err != nil {
+		t.Fatalf("leer progreso oculto: %v", err)
+	}
+	if position != 12 {
+		t.Errorf("el progreso oculto cambió a %v", position)
+	}
+	var quality sql.NullString
+	if err := ts.db.QueryRow(`
+		SELECT quality FROM item_preferences
+		 WHERE user_id = ? AND media_item_id = ?`, fixture.userID, fixture.hiddenEpisode2).
+		Scan(&quality); err != nil {
+		t.Fatalf("leer preferencias ocultas: %v", err)
+	}
+	if !quality.Valid || quality.String != "720" {
+		t.Errorf("las preferencias ocultas cambiaron: %+v", quality)
 	}
 
 	checkLeakRouteCoverage(t, covered)

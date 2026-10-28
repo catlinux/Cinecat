@@ -324,6 +324,9 @@ func (a *API) handleItem(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusNotFound, "ítem no encontrado")
 		return
 	}
+	if _, ok := a.requireVisibleItem(w, r, id); !ok {
+		return
+	}
 
 	item, err := queryMediaItem(r.Context(), a.db, id, sessionUserID(r), a.collectionMin())
 	switch {
@@ -381,6 +384,9 @@ func (a *API) handlePlay(w http.ResponseWriter, r *http.Request) {
 	id, ok := idFromPath(r)
 	if !ok {
 		writeJSONError(w, http.StatusNotFound, "ítem no encontrado")
+		return
+	}
+	if _, ok := a.requireVisibleItem(w, r, id); !ok {
 		return
 	}
 

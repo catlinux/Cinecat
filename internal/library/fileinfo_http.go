@@ -88,6 +88,9 @@ func (a *API) handleItemFileInfo(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusNotFound, "ítem no encontrado")
 		return
 	}
+	if _, ok := a.requireVisibleItem(w, r, id); !ok {
+		return
+	}
 
 	media, err := a.mediaFile(r, id)
 	switch {

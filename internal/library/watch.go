@@ -3,7 +3,6 @@ package library
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"log"
 	"net/http"
 
@@ -49,15 +48,7 @@ func (a *API) setWatched(w http.ResponseWriter, r *http.Request, watched bool) {
 		return
 	}
 
-	var exists int
-	err := a.db.QueryRowContext(r.Context(), `SELECT 1 FROM media_items WHERE id = ?`, id).Scan(&exists)
-	switch {
-	case errors.Is(err, sql.ErrNoRows):
-		writeJSONError(w, http.StatusNotFound, "ítem no encontrado")
-		return
-	case err != nil:
-		log.Printf("library: comprobar ítem %d para visionado: %v", id, err)
-		writeJSONError(w, http.StatusInternalServerError, "error interno")
+	if _, ok := a.requireVisibleItem(w, r, id); !ok {
 		return
 	}
 

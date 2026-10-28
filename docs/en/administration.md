@@ -136,6 +136,12 @@ Docker also uses `CINECAT_MEDIA_PATH` (host path mounted at `/media`), `CINECAT_
 
 Each user has their own **Favorites** and **Watchlist**; they are not shared between accounts.
 
+## Users and library access
+
+Each user account only sees the libraries assigned to it by the administrator. The administrator always sees every library; an account with the "all libraries" option also sees libraries created in the future. Filtering is enforced by the server for listings, item pages, series, collections, people, music and individual items.
+
+Anything outside the visible libraries responds as if it did not exist: listings do not show it and direct routes return 404. Collections and people pages only count visible content. Playback URLs already issued keep working until they expire, 8 hours later, even if access is removed or sessions are closed. The user-management screen will arrive in the next version.
+
 ## Uploading files and trash
 
 Disabled by default. Two things are needed: mount the library read-write (`CINECAT_MEDIA_MODE=rw` in the Debian `.env`, then bring the containers up again) and enable **Permitir cambiar archivos** in Administration → Library. With either one off, the web app shows the reason and does not touch the disk. With `rw`, any Cinecat administrator can write to your disks: protect that account well.
@@ -156,7 +162,7 @@ Disabled by default. Two things are needed: mount the library read-write (`CINEC
 ## Security limitations
 
 - Login lockout counts failures per user+IP pair and adds a per-IP limit, but it still lives in process memory and depends on Apache and the web app forwarding the real IP correctly.
-- There are no per-library permissions: any authenticated user sees the whole catalogue.
-- There is no screen to create users or revoke sessions.
+- Per-library permissions are enforced by the server; the screen to manage users will arrive in the next version.
+- Signed playback URLs that have already been issued remain valid until they expire, even if access is removed or sessions are closed.
 - The server sends no CORS headers; the Apache deployment works by sharing the origin.
 - With `CINECAT_MEDIA_MODE=rw`, an administrator can upload and move to the trash; permanent deletion only affects `.cinecat-papelera`.

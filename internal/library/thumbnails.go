@@ -335,6 +335,9 @@ func (a *API) handleItemThumbnail(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusNotFound, "ítem no encontrado")
 		return
 	}
+	if _, ok := a.requireVisibleItem(w, r, id); !ok {
+		return
+	}
 	if a.thumbnails == nil {
 		writeJSONError(w, http.StatusNotFound, "miniatura no disponible")
 		return
