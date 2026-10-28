@@ -6,6 +6,23 @@ export interface LoginRequest {
 export interface LoginResponse {
 	token: string;
 	expires_at: string;
+	session_id: number;
+}
+
+export type SessionClient = 'web' | 'android' | 'androidtv';
+
+export interface Session {
+	id: number;
+	device_name: string;
+	client: SessionClient;
+	created_at: string;
+	last_seen_at: string;
+	expires_at: string;
+	current: boolean;
+}
+
+export interface SessionsResponse {
+	sessions: Session[];
 }
 
 export interface ErrorResponse {
@@ -901,12 +918,24 @@ export class ApiClient {
 		this.fetchImpl = options.fetch ?? globalThis.fetch.bind(globalThis);
 	}
 
-	async login(credentials: LoginRequest, clientIP = ''): Promise<LoginResponse> {
+	async login(
+		credentials: LoginRequest,
+		clientIP = '',
+		userAgent = ''
+	): Promise<LoginResponse> {
+		const headers: Record<string, string> = {};
 		const ip = clientIP.trim();
+		if (ip) {
+			headers['X-Forwarded-For'] = ip;
+		}
+		const agent = sanitizeUserAgent(userAgent);
+		if (agent) {
+			headers['User-Agent'] = agent;
+		}
 		return this.request<LoginResponse>('/api/v1/auth/login', {
 			method: 'POST',
 			body: credentials,
-			headers: ip ? { 'X-Forwarded-For': ip } : undefined
+			headers: Object.keys(headers).length > 0 ? headers : undefined
 		});
 	}
 
@@ -929,6 +958,22 @@ export class ApiClient {
 
 	async getCurrentUser(token: string): Promise<CurrentUserResponse> {
 		return this.get<CurrentUserResponse>('/api/v1/auth/me', token);
+	}
+
+	async getSessions(token: string): Promise<SessionsResponse> {
+		return this.get<SessionsResponse>('/api/v1/auth/sessions', token);
+	}
+
+	async closeSession(id: number, token: string): Promise<void> {
+		await this.delete(`/api/v1/auth/sessions/${id}`, token);
+	}
+
+	async getUserSessions(userId: number, token: string): Promise<SessionsResponse> {
+		return this.get<SessionsResponse>(`/api/v1/users/${userId}/sessions`, token);
+	}
+
+	async closeUserSession(userId: number, sessionId: number, token: string): Promise<void> {
+		await this.delete(`/api/v1/users/${userId}/sessions/${sessionId}`, token);
 	}
 
 	async listUsers(token: string): Promise<UsersResponse> {
@@ -1641,6 +1686,11 @@ function appendPagination(
 
 function querySuffix(params: URLSearchParams): string {
 	return params.toString() ? `?${params}` : '';
+}
+
+function sanitizeUserAgent(value: string): string {
+	const clean = value.replace(/[\r\n\u2028\u2029]+/g, ' ').trim();
+	return Array.from(clean).slice(0, 300).join('');
 }
 
 function defaultMessage(status: number): string {

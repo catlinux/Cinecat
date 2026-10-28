@@ -1,6 +1,6 @@
 import { render } from 'svelte/server';
 import { describe, expect, it, vi } from 'vitest';
-import type { Library, ManagedUser } from '$lib/api';
+import type { Library, ManagedUser, Session } from '$lib/api';
 import { DEFAULT_PUBLIC_UI } from '$lib/settings';
 import { webVersion } from '$lib/version';
 import UsersPage from './+page.svelte';
@@ -11,6 +11,7 @@ const updateAction = actions.update!;
 const librariesAction = actions.libraries!;
 const passwordAction = actions.password!;
 const deleteAction = actions.delete!;
+const closeSessionAction = actions.closeSession!;
 
 function jsonResponse(body: unknown, status = 200): Response {
 	return new Response(JSON.stringify(body), {
@@ -47,6 +48,24 @@ const users: ManagedUser[] = [
 		active_sessions: 2
 	}
 ];
+
+function userSession(id: number, overrides: Partial<Session> = {}): Session {
+	return {
+		id,
+		device_name: 'Portátil',
+		client: 'web',
+		created_at: '2026-10-27T09:00:00Z',
+		last_seen_at: '2026-10-27T10:00:00Z',
+		expires_at: '2026-10-28T10:00:00Z',
+		current: false,
+		...overrides
+	};
+}
+
+const sessionsByUser: Record<number, Session[]> = {
+	1: [userSession(11, { device_name: 'Panel', current: false })],
+	4: [userSession(7), userSession(8, { device_name: 'Pixel', client: 'android' })]
+};
 
 function loadEvent(fetchImpl: typeof fetch, token: string | null = 'token-123') {
 	return {
@@ -106,6 +125,10 @@ function adminFetch(overrides: (url: URL, init?: RequestInit) => Response | unde
 		if (url.pathname === '/api/v1/users' && (init?.method ?? 'GET') === 'GET') {
 			return jsonResponse({ users });
 		}
+		const sessionsMatch = url.pathname.match(/^\/api\/v1\/users\/(\d+)\/sessions$/);
+		if (sessionsMatch && (init?.method ?? 'GET') === 'GET') {
+			return jsonResponse({ sessions: sessionsByUser[Number(sessionsMatch[1])] ?? [] });
+		}
 		if (url.pathname === '/api/v1/libraries') {
 			return jsonResponse({ libraries });
 		}
@@ -143,15 +166,29 @@ describe('carga de usuarios', () => {
 		await expect(load(loadEvent(fetchMock) as never)).rejects.toMatchObject({ status: 403 });
 	});
 
-	it('carga usuarios y bibliotecas para el administrador', async () => {
+	it('carga usuarios, bibliotecas y sesiones para el administrador', async () => {
 		const result = (await load(loadEvent(adminFetch()) as never)) as {
-			users: ManagedUser[];
+			users: Array<ManagedUser & { sessions: Session[] | null }>;
 			libraries: Library[];
 			currentUser: { username: string };
 		};
 		expect(result.users).toHaveLength(2);
 		expect(result.libraries).toHaveLength(3);
 		expect(result.currentUser.username).toBe('ana');
+		expect(result.users.find((user) => user.id === 4)?.sessions).toHaveLength(2);
+	});
+
+	it('deja sin sesiones al usuario cuya petición falla sin romper la página', async () => {
+		const fetchMock = adminFetch((url) =>
+			url.pathname === '/api/v1/users/4/sessions'
+				? jsonResponse({ error: 'fallo' }, 500)
+				: undefined
+		);
+		const result = (await load(loadEvent(fetchMock) as never)) as {
+			users: Array<ManagedUser & { sessions: Session[] | null }>;
+		};
+		expect(result.users.find((user) => user.id === 1)?.sessions).toHaveLength(1);
+		expect(result.users.find((user) => user.id === 4)?.sessions).toBeNull();
 	});
 
 	it('devuelve 502 si falla la lista de usuarios', async () => {
@@ -333,12 +370,53 @@ describe('acciones de usuarios', () => {
 	});
 });
 
+describe('cierre de sesiones de usuarios', () => {
+	it('cierra la sesión indicada del usuario', async () => {
+		const fetchMock = adminFetch();
+		const result = (await closeSessionAction(
+			actionEvent(fetchMock, 'closeSession', { user_id: '4', session_id: '7' }) as never
+		)) as { success?: boolean; message?: string; action?: string };
+		expect(result.success).toBe(true);
+		expect(result.message).toBe('Sesión cerrada.');
+		expect(result.action).toBe('closeSession');
+		const call = fetchMock.mock.calls.find(
+			([url, init]) => String(url).endsWith('/api/v1/users/4/sessions/7') && init?.method === 'DELETE'
+		);
+		expect(call).toBeTruthy();
+	});
+
+	it('traduce el 404 de una sesión que no pertenece al usuario', async () => {
+		const fetchMock = adminFetch((url, init) =>
+			url.pathname === '/api/v1/users/4/sessions/99' && init?.method === 'DELETE'
+				? jsonResponse({ error: 'sesión no encontrada' }, 404)
+				: undefined
+		);
+		const result = (await closeSessionAction(
+			actionEvent(fetchMock, 'closeSession', { user_id: '4', session_id: '99' }) as never
+		)) as { status: number; data: { message: string } };
+		expect(result.status).toBe(404);
+		expect(result.data.message).toContain('sesión no encontrada');
+	});
+
+	it('valida los identificadores sin llamar a la API', async () => {
+		const fetchMock = vi.fn();
+		const result = (await closeSessionAction(
+			actionEvent(fetchMock, 'closeSession', { user_id: '4', session_id: 'no' }) as never
+		)) as { status: number };
+		expect(result.status).toBe(400);
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+});
+
 describe('página de usuarios', () => {
 	it('marca al usuario actual y no ofrece acciones destructivas sobre él', () => {
 		const body = render(UsersPage, {
 			props: {
 				data: {
-					users,
+					users: users.map((user) => ({
+						...user,
+						sessions: sessionsByUser[user.id] ?? []
+					})),
 					libraries,
 					currentUser: { username: 'ana', role: 'admin', all_libraries: true, library_ids: [] },
 					ui: DEFAULT_PUBLIC_UI,
@@ -360,6 +438,10 @@ describe('página de usuarios', () => {
 		expect(body).toContain('bea');
 		expect(body).toContain('Tú');
 		expect(body).toContain('Restablecer contraseña');
+		expect(body).toContain('Sesiones (2)');
+		expect(body).toContain('Pixel');
+		expect(body).toContain('action="?/closeSession"');
+		expect(body).toContain('name="session_id"');
 		expect(body).toContain('user-delete-4');
 		expect(body).not.toContain('user-delete-1');
 	});

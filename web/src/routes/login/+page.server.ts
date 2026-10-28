@@ -27,7 +27,11 @@ export const actions: Actions = {
 		const api = createApiClient(fetch);
 
 		try {
-			const session = await api.login({ username, password }, clientIP);
+			const session = await api.login(
+				{ username, password },
+				clientIP,
+				request.headers.get('user-agent') ?? ''
+			);
 			setSessionCookie(cookies, session.token, session.expires_at, url.protocol === 'https:');
 		} catch (error) {
 			const status = typeof error === 'object' && error !== null && 'status' in error

@@ -1,5 +1,11 @@
 import { error, fail, redirect } from '@sveltejs/kit';
-import { ApiError, type ManagedUser, type UpdateUserInput, type UserRole } from '$lib/api';
+import {
+	ApiError,
+	type ManagedUser,
+	type Session,
+	type UpdateUserInput,
+	type UserRole
+} from '$lib/api';
 import { createApiClient } from '$lib/api-factory';
 import { requireSessionToken } from '$lib/session';
 import type { Actions, PageServerLoad } from './$types';
@@ -7,6 +13,8 @@ import type { Actions, PageServerLoad } from './$types';
 const ADMIN_MESSAGE = 'Esta sección es solo para administradores.';
 const LOAD_ERROR = 'No se pudieron cargar los usuarios. Inténtalo de nuevo.';
 const ROLES = new Set<UserRole>(['admin', 'user']);
+
+type ManagedUserWithSessions = ManagedUser & { sessions: Session[] | null };
 
 function actionFailure(reason: unknown, fallback: string, extra: Record<string, unknown> = {}) {
 	if (reason instanceof ApiError) {
@@ -84,8 +92,19 @@ export const load: PageServerLoad = async ({ locals, fetch }) => {
 			api.listUsers(token),
 			api.listLibraries(token)
 		]);
+		const users: ManagedUserWithSessions[] = await Promise.all(
+			(usersResponse.users ?? []).map(async (user) => {
+				try {
+					const response = await api.getUserSessions(user.id, token);
+					return { ...user, sessions: response.sessions ?? [] };
+				} catch {
+					// La tarjeta del usuario sigue funcionando sin sus sesiones.
+					return { ...user, sessions: null };
+				}
+			})
+		);
 		return {
-			users: usersResponse.users ?? [],
+			users,
 			libraries: librariesResponse.libraries ?? [],
 			currentUser
 		};
@@ -315,5 +334,35 @@ export const actions: Actions = {
 		}
 
 		return { success: true, message: 'Usuario eliminado.', action: 'delete', userId: id };
+	},
+
+	closeSession: async ({ request, locals, fetch }) => {
+		const token = requireSessionToken(locals);
+		const form = await request.formData();
+		const userID = validID(form.get('user_id'));
+		const sessionID = validID(form.get('session_id'));
+		if (userID === null || sessionID === null) {
+			return fail(400, {
+				message: 'Sesión no válida.',
+				action: 'closeSession',
+				userId: userID ?? undefined
+			});
+		}
+
+		try {
+			await createApiClient(fetch).closeUserSession(userID, sessionID, token);
+		} catch (reason) {
+			return actionFailure(reason, 'No se pudo cerrar la sesión.', {
+				action: 'closeSession',
+				userId: userID
+			});
+		}
+
+		return {
+			success: true,
+			message: 'Sesión cerrada.',
+			action: 'closeSession',
+			userId: userID
+		};
 	}
 };

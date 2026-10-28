@@ -11,13 +11,17 @@ function jsonResponse(body: unknown, status = 200): Response {
 describe('ApiClient', () => {
 	it('hace login y devuelve el token tipado', async () => {
 		const fetchMock = vi.fn().mockResolvedValue(
-			jsonResponse({ token: 'token-123', expires_at: '2026-10-26T12:00:00Z' })
+			jsonResponse({ token: 'token-123', expires_at: '2026-10-26T12:00:00Z', session_id: 4 })
 		);
 		const client = new ApiClient({ baseUrl: 'http://api.test/', fetch: fetchMock });
 
 		const session = await client.login({ username: 'ana', password: 'secreta' });
 
-		expect(session).toEqual({ token: 'token-123', expires_at: '2026-10-26T12:00:00Z' });
+		expect(session).toEqual({
+			token: 'token-123',
+			expires_at: '2026-10-26T12:00:00Z',
+			session_id: 4
+		});
 		expect(fetchMock).toHaveBeenCalledTimes(1);
 		const [url, init] = fetchMock.mock.calls[0];
 		expect(url).toBe('http://api.test/api/v1/auth/login');
@@ -45,6 +49,53 @@ describe('ApiClient', () => {
 		await client.login({ username: 'ana', password: 'secreta' }, '  ');
 
 		expect(fetchMock.mock.calls[0][1].headers['X-Forwarded-For']).toBeUndefined();
+	});
+
+	it('reenvía el User-Agent saneado al hacer login', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(
+			jsonResponse({ token: 'token-123', expires_at: '2026-10-26T12:00:00Z', session_id: 4 })
+		);
+		const client = new ApiClient({ baseUrl: 'http://api.test', fetch: fetchMock });
+		const userAgent = `Mozilla/5.0\r\nChrome/130 ${'x'.repeat(400)}`;
+
+		await client.login({ username: 'ana', password: 'secreta' }, '', userAgent);
+
+		const header = fetchMock.mock.calls[0][1].headers['User-Agent'] as string;
+		expect(header).not.toContain('\r');
+		expect(header).not.toContain('\n');
+		expect(header.startsWith('Mozilla/5.0 Chrome/130')).toBe(true);
+		expect(header).toHaveLength(300);
+	});
+
+	it('consulta y cierra sesiones propias y de otros usuarios', async () => {
+		const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+			if (init?.method === 'DELETE') {
+				return new Response(null, { status: 204 });
+			}
+			return jsonResponse({ sessions: [] });
+		});
+		const client = new ApiClient({ baseUrl: 'http://api.test', fetch: fetchMock });
+
+		await client.getSessions('token-123');
+		await client.closeSession(7, 'token-123');
+		await client.getUserSessions(4, 'token-123');
+		await client.closeUserSession(4, 8, 'token-123');
+
+		expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
+			'http://api.test/api/v1/auth/sessions',
+			'http://api.test/api/v1/auth/sessions/7',
+			'http://api.test/api/v1/users/4/sessions',
+			'http://api.test/api/v1/users/4/sessions/8'
+		]);
+		expect(fetchMock.mock.calls.map(([, init]) => init?.method)).toEqual([
+			'GET',
+			'DELETE',
+			'GET',
+			'DELETE'
+		]);
+		for (const [, init] of fetchMock.mock.calls) {
+			expect((init?.headers as Record<string, string>).Authorization).toBe('Bearer token-123');
+		}
 	});
 
 	it('convierte un 401 en ApiError con estado', async () => {

@@ -1,9 +1,12 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { untrack } from 'svelte';
+	import SessionList from '$lib/components/SessionList.svelte';
 	import { formatDateTime } from '$lib/media';
-	import type { Library, ManagedUser, UserRole } from '$lib/api';
+	import type { Library, ManagedUser, Session, UserRole } from '$lib/api';
 	import type { PageData } from './$types';
+
+	type ManagedUserWithSessions = ManagedUser & { sessions?: Session[] | null };
 
 	type CreateState = {
 		username: string;
@@ -23,7 +26,7 @@
 	let { data, form = null }: { data: PageData; form?: UsersForm } = $props();
 
 	const libraries = $derived((data.libraries ?? []) as Library[]);
-	const users = $derived((data.users ?? []) as ManagedUser[]);
+	const users = $derived((data.users ?? []) as ManagedUserWithSessions[]);
 
 	let createUsername = $state(untrack(() => form?.create?.username ?? ''));
 	let createPassword = $state('');
@@ -251,6 +254,24 @@
 							</p>
 						</div>
 					</div>
+
+					<details class="user-sessions">
+						<summary>
+							Sesiones ({user.sessions === null ? '—' : (user.sessions?.length ?? 0)})
+							{#if user.sessions === null}
+								<span class="user-sessions-warning">No se pudieron cargar</span>
+							{/if}
+						</summary>
+						<SessionList
+							sessions={user.sessions}
+							formAction="?/closeSession"
+							hiddenFields={(session) => ({
+								user_id: user.id,
+								session_id: session.id
+							})}
+							currentLabel="Este dispositivo"
+						/>
+					</details>
 
 					<div class="user-actions">
 						<form method="POST" action="?/libraries" class="user-form">
@@ -527,6 +548,26 @@
 		padding: 0.6rem 0.7rem;
 		border-left: 3px solid var(--naranja);
 		background: var(--tinte);
+	}
+	.user-sessions {
+		padding: 0.7rem 0.8rem;
+		border: 1px solid var(--borde-suave);
+		border-radius: 4px;
+		background: var(--superficie-suave);
+	}
+	.user-sessions summary {
+		cursor: pointer;
+		color: var(--granate);
+		font-size: 0.72rem;
+		font-weight: 700;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+	}
+	.user-sessions-warning {
+		margin-left: 0.4rem;
+		color: var(--naranja);
+		font-size: 0.62rem;
+		letter-spacing: 0.04em;
 	}
 	.user-delete-confirm {
 		align-self: start;

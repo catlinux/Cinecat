@@ -6,13 +6,16 @@ import { actions } from './+page.server';
 const login = actions.login!;
 const logout = actions.logout!;
 
-function formRequest(username?: string, password?: string): Request {
+function formRequest(username?: string, password?: string, userAgent?: string): Request {
 	const body = new URLSearchParams();
 	if (username !== undefined) body.set('username', username);
 	if (password !== undefined) body.set('password', password);
 	return new Request('http://localhost/login?/login', {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+		headers: {
+			'Content-Type': 'application/x-www-form-urlencoded',
+			...(userAgent ? { 'User-Agent': userAgent } : {})
+		},
 		body
 	});
 }
@@ -22,6 +25,7 @@ function fakeEvent(options: {
 	url?: string;
 	username?: string;
 	password?: string;
+	userAgent?: string;
 	token?: string | null;
 	clientIP?: string | null;
 }) {
@@ -31,7 +35,7 @@ function fakeEvent(options: {
 	const cookies = { get, set, delete: remove };
 
 	const event = {
-		request: formRequest(options.username, options.password),
+		request: formRequest(options.username, options.password, options.userAgent),
 		cookies,
 		url: new URL(options.url ?? 'http://localhost/login'),
 		fetch: options.fetchImpl,
@@ -57,7 +61,9 @@ function fakeEvent(options: {
 	return { event, cookies, set, remove };
 }
 
-function loginOk(body: unknown = { token: 'token-123', expires_at: '2026-10-26T12:00:00Z' }) {
+function loginOk(
+	body: unknown = { token: 'token-123', expires_at: '2026-10-26T12:00:00Z', session_id: 1 }
+) {
 	return vi.fn().mockResolvedValue(
 		new Response(JSON.stringify(body), {
 			status: 200,
@@ -103,6 +109,21 @@ describe('acción de login', () => {
 			sameSite: 'lax',
 			secure: false
 		});
+	});
+
+	it('reenvía el User-Agent del navegador al servidor', async () => {
+		const fetchMock = loginOk();
+		const userAgent =
+			'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130.0 Safari/537.36';
+		const { event } = fakeEvent({
+			fetchImpl: fetchMock,
+			username: 'ana',
+			password: 'Clave-segura-1',
+			userAgent
+		});
+
+		await expect(login(event as never)).rejects.toMatchObject({ status: 303, location: '/' });
+		expect(fetchMock.mock.calls[0][1].headers['User-Agent']).toBe(userAgent);
 	});
 
 	it('marca Secure en la cookie si la petición llegó por HTTPS', async () => {
