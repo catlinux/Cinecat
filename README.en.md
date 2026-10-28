@@ -14,7 +14,7 @@ Cinecat is for people who keep their own video library at home and want a carefu
 - **Identification and detail pages:** TMDB in Spanish; OMDb as a fallback when there is no TMDB key; automatic, manual and "not this one" states; search, filters by letter, genre and watched state, and sorting; cast and crew with photos, synopsis, posters, backdrops and IMDb/TMDB links.
 - **Series:** one detail page per folder, seasons and episodes with title, synopsis and image, next episode, watched state per episode, season or series, and manual correction.
 - **Collections:** automatic TMDB sagas and manual collections, with editing, ordering, poster and backdrop.
-- **Playback:** direct play for MP4/M4V; HLS for the rest, re-encoded to H.264 + stereo AAC, with seeking, audio tracks, text subtitles as WebVTT, quality choices and per-user, per-movie preferences.
+- **Playback:** direct play for compatible MP4/M4V files; HLS for the rest, copying the video when the container, codec, browser, height and keyframe index allow it or re-encoding to H.264 + stereo AAC, with seeking, audio tracks, text subtitles as WebVTT, quality choices and per-user, per-movie preferences.
 - **Web interface:** portal with "Continue watching", "Next episode" and "Recently added"; movie, series and collection lists with search and filters; full detail pages; custom player with keyboard shortcuts; light, dark or system theme; side or top navigation.
 - **Administration:** summary, libraries, scan progress, hot settings, metadata correction, images and updates from System.
 - **Updates:** the server checks tags and release notes; "Update now" hands the request to a host systemd service that backs up the database, updates, checks and rolls back on failure. See [updates](docs/en/updates.md).

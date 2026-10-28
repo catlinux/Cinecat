@@ -37,12 +37,13 @@ Current version: **0.20.0**. This page describes the real state of the code, not
 | Web interface | TMDB rating on posters | ✅ 0.22.0 | Movies and series. |
 | Web interface | Person page and "Ver tráiler" button | ✅ 0.22.0 | What you have and what you do not; YouTube trailer in Spanish when available. |
 | Server and library | Guided uploads of series, seasons, episodes and movies | ✅ 0.22.0 | Administrators only; same requirements as the generic upload. |
-| Playback | Decision by real codec and browser capabilities | ✅ 0.22.0 | H.265 direct only when the browser supports it. |
+| Playback | Decision by real codec and browser capabilities | ✅ 0.22.0 | H.265 direct only when the browser supports it; copying also depends on the keyframe index and the MSE tokens. |
 | Playback | Direct play for MP4/M4V | ✅ 0.1.0 | Serves the file with HTTP range support. |
-| Playback | HLS for MKV, AVI, MOV, TS and M2TS | ✅ 0.12.0 | Re-encoded to H.264 + stereo AAC, 6 s MPEG-TS segments, seeking and process limits. |
+| Playback | HLS for MKV, AVI, MOV, TS and M2TS | ✅ 0.12.0 / 0.23.0 | Copies the video when the container, codec, height and keyframe index allow it; otherwise re-encodes to H.264 + stereo AAC. MPEG-TS segments, seeking and process limits. |
+| Playback | Copy mode without re-encoding | ✅ 0.23.0 | Cuts at real keyframes; H.265 through MSE. |
 | Playback | Audio, text subtitles and quality | ✅ 0.13.0 | Embedded text and `.srt`/`.vtt`/`.ass` as WebVTT; per-user, per-movie preferences. |
 | Playback | Custom player with controls, shortcuts and next episode | ✅ 0.13.0 | hls.js for HLS and native `<video>` for direct play. |
-| Playback | Per-device profiles, H.265, hardware, HDR, image subtitles and ABR | ⬜ | Current HLS is always software H.264 + stereo AAC. |
+| Playback | Per-device profiles, hardware, HDR/10-bit, image subtitles and ABR | ⬜ | Copy mode exists; re-encoding is still software H.264 + stereo AAC. |
 | Web interface | Login, httpOnly session, logout and password change | ✅ 0.2.0 / 0.3.5 | Logout is on `/login`. |
 | Web interface | Portal, movies, series and collections with search, filters, sorting and pagination | ✅ 0.11.0 / 0.15.0 | Columns × rows per page; letter, genre and watched filters on movies. |
 | Web interface | Light/dark/system themes, side or top navigation and responsive layout | ✅ 0.2.0 / 0.14.0 | Theme preference stored in the browser. |
@@ -78,8 +79,8 @@ The order comes from the plans in `.agents/plans`; no dates or committed version
 - **No per-library permissions:** any authenticated user can see every library, item, series and collection. This is a risk for multi-user use.
 - **No user creation:** only the initial `admin` and the `--hash-password` flag exist; there is no user screen or endpoint.
 - **Manually corrected series:** scans do not touch `manual` or `none` series; missing seasons or episodes are not filled automatically.
-- **HLS is always software:** no H.264 copy, Quick Sync/VAAPI, HDR tone mapping, deinterlacing, image subtitles or ABR. 1080p/HEVC may be tight on the CPU.
-- **The API still calls HLS `remux`** even though it re-encodes; the client receives HLS in both cases.
+- **HLS:** re-encoding uses libx264 (software); there is no Quick Sync/VAAPI, HDR tone mapping, deinterlacing, image subtitles or ABR. Copying video does not re-encode and uses almost no CPU. 1080p/HEVC may be tight on the CPU when re-encoding.
+- **The API still calls HLS `remux`** even though it copies or re-encodes; the client receives HLS in both cases.
 - **If duration cannot be read**, FFmpeg's `event` playlist is used and long seeks are not fast.
 - **Subtitles:** text only; PGS/VobSub are ignored. HLS has no separate subtitle rendition; they are served as WebVTT.
 - **Real HLS tests:** skipped without `ffmpeg`/`ffprobe` in PATH, and there is no CI to run them.

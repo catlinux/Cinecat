@@ -18,10 +18,10 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 - **Usuarios y perfil:** CRUD de usuarios, perfil propio, personalización del portal, sesiones abiertas e historial.
 - **Sesiones, dispositivos, actividad y copias de seguridad** en administración.
 - **Subtítulos subidos por el usuario:** requiere diseño previo; hoy solo se leen incrustados de texto o archivos `.srt`/`.vtt`/`.ass` junto al vídeo.
-- **Reproducción avanzada:** copiar vídeo cuando ya sea H.264 8 bits, Quick Sync/VAAPI, perfiles por dispositivo, HDR/10 bits, desentrelazado, subtítulos de imagen y audio no soportado.
+- **Reproducción avanzada:** Quick Sync/VAAPI, perfiles por dispositivo, HDR/10 bits, desentrelazado, subtítulos de imagen y audio no soportado.
 - **Tests HLS reales y CI:** los tests se saltan sin `ffmpeg`/`ffprobe`; no hay flujo automático que los ejecute en Linux.
 - **Revisar el TTL de 7 días de TMDB** contra los términos vigentes antes de dar por buena la caché de producción.
-- **Exponer un modo de reproducción `transcode`** en la API; hoy el HLS recodificado sigue anunciándose como `remux`.
+- **Exponer un modo de reproducción `transcode`** en la API; hoy el HLS copiado o recodificado sigue anunciándose como `remux`.
 
 ## 🟢 Más adelante
 
@@ -38,7 +38,7 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 ## Descartado y por qué
 
 - **Caddy como proxy propio:** se descartó en 0.3.1; el Apache del host ya gestiona los vhosts y HTTPS.
-- **Remux sin recodificar y segmentos fMP4:** se descartaron; los contenedores reales y los timestamps hacían inviable el remux fiable. Todo HLS se recodifica a H.264 + AAC estéreo.
+- **Segmentos fMP4 para la copia:** se descartaron; los contenedores reales y los timestamps hacían inviable un fMP4 fiable. La copia usa MPEG-TS con cortes en fotogramas clave reales; la recodificación sigue usando H.264.
 - **OMDb como fuente principal:** TMDB pasó a ser la fuente principal en 0.11.0; OMDb queda como respaldo si no hay clave de TMDB.
 - **Que el contenedor se actualice a sí mismo:** no tiene acceso a Docker; la orden la ejecuta un servicio de systemd del host.
 - **FilmAffinity y scraping:** no hay API oficial; no se usa.
@@ -50,7 +50,7 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 - Existe una app Android inactiva desde 2015 llamada «CineCat» (F-Droid, catálogo de cine catalán; sin marca registrada). Se mantiene el nombre Cinecat; riesgo de confusión menor.
 - **Sin CORS:** el servidor no envía cabeceras `Access-Control-*`; el despliegue depende de que Apache sirva la API y la web bajo el mismo origen.
 - **Escritura en los discos:** subir y la papelera exigen `CINECAT_MEDIA_MODE=rw`; la música no se puede subir ni mover a la papelera.
-- **Solo software:** la transcodificación usa libx264; no hay aceleración por hardware ni copia H.264.
+- **Solo software para recodificar:** la transcodificación usa libx264; no hay aceleración por hardware. La copia de vídeo no recodifica y apenas usa CPU.
 - **Caché y cuotas:** el TTL de TMDB es un valor de partida y OMDb tiene cuota diaria; TMDB exige atribución (falta la pantalla «Acerca de»).
 - **Series corregidas a mano:** el escaneo no las vuelve a tocar; si faltan temporadas o episodios, no se rellenan solos.
 - **URLs de reproducción:** duran 8 horas, no están ligadas al usuario y dejan de valer al reiniciar el servidor.
