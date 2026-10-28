@@ -44,6 +44,8 @@ type Capabilities struct {
 	// HEV1 indica que el navegador acepta la etiqueta hev1 en MP4. No
 	// implica HEVC ni al revés.
 	HEV1 bool
+	// native guarda los tokens que solo envían las apps (ver native.go).
+	native nativeSet
 }
 
 // ParseCapabilities interpreta la lista separada por comas que envía la web.
@@ -65,6 +67,10 @@ func ParseCapabilities(raw string) Capabilities {
 			result.HEVC10MSE = true
 		case "hev1":
 			result.HEV1 = true
+		default:
+			if bit, ok := nativeToken(strings.ToLower(strings.TrimSpace(token))); ok {
+				result.native |= bit
+			}
 		}
 	}
 	return result
@@ -87,6 +93,11 @@ func (c Capabilities) QueryValue() string {
 	}
 	if c.HEV1 {
 		values = append(values, "hev1")
+	}
+	for _, token := range nativeTokens {
+		if c.native.has(token.bit) {
+			values = append(values, token.name)
+		}
 	}
 	return strings.Join(values, ",")
 }
@@ -187,10 +198,11 @@ func CanCopy(info *FileInfo, caps Capabilities, maxHeight int) bool {
 	case "h264":
 		return copyableH264(video)
 	case "hevc":
+		// Una app nativa (ExoPlayer) decodifica HEVC en MPEG-TS sin MSE.
 		if hevc10Bit(video) {
-			return caps.HEVC10MSE
+			return caps.HEVC10MSE || (caps.Native() && caps.HEVC10)
 		}
-		return caps.HEVCMSE || caps.HEVC10MSE
+		return caps.HEVCMSE || caps.HEVC10MSE || (caps.Native() && (caps.HEVC || caps.HEVC10))
 	default:
 		return false
 	}

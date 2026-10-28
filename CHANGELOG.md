@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.29.0] - 2026-10-28
+
+### Añadido
+
+- Capacidades de las apps nativas en la decisión de reproducción: con los tokens nuevos de `caps` (contenedores `mkv`/`mp4`, vídeo `h264`, `h264hi10`, `hevc`, `hevc10`, `av1`, `vp9`, audio `aac`, `mp3`, `ac3`, `eac3`, `dts`, `truehd`, `opus`, `flac` y `mch`), un MKV o MP4 se sirve en directo si el equipo reproduce su vídeo y la pista de audio elegida; si no, HLS copiando el HEVC. `/play` devuelve `reason` (`container`, `video`, `audio`). La web no envía esos tokens y su comportamiento no cambia (lo comprueba una prueba que recorre su matriz).
+
 ## [0.28.0] - 2026-10-28
 
 ### Añadido

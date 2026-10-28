@@ -161,6 +161,61 @@ func TestPlayConOpcionesYPreferencias(t *testing.T) {
 	}
 }
 
+func TestPlayAppNativa(t *testing.T) {
+	info := fileInfoFixture()
+	info.Container = "matroska,webm"
+	info.FileName = "Pelicula.mkv"
+	info.Video[0].PixelFormat = "yuv420p"
+	info.Video[0].BitDepth = 8
+	info.Audio = []playback.AudioStream{
+		{Index: 1, Codec: "ac3", Channels: 6, Language: "spa", Default: true},
+		{Index: 2, Codec: "dts", Channels: 6, Language: "eng"},
+	}
+	ts := newPlayTestServer(t, info, nil)
+	id, _ := insertFileInfoItem(t, ts.libraryTestServer, "Pelicula.mkv", true)
+	const tv = "caps=mkv,mp4,h264,aac,ac3"
+
+	play := func(query string) playResponse {
+		t.Helper()
+		status, body := libraryHTTPGet(t, playURL(ts, id, query), ts.token)
+		var response playResponse
+		if err := json.Unmarshal(body, &response); err != nil || status != http.StatusOK {
+			t.Fatalf("play %q: %d %s (%v)", query, status, body, err)
+		}
+		return response
+	}
+
+	direct := play(tv)
+	if direct.Mode != playback.ModeDirect || direct.Reason != "" ||
+		!strings.Contains(direct.URL, "audio=0") || !strings.Contains(direct.URL, "mkv") ||
+		strings.Contains(direct.URL, "playlist.m3u8") {
+		t.Fatalf("MKV con AC-3 debería ir en directo para la app: %+v", direct)
+	}
+	// /stream vuelve a decidir con los parámetros de la URL: tiene que servir
+	// el archivo, no responder como si fuera HLS.
+	if status, body := libraryHTTPGet(t, ts.URL+direct.URL, ""); status != http.StatusOK {
+		t.Fatalf("stream directo de la app: %d %s", status, body)
+	}
+
+	if dts := play(tv + "&audio=1"); dts.Mode != playback.ModeRemux || dts.Reason != playback.ReasonAudio ||
+		!strings.Contains(dts.URL, "audio=1") {
+		t.Fatalf("la pista DTS no declarada debe ir por HLS: %+v", dts)
+	}
+
+	status, body := libraryHTTPDo(t, http.MethodPut, itemPreferencesURL(ts.libraryTestServer, id), ts.token,
+		map[string]any{"audio_index": 1})
+	if status != http.StatusNoContent {
+		t.Fatalf("preferencias: %d %s", status, body)
+	}
+	if preferred := play(tv); preferred.Mode != playback.ModeRemux || preferred.Reason != playback.ReasonAudio {
+		t.Fatalf("la pista preferida (DTS) debe decidir el modo: %+v", preferred)
+	}
+
+	if web := play(""); web.Mode != playback.ModeRemux || web.Reason != playback.ReasonContainer {
+		t.Fatalf("la web sigue recibiendo HLS para MKV: %+v", web)
+	}
+}
+
 func TestPlayDirectoEInspectorSinDatos(t *testing.T) {
 	info := fileInfoFixture()
 	info.Video[0].Height = 720

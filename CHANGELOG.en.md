@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-10-28
+
+### Added
+
+- Native app capabilities in the playback decision: with the new `caps` tokens (containers `mkv`/`mp4`, video `h264`, `h264hi10`, `hevc`, `hevc10`, `av1`, `vp9`, audio `aac`, `mp3`, `ac3`, `eac3`, `dts`, `truehd`, `opus`, `flac` and `mch`), an MKV or MP4 is served directly if the device plays its video and the chosen audio track; otherwise HLS copying HEVC. `/play` returns `reason` (`container`, `video`, `audio`). The web does not send these tokens and its behaviour is unchanged (a test walks its whole matrix).
+
 ## [0.28.0] - 2026-10-28
 
 ### Added

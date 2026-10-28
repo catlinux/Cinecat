@@ -202,7 +202,8 @@ func normalizedFileInfo(info *playback.FileInfo) playback.FileInfo {
 }
 
 func playbackInfo(path string, info *playback.FileInfo, caps playback.Capabilities, maxHeight int, hardware ...func() bool) PlaybackInfo {
-	mode, err := playback.DecideFor(path, info, caps)
+	// La ficha técnica describe la pista por defecto, también en las apps.
+	mode, _, err := playback.DecideForAudio(path, info, caps, -1)
 	if errors.Is(err, playback.ErrUnsupportedContainer) {
 		return PlaybackInfo{
 			Description: "Contenedor no soportado para reproducción",

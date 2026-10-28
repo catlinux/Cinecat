@@ -118,6 +118,10 @@ The player offers `auto`, 480p, 720p, 1080p (never above the original height or 
 - **Subtitles:** embedded text tracks and external `.srt`, `.vtt` or `.ass` files next to the video, with language and `forced` suffixes. They are converted to WebVTT. Image tracks (PGS/VobSub) are not supported and HLS has no separate subtitle rendition.
 - **Preferences:** audio, subtitle and quality per user and movie; the player saves them and reloads at the current second when changed.
 
+## Native apps (Android and Android TV)
+
+The apps declare in `caps` what their device plays: containers (`mkv`, `mp4`), video (`h264`, `h264hi10`, `hevc`, `hevc10`, `av1`, `vp9`), audio (`aac`, `mp3`, `ac3`, `eac3`, `dts`, `truehd`, `opus`, `flac`) and `mch` if it decodes multichannel AAC. With that, an MKV or MP4 whose video and chosen audio track are declared is served **directly**, untouched (AC-3, E-AC-3 or DTS arrive as they are for HDMI passthrough). Otherwise it goes through HLS: HEVC is copied without re-encoding and audio is converted to stereo AAC. `/play` returns `reason` (`container`, `video` or `audio`) to explain why it was not direct. The web does not send these tokens, so its behaviour does not change. Pending: HLS with 5.1 AAC for the apps.
+
 ## Web player
 
 - Native `<video>` for direct play; hls.js 1.7.3 for HLS.

@@ -118,6 +118,10 @@ El reproductor ofrece `auto`, 480p, 720p, 1080p (sin superar la altura original 
 - **Subtítulos:** se leen pistas de texto incrustadas y archivos externos `.srt`, `.vtt` o `.ass` junto al vídeo, con sufijos de idioma y `forced`. Se convierten a WebVTT. Las pistas de imagen (PGS/VobSub) no se admiten y el HLS no lleva una representación separada de subtítulos.
 - **Preferencias:** audio, subtítulo y calidad por usuario y película; el reproductor las guarda y recarga en el segundo actual al cambiarlas.
 
+## Apps nativas (Android y Android TV)
+
+Las apps declaran en `caps` lo que su equipo reproduce: contenedores (`mkv`, `mp4`), vídeo (`h264`, `h264hi10`, `hevc`, `hevc10`, `av1`, `vp9`), audio (`aac`, `mp3`, `ac3`, `eac3`, `dts`, `truehd`, `opus`, `flac`) y `mch` si decodifica AAC multicanal. Con eso, un MKV o MP4 cuyo vídeo y pista de audio elegida estén declarados se sirve **en directo**, sin tocar el archivo (AC-3, E-AC-3 o DTS llegan tal cual para pasarlos por HDMI). Si no, va por HLS: el HEVC se copia sin recodificar y el audio se convierte a AAC estéreo. `/play` devuelve `reason` (`container`, `video` o `audio`) para saber por qué no fue en directo. La web no envía esos tokens, así que su comportamiento no cambia. Pendiente: HLS con AAC 5.1 para las apps.
+
 ## Reproductor web
 
 - `<video>` nativo para reproducción directa; hls.js 1.7.3 para HLS.

@@ -2865,6 +2865,20 @@ paths:
         - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/ItemId'
+        - name: caps
+          in: query
+          required: false
+          description: |
+            Capacidades del cliente, separadas por comas; los tokens
+            desconocidos se ignoran. La web envía `hevc`, `hevc10`, `hevcmse`,
+            `hevc10mse` y `hev1`. Las apps nativas declaran además contenedores
+            (`mkv`, `mp4`), vídeo (`h264`, `h264hi10`, `hevc`, `hevc10`, `av1`,
+            `vp9`), audio (`aac`, `mp3`, `ac3`, `eac3`, `dts`, `truehd`, `opus`,
+            `flac`) y `mch` (decodifica AAC/MP3/Opus/FLAC multicanal). Con un
+            contenedor declarado, el directo se decide con la pista de audio
+            elegida (`audio` o la preferencia) y la URL directa incluye `audio`.
+          schema:
+            type: string
         - name: audio
           in: query
           required: false
@@ -6502,6 +6516,13 @@ components:
           enum:
             - direct
             - remux
+        reason:
+          type: string
+          description: Por qué no va en directo (ausente en directo).
+          enum:
+            - container
+            - video
+            - audio
         expires_at:
           type: string
           format: date-time

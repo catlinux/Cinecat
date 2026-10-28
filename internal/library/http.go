@@ -364,8 +364,10 @@ func pagination(r *http.Request) (limit, offset int, err error) {
 }
 
 type playResponse struct {
-	URL              string          `json:"url"`
-	Mode             playback.Mode   `json:"mode"`
+	URL  string        `json:"url"`
+	Mode playback.Mode `json:"mode"`
+	// Reason explica por qué no va en directo: container, video o audio.
+	Reason           playback.Reason `json:"reason,omitempty"`
 	ExpiresAt        time.Time       `json:"expires_at"`
 	AudioTracks      []audioTrackDTO `json:"audio_tracks"`
 	SelectedAudio    int             `json:"selected_audio"`
@@ -391,7 +393,7 @@ func (a *API) handlePlay(w http.ResponseWriter, r *http.Request) {
 	}
 
 	caps := playback.ParseCapabilities(r.URL.Query().Get("caps"))
-	mode, safePath, ok := a.resolveMedia(w, r, id)
+	mode, reason, safePath, ok := a.resolveMediaReason(w, r, id)
 	if !ok {
 		return
 	}
@@ -437,11 +439,15 @@ func (a *API) handlePlay(w http.ResponseWriter, r *http.Request) {
 	if mode == playback.ModeRemux {
 		query.Set("audio", strconv.Itoa(options.Audio))
 		query.Set("q", options.Quality)
+	} else if caps.Native() {
+		// /stream vuelve a decidir: con la misma pista sale el mismo modo.
+		query.Set("audio", strconv.Itoa(options.SelectedAudio))
 	}
 
 	writeJSON(w, http.StatusOK, playResponse{
 		URL:              target + "?" + query.Encode(),
 		Mode:             mode,
+		Reason:           reason,
 		ExpiresAt:        expiresAt,
 		AudioTracks:      options.AudioTracks,
 		SelectedAudio:    options.SelectedAudio,
@@ -588,37 +594,45 @@ func (a *API) handleStreamSubtitle(w http.ResponseWriter, r *http.Request) {
 // resolveMedia busca el ítem, decide el modo y comprueba que el archivo sigue
 // dentro de su biblioteca y existe. Si algo falla, ya escribe la respuesta.
 func (a *API) resolveMedia(w http.ResponseWriter, r *http.Request, id int64) (playback.Mode, string, bool) {
+	mode, _, safePath, ok := a.resolveMediaReason(w, r, id)
+	return mode, safePath, ok
+}
+
+// resolveMediaReason es resolveMedia con el motivo de no ir en directo. Para
+// las apps nativas la pista de audio cuenta: la del parámetro audio o, si no
+// viene, la guardada en las preferencias del usuario.
+func (a *API) resolveMediaReason(w http.ResponseWriter, r *http.Request, id int64) (playback.Mode, playback.Reason, string, bool) {
 	media, err := a.mediaFile(r, id)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		writeJSONError(w, http.StatusNotFound, "ítem no encontrado")
-		return "", "", false
+		return "", "", "", false
 	case err != nil:
 		log.Printf("library: leer archivo del ítem %d: %v", id, err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
-		return "", "", false
+		return "", "", "", false
 	}
 
 	if _, err := playback.Decide(media.path); errors.Is(err, playback.ErrUnsupportedContainer) {
 		writeJSONError(w, http.StatusUnsupportedMediaType, "contenedor no soportado para reproducción")
-		return "", "", false
+		return "", "", "", false
 	} else if err != nil {
 		log.Printf("library: decidir reproducción del ítem %d: %v", id, err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
-		return "", "", false
+		return "", "", "", false
 	}
 
 	safePath, err := playback.SafePath(media.libraryPath, media.path)
 	if err != nil {
 		log.Printf("library: ítem %d fuera de la biblioteca: %v", id, err)
 		writeJSONError(w, http.StatusNotFound, "archivo no encontrado")
-		return "", "", false
+		return "", "", "", false
 	}
 
 	stat, err := os.Stat(safePath)
 	if err != nil || stat.IsDir() {
 		writeJSONError(w, http.StatusNotFound, "archivo no encontrado")
-		return "", "", false
+		return "", "", "", false
 	}
 	fileInfo, _ := a.cachedFileInfo(r.Context(), safePath)
 	var infoPointer *playback.FileInfo
@@ -626,15 +640,39 @@ func (a *API) resolveMedia(w http.ResponseWriter, r *http.Request, id int64) (pl
 		len(fileInfo.Audio) > 0 || len(fileInfo.Subtitles) > 0 {
 		infoPointer = &fileInfo
 	}
-	mode, err := playback.DecideFor(
-		media.path, infoPointer, playback.ParseCapabilities(r.URL.Query().Get("caps")),
-	)
+	caps := playback.ParseCapabilities(r.URL.Query().Get("caps"))
+	audioIndex := -1
+	if caps.Native() {
+		audioIndex = a.nativeAudioIndex(r, id)
+	}
+	mode, reason, err := playback.DecideForAudio(media.path, infoPointer, caps, audioIndex)
 	if err != nil {
 		log.Printf("library: decidir reproducción del ítem %d: %v", id, err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
-		return "", "", false
+		return "", "", "", false
 	}
-	return mode, safePath, true
+	return mode, reason, safePath, true
+}
+
+// nativeAudioIndex devuelve la pista de audio que pide la app: la del
+// parámetro audio o, si falta, la de las preferencias; -1 si no hay ninguna.
+// Un valor no válido cuenta como ausente: playOptions ya lo rechaza con 400.
+func (a *API) nativeAudioIndex(r *http.Request, id int64) int {
+	if raw := r.URL.Query().Get("audio"); raw != "" {
+		if index, err := strconv.Atoi(raw); err == nil && index >= 0 {
+			return index
+		}
+		return -1
+	}
+	userID := sessionUserID(r)
+	if userID == 0 {
+		return -1
+	}
+	preferences, err := loadItemPreferences(r.Context(), a.db, userID, id)
+	if err != nil || preferences == nil || preferences.AudioIndex == nil || *preferences.AudioIndex < 0 {
+		return -1
+	}
+	return *preferences.AudioIndex
 }
 
 func (a *API) mediaFile(r *http.Request, id int64) (mediaFile, error) {
