@@ -7,6 +7,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.30.0] - 2026-10-29
+
+### Added
+
+- Stable API contract for native clients: `GET /api/v1/system/version` now returns `api_level` (currently 1) and `min_client` (minimum supported app version). The OpenAPI now covers all 109 routes (users, trash, backups, uploads, people, delete item and `/healthz` were documented) and a new test (`internal/apicontract`) fails if a server route is missing from the OpenAPI or vice versa.
+- API documentation for client developers: [docs/en/api.md](docs/en/api.md) (stability, authentication, pairing by code, playback with `caps`, errors and a `curl` example).
+
 ## [0.29.0] - 2026-10-28
 
 ### Added

@@ -7,6 +7,13 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.30.0] - 2026-10-29
+
+### Añadido
+
+- Contrato de la API estable para clientes nativos: `GET /api/v1/system/version` devuelve ahora `api_level` (hoy 1) y `min_client` (versión mínima de app admitida). El OpenAPI incluye ya las 109 rutas (se documentaron usuarios, papelera, copias de seguridad, subidas, personas, borrar ítem y `/healthz`) y una prueba nueva (`internal/apicontract`) falla si una ruta del servidor no está en el OpenAPI o al revés.
+- Documentación de la API para quien desarrolle clientes: [docs/es/api.md](docs/es/api.md) (estabilidad, autenticación, vinculación por código, reproducción con `caps`, errores y un ejemplo con `curl`).
+
 ## [0.29.0] - 2026-10-28
 
 ### Añadido
