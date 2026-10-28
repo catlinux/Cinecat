@@ -39,9 +39,9 @@ Versión actual: **0.20.0**. Esta página resume el estado real del código, no 
 | Servidor y biblioteca | Subidas guiadas de series, temporadas, capítulos y películas | ✅ 0.22.0 | Solo administradores; mismos requisitos que la subida genérica. |
 | Reproducción | Decisión por códec real y capacidades del navegador | ✅ 0.22.0 | H.265 directo solo si el navegador lo admite; la copia depende además del índice de claves y de los tokens MSE. |
 | Reproducción | Reproducción directa de MP4/M4V | ✅ 0.1.0 | Sirve el archivo con soporte de rangos HTTP. |
-| Reproducción | HLS para MKV, AVI, MOV, TS y M2TS | ✅ 0.12.0 / 0.23.0 | Copia el vídeo si el contenedor, el códec, la altura y el índice de claves lo permiten; si no, recodifica a H.264 + AAC estéreo. Segmentos MPEG-TS, saltos y límites de procesos. |
-| Reproducción | Modo copia sin recodificar | ✅ 0.23.0 | Cortes en fotogramas clave reales; H.265 por MSE. |
-| Reproducción | Aceleración por hardware Intel (VA-API) | ✅ 0.23.0 | H.264 VA-API con decodificación CPU o GPU; vuelta automática a libx264. |
+| Reproducción | HLS para MKV, AVI, MOV, TS y M2TS | ✅ 0.12.0 / 0.24.0 | Copia el vídeo si el contenedor, el códec, la altura y el índice de claves lo permiten; si no, recodifica a H.264 + AAC estéreo. Segmentos MPEG-TS, saltos y límites de procesos. |
+| Reproducción | Modo copia sin recodificar | ✅ 0.24.0 | Cortes en fotogramas clave reales; H.265 por MSE. |
+| Reproducción | Aceleración por hardware Intel (VA-API) | ✅ 0.24.0 | H.264 VA-API con decodificación CPU o GPU; vuelta automática a libx264. |
 | Reproducción | Audio, subtítulos de texto y calidad | ✅ 0.13.0 | Subtítulos incrustados de texto y `.srt`/`.vtt`/`.ass` como WebVTT; preferencias por usuario y película. |
 | Reproducción | Reproductor propio con controles, atajos y siguiente episodio | ✅ 0.13.0 | hls.js para HLS y `<video>` nativo para directa. |
 | Reproducción | Perfiles por dispositivo, HDR/10 bits, subtítulos de imagen y ABR | ⬜ | La copia existe; la recodificación usa VA-API o software, todavía H.264 + AAC estéreo. |

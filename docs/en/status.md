@@ -39,9 +39,9 @@ Current version: **0.20.0**. This page describes the real state of the code, not
 | Server and library | Guided uploads of series, seasons, episodes and movies | ✅ 0.22.0 | Administrators only; same requirements as the generic upload. |
 | Playback | Decision by real codec and browser capabilities | ✅ 0.22.0 | H.265 direct only when the browser supports it; copying also depends on the keyframe index and the MSE tokens. |
 | Playback | Direct play for MP4/M4V | ✅ 0.1.0 | Serves the file with HTTP range support. |
-| Playback | HLS for MKV, AVI, MOV, TS and M2TS | ✅ 0.12.0 / 0.23.0 | Copies the video when the container, codec, height and keyframe index allow it; otherwise re-encodes to H.264 + stereo AAC. MPEG-TS segments, seeking and process limits. |
-| Playback | Copy mode without re-encoding | ✅ 0.23.0 | Cuts at real keyframes; H.265 through MSE. |
-| Playback | Intel hardware acceleration (VA-API) | ✅ 0.23.0 | H.264 VA-API with CPU or GPU decoding; automatic fallback to libx264. |
+| Playback | HLS for MKV, AVI, MOV, TS and M2TS | ✅ 0.12.0 / 0.24.0 | Copies the video when the container, codec, height and keyframe index allow it; otherwise re-encodes to H.264 + stereo AAC. MPEG-TS segments, seeking and process limits. |
+| Playback | Copy mode without re-encoding | ✅ 0.24.0 | Cuts at real keyframes; H.265 through MSE. |
+| Playback | Intel hardware acceleration (VA-API) | ✅ 0.24.0 | H.264 VA-API with CPU or GPU decoding; automatic fallback to libx264. |
 | Playback | Audio, text subtitles and quality | ✅ 0.13.0 | Embedded text and `.srt`/`.vtt`/`.ass` as WebVTT; per-user, per-movie preferences. |
 | Playback | Custom player with controls, shortcuts and next episode | ✅ 0.13.0 | hls.js for HLS and native `<video>` for direct play. |
 | Playback | Per-device profiles, HDR/10-bit, image subtitles and ABR | ⬜ | Copy mode exists; re-encoding uses VA-API or software, still H.264 + stereo AAC. |

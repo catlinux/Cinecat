@@ -7,6 +7,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-10-28
+
 ### Security
 
 - Per-library access: each non-administrator user only sees the libraries assigned to them (or all of them, including future ones, with that option). It applies to every listing, search, the home page, series, collections, people, music, the user's lists and to each item, its playback, thumbnail, progress, watched state and preferences. Anything hidden answers as if it did not exist (404) and cannot be written to. Collections and people only count what is visible. An automated leak test walks every read route with a marked hidden library and fails if any response gives it away or if a new route appears without coverage. Known limitation: an already issued playback URL stays valid until it expires (8 h).

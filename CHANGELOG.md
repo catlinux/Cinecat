@@ -7,6 +7,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.24.0] - 2026-10-28
+
 ### Seguridad
 
 - Acceso por biblioteca: cada usuario que no es administrador solo ve las bibliotecas que se le asignan (o todas, incluidas las futuras, si tiene esa opción). Se aplica en todos los listados, la búsqueda, el portal, series, colecciones, personas, música, las listas del usuario y en cada ítem, su reproducción, miniatura, progreso, visto y preferencias. Lo oculto responde como si no existiera (404) y no se puede escribir en ello. Las colecciones y las personas solo cuentan lo visible. Una prueba automática de fugas recorre todas las rutas de lectura con una biblioteca oculta marcada y falla si alguna respuesta la delata o si aparece una ruta nueva sin cubrir. Limitación conocida: una URL de reproducción ya emitida sigue valiendo hasta que caduca (8 h).
