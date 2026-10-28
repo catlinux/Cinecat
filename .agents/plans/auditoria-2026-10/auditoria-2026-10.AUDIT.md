@@ -65,3 +65,7 @@ Versión sugerida: **0.23.1** (parche: correcciones de seguridad y rendimiento s
 7. **A7 — Copia de seguridad diaria de la base** (nueva función, versión menor aparte): `VACUUM INTO` a `/data/backups` con retención configurable y sección en Administración. AgentRelay, esfuerzo medio.
 
 Compatibilidad que conviene abordar después (versiones menores): PWA (`manifest`, iconos), subtítulos de imagen quemados al recodificar (opción por pista), desentrelazado automático (`bwdif` si `field_order` es entrelazado), AV1 directo/copia con capacidades, conservar 5.1 en AAC multicanal cuando el cliente lo admita (aplicaciones nativas).
+
+## Estado de los arreglos (2026-10-28)
+
+**A1-A6 hechos y verificados** en la instancia de prueba del Debian (imagen compilada con Go 1.26): página de 48 películas de 320 KB a 75 KB; un usuario `user` no recibe ninguna ruta del disco ni puede usar ajustes, navegador de carpetas o papelera (403); la ficha conserva el reparto completo; cabeceras presentes en la web y en la API; `signing.key` creada con permisos 0600 y la misma URL de reproducción sigue valiendo tras reiniciar el servidor; la copia sigue funcionando. Entran en la 0.23.0 junto con el resto, porque ninguna se había publicado. **Pendiente de la auditoría:** A7 (copia de seguridad diaria de la base, función nueva), la CSP completa (necesita pruebas en navegadores reales), `ServerTokens Prod` en el Apache del host (lo aplica el usuario) y el bloque de compatibilidad (PWA, subtítulos de imagen, desentrelazado, AV1, 5.1).
