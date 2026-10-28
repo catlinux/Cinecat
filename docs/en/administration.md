@@ -146,6 +146,8 @@ Anything outside the visible libraries responds as if it did not exist: listings
 
 In **Administration → Users** you can create an account with a name, password and role, choose its libraries (or tick "All, including future libraries"), change its role, enable or disable it, reset its password and delete it. User accounts must have at least one library or access to all. The administrator cannot delete, disable or remove the admin role from their own account, and at least one active administrator must remain. Resetting a password, changing a role, disabling or deleting an account closes all its sessions.
 
+Every session records its device and type. **Your account** lists your open sessions (device, last activity, expiry) so you can close any of them, and each user card in **Users** does the same for administrators. Web sessions last 24 hours; native app sessions will last 90 days, both renewed while in use.
+
 ## Uploading files and trash
 
 Disabled by default. Two things are needed: mount the library read-write (`CINECAT_MEDIA_MODE=rw` in the Debian `.env`, then bring the containers up again) and enable **Permitir cambiar archivos** in Administration → Library. With either one off, the web app shows the reason and does not touch the disk. With `rw`, any Cinecat administrator can write to your disks: protect that account well.

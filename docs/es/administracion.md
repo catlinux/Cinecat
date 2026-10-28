@@ -146,6 +146,8 @@ Lo que queda fuera de las bibliotecas visibles responde igual que si no existier
 
 En **Administración → Usuarios** puedes crear una cuenta con nombre, contraseña y rol, elegir sus bibliotecas (o marcar «Todas, también las que se creen en el futuro»), cambiar el rol, activar o desactivar la cuenta, restablecer su contraseña y borrarla. Las cuentas de usuario deben tener al menos una biblioteca o el acceso a todas. El administrador no puede borrarse, desactivarse ni quitarse el rol a sí mismo, y siempre debe quedar un administrador activo. Restablecer la contraseña, cambiar el rol, desactivar o borrar una cuenta cierra todas sus sesiones.
 
+Cada sesión guarda su dispositivo y su tipo. **Tu cuenta** lista tus sesiones abiertas (dispositivo, última actividad y caducidad) para que puedas cerrar cualquiera, y cada tarjeta de **Usuarios** hace lo mismo para el administrador. Las sesiones web duran 24 horas y las de las apps nativas durarán 90 días, ambas renovadas mientras se usan.
+
 ## Subir archivos y papelera
 
 Desactivado por defecto. Para usarlo hacen falta dos cosas: montar la biblioteca en lectura y escritura (`CINECAT_MEDIA_MODE=rw` en el `.env` del Debian y volver a levantar los contenedores) y activar **Permitir cambiar archivos** en Administración → Biblioteca. Con cualquiera de las dos apagada, la web muestra el motivo y no toca el disco. Con `rw`, cualquier administrador de Cinecat puede escribir en tus discos: protege bien esa cuenta.

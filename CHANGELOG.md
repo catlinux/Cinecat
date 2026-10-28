@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.26.0] - 2026-10-28
+
+### Añadido
+
+- Sesiones de dispositivo: cada sesión guarda el nombre del dispositivo (la web lo deduce del navegador y del sistema, p. ej. «Chrome · Windows») y su tipo (`web`, `android` o `androidtv`). En **Tu cuenta** hay una lista de «Sesiones abiertas» con la última actividad y un botón para cerrar cada una, y en **Administración → Usuarios** cada tarjeta muestra y cierra las sesiones de ese usuario. Las sesiones de los clientes nativos durarán 90 días (renovables); las de la web siguen en 24 h. API: `GET/DELETE /api/v1/auth/sessions` y, para administradores, `GET/DELETE /api/v1/users/{id}/sessions`; el login acepta `device_name` y `client`. Migración 0021. Es la base de las apps Android y Android TV.
+
 ## [0.25.0] - 2026-10-28
 
 ### Añadido
