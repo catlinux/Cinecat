@@ -58,6 +58,19 @@ RequestHeader set X-Forwarded-Proto "https"
 
 Recarga Apache. Sin esa cabecera la cookie de sesión no se marca `Secure`.
 
+### Cabeceras y firma del servidor
+
+Las cabeceras de seguridad (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, la CSP mínima y HSTS en HTTPS) las añaden la web y la API. Apache no debe duplicarlas; el vhost las deja comentadas solo como referencia.
+
+Para reducir la firma del servidor, edita `/etc/apache2/conf-available/security.conf` del host (no el vhost) y deja:
+
+```apache
+ServerTokens Prod
+ServerSignature Off
+```
+
+Después recarga Apache. Estos ajustes no afectan a la reproducción ni a los proxies.
+
 ### IP real del cliente y bloqueo de login
 
 El bloqueo de login cuenta los fallos por pareja usuario+IP, así que la API necesita la IP real y no la del contenedor web. `mod_proxy_http` de Apache añade `X-Forwarded-For` por sí solo (directiva `ProxyAddHeaders`, activa por defecto), así que normalmente no hace falta configurar nada en el vhost. No la desactives ni la sobrescribas con `RequestHeader set`.

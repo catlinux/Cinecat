@@ -37,6 +37,23 @@ func TestHealthz(t *testing.T) {
 	}
 }
 
+func TestSecurityHeadersEnAPISinSesion(t *testing.T) {
+	server := newTestServer(t)
+	for _, path := range []string{"/healthz", "/api/v1/libraries"} {
+		resp, err := http.Get(server.URL + path)
+		if err != nil {
+			t.Fatalf("GET %s: %v", path, err)
+		}
+		resp.Body.Close()
+		if got := resp.Header.Get("X-Content-Type-Options"); got != "nosniff" {
+			t.Fatalf("%s: X-Content-Type-Options = %q", path, got)
+		}
+		if got := resp.Header.Get("Referrer-Policy"); got != "no-referrer" {
+			t.Fatalf("%s: Referrer-Policy = %q", path, got)
+		}
+	}
+}
+
 func TestHealthzRechazaOtrosMetodos(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/healthz", nil)
 	rec := httptest.NewRecorder()

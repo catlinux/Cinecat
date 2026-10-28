@@ -9,6 +9,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ### Seguridad
 
+- Cabeceras de seguridad en la web y en la API: la web ya no se puede incrustar en otra página (`X-Frame-Options: DENY` y `frame-ancestors 'none'`), `Strict-Transport-Security` por HTTPS, `X-Content-Type-Options: nosniff`, política de referencia y de permisos. La CSP es solo la mínima; una completa queda para más adelante. Recomendación de `ServerTokens Prod` en Apache (ver despliegue).
 - El servidor se compila con Go 1.26 (antes 1.22.12, que ya no recibe parches y arrastraba 43 vulnerabilidades conocidas de la biblioteca estándar: `net/http`, `crypto/tls`, `crypto/x509`, `mime/multipart`…).
 
 ### Añadido

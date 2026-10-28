@@ -404,7 +404,17 @@ func newHandler(authSvc *auth.Service, api *library.API, updateAPIs ...*update.A
 	if len(updateAPIs) > 0 && updateAPIs[0] != nil {
 		updateAPIs[0].Register(mux)
 	}
-	return mux
+	return securityHeaders(mux)
+}
+
+// securityHeaders añade las cabeceras comunes de la API sin envolver el
+// ResponseWriter: Range, streaming y Flush siguen funcionando igual.
+func securityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("Referrer-Policy", "no-referrer")
+		next.ServeHTTP(w, r)
+	})
 }
 
 type versionResponse struct {

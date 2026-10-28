@@ -9,6 +9,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ### Security
 
+- Security headers on the web app and the API: the web app can no longer be embedded in another page (`X-Frame-Options: DENY` and `frame-ancestors 'none'`), `Strict-Transport-Security` over HTTPS, `X-Content-Type-Options: nosniff`, referrer and permissions policies. The CSP is only the minimal one; a full one is left for later. `ServerTokens Prod` is recommended for Apache (see deployment).
 - The server is built with Go 1.26 (before 1.22.12, which no longer receives patches and carried 43 known standard library vulnerabilities: `net/http`, `crypto/tls`, `crypto/x509`, `mime/multipart`…).
 
 ### Added

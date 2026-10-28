@@ -58,6 +58,19 @@ RequestHeader set X-Forwarded-Proto "https"
 
 Reload Apache. Without that header the session cookie is not marked `Secure`.
 
+### Headers and server signature
+
+The web app and the API add the security headers (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, the minimal CSP and HSTS on HTTPS). Apache must not duplicate them; the vhost keeps them commented only as a reference.
+
+To reduce the server signature, edit the host's `/etc/apache2/conf-available/security.conf` (not the vhost) and keep:
+
+```apache
+ServerTokens Prod
+ServerSignature Off
+```
+
+Then reload Apache. These settings do not affect playback or the proxies.
+
 ### Real client IP and login lockout
 
 Login lockout counts failures per user+IP pair, so the API needs the real IP rather than the web container's IP. Apache's `mod_proxy_http` adds `X-Forwarded-For` by itself (the `ProxyAddHeaders` directive, on by default), so you normally do not need to configure anything in the vhost. Do not turn it off or overwrite it with `RequestHeader set`.
