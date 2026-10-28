@@ -370,6 +370,8 @@ func TestDecideFor(t *testing.T) {
 		{name: "h264 mp4 aac directo", path: "/media/peli.mp4", info: &FileInfo{Video: []VideoStream{h264}, Audio: []AudioStream{aac}}, want: ModeDirect},
 		{name: "h264 mp4 sin audio directo", path: "/media/peli.m4v", info: &FileInfo{Video: []VideoStream{h264}}, want: ModeDirect},
 		{name: "h264 mp4 ac3 recodifica", path: "/media/peli.mp4", info: &FileInfo{Video: []VideoStream{h264}, Audio: []AudioStream{ac3}}, want: ModeRemux},
+		{name: "h264 mp4 aac estéreo directo", path: "/media/peli.mp4", info: &FileInfo{Video: []VideoStream{h264}, Audio: []AudioStream{{Codec: "aac", Default: true, Channels: 2}}}, want: ModeDirect},
+		{name: "h264 mp4 aac 5.1 no directo", path: "/media/peli.mp4", info: &FileInfo{Video: []VideoStream{h264}, Audio: []AudioStream{{Codec: "aac", Default: true, Channels: 6}}}, want: ModeRemux},
 		{name: "hevc sin capacidades recodifica", path: "/media/peli.mp4", info: &FileInfo{Video: []VideoStream{hevc}, Audio: []AudioStream{aac}}, want: ModeRemux},
 		{name: "hevc con capacidad directo", path: "/media/peli.mp4", info: &FileInfo{Video: []VideoStream{hevc}, Audio: []AudioStream{aac}}, caps: Capabilities{HEVC: true}, want: ModeDirect},
 		{name: "hevc 10 bits sin hevc10 recodifica", path: "/media/peli.mp4", info: &FileInfo{Video: []VideoStream{hevc10}, Audio: []AudioStream{aac}}, caps: Capabilities{HEVC: true}, want: ModeRemux},

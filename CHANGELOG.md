@@ -37,6 +37,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 - Un MP4 con H.265 etiquetado `hev1` (la mayoría de los descargados) ya no se envía en directo a un navegador que no lo acepta (Safari y iOS solo aceptan `hvc1`): la web comprueba también esa etiqueta y, si no, se reproduce por copia o recodificación.
 - El listado de colecciones es mucho más rápido (el recuento usa `JOIN`).
 - Las subidas largas ya no fallan con `fetch failed`: la web reenviaba el archivo con un `fetch` que corta a los 300 s sin respuesta, y el servidor solo responde al terminar de recibirlo. Ahora se reenvía en streaming sin límite de tiempo y directo al servidor por la red de Docker (`INTERNAL_API_URL`, ya en `docker-compose.yml`), sin salir a internet ni pasar otra vez por Apache.
+- Un MP4 cuya pista de audio por defecto es AAC o MP3 con más de dos canales (p. ej. AAC 5.1) ya no se reproduce en directo, sino por HLS con el audio bajado a estéreo: Opera no sacaba sonido de AAC multicanal en directo.
 
 ## [0.22.1] - 2026-10-28
 

@@ -250,7 +250,9 @@ func directAudio(info *FileInfo) bool {
 	}
 	switch strings.ToLower(strings.TrimSpace(audio.Codec)) {
 	case "aac", "mp3":
-		return true
+		// Algunos navegadores (Opera) no sacan audio de AAC multicanal en
+		// directo; el HLS lo baja a estéreo.
+		return audio.Channels <= 2
 	default:
 		return false
 	}

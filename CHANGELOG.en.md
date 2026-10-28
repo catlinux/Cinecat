@@ -37,6 +37,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 - An H.265 MP4 tagged `hev1` (most downloaded ones) is no longer sent directly to a browser that does not accept it (Safari and iOS only accept `hvc1`): the web app also checks that tag and, if not, plays it by copy or re-encode.
 - The collections list is much faster (the count uses `JOIN`).
 - Long uploads no longer fail with `fetch failed`: the web app forwarded the file with a `fetch` that gives up after 300 s without a response, and the server only answers once it has received it. It is now streamed without a time limit and straight to the server over the Docker network (`INTERNAL_API_URL`, already in `docker-compose.yml`), without going out to the internet or through Apache again.
+- An MP4 whose default audio track is AAC or MP3 with more than two channels (e.g. AAC 5.1) is no longer played directly but through HLS with the audio downmixed to stereo: Opera produced no sound from multichannel AAC in direct play.
 
 ## [0.22.1] - 2026-10-28
 
