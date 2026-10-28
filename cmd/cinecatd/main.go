@@ -31,6 +31,13 @@ import (
 // -ldflags "-X main.version=<versión>"; si no, se lee del archivo VERSION.
 var version string
 
+// apiLevel solo cambia cuando una ruta de /api/v1 se modifica de forma
+// incompatible; minClient es la versión mínima de app nativa admitida.
+const (
+	apiLevel  = 1
+	minClient = "0.0.0"
+)
+
 // commit y builtAt se inyectan con -ldflags "-X main.commit=... -X main.builtAt=...".
 var (
 	commit  string
@@ -488,17 +495,21 @@ func securityHeaders(next http.Handler) http.Handler {
 }
 
 type versionResponse struct {
-	Server  string `json:"server"`
-	Commit  string `json:"commit"`
-	BuiltAt string `json:"built_at"`
+	Server    string `json:"server"`
+	Commit    string `json:"commit"`
+	BuiltAt   string `json:"built_at"`
+	APILevel  int    `json:"api_level"`
+	MinClient string `json:"min_client"`
 }
 
 func handleVersion(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	if err := json.NewEncoder(w).Encode(versionResponse{
-		Server:  applicationVersion(),
-		Commit:  commit,
-		BuiltAt: builtAt,
+		Server:    applicationVersion(),
+		Commit:    commit,
+		BuiltAt:   builtAt,
+		APILevel:  apiLevel,
+		MinClient: minClient,
 	}); err != nil {
 		log.Printf("cinecatd: escribir versión: %v", err)
 	}

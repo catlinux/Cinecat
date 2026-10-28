@@ -790,6 +790,8 @@ export interface ServerVersion {
 	server: string;
 	commit: string;
 	built_at: string;
+	api_level?: number;
+	min_client?: string;
 }
 
 export interface CurrentUserResponse {

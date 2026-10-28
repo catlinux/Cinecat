@@ -4,9 +4,10 @@ info:
   version: 0.1.0
   description: |
     API REST de Cinecat, el servidor de una biblioteca de vídeo personal.
-    Todas las rutas están versionadas bajo `/api/v1/`, de forma independiente
-    de la versión del propio servidor. Los endpoints de biblioteca exigen una
-    sesión válida enviada como `Authorization: Bearer <token>`.
+    La API está versionada bajo `/api/v1/`, de forma independiente de la
+    versión del propio servidor; `/healthz` queda fuera de ese contrato. Los
+    endpoints de biblioteca exigen una sesión válida enviada como
+    `Authorization: Bearer <token>`.
 servers:
   - url: /
 paths:
@@ -475,8 +476,10 @@ paths:
       summary: Devuelve la versión del servidor
       description: |
         Informa de la versión compilada del servidor, el commit y la fecha de
-        compilación. No exige sesión: la web lo usa para mostrar el pie y
-        avisar si su propia versión no coincide.
+        compilación. `api_level` identifica el nivel del contrato de /api/v1 y
+        `min_client` es la versión mínima de app nativa admitida. No exige
+        sesión: la web lo usa para mostrar el pie y avisar si su propia versión
+        no coincide.
       security: []
       responses:
         '200':
@@ -2020,6 +2023,62 @@ paths:
                 $ref: '#/components/schemas/Error'
         '404':
           description: No existe un ítem con ese identificador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Mueve un ítem a la papelera (solo administradores)
+      description: |
+        Mueve el archivo del ítem a la carpeta `.cinecat-papelera` de su
+        biblioteca, junto con sus subtítulos, guarda una instantánea de sus
+        datos y lo elimina de `media_items`. Requiere una sesión con rol
+        `admin` y la modificación de archivos activada. La entrada se puede
+        recuperar con `POST /api/v1/trash/{id}/restore`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identificador del ítem que se mueve a la papelera.
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        '200':
+          description: Ítem movido a la papelera
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrashItem'
+        '400':
+          description: Identificador o ruta no válidos, o biblioteca no admitida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Se requiere rol de administrador o la modificación de archivos está desactivada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: El ítem o su archivo no existe
           content:
             application/json:
               schema:
@@ -4399,6 +4458,905 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/trash:
+    get:
+      summary: Lista la papelera (solo administradores)
+      description: |
+        Devuelve los elementos eliminados que aún no se han restaurado ni
+        purgado, del más reciente al más antiguo. `expires_at` se calcula con
+        los días de retención configurados.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Elementos de la papelera
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrashListResponse'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Se requiere rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/trash/{id}/restore:
+    post:
+      summary: Restaura un elemento de la papelera (solo administradores)
+      description: |
+        Devuelve el archivo a su ruta original, recrea las carpetas necesarias
+        y restaura la ficha y los datos asociados. Si la ruta original ya
+        existe responde 409. Requiere una sesión con rol `admin` y la
+        modificación de archivos activada.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TrashId'
+      responses:
+        '200':
+          description: Elemento restaurado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrashRestoreResponse'
+        '400':
+          description: Identificador no válido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Se requiere rol de administrador o la modificación de archivos está desactivada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: El elemento o su archivo no existe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: La ruta original ya existe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/trash/{id}:
+    delete:
+      summary: Elimina definitivamente un elemento de la papelera (solo administradores)
+      description: |
+        Borra el archivo de la papelera y su entrada. No comprueba si la
+        modificación de archivos está activada. Requiere una sesión con rol
+        `admin`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TrashId'
+      responses:
+        '204':
+          description: Elemento eliminado definitivamente
+        '400':
+          description: Identificador o ruta de la papelera no válidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Se requiere rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: El elemento no existe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/trash/purge:
+    post:
+      summary: Purga la papelera caducada (solo administradores)
+      description: |
+        Elimina definitivamente los elementos cuya fecha de borrado supera los
+        días de retención. No requiere cuerpo. Requiere una sesión con rol
+        `admin`.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Elementos purgados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrashPurgeResponse'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Se requiere rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/users:
+    get:
+      summary: Lista las cuentas (solo administradores)
+      description: |
+        Devuelve todas las cuentas ordenadas por nombre, con su rol, estado,
+        bibliotecas asignadas y número de sesiones activas. Requiere una sesión
+        con rol `admin`.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Cuentas de usuario
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsersResponse'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Se requiere rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      summary: Crea una cuenta (solo administradores)
+      description: |
+        Crea una cuenta con contraseña argon2id y le asigna las bibliotecas
+        indicadas. El nombre de usuario no puede repetirse. Requiere una sesión
+        con rol `admin`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: Cuenta creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Nombre, contraseña, rol o bibliotecas no válidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Se requiere rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Ya existe una cuenta con ese nombre
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: El cuerpo supera el límite de 1 MiB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/users/{id}:
+    patch:
+      summary: Actualiza una cuenta (solo administradores)
+      description: |
+        Cambia el rol, el estado de desactivación o el acceso global a
+        bibliotecas. Al desactivar una cuenta o cambiar su rol se cierran sus
+        sesiones. Un administrador no puede desactivarse ni quitarse el rol a
+        sí mismo. Requiere una sesión con rol `admin`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identificador de la cuenta.
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: Cuenta actualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Cuerpo no válido o rol no permitido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Se requiere rol de administrador o la operación afecta a la propia cuenta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: La cuenta no existe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: La operación dejaría el servidor sin administradores activos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: El cuerpo supera el límite de 1 MiB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Borra una cuenta (solo administradores)
+      description: |
+        Borra la cuenta y sus sesiones. Un administrador no puede borrar su
+        propia cuenta y debe quedar al menos un administrador activo. Requiere
+        una sesión con rol `admin`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identificador de la cuenta.
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        '204':
+          description: Cuenta borrada
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Se requiere rol de administrador o es la propia cuenta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: La cuenta no existe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: La operación dejaría el servidor sin administradores activos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/users/{id}/libraries:
+    put:
+      summary: Asigna las bibliotecas de una cuenta (solo administradores)
+      description: |
+        Reemplaza las bibliotecas asignadas por la lista indicada. Una lista
+        vacía deja la cuenta sin bibliotecas propias. Requiere una sesión con
+        rol `admin`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identificador de la cuenta.
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserLibrariesRequest'
+      responses:
+        '200':
+          description: Bibliotecas actualizadas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Alguna biblioteca no existe o el cuerpo no es válido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Se requiere rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: La cuenta no existe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: El cuerpo supera el límite de 1 MiB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/users/{id}/password:
+    post:
+      summary: Restablece la contraseña de una cuenta (solo administradores)
+      description: |
+        Cambia la contraseña y cierra todas las sesiones de esa cuenta. Requiere
+        una sesión con rol `admin`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identificador de la cuenta.
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetUserPasswordRequest'
+      responses:
+        '204':
+          description: Contraseña restablecida
+        '400':
+          description: La contraseña es demasiado corta o el cuerpo no es válido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Se requiere rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: La cuenta no existe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: El cuerpo supera el límite de 1 MiB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/system/backups:
+    get:
+      summary: Lista las copias de seguridad (solo administradores)
+      description: |
+        Devuelve las copias disponibles de la base de datos, de la más reciente
+        a la más antigua, con el estado de las copias automáticas y los días de
+        retención. Requiere una sesión con rol `admin`.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Copias de seguridad
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackupsResponse'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Se requiere rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      summary: Crea una copia de seguridad (solo administradores)
+      description: |
+        Crea inmediatamente una copia de la base de datos y aplica la retención.
+        Si ya hay otra copia en curso responde 409. Requiere una sesión con rol
+        `admin`.
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Copia creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Backup'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Se requiere rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Ya hay una copia de seguridad en curso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: No se pudo crear la copia
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/people/{id}:
+    get:
+      summary: Ficha de una persona
+      description: |
+        Consulta TMDB por el identificador de la persona y devuelve su ficha,
+        separando los títulos presentes en las bibliotecas visibles
+        (`in_library`) de los que no lo están (`not_in_library`). Los papeles se
+        combinan por película o serie.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PersonId'
+      responses:
+        '200':
+          description: Ficha de la persona
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PersonResponse'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: La persona no existe o TMDB no está disponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: No se pudo consultar TMDB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/uploads/targets:
+    get:
+      summary: Lista los destinos de subida (solo administradores)
+      description: |
+        Devuelve las raíces de las bibliotecas de vídeo y clips donde se pueden
+        subir archivos, con el número de películas y series de cada una, e
+        indica si la modificación de archivos está activada. Requiere una
+        sesión con rol `admin`.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Destinos de subida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadTargetsResponse'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Se requiere rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/libraries/{id}/files:
+    put:
+      summary: Sube un archivo a una biblioteca (solo administradores)
+      description: |
+        Recibe el archivo en el cuerpo binario y lo guarda sin sobrescribir
+        nada. La carpeta de destino debe existir, ser absoluta y estar dentro
+        de la biblioteca; `subdir` permite crear una subcarpeta. El nombre debe
+        tener una extensión de vídeo o subtítulo admitida. La cabecera
+        `Content-Length` es obligatoria y el tamaño máximo depende del ajuste
+        `library.upload_max_gb`. Requiere una sesión con rol `admin` y la
+        modificación de archivos activada.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identificador de la biblioteca de vídeo o clips.
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - name: dir
+          in: query
+          required: true
+          description: Carpeta absoluta y existente dentro de una raíz de la biblioteca.
+          schema:
+            type: string
+        - name: subdir
+          in: query
+          required: false
+          description: Nombre de una única subcarpeta; se crea si no existe.
+          schema:
+            type: string
+        - name: name
+          in: query
+          required: true
+          description: Nombre del archivo, con extensión de vídeo o subtítulo.
+          schema:
+            type: string
+        - $ref: '#/components/parameters/UploadContentLength'
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '201':
+          description: Archivo subido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadResult'
+        '400':
+          description: Identificador, ruta, carpeta o nombre no válidos, o cuerpo incompleto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Se requiere rol de administrador o la modificación de archivos está desactivada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: La biblioteca no existe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: El archivo ya existe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '411':
+          description: Falta la cabecera Content-Length
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: El archivo supera el tamaño máximo permitido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '507':
+          description: No hay espacio libre suficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/series/{id}/files:
+    put:
+      summary: Sube un episodio o subtítulo a una serie (solo administradores)
+      description: |
+        Recibe el archivo en el cuerpo binario y lo guarda en la carpeta de la
+        serie y temporada, con el nombre normalizado `<serie> SxxExx.<ext>`.
+        `season` y `episode` deciden la carpeta y el nombre; `name` solo aporta
+        la extensión (y el idioma en los subtítulos). No sobrescribe archivos.
+        La cabecera `Content-Length` es obligatoria y el tamaño máximo depende
+        del ajuste `library.upload_max_gb`. Requiere una sesión con rol `admin`
+        y la modificación de archivos activada.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identificador de la serie.
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - name: season
+          in: query
+          required: true
+          description: Temporada; entero entre 0 y 99.
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 99
+        - name: episode
+          in: query
+          required: true
+          description: Episodio; entero entre 1 y 999.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 999
+        - name: name
+          in: query
+          required: true
+          description: Nombre original del archivo; se usa para validar y conservar la extensión.
+          schema:
+            type: string
+        - $ref: '#/components/parameters/UploadContentLength'
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '201':
+          description: Archivo subido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GuidedUploadResult'
+        '400':
+          description: Temporada, episodio, extensión, nombre o cuerpo no válidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Se requiere rol de administrador o la modificación de archivos está desactivada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: La serie no existe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: No se pudo determinar la carpeta de la serie o hay un conflicto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '411':
+          description: Falta la cabecera Content-Length
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: El archivo supera el tamaño máximo permitido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '507':
+          description: No hay espacio libre suficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /healthz:
+    get:
+      summary: Comprueba que el servidor responde
+      description: |
+        Endpoint de salud sin autenticación. Responde `ok` en texto plano cuando
+        el proceso HTTP está en marcha.
+      security: []
+      responses:
+        '200':
+          description: Servidor operativo
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: ok
 components:
   securitySchemes:
     bearerAuth:
@@ -4469,6 +5427,33 @@ components:
         enum:
           - poster
           - backdrop
+    TrashId:
+      name: id
+      in: path
+      required: true
+      description: Identificador del elemento de la papelera.
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+    PersonId:
+      name: id
+      in: path
+      required: true
+      description: Identificador TMDB de la persona.
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+    UploadContentLength:
+      name: Content-Length
+      in: header
+      required: true
+      description: Tamaño exacto del archivo en bytes; si falta o no coincide, la subida falla.
+      schema:
+        type: integer
+        format: int64
+        minimum: 0
     ItemId:
       name: id
       in: path
@@ -4518,6 +5503,8 @@ components:
         - server
         - commit
         - built_at
+        - api_level
+        - min_client
       properties:
         server:
           type: string
@@ -4528,6 +5515,14 @@ components:
         built_at:
           type: string
           description: Fecha UTC de la compilación en RFC3339; vacía si no se inyectó.
+        api_level:
+          type: integer
+          description: Nivel del contrato de /api/v1; solo sube ante un cambio incompatible.
+          example: 1
+        min_client:
+          type: string
+          description: Versión mínima de app nativa que este servidor admite.
+          example: 0.0.0
       additionalProperties: false
     UpdateStatus:
       type: object
@@ -6933,4 +7928,376 @@ components:
           format: date-time
         playable:
           type: boolean
+      additionalProperties: false
+    TrashItem:
+      type: object
+      required:
+        - id
+        - library_id
+        - title
+        - year
+        - kind
+        - original_path
+        - moved_kind
+        - deleted_by
+        - deleted_at
+        - expires_at
+      properties:
+        id:
+          type: integer
+          format: int64
+        library_id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        year:
+          type: integer
+          nullable: true
+        kind:
+          type: string
+          description: Tipo de ítem original, por ejemplo `movie` o `episode`.
+        original_path:
+          type: string
+        moved_kind:
+          type: string
+          enum: [file, folder]
+        deleted_by:
+          type: string
+          nullable: true
+          description: Nombre del usuario que movió el elemento; null si no se pudo identificar.
+        deleted_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+          description: Fecha en la que la purga automática puede eliminar el elemento.
+      additionalProperties: false
+    TrashListResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrashItem'
+      additionalProperties: false
+    TrashRestoreResponse:
+      type: object
+      required:
+        - item_id
+      properties:
+        item_id:
+          type: integer
+          format: int64
+          description: Identificador del ítem restaurado; puede ser distinto del original.
+      additionalProperties: false
+    TrashPurgeResponse:
+      type: object
+      required:
+        - purged
+      properties:
+        purged:
+          type: integer
+          description: Número de elementos eliminados definitivamente.
+      additionalProperties: false
+    User:
+      type: object
+      required:
+        - id
+        - username
+        - role
+        - disabled
+        - all_libraries
+        - library_ids
+        - created_at
+        - active_sessions
+      properties:
+        id:
+          type: integer
+          format: int64
+        username:
+          type: string
+        role:
+          type: string
+          enum: [admin, user]
+        disabled:
+          type: boolean
+        all_libraries:
+          type: boolean
+        library_ids:
+          type: array
+          items:
+            type: integer
+            format: int64
+        created_at:
+          type: string
+          format: date-time
+        active_sessions:
+          type: integer
+      additionalProperties: false
+    UsersResponse:
+      type: object
+      required:
+        - users
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+      additionalProperties: false
+    CreateUserRequest:
+      type: object
+      required:
+        - username
+        - password
+        - role
+      properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 40
+        password:
+          type: string
+          minLength: 8
+        role:
+          type: string
+          enum: [admin, user]
+        all_libraries:
+          type: boolean
+          default: false
+        library_ids:
+          type: array
+          items:
+            type: integer
+            format: int64
+      additionalProperties: false
+    UpdateUserRequest:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [admin, user]
+        disabled:
+          type: boolean
+        all_libraries:
+          type: boolean
+      additionalProperties: false
+    UserLibrariesRequest:
+      type: object
+      required:
+        - library_ids
+      properties:
+        library_ids:
+          type: array
+          items:
+            type: integer
+            format: int64
+      additionalProperties: false
+    ResetUserPasswordRequest:
+      type: object
+      required:
+        - password
+      properties:
+        password:
+          type: string
+          minLength: 8
+      additionalProperties: false
+    Backup:
+      type: object
+      required:
+        - name
+        - size_bytes
+        - created_at
+      properties:
+        name:
+          type: string
+        size_bytes:
+          type: integer
+          format: int64
+        created_at:
+          type: string
+          format: date-time
+      additionalProperties: false
+    BackupsResponse:
+      type: object
+      required:
+        - enabled
+        - retention_days
+        - backups
+        - last_error
+      properties:
+        enabled:
+          type: boolean
+          description: Indica si las copias automáticas están activadas.
+        retention_days:
+          type: integer
+          description: Días que se conservan las copias.
+        backups:
+          type: array
+          items:
+            $ref: '#/components/schemas/Backup'
+        last_error:
+          type: string
+          description: Último error de copia o retención; vacío si no hubo.
+      additionalProperties: false
+    Person:
+      type: object
+      required:
+        - id
+        - name
+        - biography
+        - birthday
+        - deathday
+        - place_of_birth
+        - photo_url
+        - known_for
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        biography:
+          type: string
+        birthday:
+          type: string
+        deathday:
+          type: string
+        place_of_birth:
+          type: string
+        photo_url:
+          type: string
+        known_for:
+          type: string
+      additionalProperties: false
+    PersonMedia:
+      type: object
+      required:
+        - type
+        - title
+        - year
+        - poster_url
+        - rating
+        - roles
+      properties:
+        type:
+          type: string
+          enum: [movie, series]
+        id:
+          type: integer
+          format: int64
+          description: Identificador local; solo aparece si el título está en la biblioteca.
+        tmdb_id:
+          type: integer
+          format: int64
+          description: Identificador TMDB; puede faltar en títulos locales sin identificar.
+        title:
+          type: string
+        year:
+          type: integer
+          nullable: true
+        poster_url:
+          type: string
+          nullable: true
+        rating:
+          type: number
+          format: double
+          nullable: true
+        roles:
+          type: array
+          items:
+            type: string
+      additionalProperties: false
+    PersonResponse:
+      type: object
+      required:
+        - person
+        - in_library
+        - not_in_library
+      properties:
+        person:
+          $ref: '#/components/schemas/Person'
+        in_library:
+          type: array
+          description: Títulos de TMDB presentes en las bibliotecas visibles.
+          items:
+            $ref: '#/components/schemas/PersonMedia'
+        not_in_library:
+          type: array
+          description: Títulos de TMDB que no están en las bibliotecas visibles.
+          items:
+            $ref: '#/components/schemas/PersonMedia'
+      additionalProperties: false
+    UploadRootTarget:
+      type: object
+      required:
+        - library_id
+        - library_name
+        - library_kind
+        - path
+        - movie_count
+        - series_count
+      properties:
+        library_id:
+          type: integer
+          format: int64
+        library_name:
+          type: string
+        library_kind:
+          type: string
+          enum: [video, clips]
+        path:
+          type: string
+        movie_count:
+          type: integer
+          format: int64
+        series_count:
+          type: integer
+          format: int64
+      additionalProperties: false
+    UploadTargetsResponse:
+      type: object
+      required:
+        - allowed
+        - roots
+      properties:
+        allowed:
+          type: boolean
+          description: Indica si la modificación de archivos está activada.
+        roots:
+          type: array
+          items:
+            $ref: '#/components/schemas/UploadRootTarget'
+      additionalProperties: false
+    UploadResult:
+      type: object
+      required:
+        - path
+        - size
+      properties:
+        path:
+          type: string
+        size:
+          type: integer
+          format: int64
+      additionalProperties: false
+    GuidedUploadResult:
+      type: object
+      required:
+        - path
+        - size
+        - season
+        - episode
+      properties:
+        path:
+          type: string
+        size:
+          type: integer
+          format: int64
+        season:
+          type: integer
+        episode:
+          type: integer
       additionalProperties: false

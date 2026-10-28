@@ -92,6 +92,9 @@ func TestVersionEndpointSinSesion(t *testing.T) {
 	if body.Server != "1.2.3" || body.Commit != "abc1234" || body.BuiltAt != "2026-10-26T09:00:00Z" {
 		t.Fatalf("versión inesperada: %+v", body)
 	}
+	if body.APILevel != 1 || body.MinClient != "0.0.0" {
+		t.Fatalf("contrato de compatibilidad inesperado: %+v", body)
+	}
 }
 
 type testServer struct {
