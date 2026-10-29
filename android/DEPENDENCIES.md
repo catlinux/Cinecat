@@ -27,6 +27,8 @@ Versiones elegidas el 2026-10-29. Se comprobó la licencia en el POM o repositor
 | kotlinx-coroutines-core | 1.11.0 | Apache-2.0 | https://repo1.maven.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-core/1.11.0/kotlinx-coroutines-core-1.11.0.pom |
 | kotlinx-coroutines-test | 1.11.0 (pruebas) | Apache-2.0 | https://repo1.maven.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-test/1.11.0/kotlinx-coroutines-test-1.11.0.pom |
 | OkHttp mockwebserver | 5.3.2 (pruebas) | Apache-2.0 | https://repo1.maven.org/maven2/com/squareup/okhttp3/mockwebserver/5.3.2/mockwebserver-5.3.2.pom |
+| androidx.datastore:datastore-preferences | 1.3.0 | Apache-2.0 | https://dl.google.com/dl/android/maven2/androidx/datastore/datastore-preferences/1.3.0/datastore-preferences-1.3.0.pom |
+| androidx.datastore:datastore-preferences-core | 1.3.0 (pruebas) | Apache-2.0 | https://dl.google.com/dl/android/maven2/androidx/datastore/datastore-preferences-core/1.3.0/datastore-preferences-core-1.3.0.pom |
 | JUnit | 4.13.2 | EPL-1.0 | https://repo1.maven.org/maven2/junit/junit/4.13.2/junit-4.13.2.pom |
 | Fraunces Variable | archivo local | OFL-1.1 | web/static/fonts/OFL-Fraunces.txt |
 
@@ -43,5 +45,6 @@ JUnit es la única dependencia con una licencia distinta de Apache-2.0, MIT o BS
 - **lifecycle-runtime-ktx 2.10.0**: última cuyo `lifecycle-runtime-compose` declara `minCompileSdk=35`; 2.11.0 exige 37.
 - **tv-material 1.1.0**: última estable y compatible con compileSdk 35.
 - **JUnit 4.13.2**: versión estable usada por las pruebas JVM.
+- **DataStore 1.3.0**: última estable de Google Maven; `datastore-preferences-core` se usa además en las pruebas JVM de DataStore.
 
 El proyecto fija `compileSdk = 35` y `targetSdk = 35` por requisito de este paso; por eso no se usan las versiones más nuevas de AndroidX que exigirían compileSdk 36 o 37.
