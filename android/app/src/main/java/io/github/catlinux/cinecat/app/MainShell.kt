@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Home
@@ -139,6 +140,7 @@ fun MainShell(
                         NavigationRailItem(
                             selected = currentDestination.hasRoute(tab.route::class),
                             onClick = { navigateTopLevel(tab.route) },
+                            modifier = Modifier.focusRing(RoundedCornerShape(16.dp)),
                             icon = { TabIcon(tab) },
                             label = { Text(stringResource(tab.labelRes)) },
                             alwaysShowLabel = true
@@ -149,6 +151,7 @@ fun MainShell(
                     NavigationRailItem(
                         selected = false,
                         onClick = { navController.navigate(Account) },
+                        modifier = Modifier.focusRing(RoundedCornerShape(16.dp)),
                         icon = { Icon(Icons.Filled.AccountCircle, contentDescription = null) },
                         label = { Text(stringResource(R.string.account_title)) },
                         alwaysShowLabel = true

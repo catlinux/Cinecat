@@ -5,7 +5,10 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -30,8 +33,19 @@ class MainActivity : ComponentActivity() {
         val container = (application as CinecatApplication).container
         setContent {
             CinecatTheme {
-                CinecatApp(container = container, isTelevision = isTv)
-                UpdateCoordinator(container)
+                CompositionLocalProvider(LocalIsTelevision provides isTv) {
+                    if (isTv) {
+                        val color = MaterialTheme.colorScheme.tertiary
+                        val indication = remember(color) { FocusIndication(color) }
+                        CompositionLocalProvider(LocalIndication provides indication) {
+                            CinecatApp(container = container, isTelevision = isTv)
+                            UpdateCoordinator(container)
+                        }
+                    } else {
+                        CinecatApp(container = container, isTelevision = isTv)
+                        UpdateCoordinator(container)
+                    }
+                }
             }
         }
     }
