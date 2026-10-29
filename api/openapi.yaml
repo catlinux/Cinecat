@@ -4101,6 +4101,8 @@ paths:
         Descarga la imagen desde TMDB si todavía no está en disco y la sirve
         con una caché inmutable. Solo se aceptan los tamaños y los nombres de
         archivo que usa la API de TMDB; cualquier otro valor devuelve 404.
+        Sin cabecera Authorization se acepta la cookie `cinecat_session` del
+        cliente web, porque las etiquetas `<img>` del navegador solo envían esa.
       security:
         - bearerAuth: []
       parameters:

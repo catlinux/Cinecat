@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.34.1] - 2026-10-29
+
+### Fixed
+
+- Web: posters were missing since 0.34.0, because the browser requests images without the session header. The TMDB image route now also accepts the web session cookie.
+
 ## [0.34.0] - 2026-10-29
 
 ### Added

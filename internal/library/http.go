@@ -109,7 +109,7 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.Handle("GET /api/v1/music/albums/{id}/cover", a.requireSession(a.handleMusicAlbumCover))
 	mux.Handle("GET /api/v1/music/tracks", a.requireSession(a.handleMusicTracks))
 	mux.Handle("GET /api/v1/music/tracks/{id}/play", a.requireSession(a.handleMusicTrackPlay))
-	mux.Handle("GET /api/v1/images/tmdb/{size}/{file}", a.requireSession(a.handleTMDBImage))
+	mux.Handle("GET /api/v1/images/tmdb/{size}/{file}", sessionCookieAsBearer(a.requireSession(a.handleTMDBImage)))
 	mux.Handle("GET /api/v1/genres", a.requireSession(a.handleGenres))
 	mux.Handle("GET /api/v1/home", a.requireSession(a.handleHome))
 	mux.Handle("GET /api/v1/lists/{list}", a.requireSession(a.handleLists))
@@ -739,6 +739,24 @@ func idFromPath(r *http.Request) (int64, bool) {
 		return 0, false
 	}
 	return id, true
+}
+
+// webSessionCookie es la cookie httpOnly que escribe el cliente web (mismo origen).
+const webSessionCookie = "cinecat_session"
+
+// sessionCookieAsBearer acepta la cookie de sesión de la web cuando falta la
+// cabecera Authorization: un <img> del navegador solo envía la cookie. Se usa
+// únicamente en rutas GET de solo lectura, donde SameSite=Lax basta contra CSRF.
+func sessionCookieAsBearer(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") == "" {
+			if cookie, err := r.Cookie(webSessionCookie); err == nil && cookie.Value != "" {
+				r = r.Clone(r.Context())
+				r.Header.Set("Authorization", "Bearer "+cookie.Value)
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func bearerToken(r *http.Request) string {

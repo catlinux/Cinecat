@@ -246,6 +246,37 @@ func TestTMDBImageEndpointExigeSesion(t *testing.T) {
 	}
 }
 
+func TestTMDBImageEndpointAceptaLaCookieDeLaWeb(t *testing.T) {
+	fake := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "image/jpeg")
+		_, _ = w.Write([]byte("imagen"))
+	}))
+	defer fake.Close()
+
+	ts := newLibraryHTTPTestServer(t)
+	ts.api.WithTMDBImages(filepath.Join(t.TempDir(), "images")).WithTMDBImageBaseURL(fake.URL)
+	url := ts.URL + "/api/v1/images/tmdb/w342/abc.jpg"
+
+	for _, tc := range []struct {
+		value string
+		want  int
+	}{{ts.token, http.StatusOK}, {"no-valido", http.StatusUnauthorized}} {
+		request, err := http.NewRequest(http.MethodGet, url, nil)
+		if err != nil {
+			t.Fatalf("crear petición: %v", err)
+		}
+		request.AddCookie(&http.Cookie{Name: "cinecat_session", Value: tc.value})
+		response, err := http.DefaultClient.Do(request)
+		if err != nil {
+			t.Fatalf("GET %s: %v", url, err)
+		}
+		response.Body.Close()
+		if response.StatusCode != tc.want {
+			t.Fatalf("cookie %q: código = %d, se esperaba %d", tc.value, response.StatusCode, tc.want)
+		}
+	}
+}
+
 func TestTMDBImageEndpointDescargaUnaVezEnConcurrente(t *testing.T) {
 	image := []byte("concurrente")
 	var calls atomic.Int64

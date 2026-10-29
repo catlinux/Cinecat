@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.34.1] - 2026-10-29
+
+### Corregido
+
+- Web: las carátulas no se veían desde la 0.34.0, porque el navegador pide las imágenes sin la cabecera de sesión. La ruta de imágenes de TMDB acepta ahora también la cookie de sesión de la web.
+
 ## [0.34.0] - 2026-10-29
 
 ### Añadido
