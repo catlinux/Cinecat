@@ -2,7 +2,7 @@
 
 [English](../en/android.md) · [Volver al README](../../README.md) · [Arquitectura y seguridad](arquitectura.md)
 
-Cinecat incluye una única app Android para móvil, tableta y Android TV. Ahora mismo conecta con el servidor e inicia sesión, pero todavía no muestra la biblioteca ni reproduce. La primera versión utilizable llegará con los siguientes pasos del plan de apps.
+Cinecat incluye una única app Android para móvil, tableta y Android TV. Ahora mismo inicia sesión y, en el móvil y la tableta, permite recorrer la biblioteca; todavía no reproduce y la TV aún no tiene su interfaz propia. La primera versión utilizable llegará con los siguientes pasos del plan de apps.
 
 ## Estado actual
 
@@ -11,7 +11,7 @@ Al abrirla por primera vez pide la dirección del servidor (solo HTTPS) y la com
 - **Móvil y tableta:** inicio de sesión con usuario y contraseña, o con un código de vinculación.
 - **TV:** vinculación por código. La TV muestra un código `XXXX-XXXX` y un QR; se abre `<servidor>/vincular` en el móvil o el ordenador, se inicia sesión y se aprueba el código (ver [API: vincular un dispositivo](api.md#vincular-un-dispositivo)).
 
-La sesión del dispositivo dura 90 días y se renueva con el uso; aparece en «Mi cuenta → Sesiones abiertas» de la web, donde se puede cerrar. El token se guarda cifrado con una clave del Android Keystore y la app no entra en las copias de seguridad de Android. Tras iniciar sesión, la pantalla de inicio es provisional (usuario, servidor, cerrar sesión y cambiar de servidor): todavía no se puede navegar por la biblioteca ni reproducir. La interfaz cambia entre la disposición móvil y la de TV según el tipo de dispositivo.
+La sesión del dispositivo dura 90 días y se renueva con el uso; aparece en «Mi cuenta → Sesiones abiertas» de la web, donde se puede cerrar. El token se guarda cifrado con una clave del Android Keystore y la app no entra en las copias de seguridad de Android. Tras iniciar sesión, el móvil muestra el portal con las mismas filas y el mismo orden que la web (configurables en Administración), y una barra inferior (riel lateral en tableta) con Películas, Series, Colecciones y Buscar. Películas y series se ven en cuadrícula con orden y género; las fichas de película, serie (con temporadas y episodios) y colección permiten marcar favorito, «por ver» y visto. La cuenta (usuario, servidor, cerrar sesión, cambiar de servidor) está en el icono del portal. Aún no se puede reproducir; en la TV, por ahora, se ve la misma interfaz que en la tableta. La interfaz cambia entre la disposición móvil y la de TV según el tipo de dispositivo.
 
 ### IP local del servidor
 

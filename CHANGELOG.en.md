@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.33.0] - 2026-10-29
+
+### Added
+
+- Library in the Android app for phones and tablets: portal with the same rows and order as the web client, bottom navigation (side rail on tablets), movies and series in a paged grid with sort and genre, collections, movie and series search, and movie, series (seasons and episodes with progress) and collection pages with favourite, "to watch" and watched. Posters are loaded from TMDB at screen size and cached. Playback is not available yet; the dedicated TV interface will come later.
+
 ## [0.32.0] - 2026-10-29
 
 ### Added

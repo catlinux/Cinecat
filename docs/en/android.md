@@ -2,7 +2,7 @@
 
 [Español](../es/android.md) · [Back to README](../../README.en.md) · [Architecture and security](architecture.md)
 
-Cinecat includes a single Android app for phones, tablets and Android TV. It currently connects to the server and signs in, but does not show the library or play anything yet. The first usable version will arrive with the following steps of the app plan.
+Cinecat includes a single Android app for phones, tablets and Android TV. It currently signs in and, on phones and tablets, lets you browse the library; it cannot play anything yet and the TV does not have its own interface yet. The first usable version will arrive with the following steps of the app plan.
 
 ## Current state
 
@@ -11,7 +11,7 @@ On first launch it asks for the server address (HTTPS only) and checks it with `
 - **Phone and tablet:** sign in with username and password, or with a pairing code.
 - **TV:** pairing by code. The TV shows an `XXXX-XXXX` code and a QR code; open `<server>/vincular` on a phone or computer, sign in and approve the code (see [API: pairing a device](api.md#pairing-a-device)).
 
-The device session lasts 90 days and is renewed with use; it appears under "My account → Open sessions" in the web client, where it can be closed. The token is stored encrypted with an Android Keystore key and the app is excluded from Android backups. After signing in, the home screen is provisional (user, server, sign out and change server): browsing the library and playback are not available yet. The interface switches between the mobile and TV layouts depending on the device type.
+The device session lasts 90 days and is renewed with use; it appears under "My account → Open sessions" in the web client, where it can be closed. The token is stored encrypted with an Android Keystore key and the app is excluded from Android backups. After signing in, phones show the portal with the same rows and order as the web client (configurable in Administration), and a bottom bar (side rail on tablets) with Movies, Series, Collections and Search. Movies and series are shown in a grid with sort and genre; the movie, series (with seasons and episodes) and collection pages let you mark favourite, "to watch" and watched. The account (user, server, sign out, change server) is behind the portal icon. Playback is not available yet; for now the TV shows the same interface as a tablet. The interface switches between the mobile and TV layouts depending on the device type.
 
 ### Server local IP
 

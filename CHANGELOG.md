@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.33.0] - 2026-10-29
+
+### Añadido
+
+- Biblioteca en la app Android para móvil y tableta: portal con las mismas filas y orden que la web, navegación inferior (riel lateral en tableta), películas y series en cuadrícula paginada con orden y género, colecciones, búsqueda de películas y series, y fichas de película, serie (temporadas y episodios con progreso) y colección con favorito, «por ver» y visto. Los carteles se cargan de TMDB a tamaño de pantalla y se guardan en caché. Aún no se reproduce; la interfaz propia de la TV llegará más adelante.
+
 ## [0.32.0] - 2026-10-29
 
 ### Añadido
