@@ -13,6 +13,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 - Android app on TV: primary button text was dark on maroon and barely readable.
 - Android app: large titles (app name and TV screen titles) did not use Fraunces.
 - Android app: the server address and local IP fields drop the spaces some keyboards add after each dot.
+- Android app on TV: the pairing screen did not fit 1080p (the QR was cut off) and the screensaver covered it before approval. It now uses two columns and keeps the screen on.
 - Android app on TV: the remote could not leave a text field with the up and down arrows; they now move to the previous or next field.
 
 ## [0.33.0] - 2026-10-29
