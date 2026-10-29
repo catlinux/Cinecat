@@ -63,7 +63,7 @@ The `versionName` is the contents of the `VERSION` file at the repository root, 
 major * 10000 + minor * 100 + patch
 ```
 
-For example, `0.30.0` produces code `3000`. The app identifier is `io.github.catlinux.cinecat`.
+For example, `0.31.0` produces code `3100`. The app identifier is `io.github.catlinux.cinecat`.
 
 ## Playback
 

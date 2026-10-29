@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.31.0] - 2026-10-29
+
+### Added
+
+- Skeleton of the app for Android, tablet and Android TV in `android/` (Kotlin + Jetpack Compose): Gradle project with its modules, "Marquesina" theme and a test home screen that differs for phone and TV. It does not connect to the server or have features yet; the app version comes from the `VERSION` file. Documentation in [docs/en/android.md](docs/en/android.md), dependencies and licences in `android/DEPENDENCIES.md` and `CREDITS.md`, and a GitHub Actions workflow that builds the app when `android/` changes.
+
 ## [0.30.0] - 2026-10-29
 
 ### Added

@@ -63,7 +63,7 @@ El `versionName` es el contenido del archivo `VERSION` de la raíz del repositor
 major * 10000 + minor * 100 + patch
 ```
 
-Así, `0.30.0` produce el código `3000`. El identificador de la app es `io.github.catlinux.cinecat`.
+Así, `0.31.0` produce el código `3100`. El identificador de la app es `io.github.catlinux.cinecat`.
 
 ## Reproducción
 
