@@ -54,8 +54,8 @@ fun CinecatApp(container: AppContainer, isTelevision: Boolean) {
             scope = container.appScope,
             onApproved = { manualScreen = null }
         )
-        AppScreen.Home -> HomeScreen(
-            repository = container.sessionRepository,
+        AppScreen.Home -> MainShell(
+            container = container,
             session = session as SessionState.SignedIn,
             isTelevision = isTelevision,
             onChangeServer = { manualScreen = AppScreen.Server }

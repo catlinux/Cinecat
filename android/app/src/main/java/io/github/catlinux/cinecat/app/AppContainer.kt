@@ -4,10 +4,16 @@ import android.content.Context
 import android.content.res.Configuration
 import android.net.ConnectivityManager
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import coil3.ImageLoader
+import coil3.disk.DiskCache
+import coil3.disk.directory
+import coil3.memory.MemoryCache
+import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import io.github.catlinux.cinecat.core.api.LocalAddressDns
 import io.github.catlinux.cinecat.core.api.createApi
 import io.github.catlinux.cinecat.core.api.createOkHttpClient
 import io.github.catlinux.cinecat.core.data.KeystoreTokenCipher
+import io.github.catlinux.cinecat.core.data.LibraryRepository
 import io.github.catlinux.cinecat.core.data.LocalNetworkMonitor
 import io.github.catlinux.cinecat.core.data.SessionRepository
 import io.github.catlinux.cinecat.core.data.SessionStore
@@ -35,6 +41,8 @@ class AppContainer(context: Context) {
     private val client: OkHttpClient
 
     val sessionRepository: SessionRepository
+    val libraryRepository: LibraryRepository
+    val imageLoader: ImageLoader
 
     init {
         val connectivityManager = requireNotNull(
@@ -76,6 +84,27 @@ class AppContainer(context: Context) {
             scope = appScope
         )
         repositoryRef = sessionRepository
+        libraryRepository = LibraryRepository(
+            apiProvider = {
+                sessionRepository.currentServer()?.let { origin -> createApi(origin, client) }
+            }
+        )
+        imageLoader = ImageLoader.Builder(appContext)
+            .components {
+                add(OkHttpNetworkFetcherFactory(callFactory = { client }))
+            }
+            .memoryCache {
+                MemoryCache.Builder()
+                    .maxSizePercent(appContext, 0.25)
+                    .build()
+            }
+            .diskCache {
+                DiskCache.Builder()
+                    .directory(File(appContext.cacheDir, "images"))
+                    .maxSizeBytes(100L * 1024 * 1024)
+                    .build()
+            }
+            .build()
         localNetworkMonitor.start()
     }
 }

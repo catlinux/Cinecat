@@ -1,0 +1,221 @@
+package io.github.catlinux.cinecat.app
+
+import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavDestination.Companion.hasRoute
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import io.github.catlinux.cinecat.core.data.SessionState
+import kotlinx.serialization.Serializable
+
+@Serializable
+data object Portal
+
+@Serializable
+data object Movies
+
+@Serializable
+data object Series
+
+@Serializable
+data object Collections
+
+@Serializable
+data object Search
+
+@Serializable
+data object Account
+
+@Serializable
+data class MovieDetail(val id: Long)
+
+@Serializable
+data class SeriesDetail(val id: Long)
+
+@Serializable
+data class CollectionDetail(val id: Long)
+
+private data class MainTab(
+    @StringRes val labelRes: Int,
+    val route: Any,
+    val icon: ImageVector? = null,
+    @DrawableRes val iconRes: Int? = null
+)
+
+@Composable
+fun MainShell(
+    container: AppContainer,
+    session: SessionState.SignedIn,
+    isTelevision: Boolean,
+    onChangeServer: () -> Unit
+) {
+    val navController = rememberNavController()
+    val tabs = remember { mainTabs() }
+    val useRail = useNavigationRail(LocalConfiguration.current.screenWidthDp)
+    val currentEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = currentEntry?.destination
+    val isTopLevel = currentDestination != null &&
+        tabs.any { tab -> currentDestination.hasRoute(tab.route::class) }
+
+    fun navigateTopLevel(route: Any) {
+        if (currentDestination?.hasRoute(route::class) == true) {
+            return
+        }
+        if (route is Portal) {
+            navController.popBackStack(Portal, false)
+        } else {
+            navController.navigate(route) {
+                popUpTo(Portal) { saveState = true }
+                launchSingleTop = true
+                restoreState = true
+            }
+        }
+    }
+
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        contentWindowInsets = WindowInsets.safeDrawing,
+        bottomBar = {
+            if (!useRail && isTopLevel) {
+                NavigationBar {
+                    tabs.forEach { tab ->
+                        NavigationBarItem(
+                            selected = currentDestination.hasRoute(tab.route::class),
+                            onClick = { navigateTopLevel(tab.route) },
+                            icon = { TabIcon(tab) },
+                            label = { Text(stringResource(tab.labelRes)) }
+                        )
+                    }
+                }
+            }
+        }
+    ) { innerPadding ->
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            if (useRail && isTopLevel) {
+                NavigationRail {
+                    Spacer(Modifier.height(8.dp))
+                    tabs.forEach { tab ->
+                        NavigationRailItem(
+                            selected = currentDestination.hasRoute(tab.route::class),
+                            onClick = { navigateTopLevel(tab.route) },
+                            icon = { TabIcon(tab) },
+                            label = { Text(stringResource(tab.labelRes)) },
+                            alwaysShowLabel = true
+                        )
+                    }
+                }
+            }
+            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                NavHost(
+                    navController = navController,
+                    startDestination = Portal,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    composable<Portal> {
+                        val portalViewModel: PortalViewModel = viewModel {
+                            PortalViewModel(container.libraryRepository, container.appScope)
+                        }
+                        PortalScreen(
+                            viewModel = portalViewModel,
+                            onOpenAccount = { navController.navigate(Account) },
+                            onOpenMovie = { navController.navigate(MovieDetail(it)) },
+                            onOpenSeries = { navController.navigate(SeriesDetail(it)) }
+                        )
+                    }
+                    composable<Movies> {
+                        PlaceholderScreen(R.string.nav_movies)
+                    }
+                    composable<Series> {
+                        PlaceholderScreen(R.string.nav_series)
+                    }
+                    composable<Collections> {
+                        PlaceholderScreen(R.string.nav_collections)
+                    }
+                    composable<Search> {
+                        PlaceholderScreen(R.string.nav_search)
+                    }
+                    composable<Account> {
+                        AccountScreen(
+                            repository = container.sessionRepository,
+                            session = session,
+                            isTelevision = isTelevision,
+                            onBack = { navController.popBackStack() },
+                            onChangeServer = onChangeServer
+                        )
+                    }
+                    composable<MovieDetail> {
+                        DetailPlaceholderScreen(
+                            titleRes = R.string.movie_detail_title,
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+                    composable<SeriesDetail> {
+                        DetailPlaceholderScreen(
+                            titleRes = R.string.series_detail_title,
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+                    composable<CollectionDetail> {
+                        DetailPlaceholderScreen(
+                            titleRes = R.string.collection_detail_title,
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TabIcon(tab: MainTab) {
+    val icon = tab.icon
+    if (icon != null) {
+        Icon(imageVector = icon, contentDescription = null)
+    } else {
+        Icon(painter = painterResource(tab.iconRes!!), contentDescription = null)
+    }
+}
+
+private fun mainTabs(): List<MainTab> = listOf(
+    MainTab(R.string.nav_portal, Portal, icon = Icons.Filled.Home),
+    MainTab(R.string.nav_movies, Movies, iconRes = R.drawable.ic_nav_movies),
+    MainTab(R.string.nav_series, Series, iconRes = R.drawable.ic_nav_series),
+    MainTab(R.string.nav_collections, Collections, iconRes = R.drawable.ic_nav_collections),
+    MainTab(R.string.nav_search, Search, icon = Icons.Filled.Search)
+)
