@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Cinecat</string>
+    <string name="version_format">Versión %1$s</string>
+    <string name="skeleton_message">Esqueleto de la app: aún sin conexión al servidor.</string>
+    <string name="start">Comenzar</string>
+</resources>
