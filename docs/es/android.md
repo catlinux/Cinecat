@@ -2,11 +2,20 @@
 
 [English](../en/android.md) · [Volver al README](../../README.md) · [Arquitectura y seguridad](arquitectura.md)
 
-Cinecat incluye una única app Android para móvil, tableta y Android TV. Ahora mismo es un **esqueleto**: abre una pantalla de presentación con el tema Marquesina y todavía no se conecta al servidor. La primera versión utilizable llegará con los siguientes pasos del plan de apps.
+Cinecat incluye una única app Android para móvil, tableta y Android TV. Ahora mismo conecta con el servidor e inicia sesión, pero todavía no muestra la biblioteca ni reproduce. La primera versión utilizable llegará con los siguientes pasos del plan de apps.
 
 ## Estado actual
 
-La app compila, pero todavía no permite iniciar sesión, navegar por la biblioteca ni reproducir contenido. La pantalla de inicio muestra el nombre de la app, su versión y un aviso de que aún no hay conexión con el servidor. La interfaz cambia entre la disposición móvil y la de TV según el tipo de dispositivo.
+Al abrirla por primera vez pide la dirección del servidor (solo HTTPS) y la comprueba con `/healthz` y `/api/v1/system/version`: avisa si el servidor es anterior a la 0.30.0 o si la app es más antigua que la `min_client` del servidor. Después:
+
+- **Móvil y tableta:** inicio de sesión con usuario y contraseña, o con un código de vinculación.
+- **TV:** vinculación por código. La TV muestra un código `XXXX-XXXX` y un QR; se abre `<servidor>/vincular` en el móvil o el ordenador, se inicia sesión y se aprueba el código (ver [API: vincular un dispositivo](api.md#vincular-un-dispositivo)).
+
+La sesión del dispositivo dura 90 días y se renueva con el uso; aparece en «Mi cuenta → Sesiones abiertas» de la web, donde se puede cerrar. El token se guarda cifrado con una clave del Android Keystore y la app no entra en las copias de seguridad de Android. Tras iniciar sesión, la pantalla de inicio es provisional (usuario, servidor, cerrar sesión y cambiar de servidor): todavía no se puede navegar por la biblioteca ni reproducir. La interfaz cambia entre la disposición móvil y la de TV según el tipo de dispositivo.
+
+### IP local del servidor
+
+Si el dominio del servidor apunta a la IP pública y el router no tiene DNS local, ir desde casa por Internet puede ser mucho más lento que por la red local, y una TV no permite editar `hosts`. En la pantalla del servidor se puede indicar opcionalmente la **IP local** del servidor (una IPv4 privada como `192.168.1.150`, o una IPv6 local). Cuando el dispositivo está en Wi-Fi o Ethernet y esa IP responde en el puerto del servidor en menos de 1,5 s, la app conecta con ella usando el mismo dominio, así que HTTPS sigue validando el certificado de siempre. Si no responde, o el dispositivo está en datos móviles, usa el DNS normal. El resultado se recuerda 60 s y se vuelve a comprobar al cambiar de red.
 
 ## Requisitos
 
@@ -49,10 +58,10 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 ## Estructura de módulos
 
-- `app`: actividad, selección entre interfaz móvil y de TV y pantallas de presentación.
+- `app`: actividad, contenedor de dependencias, selección entre interfaz móvil y de TV y pantallas de servidor, inicio de sesión, vinculación e inicio.
 - `ui/common`: tema Marquesina de Compose, colores y tipografía Fraunces.
-- `core/api`: reservado para el cliente de la API; vacío por ahora.
-- `core/data`: reservado para sesión, preferencias y repositorios; vacío por ahora.
+- `core/api`: cliente de la API (Retrofit, OkHttp y kotlinx.serialization), cabecera de sesión solo hacia el servidor y DNS de IP local.
+- `core/data`: dirección del servidor, sesión cifrada (DataStore y Android Keystore), comprobación de compatibilidad, inicio de sesión y vinculación.
 - `core/player`: reservado para el reproductor; vacío por ahora.
 
 ## Versión e identificador
@@ -63,7 +72,7 @@ El `versionName` es el contenido del archivo `VERSION` de la raíz del repositor
 major * 10000 + minor * 100 + patch
 ```
 
-Así, `0.31.0` produce el código `3100`. El identificador de la app es `io.github.catlinux.cinecat`.
+Así, `0.32.0` produce el código `3200`. El identificador de la app es `io.github.catlinux.cinecat`.
 
 ## Reproducción
 

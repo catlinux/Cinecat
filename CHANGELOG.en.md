@@ -7,6 +7,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.32.0] - 2026-10-29
+
+### Added
+
+- The Android and Android TV app now connects to the server: a screen for the server address (HTTPS only, with version and compatibility check), sign-in with username and password on phones and pairing by code with a QR code on TV (also available on phones). The device session is stored encrypted with the Android Keystore and the app is excluded from Android backups. After signing in there is a provisional home screen; the library and playback will arrive in the next versions.
+- "Server local IP" in the app: when set (private IPv4 or local IPv6) and the device is on Wi-Fi or Ethernet, the app reaches the server over the local network using the same domain and its certificate. It is the equivalent of editing `hosts` on the PC, which a TV does not allow. Details in [docs/en/android.md](docs/en/android.md#server-local-ip).
+
 ## [0.31.0] - 2026-10-29
 
 ### Added

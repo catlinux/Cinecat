@@ -7,6 +7,13 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.32.0] - 2026-10-29
+
+### Añadido
+
+- La app Android y Android TV ya se conecta con el servidor: pantalla para la dirección del servidor (solo HTTPS, con comprobación de versión y compatibilidad), inicio de sesión con usuario y contraseña en el móvil y vinculación por código con QR en la TV (también disponible en el móvil). La sesión del dispositivo se guarda cifrada con el Android Keystore y la app no entra en las copias de seguridad de Android. Tras iniciar sesión hay una pantalla de inicio provisional; la biblioteca y la reproducción llegarán en las próximas versiones.
+- «IP local del servidor» en la app: si se indica (IPv4 privada o IPv6 local) y el equipo está en Wi-Fi o Ethernet, la app conecta con el servidor por la red local usando el mismo dominio y su certificado. Es el equivalente de editar `hosts` en el PC, que una TV no permite. Detalles en [docs/es/android.md](docs/es/android.md#ip-local-del-servidor).
+
 ## [0.31.0] - 2026-10-29
 
 ### Añadido
