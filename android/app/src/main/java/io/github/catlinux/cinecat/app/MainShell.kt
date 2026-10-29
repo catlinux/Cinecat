@@ -225,9 +225,18 @@ fun MainShell(
                         )
                     }
                     composable<SeriesDetail> {
-                        DetailPlaceholderScreen(
-                            titleRes = R.string.series_detail_title,
-                            onBack = { navController.popBackStack() }
+                        val route = it.toRoute<SeriesDetail>()
+                        val seriesViewModel: SeriesDetailViewModel = viewModel {
+                            SeriesDetailViewModel(
+                                id = route.id,
+                                repository = container.libraryRepository,
+                                scope = container.appScope
+                            )
+                        }
+                        SeriesDetailScreen(
+                            viewModel = seriesViewModel,
+                            onBack = { navController.popBackStack() },
+                            onOpenSeries = { id -> navController.navigate(SeriesDetail(id)) }
                         )
                     }
                     composable<CollectionDetail> {

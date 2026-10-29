@@ -62,9 +62,6 @@
     <string name="portal_error">No se pudo cargar el portal</string>
     <string name="retry">Reintentar</string>
     <string name="portal_empty">Tu biblioteca está vacía todavía</string>
-    <string name="section_preparing">En preparación</string>
-    <string name="detail_preparing">Ficha en preparación</string>
-    <string name="series_detail_title">Serie</string>
     <string name="poster_description">Cartel de %1$s</string>
     <string name="episode_image_description">Imagen del episodio %1$s</string>
 
@@ -112,4 +109,15 @@
     <string name="rating_format">★ %1$s</string>
     <string name="backdrop_description">Fondo de %1$s</string>
     <string name="collection_empty">Esta colección todavía no tiene películas</string>
+    <string name="series_detail_error">No se pudo cargar la serie</string>
+    <string name="season_error">No se pudo cargar la temporada</string>
+    <string name="series_watched">Serie vista</string>
+    <string name="season_watched">Temporada vista</string>
+    <string name="season_specials">Especiales</string>
+    <string name="season_number">Temporada %1$d</string>
+    <string name="series_counts">Temporadas: %1$d · Episodios: %2$d</string>
+    <string name="season_progress">Vistos: %1$d de %2$d</string>
+    <string name="mark_watched">Marcar como visto</string>
+    <string name="unmark_watched">Desmarcar visto</string>
+    <string name="play_soon_snackbar">La reproducción llega en la próxima versión</string>
 </resources>

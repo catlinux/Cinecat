@@ -61,3 +61,71 @@ internal fun sampleCollectionDetail(
     watchlist = watchlist,
     items = emptyList()
 )
+
+internal fun sampleSeason(
+    season: Int,
+    episodeCount: Int = 2,
+    watchedCount: Int = 0
+): io.github.catlinux.cinecat.core.api.Season =
+    io.github.catlinux.cinecat.core.api.Season(
+        season = season,
+        name = if (season == 0) "Especiales" else "Temporada $season",
+        overview = null,
+        posterUrl = null,
+        episodeCount = episodeCount.toLong(),
+        watchedCount = watchedCount.toLong()
+    )
+
+internal fun sampleEpisode(
+    id: Long,
+    season: Int,
+    episode: Int,
+    watched: Boolean = false
+): MediaItem = sampleMediaItem(id, watched = watched).copy(
+    kind = "episode",
+    season = season,
+    episode = episode,
+    episodeTitle = "Episodio $episode",
+    seriesId = 3
+)
+
+internal fun sampleSeasonDetail(
+    season: Int,
+    items: List<MediaItem>
+): io.github.catlinux.cinecat.core.api.SeasonDetail =
+    io.github.catlinux.cinecat.core.api.SeasonDetail(
+        season = season,
+        name = if (season == 0) "Especiales" else "Temporada $season",
+        overview = null,
+        posterUrl = null,
+        items = items
+    )
+
+internal fun sampleSeriesDetail(
+    seasons: List<io.github.catlinux.cinecat.core.api.Season>,
+    nextEpisode: MediaItem? = null
+): io.github.catlinux.cinecat.core.api.SeriesDetail =
+    io.github.catlinux.cinecat.core.api.SeriesDetail(
+        id = 3,
+        title = "Serie",
+        fileTitle = "Serie",
+        originalTitle = null,
+        year = 2020,
+        tagline = null,
+        overview = "Sinopsis de la serie",
+        posterUrl = null,
+        backdropUrl = null,
+        genres = emptyList(),
+        rating = 7.0,
+        directors = emptyList(),
+        cast = emptyList(),
+        credits = Credits(emptyList(), emptyList()),
+        tmdbId = null,
+        seasonCount = seasons.size.toLong(),
+        episodeCount = seasons.sumOf { it.episodeCount },
+        watchedCount = seasons.sumOf { it.watchedCount },
+        favorite = false,
+        watchlist = false,
+        seasons = seasons,
+        nextEpisode = nextEpisode
+    )
