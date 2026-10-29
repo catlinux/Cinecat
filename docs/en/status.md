@@ -59,7 +59,7 @@ Current version: **0.20.0**. This page describes the real state of the code, not
 | Updates | Host service with database backup and rollback | ✅ 0.16.0 | Bash + user systemd; the container does not run it. |
 | Security | Argon2id, 24 h sessions and admin/user roles | ✅ 0.1.0 | Only the token hash is stored in the database. |
 | Security | Per-library and per-user permissions | ⬜ | Any authenticated user sees the whole library. |
-| Android / Android TV clients | Android and Android TV | ⬜ | No code or detailed plan yet. The web client is the only finished one. |
+| Android / Android TV clients | Android and Android TV | 🟡 0.34.0 | Sign-in, TV pairing, library and Media3 player (direct or HLS, resume, tracks, remote). The TV's own interface is still missing. See [Android](android.md). |
 
 ## What comes next, in order
 

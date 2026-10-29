@@ -7,6 +7,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.34.0] - 2026-10-29
+
 ### Añadido
 
 - Servidor: las imágenes de TMDB se sirven desde el propio servidor (`/api/v1/images/tmdb/<tamaño>/<archivo>`) con una caché en disco en `cache/images`, y la API devuelve esas rutas relativas. Los carteles ya no dependen de que el DNS de cada aparato resuelva el CDN de TMDB, que algunos DNS bloquean.

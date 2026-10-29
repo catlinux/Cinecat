@@ -7,6 +7,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.34.0] - 2026-10-29
+
 ### Added
 
 - Server: TMDB images are served by the server itself (`/api/v1/images/tmdb/<size>/<file>`) with an on-disk cache in `cache/images`, and the API returns those relative paths. Posters no longer depend on each device's DNS resolving the TMDB CDN, which some DNS servers block.

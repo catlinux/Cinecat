@@ -2,7 +2,7 @@
 
 [Español](../es/hoja-de-ruta.md) · [Back to README](../../README.en.md) · [Status](status.md)
 
-The current version is **0.33.0**. Feature details, versions and limits are in [status](status.md); this page only summarises the phases.
+The current version is **0.34.0**. Feature details, versions and limits are in [status](status.md); this page only summarises the phases.
 
 ## Phase 0: preparation (`0.0.x`) — done
 
@@ -28,9 +28,9 @@ TMDB, full detail pages, collections, series, hot settings, administration panel
 
 The agreed order is: favorites and watchlist; collections from the movie page and collection identification; libraries with multiple folders and a browser; upload/deletion with a trash bin; users and profile; sessions, devices, activity and backups; user-uploaded subtitles; plugins; DLNA/UPnP; library types; Android and Android TV clients. Details are in [status](status.md).
 
-## Phase 4: Android and Android TV — not started
+## Phase 4: Android and Android TV — in progress
 
-Kotlin + Jetpack Compose + Media3/ExoPlayer, with optional libmpv. No code yet. The plan is written: first the server (device sessions, TV pairing by code, native capabilities in playback and a stable API contract), then a single APK for phone and TV.
+Kotlin + Jetpack Compose + Media3/ExoPlayer, with optional libmpv. Done: the server (device sessions, TV pairing by code, native capabilities in playback, a stable API contract and TMDB images served by the server itself) and a single APK for phone and TV that signs in, browses the library and plays. Still missing: the TV's own interface, background playback and publishing.
 
 ## Phase 5: first stable release (`1.0.0`) — future
 
