@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.35.1] - 2026-10-29
+
+### Corregido
+
+- App Android en el móvil: al abrir el teclado en Servidor, Iniciar sesión o Buscar, la pantalla quedaba vacía y no se veía lo que se escribía; el espacio del teclado se descontaba dos veces.
+
 ## [0.35.0] - 2026-10-29
 
 ### Añadido

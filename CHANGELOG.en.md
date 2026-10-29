@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.35.1] - 2026-10-29
+
+### Fixed
+
+- Android app on phones: opening the keyboard on Server, Sign in or Search left the screen empty and hid what was typed; the keyboard space was subtracted twice.
+
 ## [0.35.0] - 2026-10-29
 
 ### Added
