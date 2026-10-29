@@ -215,6 +215,7 @@ func main() {
 	api = api.WithFileInspector(playSvc)
 	api = api.WithThumbnails(thumbnailCacheDir(cfg.DatabasePath))
 	api = api.WithMusicCovers(musicCoverCacheDir(cfg.DatabasePath))
+	api = api.WithTMDBImages(tmdbImageCacheDir(cfg.DatabasePath))
 	api = api.WithMediaRoots(cfg.MediaRoots)
 	go api.StartTrashPurger(ctx)
 
@@ -412,6 +413,15 @@ func tmdbCacheDir(databasePath string) string {
 		return ""
 	}
 	return filepath.Join(filepath.Dir(path), "cache", "tmdb")
+}
+
+// tmdbImageCacheDir guarda las imágenes de TMDB en el volumen de la base.
+func tmdbImageCacheDir(databasePath string) string {
+	path := strings.TrimSpace(databasePath)
+	if path == "" || path == ":memory:" {
+		return ""
+	}
+	return filepath.Join(filepath.Dir(path), "cache", "images")
 }
 
 // thumbnailCacheDir guarda los fotogramas en el volumen de la base, para que

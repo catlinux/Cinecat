@@ -229,6 +229,10 @@ class LibraryApiTest {
     @Test
     fun tmdbImageOnlyRewritesTmdbSizes() {
         assertEquals(
+            "/api/v1/images/tmdb/w342/poster.jpg",
+            tmdbImage("/api/v1/images/tmdb/w500/poster.jpg", "w342")
+        )
+        assertEquals(
             "https://image.tmdb.org/t/p/w342/poster.jpg",
             tmdbImage("https://image.tmdb.org/t/p/w500/poster.jpg", "w342")
         )

@@ -32,6 +32,7 @@ The updater does not live inside the containers: the Go server writes `run/updat
 - **Web client (`web/`):** SvelteKit + TypeScript + Svelte 5, with the session in an `httpOnly` cookie; it never stores the API token in JavaScript. It uses hls.js for HLS and native `<video>` for direct play.
 - **SQLite database:** embedded migrations, `STRICT`, WAL, foreign keys and `busy_timeout`. It lives in the `cinecat_data` volume.
 - **TMDB cache:** next to the database (`/data/cache/tmdb` in Docker), with raw responses and a 7-day TTL.
+- **TMDB images:** the server serves them at `/api/v1/images/tmdb/<size>/<file>` and stores them in `/data/cache/images`; the API returns those relative paths instead of `image.tmdb.org` URLs, so clients do not depend on their DNS resolving the TMDB CDN. They can be deleted safely: they are downloaded again.
 - **FFmpeg/ffprobe:** external tools installed in the server image, not distributed in the repository. They are always invoked with argument lists, never through a shell.
 - **Host Apache:** reverse proxy and TLS. It routes `/api/` and `/healthz` to the server and everything else to the web client, so browser and API share an origin.
 

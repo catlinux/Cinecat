@@ -1,11 +1,13 @@
 package library
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -37,6 +39,7 @@ type API struct {
 	mediaRoots    []string
 	thumbnails    *Thumbnailer
 	musicCovers   *MusicCoverer
+	tmdbImages    *TMDBImageCache
 	now           func() time.Time
 }
 
@@ -106,6 +109,7 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.Handle("GET /api/v1/music/albums/{id}/cover", a.requireSession(a.handleMusicAlbumCover))
 	mux.Handle("GET /api/v1/music/tracks", a.requireSession(a.handleMusicTracks))
 	mux.Handle("GET /api/v1/music/tracks/{id}/play", a.requireSession(a.handleMusicTrackPlay))
+	mux.Handle("GET /api/v1/images/tmdb/{size}/{file}", a.requireSession(a.handleTMDBImage))
 	mux.Handle("GET /api/v1/genres", a.requireSession(a.handleGenres))
 	mux.Handle("GET /api/v1/home", a.requireSession(a.handleHome))
 	mux.Handle("GET /api/v1/lists/{list}", a.requireSession(a.handleLists))
@@ -747,9 +751,23 @@ func bearerToken(r *http.Request) string {
 }
 
 func writeJSON(w http.ResponseWriter, status int, body any) {
+	var buffer bytes.Buffer
+	encodeErr := json.NewEncoder(&buffer).Encode(body)
+
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(body); err != nil {
+	if encodeErr != nil {
+		log.Printf("library: escribir respuesta: %v", encodeErr)
+		return
+	}
+	// Las imágenes de TMDB se sirven desde el propio servidor para no depender
+	// del CDN desde los clientes.
+	payload := strings.ReplaceAll(
+		buffer.String(),
+		`"https://image.tmdb.org/t/p/`,
+		`"/api/v1/images/tmdb/`,
+	)
+	if _, err := io.WriteString(w, payload); err != nil {
 		log.Printf("library: escribir respuesta: %v", err)
 	}
 }

@@ -7,7 +7,9 @@ info:
     La API está versionada bajo `/api/v1/`, de forma independiente de la
     versión del propio servidor; `/healthz` queda fuera de ese contrato. Los
     endpoints de biblioteca exigen una sesión válida enviada como
-    `Authorization: Bearer <token>`.
+    `Authorization: Bearer <token>`. Las imágenes de TMDB se devuelven como
+    rutas relativas `/api/v1/images/tmdb/...` y las sirve este servidor, que
+    las cachea en disco para no depender del CDN.
 servers:
   - url: /
 paths:
@@ -4088,6 +4090,73 @@ paths:
                 $ref: '#/components/schemas/Error'
         '500':
           description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/images/tmdb/{size}/{file}:
+    get:
+      summary: Sirve una imagen de TMDB desde la caché del servidor
+      description: |
+        Descarga la imagen desde TMDB si todavía no está en disco y la sirve
+        con una caché inmutable. Solo se aceptan los tamaños y los nombres de
+        archivo que usa la API de TMDB; cualquier otro valor devuelve 404.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: size
+          in: path
+          required: true
+          description: Tamaño de imagen de TMDB.
+          schema:
+            type: string
+            enum: [w92, w154, w185, w300, w342, w500, w780, w1280, h632, original]
+        - name: file
+          in: path
+          required: true
+          description: Nombre del archivo de TMDB.
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9_-]{1,100}\.(jpg|jpeg|png|webp|svg)$'
+      responses:
+        '200':
+          description: Imagen
+          headers:
+            Cache-Control:
+              description: private, max-age=31536000, immutable
+              schema:
+                type: string
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+            image/svg+xml:
+              schema:
+                type: string
+                format: binary
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Imagen no encontrada, tamaño no permitido o nombre no válido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: No se pudo descargar la imagen de TMDB
           content:
             application/json:
               schema:

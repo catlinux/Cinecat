@@ -396,6 +396,7 @@ func leakRoutes() []leakCase {
 		{name: "navegar clips visibles", pattern: "/api/v1/libraries/{id}/browse"},
 		{name: "navegar clips ocultos", pattern: "/api/v1/libraries/{id}/browse", notFound: true},
 		{name: "ajustes públicos", pattern: "/api/v1/settings/public", path: "/api/v1/settings/public"},
+		{name: "imagen de TMDB sin caché", pattern: "/api/v1/images/tmdb/{size}/{file}", path: "/api/v1/images/tmdb/w342/abc.jpg", notFound: true},
 		{name: "stream de música sin firma", pattern: "/api/v1/stream/music/{id}", path: "/api/v1/stream/music/", wantStatus: http.StatusForbidden},
 		{name: "stream directo sin firma", pattern: "/api/v1/stream/{id}", path: "/api/v1/stream/", wantStatus: http.StatusForbidden},
 		{name: "archivo de stream sin firma", pattern: "/api/v1/stream/{id}/{file}", path: "/api/v1/stream/", wantStatus: http.StatusForbidden},

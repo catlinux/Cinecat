@@ -2,6 +2,9 @@ package io.github.catlinux.cinecat.core.api
 
 private val TmdbImageSize = Regex("^https://image\\.tmdb\\.org/t/p/(?:w\\d+|original)/")
 
+// Desde 0.34.0 el servidor sirve las imágenes de TMDB con esta ruta relativa.
+private val ProxiedTmdbImageSize = Regex("^/api/v1/images/tmdb/(?:w\\d+|h\\d+|original)/")
+
 val DefaultPortalRows: List<PortalRow> = listOf(
     PortalRow("recent_movies", true, "Películas recién añadidas", "Estrenos"),
     PortalRow("continue_movies", true, "Continuar viendo películas", "En pausa"),
@@ -29,6 +32,9 @@ fun portalRows(raw: String?): List<PortalRow> {
 fun tmdbImage(url: String?, size: String): String? {
     if (url == null) {
         return null
+    }
+    ProxiedTmdbImageSize.find(url)?.let { match ->
+        return "/api/v1/images/tmdb/$size/" + url.substring(match.range.last + 1)
     }
     val match = TmdbImageSize.find(url) ?: return url
     return "https://image.tmdb.org/t/p/$size/" + url.substring(match.range.last + 1)

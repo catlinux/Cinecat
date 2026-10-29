@@ -7,6 +7,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+### Added
+
+- Server: TMDB images are served by the server itself (`/api/v1/images/tmdb/<size>/<file>`) with an on-disk cache in `cache/images`, and the API returns those relative paths. Posters no longer depend on each device's DNS resolving the TMDB CDN, which some DNS servers block.
+- Android app: loads images from the server through those relative paths.
+
 ### Fixed
 
 - Android app: the portal, lists and detail pages did not load from a real server, because lists omit cast and credits and the app required them. All library fields are now optional and a `null` list is read as empty.

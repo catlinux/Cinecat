@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import coil3.ImageLoader
 import coil3.disk.DiskCache
 import coil3.disk.directory
+import coil3.map.Mapper
 import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import io.github.catlinux.cinecat.core.api.LocalAddressDns
@@ -92,6 +93,14 @@ class AppContainer(context: Context) {
         imageLoader = ImageLoader.Builder(appContext)
             .components {
                 add(OkHttpNetworkFetcherFactory(callFactory = { client }))
+                // El servidor devuelve las imágenes con rutas relativas a su origen.
+                add(Mapper<String, String> { data, _ ->
+                    if (data.startsWith("/")) {
+                        sessionRepository.currentServer()?.resolve(data)?.toString()
+                    } else {
+                        null
+                    }
+                })
             }
             .memoryCache {
                 MemoryCache.Builder()

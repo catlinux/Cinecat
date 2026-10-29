@@ -32,6 +32,7 @@ El servidor de actualizaciones no vive dentro de los contenedores: el servidor G
 - **Cliente web (`web/`):** SvelteKit + TypeScript + Svelte 5, con sesión en cookie `httpOnly`; nunca guarda el token de la API en JavaScript. Usa hls.js para HLS y `<video>` nativo para reproducción directa.
 - **Base de datos SQLite:** migraciones embebidas, `STRICT`, WAL, claves foráneas y `busy_timeout`. Vive en el volumen `cinecat_data`.
 - **Caché de TMDB:** junto a la base de datos (`/data/cache/tmdb` en Docker), con respuestas crudas y TTL de 7 días.
+- **Imágenes de TMDB:** el servidor las sirve en `/api/v1/images/tmdb/<tamaño>/<archivo>` y las guarda en `/data/cache/images`; la API devuelve esas rutas relativas en lugar de las URLs de `image.tmdb.org`, así los clientes no dependen de que su DNS resuelva el CDN de TMDB. Se pueden borrar sin riesgo: se vuelven a descargar.
 - **FFmpeg/ffprobe:** herramienta externa instalada en la imagen del servidor; no se distribuye en el repositorio. Se invoca siempre con listas de argumentos, sin shell.
 - **Apache del host:** proxy inverso y TLS. Enruta `/api/` y `/healthz` al servidor y el resto al cliente web, de modo que navegador y API comparten origen.
 

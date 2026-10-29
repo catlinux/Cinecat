@@ -7,6 +7,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Añadido
+
+- Servidor: las imágenes de TMDB se sirven desde el propio servidor (`/api/v1/images/tmdb/<tamaño>/<archivo>`) con una caché en disco en `cache/images`, y la API devuelve esas rutas relativas. Los carteles ya no dependen de que el DNS de cada aparato resuelva el CDN de TMDB, que algunos DNS bloquean.
+- App Android: carga las imágenes desde el servidor con sus rutas relativas.
+
 ### Corregido
 
 - App Android: el portal, los listados y las fichas no cargaban con un servidor real, porque los listados no envían el reparto ni los créditos y la app los exigía. Ahora todos los campos de la biblioteca son opcionales y un `null` de una lista se toma como lista vacía.
