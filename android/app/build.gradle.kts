@@ -14,6 +14,14 @@ val versionMatch = Regex("""^(\d+)\.(\d+)\.(\d+)$""").matchEntire(projectVersion
 val (major, minor, patch) = versionMatch.destructured
 val projectVersionCode = major.toInt() * 10_000 + minor.toInt() * 100 + patch.toInt()
 
+val releaseKeystore = System.getenv("CINECAT_KEYSTORE_FILE")?.trim().orEmpty()
+val releaseKeystorePassword = System.getenv("CINECAT_KEYSTORE_PASSWORD").orEmpty()
+val releaseKeyAlias = System.getenv("CINECAT_KEY_ALIAS").orEmpty()
+val hasReleaseSigning = releaseKeystore.isNotEmpty() &&
+    releaseKeystorePassword.isNotEmpty() &&
+    releaseKeyAlias.isNotBlank() &&
+    file(releaseKeystore).isFile
+
 android {
     namespace = "io.github.catlinux.cinecat.app"
     compileSdk = 35
@@ -38,6 +46,31 @@ android {
 
     lint {
         abortOnError = true
+    }
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = file(releaseKeystore)
+                storePassword = releaseKeystorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeystorePassword
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            isShrinkResources = false
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
+        debug {
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+        }
     }
 }
 

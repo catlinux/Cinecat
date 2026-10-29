@@ -1,0 +1,112 @@
+name: Android release
+
+"on":
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Comprobar etiqueta y VERSION
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          if [ "${TAG#v}" != "${VERSION}" ]; then
+            echo "::error::La etiqueta ${TAG} no coincide con el contenido de VERSION (${VERSION})."
+            exit 1
+          fi
+          echo "TAG=${TAG}" >> "$GITHUB_ENV"
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+
+      - name: Comprobar secretos
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          for name in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Falta el secreto ${name}."
+              exit 1
+            fi
+          done
+
+      - name: Decodificar keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/cinecat-release.jks"
+          test -s "$RUNNER_TEMP/cinecat-release.jks"
+
+      - name: Compilar APK de release
+        working-directory: android
+        env:
+          CINECAT_KEYSTORE_FILE: ${{ runner.temp }}/cinecat-release.jks
+          CINECAT_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          CINECAT_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: ./gradlew assembleRelease
+
+      - name: Verificar firma
+        run: |
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          APKSIGNER="$(find "$SDK_ROOT/build-tools" -maxdepth 2 -type f -name apksigner 2>/dev/null | sort -V | tail -n 1)"
+          if [ -z "$APKSIGNER" ]; then
+            echo "::error::No se encontró apksigner en $SDK_ROOT/build-tools."
+            exit 1
+          fi
+          APK="$(find android/app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n 1)"
+          if [ -z "$APK" ]; then
+            echo "::error::No se generó el APK de release."
+            exit 1
+          fi
+          "$APKSIGNER" verify --print-certs "$APK"
+
+      - name: Preparar artefactos
+        run: |
+          APK="$(find android/app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -n 1)"
+          if [ -z "$APK" ]; then
+            echo "::error::No se generó el APK de release."
+            exit 1
+          fi
+          cp "$APK" "cinecat-${VERSION}.apk"
+          sha256sum "cinecat-${VERSION}.apk" > "cinecat-${VERSION}.apk.sha256"
+          awk -v version="$VERSION" '
+            index($0, "## [" version "]") == 1 { found=1; next }
+            found && index($0, "## [") == 1 { exit }
+            found { print }
+          ' CHANGELOG.md > "$RUNNER_TEMP/release-notes.md"
+
+      - name: Publicar release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" \
+              "cinecat-${VERSION}.apk" "cinecat-${VERSION}.apk.sha256" --clobber
+          else
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" \
+              "cinecat-${VERSION}.apk" "cinecat-${VERSION}.apk.sha256" \
+              --title "Cinecat ${VERSION}" \
+              --notes-file "$RUNNER_TEMP/release-notes.md"
+          fi
+
+      - name: Borrar keystore temporal
+        if: always()
+        run: rm -f "$RUNNER_TEMP/cinecat-release.jks"
