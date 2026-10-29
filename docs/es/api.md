@@ -31,6 +31,14 @@ El contrato de `/api/v1/` es estable para las apps:
 
 La app debe comparar su propia versión con `min_client` y avisar al usuario si es menor. `api_level` solo sube cuando cambia el contrato de forma incompatible.
 
+## Actualización de la app Android
+
+`GET /api/v1/system/client-update?platform=android&version_code=N` permite a la app Android comprobar si la versión del servidor tiene un APK publicado más nuevo. Requiere una sesión válida, pero no rol de administrador.
+
+Si hay una actualización, responde `200` con `version`, `version_code`, `url`, `sha256` y `notes`. La URL apunta al APK de la release del servidor y `sha256` es su suma SHA-256 en minúsculas; `notes` contiene la sección del CHANGELOG si está disponible en la caché del comprobador.
+
+Responde `204` si la comprobación está desactivada, si `platform` no es `android`, si la versión del servidor no es válida, si el cliente ya está al día o si no se pudo obtener la suma. `version_code` es obligatorio, debe ser un entero no negativo y su ausencia o formato inválido devuelve `400`.
+
 ## Autenticación
 
 `POST /api/v1/auth/login` recibe las credenciales y los datos del dispositivo:

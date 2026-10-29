@@ -31,6 +31,14 @@ The `/api/v1/` contract is stable for apps:
 
 The app must compare its own version with `min_client` and warn the user when it is lower. `api_level` only increases when the contract changes in an incompatible way.
 
+## Android app updates
+
+`GET /api/v1/system/client-update?platform=android&version_code=N` lets the Android app check whether the server version has a newer published APK. It requires a valid session, but not the admin role.
+
+When an update is available it returns `200` with `version`, `version_code`, `url`, `sha256` and `notes`. The URL points to the server release APK and `sha256` is its lowercase SHA-256 checksum; `notes` contains the CHANGELOG section when it is available in the checker cache.
+
+It returns `204` when update checks are disabled, `platform` is not `android`, the server version is invalid, the client is already up to date or the checksum cannot be fetched. `version_code` is required, must be a non-negative integer and a missing or invalid value returns `400`.
+
 ## Authentication
 
 `POST /api/v1/auth/login` accepts the credentials and device details:

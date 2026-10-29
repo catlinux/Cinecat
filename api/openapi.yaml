@@ -490,6 +490,59 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ServerVersion'
+  /api/v1/system/client-update:
+    get:
+      summary: Comprueba si hay un APK nuevo para la app Android
+      description: |
+        Indica a la app Android si la versión del servidor tiene un APK
+        publicado más reciente, con su URL y su SHA-256. No requiere rol de
+        administrador: basta una sesión válida. Devuelve 204 si la comprobación
+        está desactivada, si la plataforma no es `android`, si la versión del
+        servidor no es válida, si el cliente ya está al día o si no se pudo
+        obtener la suma de verificación.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: platform
+          in: query
+          required: false
+          description: Plataforma del cliente. Solo `android` puede recibir una actualización.
+          schema:
+            type: string
+            enum: [android]
+        - name: version_code
+          in: query
+          required: true
+          description: Código de versión instalado por el cliente.
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        '200':
+          description: APK nuevo disponible
+          headers:
+            Cache-Control:
+              description: no-store
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientUpdateResponse'
+        '204':
+          description: No hay actualización, la comprobación está desactivada o no se pudo obtener la suma
+        '400':
+          description: version_code ausente, no entero o negativo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/system/update:
     get:
       summary: Estado de las actualizaciones (solo administradores)
@@ -5617,6 +5670,33 @@ components:
           type: string
         result:
           type: string
+      additionalProperties: false
+    ClientUpdateResponse:
+      type: object
+      required:
+        - version
+        - version_code
+        - url
+        - sha256
+        - notes
+      properties:
+        version:
+          type: string
+          description: Versión del servidor, sin prefijo v.
+        version_code:
+          type: integer
+          description: Código de versión calculado como major*10000+minor*100+patch.
+        url:
+          type: string
+          format: uri
+          description: URL del APK de esa versión.
+        sha256:
+          type: string
+          pattern: '^[0-9a-f]{64}$'
+          description: SHA-256 del APK en minúsculas.
+        notes:
+          type: string
+          description: Notas del CHANGELOG de esa versión si están en la caché del comprobador.
       additionalProperties: false
     UpdateResponse:
       type: object

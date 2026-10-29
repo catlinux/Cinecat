@@ -18,6 +18,7 @@ type API struct {
 	checker      *Checker
 	requester    *Requester
 	checkEnabled func() bool
+	clientUpdate *ClientUpdate
 }
 
 func NewAPI(
@@ -31,6 +32,7 @@ func NewAPI(
 		checker:      checker,
 		requester:    requester,
 		checkEnabled: checkEnabled,
+		clientUpdate: NewClientUpdate(""),
 	}
 }
 
@@ -38,6 +40,7 @@ func (a *API) Register(mux *http.ServeMux) {
 	if a == nil {
 		return
 	}
+	mux.Handle("GET /api/v1/system/client-update", a.requireSession(a.handleClientUpdate))
 	mux.Handle("GET /api/v1/system/update", a.requireAdmin(a.handleStatus))
 	mux.Handle("POST /api/v1/system/update/check", a.requireAdmin(a.handleCheck))
 	mux.Handle("POST /api/v1/system/update/apply", a.requireAdmin(a.handleApply))
@@ -79,7 +82,15 @@ func (a *API) enabled() bool {
 	return a.checkEnabled != nil && a.checkEnabled()
 }
 
+func (a *API) requireSession(next http.HandlerFunc) http.Handler {
+	return a.requireRole("", next)
+}
+
 func (a *API) requireAdmin(next http.HandlerFunc) http.Handler {
+	return a.requireRole("admin", next)
+}
+
+func (a *API) requireRole(role string, next http.HandlerFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token := bearerToken(r)
 		if token == "" {
@@ -100,7 +111,7 @@ func (a *API) requireAdmin(next http.HandlerFunc) http.Handler {
 			writeError(w, http.StatusInternalServerError, "error interno")
 			return
 		}
-		if user.Role != "admin" {
+		if role != "" && user.Role != role {
 			writeError(w, http.StatusForbidden, "se requiere rol de administrador")
 			return
 		}
