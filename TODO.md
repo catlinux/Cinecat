@@ -22,6 +22,7 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 - **Tests HLS reales y CI:** los tests se saltan sin `ffmpeg`/`ffprobe`; no hay flujo automático que los ejecute en Linux.
 - **Revisar el TTL de 7 días de TMDB** contra los términos vigentes antes de dar por buena la caché de producción.
 - **Exponer un modo de reproducción `transcode`** en la API; hoy el HLS copiado o recodificado sigue anunciándose como `remux`.
+- **App Android y Android TV** (plan en `.agents/plans/apps-android/apps-android.PLAN.md`): interfaz propia de TV (A4: foco visible, filas para el mando, sin teclado automático); en el móvil, carteles más pequeños, títulos sin cortes y «Colecciones» en una línea; PiP en el móvil; guardar en el servidor la pista elegida; probar audio AC-3 y AVI por HLS en la TV; HLS con AAC 5.1 cuando el equipo lo admita; valorar `compileSdk 36`.
 
 ## 🟢 Más adelante
 
@@ -31,7 +32,6 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 - **Complementos**, todavía en diseño.
 - **DLNA/UPnP**, todavía en diseño.
 - **Tipos de biblioteca** distintos de vídeo (música, fotos u otros) cuando se aborde el modelo.
-- **Clientes Android y Android TV.** Sin código; plan en `.agents/plans/apps-android/apps-android.PLAN.md` (primero sesiones de dispositivo, vinculación por código, capacidades nativas y contrato estable de la API en el servidor).
 - Fotos y presentaciones, televisión en directo y contenido de internet, segmentos de intro/créditos, descargas sin conexión y sincronización entre dispositivos.
 - Otras plataformas (Apple, televisores Samsung/LG).
 
