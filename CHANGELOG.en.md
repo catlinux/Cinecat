@@ -11,6 +11,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 - Server: TMDB images are served by the server itself (`/api/v1/images/tmdb/<size>/<file>`) with an on-disk cache in `cache/images`, and the API returns those relative paths. Posters no longer depend on each device's DNS resolving the TMDB CDN, which some DNS servers block.
 - Android app: loads images from the server through those relative paths.
+- Android app: Media3 (ExoPlayer) player. It plays directly whatever the device can decode (its codecs are detected) and, if that fails, requests HLS playback instead. It resumes where you left off, saves progress every 10 s, on pause and on exit, lets you choose audio and subtitles ("Tracks") and moves on to the next episode in series.
+- Android app on TV: remote control in the player: centre pauses or resumes, left and right go back or forward 10 s, down shows the controls and up or Menu opens "Tracks".
 
 ### Fixed
 
@@ -20,6 +22,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 - Android app: the server address and local IP fields drop the spaces some keyboards add after each dot.
 - Android app on TV: the pairing screen did not fit 1080p (the QR was cut off) and the screensaver covered it before approval. It now uses two columns and keeps the screen on.
 - Android app on TV: the remote could not leave a text field with the up and down arrows; they now move to the previous or next field.
+- Android app on TV: on movie and series pages the remote only reached "Back"; the header now takes focus on entry and down scrolls to Play.
 
 ## [0.33.0] - 2026-10-29
 

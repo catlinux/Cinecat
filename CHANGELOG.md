@@ -11,6 +11,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 - Servidor: las imágenes de TMDB se sirven desde el propio servidor (`/api/v1/images/tmdb/<tamaño>/<archivo>`) con una caché en disco en `cache/images`, y la API devuelve esas rutas relativas. Los carteles ya no dependen de que el DNS de cada aparato resuelva el CDN de TMDB, que algunos DNS bloquean.
 - App Android: carga las imágenes desde el servidor con sus rutas relativas.
+- App Android: reproductor con Media3 (ExoPlayer). Reproduce en directo lo que el aparato decodifica (detecta sus códecs) y, si falla, vuelve a pedir la reproducción por HLS. Reanuda donde se dejó, guarda el progreso cada 10 s, al pausar y al salir, permite elegir audio y subtítulos («Pistas») y pasa al siguiente episodio en las series.
+- App Android en TV: control con el mando en el reproductor: centro pausa o reanuda, izquierda y derecha retroceden o avanzan 10 s, abajo muestra los controles y arriba o Menú abre «Pistas».
 
 ### Corregido
 
@@ -20,6 +22,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 - App Android: los campos de dirección del servidor e IP local descartan los espacios que algunos teclados añaden tras cada punto.
 - App Android en TV: la pantalla de vinculación no cabía en 1080p (el QR se cortaba) y el salvapantallas la tapaba antes de aprobar. Ahora va en dos columnas y mantiene la pantalla encendida.
 - App Android en TV: con el mando no se podía salir de un campo de texto con las flechas arriba y abajo; ahora pasan al campo anterior o siguiente.
+- App Android en TV: en las fichas de película y serie el mando solo llegaba a «Atrás»; ahora la cabecera toma el foco al entrar y abajo baja hasta Reproducir.
 
 ## [0.33.0] - 2026-10-29
 

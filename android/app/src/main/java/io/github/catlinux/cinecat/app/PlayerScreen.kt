@@ -8,6 +8,7 @@ import android.content.pm.ActivityInfo
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,7 +36,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
@@ -74,11 +82,15 @@ fun PlayerScreen(
             .setMediaSourceFactory(
                 DefaultMediaSourceFactory(OkHttpDataSource.Factory(client))
             )
+            .setSeekBackIncrementMs(SEEK_INCREMENT_MS)
+            .setSeekForwardIncrementMs(SEEK_INCREMENT_MS)
             .build()
     }
     var isPlaying by remember(exoPlayer) { mutableStateOf(false) }
     var tracks by remember(exoPlayer) { mutableStateOf<Tracks?>(null) }
     var showTracks by remember { mutableStateOf(false) }
+    var playerView by remember { mutableStateOf<PlayerView?>(null) }
+    val rootFocus = remember { FocusRequester() }
 
     fun saveCurrentProgress() {
         val duration = exoPlayer.duration
@@ -148,10 +160,41 @@ fun PlayerScreen(
         }
     }
 
+    LaunchedEffect(state is PlayerUiState.Ready) {
+        runCatching { rootFocus.requestFocus() }
+    }
+
+    // Compose retiene el foco y las teclas no llegan a la PlayerView: el mando se
+    // gestiona aquí, antes que cualquier hijo.
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
+            .focusRequester(rootFocus)
+            .focusable()
+            .onPreviewKeyEvent { event ->
+                if (state !is PlayerUiState.Ready || showTracks) {
+                    return@onPreviewKeyEvent false
+                }
+                val action: (() -> Unit) = when (event.key) {
+                    Key.DirectionCenter, Key.Enter, Key.NumPadEnter, Key.Spacebar,
+                    Key.MediaPlayPause -> {
+                        { if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play() }
+                    }
+                    Key.MediaPlay -> exoPlayer::play
+                    Key.MediaPause -> exoPlayer::pause
+                    Key.DirectionLeft, Key.MediaRewind -> exoPlayer::seekBack
+                    Key.DirectionRight, Key.MediaFastForward -> exoPlayer::seekForward
+                    Key.DirectionDown -> { {} }
+                    Key.DirectionUp, Key.Menu -> { { showTracks = true } }
+                    else -> return@onPreviewKeyEvent false
+                }
+                if (event.type == KeyEventType.KeyDown) {
+                    action()
+                    playerView?.showController()
+                }
+                true
+            }
     ) {
         when (val current = state) {
             PlayerUiState.Loading -> Column(
@@ -189,7 +232,7 @@ fun PlayerScreen(
                 }
             }
             is PlayerUiState.Ready -> {
-                PlayerViewSurface(exoPlayer = exoPlayer)
+                PlayerViewSurface(exoPlayer = exoPlayer, onCreated = { playerView = it })
                 TextButton(
                     onClick = { showTracks = true },
                     modifier = Modifier
@@ -217,18 +260,15 @@ fun PlayerScreen(
 
 @SuppressLint("UnsafeOptInUsageError")
 @Composable
-private fun PlayerViewSurface(exoPlayer: ExoPlayer) {
+private fun PlayerViewSurface(exoPlayer: ExoPlayer, onCreated: (PlayerView) -> Unit) {
     AndroidView(
         factory = { context ->
             PlayerView(context).apply {
                 player = exoPlayer
                 useController = true
                 keepScreenOn = true
-                isFocusable = true
-                isFocusableInTouchMode = true
                 setShutterBackgroundColor(android.graphics.Color.BLACK)
-                requestFocus()
-                post { requestFocus() }
+                onCreated(this)
             }
         },
         update = { view ->
@@ -373,6 +413,8 @@ private fun PlayerUiState.Ready.toMediaItem(): ExoMediaItem {
         .setSubtitleConfigurations(subtitleConfigurations)
         .build()
 }
+
+private const val SEEK_INCREMENT_MS = 10_000L
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
