@@ -69,4 +69,28 @@
     <string name="collection_detail_title">Colección</string>
     <string name="poster_description">Cartel de %1$s</string>
     <string name="episode_image_description">Imagen del episodio %1$s</string>
+
+    <string name="filter_sort">Orden</string>
+    <string name="filter_genre">Género</string>
+    <string name="filter_all">Todos</string>
+    <string name="filter_chip_format">%1$s: %2$s</string>
+    <string name="sort_title">Título</string>
+    <string name="sort_year">Año</string>
+    <string name="sort_added">Añadidas recientemente</string>
+    <string name="sort_name">Nombre</string>
+    <string name="sort_size">Tamaño</string>
+    <string name="movies_error">No se pudieron cargar las películas</string>
+    <string name="series_error">No se pudieron cargar las series</string>
+    <string name="collections_error">No se pudieron cargar las colecciones</string>
+    <string name="movies_empty">Ninguna película coincide</string>
+    <string name="series_empty">Ninguna serie coincide</string>
+    <string name="collections_empty">Ninguna colección coincide</string>
+    <string name="search_hint">Buscar películas y series</string>
+    <string name="search_help">Escribe al menos 2 caracteres para buscar.</string>
+    <string name="search_empty">Sin resultados para «%1$s»</string>
+    <string name="search_error">No se pudo buscar</string>
+    <plurals name="collection_item_count">
+        <item quantity="one">%1$d película</item>
+        <item quantity="other">%1$d películas</item>
+    </plurals>
 </resources>

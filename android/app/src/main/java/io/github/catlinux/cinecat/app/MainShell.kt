@@ -158,16 +158,43 @@ fun MainShell(
                         )
                     }
                     composable<Movies> {
-                        PlaceholderScreen(R.string.nav_movies)
+                        val moviesViewModel: MoviesViewModel = viewModel {
+                            MoviesViewModel(container.libraryRepository, container.appScope)
+                        }
+                        MoviesScreen(
+                            viewModel = moviesViewModel,
+                            onOpenMovie = { navController.navigate(MovieDetail(it)) }
+                        )
                     }
                     composable<Series> {
-                        PlaceholderScreen(R.string.nav_series)
+                        val seriesViewModel: SeriesViewModel = viewModel {
+                            SeriesViewModel(container.libraryRepository, container.appScope)
+                        }
+                        SeriesScreen(
+                            viewModel = seriesViewModel,
+                            onOpenSeries = { navController.navigate(SeriesDetail(it)) }
+                        )
                     }
                     composable<Collections> {
-                        PlaceholderScreen(R.string.nav_collections)
+                        val collectionsViewModel: CollectionsViewModel = viewModel {
+                            CollectionsViewModel(container.libraryRepository, container.appScope)
+                        }
+                        CollectionsScreen(
+                            viewModel = collectionsViewModel,
+                            onOpenCollection = {
+                                navController.navigate(CollectionDetail(it))
+                            }
+                        )
                     }
                     composable<Search> {
-                        PlaceholderScreen(R.string.nav_search)
+                        val searchViewModel: SearchViewModel = viewModel {
+                            SearchViewModel(container.libraryRepository, container.appScope)
+                        }
+                        SearchScreen(
+                            viewModel = searchViewModel,
+                            onOpenMovie = { navController.navigate(MovieDetail(it)) },
+                            onOpenSeries = { navController.navigate(SeriesDetail(it)) }
+                        )
                     }
                     composable<Account> {
                         AccountScreen(
