@@ -12,6 +12,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 ### Corregido
 
 - App Android en el móvil: al abrir el teclado en Servidor, Iniciar sesión o Buscar, la pantalla quedaba vacía y no se veía lo que se escribía; el espacio del teclado se descontaba dos veces.
+- App Android (versión de pruebas): «Comprobar» decía «No se puede conectar con el servidor» porque la comprobación de compatibilidad no aceptaba el sufijo `-debug` de la versión; ahora ignora los sufijos SemVer.
 
 ## [0.35.0] - 2026-10-29
 

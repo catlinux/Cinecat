@@ -12,6 +12,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 ### Fixed
 
 - Android app on phones: opening the keyboard on Server, Sign in or Search left the screen empty and hid what was typed; the keyboard space was subtracted twice.
+- Android app (testing build): "Check" said it could not connect to the server because the compatibility check rejected the version's `-debug` suffix; SemVer suffixes are now ignored.
 
 ## [0.35.0] - 2026-10-29
 

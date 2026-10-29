@@ -33,8 +33,9 @@ fun checkCompatibility(version: ServerVersion, appVersion: String): Compatibilit
     return Compatibility.Compatible
 }
 
+// Los sufijos SemVer (el "-debug" de la versión de pruebas) no cuentan para la compatibilidad.
 private fun parseVersion(value: String): List<Int> {
-    val parts = value.trim().split(".")
+    val parts = value.trim().substringBefore('-').substringBefore('+').split(".")
     require(parts.size == 3 && parts.all { it.isNotEmpty() && it.all(Char::isDigit) }) {
         "La versión debe tener el formato x.y.z"
     }

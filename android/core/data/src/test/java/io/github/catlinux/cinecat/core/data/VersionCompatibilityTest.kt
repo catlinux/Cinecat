@@ -12,6 +12,8 @@ class VersionCompatibilityTest {
         assertTrue(compareVersions("0.30.1", "0.30.0") > 0)
         assertTrue(compareVersions("0.29.9", "0.30.0") < 0)
         assertTrue(compareVersions("1.0.0", "0.99.99") > 0)
+        assertEquals(0, compareVersions("0.35.1-debug", "0.35.1"))
+        assertEquals(0, compareVersions("0.35.1+abc", "0.35.1"))
     }
 
     @Test
