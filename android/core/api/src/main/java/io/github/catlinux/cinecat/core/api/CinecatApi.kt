@@ -55,6 +55,137 @@ class CinecatApi(
         service.pairToken(request)
     }
 
+    suspend fun home(): ApiResult<HomeResponse> = call { service.home() }
+
+    suspend fun publicSettings(): ApiResult<PublicSettings> = call { service.publicSettings() }
+
+    suspend fun items(
+        kind: String? = null,
+        q: String? = null,
+        letter: String? = null,
+        genre: String? = null,
+        sort: String? = null,
+        watched: Boolean? = null,
+        inProgress: Boolean? = null,
+        collectionId: Long? = null,
+        seriesId: Long? = null,
+        limit: Int? = null,
+        offset: Int? = null
+    ): ApiResult<ItemsResponse> = call {
+        service.items(
+            kind = kind,
+            q = q,
+            letter = letter,
+            genre = genre,
+            sort = sort,
+            watched = watched,
+            inProgress = inProgress,
+            collectionId = collectionId,
+            seriesId = seriesId,
+            limit = limit,
+            offset = offset
+        )
+    }
+
+    suspend fun item(id: Long): ApiResult<MediaItem> = call { service.item(id) }
+
+    suspend fun itemSimilar(
+        id: Long,
+        limit: Int? = null
+    ): ApiResult<SimilarItemsResponse> = call { service.itemSimilar(id, limit) }
+
+    suspend fun series(
+        q: String? = null,
+        letter: String? = null,
+        genre: String? = null,
+        sort: String? = null,
+        limit: Int? = null,
+        offset: Int? = null
+    ): ApiResult<SeriesResponse> = call {
+        service.series(q = q, letter = letter, genre = genre, sort = sort, limit = limit, offset = offset)
+    }
+
+    suspend fun seriesDetail(id: Long): ApiResult<SeriesDetail> = call {
+        service.seriesDetail(id)
+    }
+
+    suspend fun season(id: Long, n: Int): ApiResult<SeasonDetail> = call {
+        service.season(id, n)
+    }
+
+    suspend fun seriesSimilar(
+        id: Long,
+        limit: Int? = null
+    ): ApiResult<SimilarSeriesResponse> = call { service.seriesSimilar(id, limit) }
+
+    suspend fun seriesGenres(): ApiResult<GenresResponse> = call { service.seriesGenres() }
+
+    suspend fun genres(kind: String? = "movie"): ApiResult<GenresResponse> = call {
+        service.genres(kind)
+    }
+
+    suspend fun collections(
+        q: String? = null,
+        sort: String? = null,
+        limit: Int? = null,
+        offset: Int? = null
+    ): ApiResult<CollectionsResponse> = call {
+        service.collections(q = q, sort = sort, limit = limit, offset = offset)
+    }
+
+    suspend fun collection(id: Long): ApiResult<CollectionDetail> = call {
+        service.collection(id)
+    }
+
+    suspend fun lists(
+        list: UserList,
+        kind: String? = null
+    ): ApiResult<ListsResponse> = call { service.lists(list, kind) }
+
+    suspend fun setItemList(id: Long, list: UserList): ApiResult<Unit> = call {
+        service.setItemList(id, list)
+    }
+
+    suspend fun clearItemList(id: Long, list: UserList): ApiResult<Unit> = call {
+        service.clearItemList(id, list)
+    }
+
+    suspend fun setSeriesList(id: Long, list: UserList): ApiResult<Unit> = call {
+        service.setSeriesList(id, list)
+    }
+
+    suspend fun clearSeriesList(id: Long, list: UserList): ApiResult<Unit> = call {
+        service.clearSeriesList(id, list)
+    }
+
+    suspend fun setCollectionList(id: Long, list: UserList): ApiResult<Unit> = call {
+        service.setCollectionList(id, list)
+    }
+
+    suspend fun clearCollectionList(id: Long, list: UserList): ApiResult<Unit> = call {
+        service.clearCollectionList(id, list)
+    }
+
+    suspend fun setWatched(id: Long): ApiResult<Unit> = call { service.setWatched(id) }
+
+    suspend fun clearWatched(id: Long): ApiResult<Unit> = call { service.clearWatched(id) }
+
+    suspend fun setSeriesWatched(id: Long): ApiResult<Unit> = call {
+        service.setSeriesWatched(id)
+    }
+
+    suspend fun clearSeriesWatched(id: Long): ApiResult<Unit> = call {
+        service.clearSeriesWatched(id)
+    }
+
+    suspend fun setSeasonWatched(id: Long, n: Int): ApiResult<Unit> = call {
+        service.setSeasonWatched(id, n)
+    }
+
+    suspend fun clearSeasonWatched(id: Long, n: Int): ApiResult<Unit> = call {
+        service.clearSeasonWatched(id, n)
+    }
+
     private suspend fun <T> call(block: suspend () -> T): ApiResult<T> {
         return try {
             ApiResult.Success(block())
