@@ -1,6 +1,7 @@
 package io.github.catlinux.cinecat.core.api
 
 import okhttp3.ResponseBody
+import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
@@ -54,6 +55,12 @@ interface CinecatService {
 
     @GET("api/v1/items/{id}")
     suspend fun item(@Path("id") id: Long): MediaItem
+
+    @GET("api/v1/system/client-update")
+    suspend fun clientUpdate(
+        @Query("platform") platform: String,
+        @Query("version_code") versionCode: Long
+    ): Response<ClientUpdate>
 
     @GET("api/v1/items/{id}/similar")
     suspend fun itemSimilar(

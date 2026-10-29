@@ -21,6 +21,7 @@ import io.github.catlinux.cinecat.core.data.PlaybackRepository
 import io.github.catlinux.cinecat.core.data.SessionRepository
 import io.github.catlinux.cinecat.core.data.SessionStore
 import io.github.catlinux.cinecat.core.data.deviceName
+import io.github.catlinux.cinecat.app.update.AppUpdater
 import io.github.catlinux.cinecat.core.player.detectCapabilities
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
@@ -33,7 +34,7 @@ class AppContainer(context: Context) {
     private val appContext = context.applicationContext
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    private val dataStore = PreferenceDataStoreFactory.create(
+    internal val dataStore = PreferenceDataStoreFactory.create(
         scope = appScope,
         produceFile = { File(appContext.filesDir, "cinecat.preferences_pb") }
     )
@@ -50,6 +51,18 @@ class AppContainer(context: Context) {
     val imageLoader: ImageLoader
 
     val caps: String by lazy { calculateCaps(appContext) }
+    val appUpdater: AppUpdater by lazy {
+        AppUpdater(
+            context = appContext,
+            apiProvider = {
+                sessionRepository.currentServer()?.let { origin -> createApi(origin, client) }
+            },
+            downloadClient = OkHttpClient(),
+            preferences = dataStore,
+            scope = appScope,
+            debug = BuildConfig.DEBUG
+        )
+    }
 
     init {
         val connectivityManager = requireNotNull(
