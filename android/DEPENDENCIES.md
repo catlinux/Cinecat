@@ -18,6 +18,7 @@ Versiones elegidas el 2026-10-29. Se comprobó la licencia en el POM o repositor
 | androidx.activity:activity-compose | 1.10.1 | Apache-2.0 | https://dl.google.com/dl/android/maven2/androidx/activity/activity-compose/1.10.1/activity-compose-1.10.1.pom |
 | androidx.core:core-ktx | 1.16.0 | Apache-2.0 | https://dl.google.com/dl/android/maven2/androidx/core/core-ktx/1.16.0/core-ktx-1.16.0.pom |
 | androidx.lifecycle:lifecycle-runtime-ktx | 2.10.0 | Apache-2.0 | https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-runtime-ktx/2.10.0/lifecycle-runtime-ktx-2.10.0.pom |
+| androidx.lifecycle:lifecycle-viewmodel-compose | 2.10.0 | Apache-2.0 | https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-viewmodel-compose/2.10.0/lifecycle-viewmodel-compose-2.10.0.pom |
 | androidx.tv:tv-material | 1.1.0 | Apache-2.0 | https://dl.google.com/dl/android/maven2/androidx/tv/tv-material/1.1.0/tv-material-1.1.0.pom |
 | OkHttp | 5.3.2 | Apache-2.0 | https://repo1.maven.org/maven2/com/squareup/okhttp3/okhttp/5.3.2/okhttp-5.3.2.pom |
 | Retrofit | 3.0.0 | Apache-2.0 | https://repo1.maven.org/maven2/com/squareup/retrofit2/retrofit/3.0.0/retrofit-3.0.0.pom |
@@ -29,10 +30,11 @@ Versiones elegidas el 2026-10-29. Se comprobó la licencia en el POM o repositor
 | OkHttp mockwebserver | 5.3.2 (pruebas) | Apache-2.0 | https://repo1.maven.org/maven2/com/squareup/okhttp3/mockwebserver/5.3.2/mockwebserver-5.3.2.pom |
 | androidx.datastore:datastore-preferences | 1.3.0 | Apache-2.0 | https://dl.google.com/dl/android/maven2/androidx/datastore/datastore-preferences/1.3.0/datastore-preferences-1.3.0.pom |
 | androidx.datastore:datastore-preferences-core | 1.3.0 (pruebas) | Apache-2.0 | https://dl.google.com/dl/android/maven2/androidx/datastore/datastore-preferences-core/1.3.0/datastore-preferences-core-1.3.0.pom |
+| ZXing core | 3.5.4 | Apache-2.0 | https://repo1.maven.org/maven2/com/google/zxing/zxing-parent/3.5.4/zxing-parent-3.5.4.pom |
 | JUnit | 4.13.2 | EPL-1.0 | https://repo1.maven.org/maven2/junit/junit/4.13.2/junit-4.13.2.pom |
 | Fraunces Variable | archivo local | OFL-1.1 | web/static/fonts/OFL-Fraunces.txt |
 
-JUnit es la única dependencia con una licencia distinta de Apache-2.0, MIT o BSD: se usa solo en las pruebas unitarias de JVM y conserva su licencia EPL-1.0.
+JUnit es la única dependencia con una licencia distinta de Apache-2.0, MIT o BSD: se usa solo en las pruebas unitarias de JVM y conserva su licencia EPL-1.0. El POM de ZXing core 3.5.4 hereda la licencia Apache-2.0 de su POM padre zxing-parent 3.5.4.
 
 ## Criterio de versiones
 
@@ -43,8 +45,10 @@ JUnit es la única dependencia con una licencia distinta de Apache-2.0, MIT o BS
 - **activity-compose 1.10.1**: última con `minCompileSdk=35`; desde 1.11.0 exige 36.
 - **core-ktx 1.16.0**: última con `minCompileSdk=35`; desde 1.17.0 exige 36.
 - **lifecycle-runtime-ktx 2.10.0**: última cuyo `lifecycle-runtime-compose` declara `minCompileSdk=35`; 2.11.0 exige 37.
+- **lifecycle-viewmodel-compose 2.10.0**: se mantiene en la misma versión que el resto de lifecycle para no elevar `minCompileSdk` por encima de 35.
 - **tv-material 1.1.0**: última estable y compatible con compileSdk 35.
 - **JUnit 4.13.2**: versión estable usada por las pruebas JVM.
 - **DataStore 1.3.0**: última estable de Google Maven; `datastore-preferences-core` se usa además en las pruebas JVM de DataStore.
+- **ZXing core 3.5.4**: última estable de Maven Central; se usa para generar la matriz del QR de vinculación.
 
 El proyecto fija `compileSdk = 35` y `targetSdk = 35` por requisito de este paso; por eso no se usan las versiones más nuevas de AndroidX que exigirían compileSdk 36 o 37.

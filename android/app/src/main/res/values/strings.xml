@@ -2,6 +2,55 @@
 <resources>
     <string name="app_name">Cinecat</string>
     <string name="version_format">Versión %1$s</string>
-    <string name="skeleton_message">Esqueleto de la app: aún sin conexión al servidor.</string>
-    <string name="start">Comenzar</string>
+    <string name="loading">Cargando…</string>
+
+    <string name="server_title">Conecta con tu servidor</string>
+    <string name="server_lede">Escribe la dirección de tu servidor Cinecat. Si está en tu red local, puedes indicar también su IP privada.</string>
+    <string name="server_address_label">Dirección del servidor</string>
+    <string name="server_address_hint">media.ejemplo.es</string>
+    <string name="server_local_label">IP local (opcional)</string>
+    <string name="server_local_help">Solo si el servidor está en tu red y quieres ir por la red local (por ejemplo 192.168.1.150).</string>
+    <string name="server_check">Comprobar</string>
+    <string name="server_checking">Comprobando…</string>
+    <string name="server_continue">Continuar</string>
+    <string name="server_error_address">Escribe una dirección HTTPS válida, sin ruta ni credenciales.</string>
+    <string name="server_error_local">Escribe una IPv4 o IPv6 privada válida, por ejemplo 192.168.1.150.</string>
+    <string name="server_compatible">Cinecat %1$s</string>
+    <string name="server_too_old">El servidor es demasiado antiguo: actualízalo a la 0.30.0 o posterior</string>
+    <string name="server_api_incompatible">Esta versión de la app no es compatible con el servidor</string>
+    <string name="server_app_too_old">Actualiza la app a la %1$s o posterior</string>
+    <string name="server_not_cinecat">Esa dirección no es un servidor Cinecat</string>
+    <string name="server_unreachable">No se puede conectar con el servidor</string>
+    <string name="server_save_error">No se pudo guardar la dirección del servidor.</string>
+
+    <string name="login_title">Inicia sesión</string>
+    <string name="login_lede">Usa tu cuenta de Cinecat para entrar en este dispositivo.</string>
+    <string name="login_username">Usuario</string>
+    <string name="login_password">Contraseña</string>
+    <string name="login_show_password">Mostrar</string>
+    <string name="login_hide_password">Ocultar</string>
+    <string name="login_submit">Entrar</string>
+    <string name="login_use_code">Usar un código de vinculación</string>
+    <string name="login_invalid_credentials">Usuario o contraseña incorrectos</string>
+    <string name="login_too_many">Demasiados intentos: espera %1$d s y vuelve a probar</string>
+    <string name="login_network">No se pudo conectar con el servidor. Revisa la red.</string>
+
+    <string name="pairing_title">Vincula este dispositivo</string>
+    <string name="pairing_lede">Abre Cinecat en otro dispositivo, inicia sesión y aprueba este código.</string>
+    <string name="pairing_open_url">Abre esta dirección en el móvil o el ordenador e introduce el código:</string>
+    <string name="pairing_code_label">Código de vinculación</string>
+    <string name="pairing_expires">Caduca en %1$d:%2$02d</string>
+    <string name="pairing_expired">El código ha caducado.</string>
+    <string name="pairing_failed">No se pudo crear la vinculación.</string>
+    <string name="pairing_new_code">Nuevo código</string>
+    <string name="pairing_retry">Reintentar</string>
+    <string name="pairing_qr_description">Código QR de vinculación</string>
+    <string name="pairing_waiting">Esperando aprobación…</string>
+
+    <string name="home_title">Sesión iniciada</string>
+    <string name="home_signed_in_as">Sesión iniciada como %1$s</string>
+    <string name="home_server">Servidor: %1$s</string>
+    <string name="home_lede">La biblioteca llegará en el siguiente paso.</string>
+    <string name="home_logout">Cerrar sesión</string>
+    <string name="home_change_server">Cambiar de servidor</string>
 </resources>

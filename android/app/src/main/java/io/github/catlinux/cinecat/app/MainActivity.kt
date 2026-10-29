@@ -12,13 +12,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val isTv = isTelevision(resources.configuration.uiMode and Configuration.UI_MODE_TYPE_MASK)
+        val container = (application as CinecatApplication).container
         setContent {
             CinecatTheme {
-                if (isTv) {
-                    TvHomeScreen()
-                } else {
-                    MobileHomeScreen()
-                }
+                CinecatApp(container = container, isTelevision = isTv)
             }
         }
     }

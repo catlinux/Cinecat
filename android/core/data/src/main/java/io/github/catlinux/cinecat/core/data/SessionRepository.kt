@@ -58,6 +58,7 @@ class SessionRepository(
     @Volatile
     private var server: HttpUrl? = null
 
+    @Volatile
     private var localAddress: InetAddress? = null
 
     @Volatile
@@ -70,6 +71,10 @@ class SessionRepository(
     }
 
     fun currentToken(): String? = token
+
+    fun currentServer(): HttpUrl? = server
+
+    fun currentLocalAddress(): InetAddress? = localAddress
 
     suspend fun setServer(address: HttpUrl, localAddress: InetAddress?) {
         val previous = server
