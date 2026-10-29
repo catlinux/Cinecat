@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,7 +40,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -56,21 +56,21 @@ import io.github.catlinux.cinecat.core.api.Season
 import io.github.catlinux.cinecat.core.api.SeriesDetail
 import io.github.catlinux.cinecat.core.api.tmdbImage
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.launch
 
 @Composable
 fun SeriesDetailScreen(
     viewModel: SeriesDetailViewModel,
     onBack: () -> Unit,
+    onPlayEpisode: (Long, Double) -> Unit,
     onOpenSeries: (Long) -> Unit
 ) {
     val state by viewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
     val actionError = stringResource(R.string.detail_action_error)
-    val playSoon = stringResource(R.string.play_soon_snackbar)
     val tablet = useNavigationRail(LocalConfiguration.current.screenWidthDp)
     val horizontalPadding = if (tablet) 28.dp else 16.dp
+
+    ReloadOnResume(viewModel::load)
 
     LaunchedEffect(viewModel) {
         viewModel.events.collect {
@@ -96,9 +96,7 @@ fun SeriesDetailScreen(
                 onToggleSeriesWatched = viewModel::toggleSeriesWatched,
                 onToggleSeasonWatched = viewModel::toggleSeasonWatched,
                 onToggleEpisodeWatched = viewModel::toggleEpisodeWatched,
-                onEpisodeClick = {
-                    scope.launch { snackbarHostState.showSnackbar(playSoon) }
-                },
+                onPlayEpisode = onPlayEpisode,
                 onOpenSeries = onOpenSeries
             )
         }
@@ -129,7 +127,7 @@ private fun SeriesDetailContent(
     onToggleSeriesWatched: () -> Unit,
     onToggleSeasonWatched: () -> Unit,
     onToggleEpisodeWatched: (Long) -> Unit,
-    onEpisodeClick: () -> Unit,
+    onPlayEpisode: (Long, Double) -> Unit,
     onOpenSeries: (Long) -> Unit
 ) {
     val series = state.series
@@ -138,11 +136,13 @@ private fun SeriesDetailContent(
         contentPadding = PaddingValues(bottom = 24.dp)
     ) {
         item(key = "hero") {
-            DetailBackdrop(
-                title = series.title,
-                url = tmdbImage(series.backdropUrl ?: series.posterUrl, "w1280"),
-                height = if (tablet) 360.dp else 240.dp
-            )
+            Box(Modifier.initialFocus()) {
+                DetailBackdrop(
+                    title = series.title,
+                    url = tmdbImage(series.backdropUrl ?: series.posterUrl, "w1280"),
+                    height = if (tablet) 360.dp else 240.dp
+                )
+            }
         }
         item(key = "info") {
             SeriesInfoRow(
@@ -150,6 +150,25 @@ private fun SeriesDetailContent(
                 tablet = tablet,
                 horizontalPadding = horizontalPadding
             )
+        }
+        state.series.nextEpisode?.let { next ->
+            item(key = "play-next") {
+                Button(
+                    onClick = {
+                        onPlayEpisode(
+                            next.id,
+                            next.progress?.positionSeconds ?: 0.0
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = horizontalPadding, end = horizontalPadding, top = 20.dp)
+                ) {
+                    val code = formatEpisodeCode(next.season, next.episode)
+                        .ifBlank { next.episodeTitle ?: next.title }
+                    Text(stringResource(R.string.play_episode, code))
+                }
+            }
         }
         item(key = "actions") {
             SeriesActions(
@@ -259,7 +278,12 @@ private fun SeriesDetailContent(
                         EpisodeRow(
                             item = episode,
                             horizontalPadding = horizontalPadding,
-                            onClick = onEpisodeClick,
+                            onClick = {
+                                onPlayEpisode(
+                                    episode.id,
+                                    episode.progress?.positionSeconds ?: 0.0
+                                )
+                            },
                             onToggleWatched = { onToggleEpisodeWatched(episode.id) }
                         )
                     }

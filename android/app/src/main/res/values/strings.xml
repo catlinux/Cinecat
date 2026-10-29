@@ -93,7 +93,9 @@
     <string name="collection_detail_error">No se pudo cargar la colección</string>
     <string name="detail_action_error">No se pudo actualizar. Inténtalo de nuevo.</string>
     <string name="play">Reproducir</string>
-    <string name="play_soon">Llega en la próxima versión</string>
+    <string name="resume">Reanudar</string>
+    <string name="resume_from">Reanudar desde %1$s</string>
+    <string name="play_episode">Reproducir %1$s</string>
     <string name="favorite">Favorito</string>
     <string name="watchlist">Por ver</string>
     <string name="watched">Visto</string>
@@ -119,5 +121,11 @@
     <string name="season_progress">Vistos: %1$d de %2$d</string>
     <string name="mark_watched">Marcar como visto</string>
     <string name="unmark_watched">Desmarcar visto</string>
-    <string name="play_soon_snackbar">La reproducción llega en la próxima versión</string>
+    <string name="player_error">No se pudo preparar la reproducción</string>
+    <string name="player_tracks">Pistas</string>
+    <string name="player_audio">Audio</string>
+    <string name="player_subtitles">Subtítulos</string>
+    <string name="player_disable_subtitles">Desactivar subtítulos</string>
+    <string name="player_no_tracks">Sin pistas disponibles</string>
+    <string name="player_track_selected">✓ %1$s</string>
 </resources>

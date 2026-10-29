@@ -48,6 +48,7 @@ import kotlinx.coroutines.flow.collect
 fun MovieDetailScreen(
     viewModel: MovieDetailViewModel,
     onBack: () -> Unit,
+    onPlay: (Long, Double) -> Unit,
     onOpenMovie: (Long) -> Unit,
     onOpenCollection: (Long) -> Unit
 ) {
@@ -56,6 +57,8 @@ fun MovieDetailScreen(
     val actionError = stringResource(R.string.detail_action_error)
     val tablet = useNavigationRail(LocalConfiguration.current.screenWidthDp)
     val horizontalPadding = if (tablet) 28.dp else 16.dp
+
+    ReloadOnResume(viewModel::load)
 
     LaunchedEffect(viewModel) {
         viewModel.events.collect {
@@ -74,6 +77,7 @@ fun MovieDetailScreen(
                 state = current,
                 tablet = tablet,
                 horizontalPadding = horizontalPadding,
+                onPlay = onPlay,
                 onOpenMovie = onOpenMovie,
                 onOpenCollection = onOpenCollection,
                 onToggleFavorite = viewModel::toggleFavorite,
@@ -101,6 +105,7 @@ private fun MovieDetailContent(
     state: MovieDetailUiState.Ready,
     tablet: Boolean,
     horizontalPadding: androidx.compose.ui.unit.Dp,
+    onPlay: (Long, Double) -> Unit,
     onOpenMovie: (Long) -> Unit,
     onOpenCollection: (Long) -> Unit,
     onToggleFavorite: () -> Unit,
@@ -113,11 +118,13 @@ private fun MovieDetailContent(
         contentPadding = PaddingValues(bottom = 24.dp)
     ) {
         item(key = "hero") {
-            DetailBackdrop(
-                title = item.title,
-                url = tmdbImage(item.backdropUrl ?: item.posterUrl, "w1280"),
-                height = if (tablet) 360.dp else 240.dp
-            )
+            Box(Modifier.initialFocus()) {
+                DetailBackdrop(
+                    title = item.title,
+                    url = tmdbImage(item.backdropUrl ?: item.posterUrl, "w1280"),
+                    height = if (tablet) 360.dp else 240.dp
+                )
+            }
         }
         item(key = "info") {
             MovieInfoRow(
@@ -130,6 +137,7 @@ private fun MovieDetailContent(
             MovieActions(
                 item = item,
                 horizontalPadding = horizontalPadding,
+                onPlay = onPlay,
                 onToggleFavorite = onToggleFavorite,
                 onToggleWatchlist = onToggleWatchlist,
                 onToggleWatched = onToggleWatched
@@ -315,6 +323,7 @@ private fun MovieInfoRow(
 private fun MovieActions(
     item: MediaItem,
     horizontalPadding: androidx.compose.ui.unit.Dp,
+    onPlay: (Long, Double) -> Unit,
     onToggleFavorite: () -> Unit,
     onToggleWatchlist: () -> Unit,
     onToggleWatched: () -> Unit
@@ -325,18 +334,28 @@ private fun MovieActions(
             .padding(start = horizontalPadding, end = horizontalPadding, top = 20.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        val progress = item.progress
+        val position = progress?.positionSeconds?.takeIf { it > 0.0 }
         Button(
-            onClick = {},
-            enabled = false,
+            onClick = { onPlay(item.id, position ?: 0.0) },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text(stringResource(R.string.play))
+            Text(
+                stringResource(
+                    if (position != null) R.string.resume else R.string.play
+                )
+            )
         }
-        Text(
-            text = stringResource(R.string.play_soon),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        if (position != null) {
+            Text(
+                text = stringResource(
+                    R.string.resume_from,
+                    formatPlaybackPosition(position)
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
         Row(
             modifier = Modifier
                 .fillMaxWidth()

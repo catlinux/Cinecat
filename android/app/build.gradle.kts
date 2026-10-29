@@ -43,6 +43,7 @@ android {
 
 dependencies {
     implementation(project(":core:data"))
+    implementation(project(":core:player"))
     implementation(project(":ui:common"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
@@ -59,6 +60,10 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
     implementation(libs.zxing.core)
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.exoplayer.hls)
+    implementation(libs.androidx.media3.datasource.okhttp)
+    implementation(libs.androidx.media3.ui)
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     testImplementation(libs.junit)

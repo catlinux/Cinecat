@@ -1,5 +1,6 @@
 package io.github.catlinux.cinecat.app
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.res.Configuration
 import android.net.ConnectivityManager
@@ -16,9 +17,11 @@ import io.github.catlinux.cinecat.core.api.createOkHttpClient
 import io.github.catlinux.cinecat.core.data.KeystoreTokenCipher
 import io.github.catlinux.cinecat.core.data.LibraryRepository
 import io.github.catlinux.cinecat.core.data.LocalNetworkMonitor
+import io.github.catlinux.cinecat.core.data.PlaybackRepository
 import io.github.catlinux.cinecat.core.data.SessionRepository
 import io.github.catlinux.cinecat.core.data.SessionStore
 import io.github.catlinux.cinecat.core.data.deviceName
+import io.github.catlinux.cinecat.core.player.detectCapabilities
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -39,11 +42,14 @@ class AppContainer(context: Context) {
 
     val localNetworkMonitor: LocalNetworkMonitor
     private val dns: LocalAddressDns
-    private val client: OkHttpClient
+    val client: OkHttpClient
 
     val sessionRepository: SessionRepository
     val libraryRepository: LibraryRepository
+    val playbackRepository: PlaybackRepository
     val imageLoader: ImageLoader
+
+    val caps: String by lazy { calculateCaps(appContext) }
 
     init {
         val connectivityManager = requireNotNull(
@@ -90,6 +96,11 @@ class AppContainer(context: Context) {
                 sessionRepository.currentServer()?.let { origin -> createApi(origin, client) }
             }
         )
+        playbackRepository = PlaybackRepository(
+            apiProvider = {
+                sessionRepository.currentServer()?.let { origin -> createApi(origin, client) }
+            }
+        )
         imageLoader = ImageLoader.Builder(appContext)
             .components {
                 add(OkHttpNetworkFetcherFactory(callFactory = { client }))
@@ -117,3 +128,6 @@ class AppContainer(context: Context) {
         localNetworkMonitor.start()
     }
 }
+
+@SuppressLint("UnsafeOptInUsageError")
+private fun calculateCaps(context: Context): String = detectCapabilities(context)

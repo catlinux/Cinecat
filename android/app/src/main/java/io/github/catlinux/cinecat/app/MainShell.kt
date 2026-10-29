@@ -67,6 +67,9 @@ data class SeriesDetail(val id: Long)
 @Serializable
 data class CollectionDetail(val id: Long)
 
+@Serializable
+data class Player(val itemId: Long, val startSeconds: Double = 0.0)
+
 private data class MainTab(
     @StringRes val labelRes: Int,
     val route: Any,
@@ -88,6 +91,7 @@ fun MainShell(
     val currentDestination = currentEntry?.destination
     val isTopLevel = currentDestination != null &&
         tabs.any { tab -> currentDestination.hasRoute(tab.route::class) }
+    val isPlayer = currentDestination?.hasRoute(Player::class) == true
 
     fun navigateTopLevel(route: Any) {
         if (currentDestination?.hasRoute(route::class) == true) {
@@ -106,7 +110,7 @@ fun MainShell(
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        contentWindowInsets = WindowInsets.safeDrawing,
+        contentWindowInsets = if (isPlayer) WindowInsets(0, 0, 0, 0) else WindowInsets.safeDrawing,
         bottomBar = {
             if (!useRail && isTopLevel) {
                 NavigationBar {
@@ -218,6 +222,9 @@ fun MainShell(
                         MovieDetailScreen(
                             viewModel = movieViewModel,
                             onBack = { navController.popBackStack() },
+                            onPlay = { id, position ->
+                                navController.navigate(Player(id, position))
+                            },
                             onOpenMovie = { id -> navController.navigate(MovieDetail(id)) },
                             onOpenCollection = { id ->
                                 navController.navigate(CollectionDetail(id))
@@ -236,7 +243,29 @@ fun MainShell(
                         SeriesDetailScreen(
                             viewModel = seriesViewModel,
                             onBack = { navController.popBackStack() },
+                            onPlayEpisode = { id, position ->
+                                navController.navigate(Player(id, position))
+                            },
                             onOpenSeries = { id -> navController.navigate(SeriesDetail(id)) }
+                        )
+                    }
+                    composable<Player> {
+                        val route = it.toRoute<Player>()
+                        val playerViewModel: PlayerViewModel = viewModel {
+                            PlayerViewModel(
+                                itemId = route.itemId,
+                                startSeconds = route.startSeconds,
+                                repository = container.playbackRepository,
+                                caps = container.caps,
+                                scope = container.appScope,
+                                serverUrl = { container.sessionRepository.currentServer() }
+                            )
+                        }
+                        PlayerScreen(
+                            viewModel = playerViewModel,
+                            client = container.client,
+                            isTelevision = isTelevision,
+                            onBack = { navController.popBackStack() }
                         )
                     }
                     composable<CollectionDetail> {
