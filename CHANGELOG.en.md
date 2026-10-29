@@ -9,6 +9,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ### Fixed
 
+- Android app: the portal, lists and detail pages did not load from a real server, because lists omit cast and credits and the app required them. All library fields are now optional and a `null` list is read as empty.
 - Android app on TV: primary button text was dark on maroon and barely readable.
 - Android app: large titles (app name and TV screen titles) did not use Fraunces.
 - Android app: the server address and local IP fields drop the spaces some keyboards add after each dot.

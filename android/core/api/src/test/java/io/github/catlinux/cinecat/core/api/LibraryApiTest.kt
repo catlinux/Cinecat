@@ -19,6 +19,25 @@ class LibraryApiTest {
     private fun api(): CinecatApi = createApi(server.url("/"), OkHttpClient())
 
     @Test
+    fun toleratesOmittedFieldsAndNullListsFromTheServer() = runTest {
+        // Los listados del servidor omiten cast y credits, y Go envía null en slices vacíos.
+        server.enqueue(
+            jsonResponse(
+                """{"continue":[{"id":7,"title":"Sin reparto","genres":null}],"next_up":null,"counts":{"movies":1}}"""
+            )
+        )
+        val home = api().home()
+        assertTrue(home is ApiResult.Success)
+        val value = (home as ApiResult.Success).value
+        val item = value.continueWatching.single()
+        assertEquals("Sin reparto", item.title)
+        assertTrue(item.genres.isEmpty())
+        assertTrue(item.credits.cast.isEmpty())
+        assertTrue(value.nextUp.isEmpty())
+        assertEquals(1, value.counts.movies)
+    }
+
+    @Test
     fun parsesLibraryReadsAndIgnoresUnknownFields() = runTest {
         server.enqueue(jsonResponse(homeJson()))
         val home = api().home()

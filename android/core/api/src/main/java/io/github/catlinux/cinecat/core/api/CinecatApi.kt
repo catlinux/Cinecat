@@ -16,6 +16,8 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
 val CinecatJson: Json = Json {
     ignoreUnknownKeys = true
     explicitNulls = false
+    // Go serializa los slices vacíos como null: se toman como el valor por defecto.
+    coerceInputValues = true
 }
 
 sealed interface ApiResult<out T> {
