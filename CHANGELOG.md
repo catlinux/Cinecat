@@ -7,6 +7,14 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.35.2] - 2026-10-30
+
+### Corregido
+
+- App Android en Android 9 (la TV): la actualización automática rechazaba los APK nuevos diciendo que la firma no coincidía, porque Android 9 no da los certificados de un APK descargado con la opción moderna; ahora se comparan también con la clásica. **La TV con la 0.35.0 o la 0.35.1 hay que actualizarla a mano una vez** (`adb install -r` o descargando el APK).
+- App Android en TV y tableta: «Cuenta» está ahora en el menú lateral; en la TV el icono de la cabecera solo se alcanzaba recorriendo la fila hasta el final.
+- App Android en TV: se quita el «tirar para recargar» del portal, cuyo indicador se movía por la pantalla al navegar con el mando.
+
 ## [0.35.1] - 2026-10-29
 
 ### Corregido

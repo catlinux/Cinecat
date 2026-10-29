@@ -340,13 +340,14 @@ class AppUpdater(
     @Suppress("DEPRECATION")
     private fun sameSignatures(installed: PackageInfo, archive: PackageInfo): Boolean {
         return try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                val installedSigning = installed.signingInfo ?: return false
-                val archiveSigning = archive.signingInfo ?: return false
+            val installedSigning = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) installed.signingInfo else null
+            val archiveSigning = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) archive.signingInfo else null
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && installedSigning != null && archiveSigning != null) {
                 val installedCerts = signingCertificates(installedSigning)
                 val archiveCerts = signingCertificates(archiveSigning)
                 installedCerts.isNotEmpty() && installedCerts == archiveCerts
             } else {
+                // Android 9 no rellena signingInfo al leer un APK suelto; sí rellena signatures.
                 val installedCerts = installed.signatures?.map { it.toByteArray().toHex() }?.toSet()
                 val archiveCerts = archive.signatures?.map { it.toByteArray().toHex() }?.toSet()
                 !installedCerts.isNullOrEmpty() && installedCerts == archiveCerts
@@ -369,7 +370,7 @@ class AppUpdater(
     @Suppress("DEPRECATION")
     private fun signingFlags(): Int {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            PackageManager.GET_SIGNING_CERTIFICATES
+            PackageManager.GET_SIGNING_CERTIFICATES or PackageManager.GET_SIGNATURES
         } else {
             PackageManager.GET_SIGNATURES
         }

@@ -42,7 +42,8 @@ import io.github.catlinux.cinecat.core.data.PortalRowData
 @Composable
 fun PortalScreen(
     viewModel: PortalViewModel,
-    onOpenAccount: () -> Unit,
+    isTelevision: Boolean,
+    onOpenAccount: (() -> Unit)?,
     onOpenMovie: (Long) -> Unit,
     onOpenSeries: (Long) -> Unit
 ) {
@@ -54,11 +55,19 @@ fun PortalScreen(
     val episodeWidth = if (tablet) 300.dp else 230.dp
     val refreshing = (state as? PortalUiState.Ready)?.refreshing == true
 
-    PullToRefreshBox(
-        isRefreshing = refreshing,
-        onRefresh = viewModel::refresh,
-        modifier = Modifier.fillMaxSize()
-    ) {
+    // Sin pantalla táctil no hay gesto de tirar; el indicador solo se veía moverse al navegar.
+    val refreshContainer: @Composable (@Composable () -> Unit) -> Unit = if (isTelevision) {
+        { content -> Box(Modifier.fillMaxSize()) { content() } }
+    } else {
+        { content ->
+            PullToRefreshBox(
+                isRefreshing = refreshing,
+                onRefresh = viewModel::refresh,
+                modifier = Modifier.fillMaxSize()
+            ) { content() }
+        }
+    }
+    refreshContainer {
         Column(modifier = Modifier.fillMaxSize()) {
             PortalHeader(
                 onOpenAccount = onOpenAccount,
@@ -124,7 +133,7 @@ fun PortalScreen(
 
 @Composable
 private fun PortalHeader(
-    onOpenAccount: () -> Unit,
+    onOpenAccount: (() -> Unit)?,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -140,12 +149,14 @@ private fun PortalHeader(
             color = MaterialTheme.colorScheme.primary
         )
         Spacer(Modifier.weight(1f))
-        IconButton(onClick = onOpenAccount) {
-            Icon(
-                imageVector = Icons.Filled.AccountCircle,
-                contentDescription = stringResource(R.string.account_title),
-                tint = MaterialTheme.colorScheme.primary
-            )
+        if (onOpenAccount != null) {
+            IconButton(onClick = onOpenAccount) {
+                Icon(
+                    imageVector = Icons.Filled.AccountCircle,
+                    contentDescription = stringResource(R.string.account_title),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
         }
     }
 }

@@ -7,6 +7,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.35.2] - 2026-10-30
+
+### Fixed
+
+- Android app on Android 9 (the TV): automatic updates rejected new APKs saying the signature did not match, because Android 9 does not return a downloaded APK's certificates with the modern option; they are now also compared with the classic one. **A TV on 0.35.0 or 0.35.1 must be updated by hand once** (`adb install -r` or by downloading the APK).
+- Android app on TV and tablets: "Account" is now in the side rail; on TV the header icon could only be reached by scrolling the row to the end.
+- Android app on TV: the portal's pull-to-refresh is removed; its indicator moved around the screen while navigating with the remote.
+
 ## [0.35.1] - 2026-10-29
 
 ### Fixed

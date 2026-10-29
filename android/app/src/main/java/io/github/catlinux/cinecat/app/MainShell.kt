@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
@@ -143,6 +144,15 @@ fun MainShell(
                             alwaysShowLabel = true
                         )
                     }
+                    // En el riel la cuenta va aquí: en la TV el icono de la cabecera solo se
+                    // alcanzaba con el mando recorriendo la fila entera hacia la derecha.
+                    NavigationRailItem(
+                        selected = false,
+                        onClick = { navController.navigate(Account) },
+                        icon = { Icon(Icons.Filled.AccountCircle, contentDescription = null) },
+                        label = { Text(stringResource(R.string.account_title)) },
+                        alwaysShowLabel = true
+                    )
                 }
             }
             Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
@@ -157,7 +167,8 @@ fun MainShell(
                         }
                         PortalScreen(
                             viewModel = portalViewModel,
-                            onOpenAccount = { navController.navigate(Account) },
+                            isTelevision = isTelevision,
+                            onOpenAccount = if (useRail) null else ({ navController.navigate(Account) }),
                             onOpenMovie = { navController.navigate(MovieDetail(it)) },
                             onOpenSeries = { navController.navigate(SeriesDetail(it)) }
                         )
