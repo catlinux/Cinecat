@@ -23,6 +23,10 @@ Versiones elegidas el 2026-10-29. Se comprobó la licencia en el POM o repositor
 | androidx.navigation:navigation-compose | 2.9.8 | Apache-2.0 | https://dl.google.com/dl/android/maven2/androidx/navigation/navigation-compose/2.9.8/navigation-compose-2.9.8.pom |
 | Coil 3 coil-compose | 3.4.0 | Apache-2.0 | https://repo1.maven.org/maven2/io/coil-kt/coil3/coil-compose/3.4.0/coil-compose-3.4.0.pom |
 | Coil 3 coil-network-okhttp | 3.4.0 | Apache-2.0 | https://repo1.maven.org/maven2/io/coil-kt/coil3/coil-network-okhttp/3.4.0/coil-network-okhttp-3.4.0.pom |
+| Media3 media3-exoplayer | 1.9.4 | Apache-2.0 | https://dl.google.com/android/maven2/androidx/media3/media3-exoplayer/1.9.4/media3-exoplayer-1.9.4.pom |
+| Media3 media3-exoplayer-hls | 1.9.4 | Apache-2.0 | https://dl.google.com/android/maven2/androidx/media3/media3-exoplayer-hls/1.9.4/media3-exoplayer-hls-1.9.4.pom |
+| Media3 media3-datasource-okhttp | 1.9.4 | Apache-2.0 | https://dl.google.com/android/maven2/androidx/media3/media3-datasource-okhttp/1.9.4/media3-datasource-okhttp-1.9.4.pom |
+| Media3 media3-ui | 1.9.4 | Apache-2.0 | https://dl.google.com/android/maven2/androidx/media3/media3-ui/1.9.4/media3-ui-1.9.4.pom |
 | OkHttp | 5.3.2 | Apache-2.0 | https://repo1.maven.org/maven2/com/squareup/okhttp3/okhttp/5.3.2/okhttp-5.3.2.pom |
 | Retrofit | 3.0.0 | Apache-2.0 | https://repo1.maven.org/maven2/com/squareup/retrofit2/retrofit/3.0.0/retrofit-3.0.0.pom |
 | Retrofit converter-kotlinx-serialization | 3.0.0 | Apache-2.0 | https://repo1.maven.org/maven2/com/squareup/retrofit2/converter-kotlinx-serialization/3.0.0/converter-kotlinx-serialization-3.0.0.pom |
@@ -52,6 +56,7 @@ JUnit es la única dependencia con una licencia distinta de Apache-2.0, MIT o BS
 - **tv-material 1.1.0**: última estable y compatible con compileSdk 35.
 - **navigation-compose 2.9.8**: última estable con `minCompileSdk=35`; 2.10.0 y posteriores exigen compileSdk 37.
 - **Coil 3.4.0**: última estable con `minCompileSdk=35`; 3.5.0 exige compileSdk 36 y 3.6.0 o posterior, 37.
+- **Media3 1.9.4**: última estable con `minCompileSdk=35`; 1.10.0 o posterior exige compileSdk 36.
 - **JUnit 4.13.2**: versión estable usada por las pruebas JVM.
 - **DataStore 1.3.0**: última estable de Google Maven; `datastore-preferences-core` se usa además en las pruebas JVM de DataStore.
 - **ZXing core 3.5.4**: última estable de Maven Central; se usa para generar la matriz del QR de vinculación.

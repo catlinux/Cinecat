@@ -15,3 +15,9 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 }
+
+dependencies {
+    api(libs.androidx.media3.exoplayer)
+
+    testImplementation(libs.junit)
+}

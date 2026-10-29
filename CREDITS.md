@@ -34,6 +34,7 @@ Cinecat builds on the work of other people and projects. This list includes **al
 | [kotlinx.coroutines](https://github.com/Kotlin/kotlinx.coroutines) 1.11.0 | Concurrencia de la app Android / Android app concurrency | Apache-2.0 |
 | [AndroidX DataStore](https://developer.android.com/jetpack/androidx/releases/datastore) 1.3.0 | Ajustes y sesión cifrada de la app Android / Android app settings and encrypted session | Apache-2.0 |
 | [Coil](https://github.com/coil-kt/coil) 3.4.0 | Carga de carteles e imágenes en la app Android / Poster and image loading in the Android app | Apache-2.0 |
+| [AndroidX Media3](https://github.com/androidx/media) 1.9.4 | Reproductor de vídeo de la app Android (ExoPlayer, HLS, interfaz) / Video player in the Android app (ExoPlayer, HLS, UI) | Apache-2.0 |
 | [AndroidX Navigation](https://developer.android.com/jetpack/androidx/releases/navigation) 2.9.8 | Navegación de la app Android / Android app navigation | Apache-2.0 |
 | [ZXing core](https://github.com/zxing/zxing) 3.5.4 | Código QR de vinculación en la app Android / Pairing QR code in the Android app | Apache-2.0 |
 | [Android Gradle Plugin](https://developer.android.com/build) 9.5.0 | Herramienta de compilación de la app Android / Android app build tool | Apache-2.0 |

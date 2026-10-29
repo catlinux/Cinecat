@@ -96,6 +96,24 @@ class CinecatApi(
         limit: Int? = null
     ): ApiResult<SimilarItemsResponse> = call { service.itemSimilar(id, limit) }
 
+    suspend fun play(
+        id: Long,
+        caps: String? = null,
+        audio: Int? = null,
+        quality: String? = null,
+        subtitle: String? = null
+    ): ApiResult<PlayResponse> = call {
+        service.play(id, caps, audio, quality, subtitle)
+    }
+
+    suspend fun saveProgress(
+        id: Long,
+        position: Double,
+        duration: Double
+    ): ApiResult<Unit> = call {
+        service.saveProgress(id, ProgressRequest(position, duration))
+    }
+
     suspend fun series(
         q: String? = null,
         letter: String? = null,

@@ -145,6 +145,21 @@ interface CinecatService {
         @Path("list") list: UserList
     )
 
+    @GET("api/v1/items/{id}/play")
+    suspend fun play(
+        @Path("id") id: Long,
+        @Query("caps") caps: String?,
+        @Query("audio") audio: Int?,
+        @Query("quality") quality: String?,
+        @Query("subtitle") subtitle: String?
+    ): PlayResponse
+
+    @PUT("api/v1/items/{id}/progress")
+    suspend fun saveProgress(
+        @Path("id") id: Long,
+        @Body request: ProgressRequest
+    )
+
     @PUT("api/v1/items/{id}/watched")
     suspend fun setWatched(@Path("id") id: Long)
 
