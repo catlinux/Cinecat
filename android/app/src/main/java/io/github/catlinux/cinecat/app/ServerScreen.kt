@@ -104,7 +104,7 @@ fun ServerScreen(
                 OutlinedTextField(
                     value = state.server,
                     onValueChange = viewModel::onServerChanged,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().dpadFieldNavigation(),
                     label = { Text(stringResource(R.string.server_address_label)) },
                     placeholder = { Text(stringResource(R.string.server_address_hint)) },
                     singleLine = true,
@@ -123,7 +123,7 @@ fun ServerScreen(
                 OutlinedTextField(
                     value = state.localAddress,
                     onValueChange = viewModel::onLocalAddressChanged,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().dpadFieldNavigation(),
                     label = { Text(stringResource(R.string.server_local_label)) },
                     singleLine = true,
                     enabled = !state.checking,

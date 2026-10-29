@@ -72,7 +72,8 @@ fun SearchScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 8.dp)
-                .focusRequester(focusRequester),
+                .focusRequester(focusRequester)
+                .dpadFieldNavigation(),
             singleLine = true,
             placeholder = { Text(stringResource(R.string.search_hint)) },
             leadingIcon = {
