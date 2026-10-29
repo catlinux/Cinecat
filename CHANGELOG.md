@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Corregido
+
+- App Android en TV: el texto de los botones principales salía oscuro sobre granate y casi no se leía.
+- App Android: los títulos grandes (nombre de la app y títulos de pantalla en TV) no usaban Fraunces.
+- App Android: los campos de dirección del servidor e IP local descartan los espacios que algunos teclados añaden tras cada punto.
+
 ## [0.33.0] - 2026-10-29
 
 ### Añadido

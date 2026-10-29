@@ -46,7 +46,8 @@ fun PrimaryActionButton(
             ),
             contentPadding = PaddingValues(horizontal = 36.dp, vertical = 18.dp)
         ) {
-            Text(text = label, style = MaterialTheme.typography.titleLarge)
+            // El Text de Material 3 no lee el color de contenido del botón de TV.
+            Text(text = label, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onPrimary)
         }
     } else {
         Button(
@@ -91,7 +92,7 @@ fun SecondaryActionButton(
             ),
             contentPadding = PaddingValues(horizontal = 32.dp, vertical = 16.dp)
         ) {
-            Text(text = label, style = MaterialTheme.typography.titleMedium)
+            Text(text = label, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     } else {
         OutlinedButton(

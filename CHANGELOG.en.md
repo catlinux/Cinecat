@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+### Fixed
+
+- Android app on TV: primary button text was dark on maroon and barely readable.
+- Android app: large titles (app name and TV screen titles) did not use Fraunces.
+- Android app: the server address and local IP fields drop the spaces some keyboards add after each dot.
+
 ## [0.33.0] - 2026-10-29
 
 ### Added

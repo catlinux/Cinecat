@@ -23,6 +23,19 @@ internal val MarquesinaTypography = Typography(
         lineHeight = 70.sp,
         letterSpacing = (-1).sp
     ),
+    displayMedium = TextStyle(
+        fontFamily = Fraunces,
+        fontWeight = FontWeight.Bold,
+        fontSize = 52.sp,
+        lineHeight = 60.sp,
+        letterSpacing = (-0.5).sp
+    ),
+    displaySmall = TextStyle(
+        fontFamily = Fraunces,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 40.sp,
+        lineHeight = 46.sp
+    ),
     headlineLarge = TextStyle(
         fontFamily = Fraunces,
         fontWeight = FontWeight.SemiBold,

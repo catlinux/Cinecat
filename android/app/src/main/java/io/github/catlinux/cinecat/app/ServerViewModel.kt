@@ -82,7 +82,8 @@ class ServerViewModel(
     fun onServerChanged(value: String) {
         _state.update {
             it.copy(
-                server = value,
+                // Algunos teclados añaden un espacio tras cada punto; en una dirección nunca es válido.
+                server = value.filterNot(Char::isWhitespace),
                 fieldError = null,
                 check = null,
                 ready = null,
@@ -94,7 +95,7 @@ class ServerViewModel(
     fun onLocalAddressChanged(value: String) {
         _state.update {
             it.copy(
-                localAddress = value,
+                localAddress = value.filterNot(Char::isWhitespace),
                 fieldError = null,
                 check = null,
                 ready = null,
