@@ -36,6 +36,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import io.github.catlinux.cinecat.core.data.SessionState
 import kotlinx.serialization.Serializable
 
@@ -206,9 +207,21 @@ fun MainShell(
                         )
                     }
                     composable<MovieDetail> {
-                        DetailPlaceholderScreen(
-                            titleRes = R.string.movie_detail_title,
-                            onBack = { navController.popBackStack() }
+                        val route = it.toRoute<MovieDetail>()
+                        val movieViewModel: MovieDetailViewModel = viewModel {
+                            MovieDetailViewModel(
+                                id = route.id,
+                                repository = container.libraryRepository,
+                                scope = container.appScope
+                            )
+                        }
+                        MovieDetailScreen(
+                            viewModel = movieViewModel,
+                            onBack = { navController.popBackStack() },
+                            onOpenMovie = { id -> navController.navigate(MovieDetail(id)) },
+                            onOpenCollection = { id ->
+                                navController.navigate(CollectionDetail(id))
+                            }
                         )
                     }
                     composable<SeriesDetail> {
@@ -218,9 +231,18 @@ fun MainShell(
                         )
                     }
                     composable<CollectionDetail> {
-                        DetailPlaceholderScreen(
-                            titleRes = R.string.collection_detail_title,
-                            onBack = { navController.popBackStack() }
+                        val route = it.toRoute<CollectionDetail>()
+                        val collectionViewModel: CollectionDetailViewModel = viewModel {
+                            CollectionDetailViewModel(
+                                id = route.id,
+                                repository = container.libraryRepository,
+                                scope = container.appScope
+                            )
+                        }
+                        CollectionDetailScreen(
+                            viewModel = collectionViewModel,
+                            onBack = { navController.popBackStack() },
+                            onOpenMovie = { id -> navController.navigate(MovieDetail(id)) }
                         )
                     }
                 }

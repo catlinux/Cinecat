@@ -64,9 +64,7 @@
     <string name="portal_empty">Tu biblioteca está vacía todavía</string>
     <string name="section_preparing">En preparación</string>
     <string name="detail_preparing">Ficha en preparación</string>
-    <string name="movie_detail_title">Película</string>
     <string name="series_detail_title">Serie</string>
-    <string name="collection_detail_title">Colección</string>
     <string name="poster_description">Cartel de %1$s</string>
     <string name="episode_image_description">Imagen del episodio %1$s</string>
 
@@ -93,4 +91,25 @@
         <item quantity="one">%1$d película</item>
         <item quantity="other">%1$d películas</item>
     </plurals>
+
+    <string name="movie_detail_error">No se pudo cargar la película</string>
+    <string name="collection_detail_error">No se pudo cargar la colección</string>
+    <string name="detail_action_error">No se pudo actualizar. Inténtalo de nuevo.</string>
+    <string name="play">Reproducir</string>
+    <string name="play_soon">Llega en la próxima versión</string>
+    <string name="favorite">Favorito</string>
+    <string name="watchlist">Por ver</string>
+    <string name="watched">Visto</string>
+    <string name="synopsis">Sinopsis</string>
+    <string name="cast_section">Reparto</string>
+    <string name="directors_section">Dirección</string>
+    <string name="similar_section">Similares</string>
+    <string name="part_of_collection">Parte de la colección %1$s</string>
+    <string name="read_more">Leer más</string>
+    <string name="read_less">Leer menos</string>
+    <string name="no_synopsis">Sin sinopsis</string>
+    <string name="list_separator">, </string>
+    <string name="rating_format">★ %1$s</string>
+    <string name="backdrop_description">Fondo de %1$s</string>
+    <string name="collection_empty">Esta colección todavía no tiene películas</string>
 </resources>
