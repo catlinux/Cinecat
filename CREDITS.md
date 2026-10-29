@@ -28,6 +28,10 @@ Cinecat builds on the work of other people and projects. This list includes **al
 | [AndroidX Lifecycle](https://developer.android.com/jetpack/androidx/releases/lifecycle) 2.10.0 | Ciclo de vida de la app Android / Android app lifecycle | Apache-2.0 |
 | [androidx.tv:tv-material](https://developer.android.com/jetpack/androidx/releases/tv) 1.1.0 | Componentes de interfaz para Android TV / Android TV UI components | Apache-2.0 |
 | [Kotlin](https://kotlinlang.org) 2.4.21 | Lenguaje y compilador de la app Android / Android app language and compiler | Apache-2.0 |
+| [OkHttp](https://square.github.io/okhttp/) 5.3.2 | Cliente HTTP y DNS de dirección local de la app Android / Android app HTTP client and local-address DNS | Apache-2.0 |
+| [Retrofit](https://square.github.io/retrofit/) 3.0.0 | Cliente de la API de la app Android / Android app API client | Apache-2.0 |
+| [kotlinx.serialization](https://github.com/Kotlin/kotlinx.serialization) 1.12.0 | JSON de la app Android / Android app JSON | Apache-2.0 |
+| [kotlinx.coroutines](https://github.com/Kotlin/kotlinx.coroutines) 1.11.0 | Concurrencia de la app Android / Android app concurrency | Apache-2.0 |
 | [Android Gradle Plugin](https://developer.android.com/build) 9.5.0 | Herramienta de compilación de la app Android / Android app build tool | Apache-2.0 |
 | [Gradle](https://gradle.org) 9.8.2 | Herramienta de compilación de la app Android / Android app build tool | Apache-2.0 |
 | [JUnit](https://junit.org/junit4/) 4.13.2 | Pruebas unitarias JVM de la app Android / Android app JVM unit tests | EPL-1.0 |

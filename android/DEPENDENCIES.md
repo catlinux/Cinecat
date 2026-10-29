@@ -19,6 +19,14 @@ Versiones elegidas el 2026-10-29. Se comprobó la licencia en el POM o repositor
 | androidx.core:core-ktx | 1.16.0 | Apache-2.0 | https://dl.google.com/dl/android/maven2/androidx/core/core-ktx/1.16.0/core-ktx-1.16.0.pom |
 | androidx.lifecycle:lifecycle-runtime-ktx | 2.10.0 | Apache-2.0 | https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-runtime-ktx/2.10.0/lifecycle-runtime-ktx-2.10.0.pom |
 | androidx.tv:tv-material | 1.1.0 | Apache-2.0 | https://dl.google.com/dl/android/maven2/androidx/tv/tv-material/1.1.0/tv-material-1.1.0.pom |
+| OkHttp | 5.3.2 | Apache-2.0 | https://repo1.maven.org/maven2/com/squareup/okhttp3/okhttp/5.3.2/okhttp-5.3.2.pom |
+| Retrofit | 3.0.0 | Apache-2.0 | https://repo1.maven.org/maven2/com/squareup/retrofit2/retrofit/3.0.0/retrofit-3.0.0.pom |
+| Retrofit converter-kotlinx-serialization | 3.0.0 | Apache-2.0 | https://repo1.maven.org/maven2/com/squareup/retrofit2/converter-kotlinx-serialization/3.0.0/converter-kotlinx-serialization-3.0.0.pom |
+| kotlinx-serialization-json | 1.12.0 | Apache-2.0 | https://repo1.maven.org/maven2/org/jetbrains/kotlinx/kotlinx-serialization-json/1.12.0/kotlinx-serialization-json-1.12.0.pom |
+| Kotlin serialization plugin | 2.4.21 | Apache-2.0 | https://repo1.maven.org/maven2/org/jetbrains/kotlin/kotlin-serialization/2.4.21/kotlin-serialization-2.4.21.pom |
+| kotlinx-coroutines-core | 1.11.0 | Apache-2.0 | https://repo1.maven.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-core/1.11.0/kotlinx-coroutines-core-1.11.0.pom |
+| kotlinx-coroutines-test | 1.11.0 (pruebas) | Apache-2.0 | https://repo1.maven.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-test/1.11.0/kotlinx-coroutines-test-1.11.0.pom |
+| OkHttp mockwebserver | 5.3.2 (pruebas) | Apache-2.0 | https://repo1.maven.org/maven2/com/squareup/okhttp3/mockwebserver/5.3.2/mockwebserver-5.3.2.pom |
 | JUnit | 4.13.2 | EPL-1.0 | https://repo1.maven.org/maven2/junit/junit/4.13.2/junit-4.13.2.pom |
 | Fraunces Variable | archivo local | OFL-1.1 | web/static/fonts/OFL-Fraunces.txt |
 
