@@ -43,18 +43,28 @@ The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 
 ## Installation
 
-With a USB-connected device:
+Each version publishes the signed APK `cinecat-X.Y.Z.apk` and its checksum `cinecat-X.Y.Z.apk.sha256` on the [GitHub releases page](https://github.com/catlinux/Cinecat/releases/latest). It is installed by hand once; after that the app updates itself.
+
+- **Phone:** open the release link in the browser, download the APK, open it and allow the browser to install apps when asked.
+- **TV:** with `adb` from the computer (`adb connect IP:5555` and `adb install cinecat-X.Y.Z.apk`), or with a TV download app (for example "Downloader") pointed at the release APK URL.
+
+If you had a version older than 0.35.0 installed, uninstall it first: it was signed with a test key and Android does not allow updating it with the signed APK. You will need to sign in or pair the TV again.
+
+### Automatic updates
+
+On start and every 12 hours, the app asks the server whether there is a newer APK: the one for the server's version, if its `versionCode` is higher than the installed one. If "Update automatically" is on (Account → Updates), it downloads it from the GitHub release and offers "Install". Before that it checks the SHA-256, that the APK is Cinecat's, a higher version and signed with the same key as the installed app. On Android 9 and earlier the system always asks to confirm the installation; the first time you must allow Cinecat to install apps (Settings → Security → Unknown sources on the TV). The server only contacts GitHub if update checking is enabled in Administration.
+
+### Testing build
+
+The debug APK (`assembleDebug`) is called "Cinecat (pruebas)" and uses the identifier `io.github.catlinux.cinecat.debug`, so it coexists with the published version. It does not update itself:
 
 ```bash
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-On a TV with network debugging, connect it first:
+### Signing key
 
-```bash
-adb connect IP:5555
-adb install -r app/build/outputs/apk/debug/app-debug.apk
-```
+Published APKs are signed in GitHub Actions (`.github/workflows/android-release.yml`) with a PKCS12 keystore stored in the repository secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD` and `ANDROID_KEY_ALIAS`. To sign locally, `assembleRelease` reads `CINECAT_KEYSTORE_FILE`, `CINECAT_KEYSTORE_PASSWORD` and `CINECAT_KEY_ALIAS`; without them it produces an unsigned APK. Keep a copy of the key and its password off the machine: if it is lost, installed apps cannot be updated without uninstalling them.
 
 ## Module structure
 

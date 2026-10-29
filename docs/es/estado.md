@@ -58,7 +58,7 @@ Versión actual: **0.20.0**. Esta página resume el estado real del código, no 
 | Actualizaciones | Servicio del host con copia de la base y rollback | ✅ 0.16.0 | Bash + systemd de usuario; no lo ejecuta el contenedor. |
 | Seguridad | Argon2id, sesiones de 24 h y roles admin/usuario | ✅ 0.1.0 | El token solo se guarda como hash en la base. |
 | Seguridad | Permisos por biblioteca y por usuario | ⬜ | Cualquier usuario autenticado ve toda la biblioteca. |
-| Clientes Android / Android TV | Android y Android TV | 🟡 0.34.0 | Inicio de sesión, vinculación de la TV, biblioteca y reproductor Media3 (directo o HLS, reanudación, pistas, mando). Falta la interfaz propia de TV. Ver [Android](android.md). |
+| Clientes Android / Android TV | Android y Android TV | 🟡 0.35.0 | Inicio de sesión, vinculación de la TV, biblioteca, reproductor Media3 (directo o HLS, reanudación, pistas, mando) y actualización automática desde GitHub. Falta la interfaz propia de TV. Ver [Android](android.md). |
 
 ## Lo que viene, en orden
 

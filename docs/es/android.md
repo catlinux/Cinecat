@@ -43,18 +43,28 @@ El APK de depuración queda en `app/build/outputs/apk/debug/app-debug.apk`.
 
 ## Instalación
 
-Con un dispositivo conectado por USB:
+Cada versión publica en la [página de versiones de GitHub](https://github.com/catlinux/Cinecat/releases/latest) el APK firmado `cinecat-X.Y.Z.apk` y su suma `cinecat-X.Y.Z.apk.sha256`. Se instala una sola vez a mano; después la app se actualiza sola.
+
+- **Móvil:** abre el enlace de la versión en el navegador, descarga el APK, ábrelo y permite al navegador instalar aplicaciones cuando lo pida.
+- **TV:** con `adb` desde el ordenador (`adb connect IP:5555` y `adb install cinecat-X.Y.Z.apk`), o con una app de descargas para TV (por ejemplo «Downloader») apuntando a la URL del APK de la versión.
+
+Si ya tenías instalada una versión anterior a la 0.35.0, desinstálala antes: estaba firmada con una clave de pruebas y Android no permite actualizarla con el APK firmado. Habrá que volver a iniciar sesión o a vincular la TV.
+
+### Actualización automática
+
+Al arrancar y cada 12 horas, la app pregunta al servidor si hay un APK más nuevo: el de la versión del servidor, si su `versionCode` es mayor que el instalado. Si «Actualizar automáticamente» está activo (en Cuenta → Actualizaciones), lo descarga de la *release* de GitHub y ofrece «Instalar». Antes comprueba el SHA-256, que el APK sea de Cinecat, de una versión mayor y firmado con la misma clave que la app instalada. En Android 9 y anteriores el sistema siempre pide confirmar la instalación; la primera vez hay que permitir a Cinecat instalar aplicaciones (Ajustes → Seguridad → Orígenes desconocidos en la TV). El servidor solo consulta GitHub si la comprobación de actualizaciones está activada en Administración.
+
+### Versión de pruebas
+
+El APK de depuración (`assembleDebug`) se llama «Cinecat (pruebas)» y usa el identificador `io.github.catlinux.cinecat.debug`, así que convive con la versión publicada. No se actualiza solo:
 
 ```bash
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-En una TV con depuración por red, conéctala antes:
+### Clave de firma
 
-```bash
-adb connect IP:5555
-adb install -r app/build/outputs/apk/debug/app-debug.apk
-```
+Los APK publicados se firman en GitHub Actions (`.github/workflows/android-release.yml`) con un almacén PKCS12 guardado en los secretos del repositorio `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD` y `ANDROID_KEY_ALIAS`. Para firmar en local, `assembleRelease` lee `CINECAT_KEYSTORE_FILE`, `CINECAT_KEYSTORE_PASSWORD` y `CINECAT_KEY_ALIAS`; sin ellas genera un APK sin firmar. Guarda una copia de la clave y su contraseña fuera del equipo: si se pierde, las apps instaladas no podrán actualizarse sin desinstalarlas.
 
 ## Estructura de módulos
 

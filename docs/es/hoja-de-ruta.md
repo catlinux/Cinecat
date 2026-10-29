@@ -2,7 +2,7 @@
 
 [English](../en/roadmap.md) · [Volver al README](../../README.md) · [Estado](estado.md)
 
-La versión actual es **0.34.1**. El detalle de funciones, versiones y límites está en [estado](estado.md); esta página solo resume las fases.
+La versión actual es **0.35.0**. El detalle de funciones, versiones y límites está en [estado](estado.md); esta página solo resume las fases.
 
 ## Fase 0: preparación (`0.0.x`) — hecha
 
@@ -30,7 +30,7 @@ El orden acordado es: favoritos y próximas a ver; colecciones desde la ficha e 
 
 ## Fase 4: Android y Android TV — en curso
 
-Kotlin + Jetpack Compose + Media3/ExoPlayer, con libmpv opcional. Hecho: el servidor (sesiones de dispositivo, vinculación de la TV por código, capacidades nativas en la reproducción, contrato estable de la API e imágenes de TMDB servidas por el propio servidor) y un solo APK para móvil y TV que inicia sesión, recorre la biblioteca y reproduce. Falta la interfaz propia de TV, la reproducción en segundo plano y la publicación.
+Kotlin + Jetpack Compose + Media3/ExoPlayer, con libmpv opcional. Hecho: el servidor (sesiones de dispositivo, vinculación de la TV por código, capacidades nativas en la reproducción, contrato estable de la API e imágenes de TMDB servidas por el propio servidor) y un solo APK para móvil y TV que inicia sesión, recorre la biblioteca y reproduce. Desde la 0.35.0 la app se publica firmada en GitHub y se actualiza sola. Falta la interfaz propia de TV y la reproducción en segundo plano.
 
 ## Fase 5: primera versión estable (`1.0.0`) — futura
 

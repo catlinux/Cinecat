@@ -7,6 +7,18 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.35.0] - 2026-10-29
+
+### Añadido
+
+- App Android: actualización automática. Al arrancar y cada 12 horas pregunta al servidor si hay un APK nuevo, lo descarga de la *release* de GitHub, comprueba su SHA-256, el paquete, la versión y la firma, y ofrece instalarlo. En Cuenta → Actualizaciones se ve la versión, el estado y el ajuste «Actualizar automáticamente».
+- Servidor: `GET /api/v1/system/client-update` indica a la app si hay un APK publicado más nuevo, con su URL y su SHA-256. Solo consulta GitHub si la comprobación de actualizaciones está activada.
+- Publicación: cada etiqueta `vX.Y.Z` compila en GitHub Actions el APK firmado y lo adjunta a la *release* con su SHA-256.
+
+### Cambiado
+
+- App Android: el APK de depuración se llama «Cinecat (pruebas)» y usa el identificador `io.github.catlinux.cinecat.debug`. **Si tenías instalada una versión anterior, desinstálala antes de instalar el APK firmado** (vuelve a iniciar sesión o a vincular la TV).
+
 ## [0.34.1] - 2026-10-29
 
 ### Corregido
