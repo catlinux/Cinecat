@@ -22,6 +22,15 @@ Cinecat builds on the work of other people and projects. This list includes **al
 | [Findroid](https://github.com/jarnedemeulemeester/findroid) | Referencia: Compose, ExoPlayer + mpv, descargas, capítulos / Reference: Compose, ExoPlayer + mpv, downloads, chapters | GPL-3.0 |
 | [Streamyfin](https://github.com/streamyfin/streamyfin) | Candidato a reutilización de código / Candidate for code reuse | MPL-2.0 |
 | [Media3 / ExoPlayer](https://github.com/androidx/media) | Reproductor de Android / Android player | Apache-2.0 |
+| [Jetpack Compose](https://developer.android.com/compose) BOM 2026.06.00 (UI 1.11.3, Material3 1.4.0) | Interfaz de la app Android / Android app UI | Apache-2.0 |
+| [AndroidX Activity](https://developer.android.com/jetpack/androidx/releases/activity) 1.10.1 | Actividad Compose de la app Android / Android app Compose activity | Apache-2.0 |
+| [AndroidX Core](https://developer.android.com/jetpack/androidx/releases/core) 1.16.0 | Utilidades base de la app Android / Android app core utilities | Apache-2.0 |
+| [AndroidX Lifecycle](https://developer.android.com/jetpack/androidx/releases/lifecycle) 2.10.0 | Ciclo de vida de la app Android / Android app lifecycle | Apache-2.0 |
+| [androidx.tv:tv-material](https://developer.android.com/jetpack/androidx/releases/tv) 1.1.0 | Componentes de interfaz para Android TV / Android TV UI components | Apache-2.0 |
+| [Kotlin](https://kotlinlang.org) 2.4.21 | Lenguaje y compilador de la app Android / Android app language and compiler | Apache-2.0 |
+| [Android Gradle Plugin](https://developer.android.com/build) 9.5.0 | Herramienta de compilación de la app Android / Android app build tool | Apache-2.0 |
+| [Gradle](https://gradle.org) 9.8.2 | Herramienta de compilación de la app Android / Android app build tool | Apache-2.0 |
+| [JUnit](https://junit.org/junit4/) 4.13.2 | Pruebas unitarias JVM de la app Android / Android app JVM unit tests | EPL-1.0 |
 | [mpv](https://mpv.io) / libmpv | Reproductor alternativo en Android / Alternative Android player | por verificar según compilación / to verify per build |
 | [hls.js](https://github.com/video-dev/hls.js) 1.7.3 | Reproducción HLS en el reproductor web (en uso) / HLS playback in the web player (in use) | Apache-2.0 |
 | [Shaka Player](https://github.com/shaka-project/shaka-player) | Alternativa para navegador / Browser alternative | Apache-2.0 |
@@ -38,6 +47,7 @@ Cinecat builds on the work of other people and projects. This list includes **al
 | [modernc.org/sqlite](https://gitlab.com/cznic/sqlite) | Driver SQLite en Go puro usado por el servidor / Pure-Go SQLite driver used by the server | BSD-3-Clause |
 | [golang.org/x/crypto](https://github.com/golang/crypto) | Hash de contraseñas con argon2id / Password hashing with argon2id | BSD-3-Clause |
 | [Fraunces](https://github.com/undercasetype/Fraunces) variable | Tipografía de títulos del cliente web, empaquetada en `web/static/fonts/Fraunces-Variable.ttf` / Web client display typeface, bundled | OFL-1.1 (`web/static/fonts/OFL-Fraunces.txt`) |
+| [Fraunces](https://github.com/undercasetype/Fraunces) variable (app Android) | Tipografía de títulos de la app Android, empaquetada en `android/ui/common/src/main/res/font/fraunces_variable.ttf` / Android app display typeface, bundled | OFL-1.1 (`android/ui/common/src/main/res/raw/ofl_fraunces.txt`) |
 | [Inter](https://github.com/rsms/inter) variable | Tipografía de texto del cliente web, empaquetada en `web/static/fonts/Inter-Variable.ttf` / Web client body typeface, bundled | OFL-1.1 (`web/static/fonts/OFL-Inter.txt`) |
 | [SvelteKit](https://svelte.dev) 2.70.3 | Framework del cliente web / Web client framework | MIT |
 | [Svelte](https://svelte.dev) 5.57.2 | Componentes del cliente web / Web components | MIT |

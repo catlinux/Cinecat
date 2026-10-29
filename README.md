@@ -4,7 +4,7 @@
 
 **Idiomas / Languages:** Español · [English](README.en.md)
 
-**Estado:** servidor y cliente web implementados; clientes Android y Android TV sin empezar. Versión `0.30.0`.
+**Estado:** servidor y cliente web implementados; hay un esqueleto de la app Android y Android TV, sin funciones aún ([documentación](docs/es/android.md)). Versión `0.30.0`.
 
 Cinecat es para quien guarda su propia biblioteca de vídeo en casa y quiere una interfaz cuidada, control sobre la reproducción y metadatos en español sin depender de un servicio externo. No es un clon: reutiliza lo que es legal de otros proyectos, con créditos, y escribe lo demás desde cero.
 
@@ -77,6 +77,7 @@ Los detalles, requisitos de systemd/linger, copias y recuperación manual están
 | Visión y decisiones | [visión](docs/es/vision.md) | [vision](docs/en/vision.md) |
 | Arquitectura y seguridad | [arquitectura](docs/es/arquitectura.md) | [architecture](docs/en/architecture.md) |
 | API para clientes nativos | [API](docs/es/api.md) | [API](docs/en/api.md) |
+| App Android | [Android](docs/es/android.md) | [Android](docs/en/android.md) |
 | Reproducción y códecs | [reproducción](docs/es/reproduccion.md) | [playback](docs/en/playback.md) |
 | Metadatos | [metadatos](docs/es/metadatos.md) | [metadata](docs/en/metadata.md) |
 | Actualizaciones | [actualizaciones](docs/es/actualizaciones.md) | [updates](docs/en/updates.md) |
