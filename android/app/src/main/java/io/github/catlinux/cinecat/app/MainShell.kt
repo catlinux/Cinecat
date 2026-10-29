@@ -205,6 +205,7 @@ fun MainShell(
                         AccountScreen(
                             repository = container.sessionRepository,
                             session = session,
+                            updater = container.appUpdater,
                             isTelevision = isTelevision,
                             onBack = { navController.popBackStack() },
                             onChangeServer = onChangeServer

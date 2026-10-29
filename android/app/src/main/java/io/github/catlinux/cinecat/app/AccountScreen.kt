@@ -22,6 +22,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import io.github.catlinux.cinecat.app.update.AccountUpdateSection
+import io.github.catlinux.cinecat.app.update.AppUpdater
 import io.github.catlinux.cinecat.core.data.SessionRepository
 import io.github.catlinux.cinecat.core.data.SessionState
 import kotlinx.coroutines.launch
@@ -30,6 +32,7 @@ import kotlinx.coroutines.launch
 fun AccountScreen(
     repository: SessionRepository,
     session: SessionState.SignedIn,
+    updater: AppUpdater,
     isTelevision: Boolean,
     onBack: () -> Unit,
     onChangeServer: () -> Unit
@@ -79,11 +82,8 @@ fun AccountScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
-            Text(
-                text = stringResource(R.string.version_format, BuildConfig.VERSION_NAME),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Spacer(Modifier.height(8.dp))
+            AccountUpdateSection(updater = updater, isTelevision = isTelevision)
             Spacer(Modifier.height(8.dp))
             PrimaryActionButton(
                 isTelevision = isTelevision,

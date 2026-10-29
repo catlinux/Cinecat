@@ -19,6 +19,7 @@ import java.io.File
 import java.io.InputStream
 import java.security.MessageDigest
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -42,7 +43,8 @@ enum class UpdateFailure {
     InvalidApk,
     PackageMismatch,
     VersionNotNewer,
-    SignatureMismatch
+    SignatureMismatch,
+    Install
 }
 
 sealed interface UpdateState {
@@ -184,18 +186,33 @@ class AppUpdater(
         }
     }
 
+    // Copiar el APK a la sesión del instalador lleva segundos en la TV: fuera del hilo principal.
+    fun install(context: Context, apkFile: File) {
+        scope.launch(Dispatchers.IO) {
+            try {
+                UpdateInstaller.install(context, apkFile)
+            } catch (error: Exception) {
+                reportInstallFailure(error.message)
+            }
+        }
+    }
+
+    fun reportInstallFailure(detail: String?) {
+        _state.value = UpdateState.Failed(UpdateFailure.Install, detail)
+    }
+
     private suspend fun performCheck(force: Boolean) {
         val stored = runCatching { preferences.data.first() }.getOrNull()
         val auto = stored?.get(AUTO_ENABLED) ?: true
         _autoEnabled.value = auto
         if (!force && !auto) {
-            _state.value = UpdateState.Idle
+            updateIdleState(UpdateState.Idle)
             return
         }
         val checkedAt = now()
         val lastCheck = stored?.get(LAST_CHECK) ?: 0L
         if (!force && !shouldCheck(lastCheck, checkedAt)) {
-            _state.value = UpdateState.UpToDate
+            updateIdleState(UpdateState.UpToDate)
             return
         }
 
@@ -276,6 +293,15 @@ class AppUpdater(
             return
         }
         _state.value = UpdateState.Ready(update, target)
+    }
+
+    private fun updateIdleState(value: UpdateState) {
+        when (_state.value) {
+            UpdateState.Idle, UpdateState.UpToDate, UpdateState.Checking -> {
+                _state.value = value
+            }
+            else -> Unit
+        }
     }
 
     private suspend fun saveLastCheck(millis: Long) {
