@@ -62,6 +62,7 @@ Orden: servidor primero (la app necesita S1-S4), después la app. Cada paso term
 ## Necesita el usuario
 
 - **Antes de A0:** activar las opciones de desarrollador y la depuración por USB/red en la Mi TV y en el Pixel, y aceptar en cada uno la huella del PC la primera vez que se conecte `adb`.
+- **Antes de A5 (instrucciones dadas el 2026-10-29):** almacén PKCS12 `%USERPROFILE%\cinecat-release.jks`, alias `cinecat`, misma contraseña para almacén y clave; secretos del repositorio `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD` y `ANDROID_KEY_ALIAS`. El workflow de A5 debe usar esos nombres.
 - **Antes de A5:** generar la clave de firma (`keytool -genkeypair …`, lo guía la sesión de A5) y guardarla, con sus contraseñas, como secretos del repositorio en GitHub (desde la web de GitHub; la sesión no inicia sesión por él). Guardar también una copia de la clave fuera del PC: si se pierde, las apps instaladas no se podrán actualizar sin desinstalarlas.
 
 ## Estado
