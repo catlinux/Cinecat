@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/catlinux/cinecat/internal/store"
 )
@@ -50,6 +51,13 @@ func writeFile(t *testing.T, path string) {
 	}
 	if err := os.WriteFile(path, []byte("contenido de prueba"), 0o644); err != nil {
 		t.Fatalf("crear archivo: %v", err)
+	}
+	// Los escaneos de prueba parten de archivos quietos, no de una conversión
+	// recién terminada; el escáner ignora por defecto los modificados hace menos
+	// de dos minutos.
+	stamp := time.Now().Add(-2 * time.Hour)
+	if err := os.Chtimes(path, stamp, stamp); err != nil {
+		t.Fatalf("fijar fecha del archivo: %v", err)
 	}
 }
 

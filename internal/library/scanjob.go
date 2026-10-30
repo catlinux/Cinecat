@@ -15,6 +15,7 @@ type ScanStatus struct {
 	Libraries          int        `json:"libraries"`
 	Files              int        `json:"files"`
 	Upserted           int        `json:"upserted"`
+	Relinked           int        `json:"relinked"`
 	Identified         int        `json:"identified"`
 	Unidentified       int        `json:"unidentified"`
 	SeriesIdentified   int        `json:"series_identified"`
@@ -95,6 +96,7 @@ func (j *ScanJob) Start(ctx context.Context) bool {
 		j.status.Libraries = result.Libraries
 		j.status.Files = result.Files
 		j.status.Upserted = result.Upserted
+		j.status.Relinked = result.Relinked
 		j.status.Identified = result.Identified
 		j.status.Unidentified = result.Unidentified
 		j.status.SeriesIdentified = result.SeriesIdentified

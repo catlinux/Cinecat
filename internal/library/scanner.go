@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/catlinux/cinecat/internal/metadata"
 	"github.com/catlinux/cinecat/internal/playback"
@@ -44,11 +45,23 @@ type Scanner struct {
 	omdb           *metadata.OMDbClient
 	tmdb           TMDBClient
 	musicInspector MusicInspector
+	stableAge      time.Duration
 }
 
 // New crea un escáner sobre la base de datos indicada.
 func New(db *sql.DB) *Scanner {
-	return &Scanner{db: db, musicInspector: playback.NewProber()}
+	return &Scanner{
+		db:             db,
+		musicInspector: playback.NewProber(),
+		stableAge:      2 * time.Minute,
+	}
+}
+
+// WithStableAge cambia el tiempo mínimo que debe llevar quieto un archivo
+// para actualizarlo. Un valor de cero desactiva la comprobación.
+func (s *Scanner) WithStableAge(d time.Duration) *Scanner {
+	s.stableAge = d
+	return s
 }
 
 // WithOMDb activa la consulta de metadatos de OMDb para películas. Si no se
@@ -72,6 +85,7 @@ type Result struct {
 	Libraries          int
 	Files              int
 	Upserted           int
+	Relinked           int
 	Identified         int
 	Unidentified       int
 	SeriesIdentified   int
@@ -125,9 +139,10 @@ func (s *Scanner) Scan(ctx context.Context) (Result, error) {
 		}
 		seriesIDs := map[string]int64{}
 		seen := make(map[string]bool)
+		unstableDirs := make(map[string]bool)
 		scannedRoots := make([]string, 0, len(paths))
 		for _, root := range paths {
-			ok, err := s.scanLibraryPath(ctx, l.id, l.kind, root, seriesIDs, seen, &res)
+			ok, err := s.scanLibraryPath(ctx, l.id, l.kind, root, seriesIDs, seen, unstableDirs, &res)
 			if err != nil {
 				return res, err
 			}
@@ -141,7 +156,7 @@ func (s *Scanner) Scan(ctx context.Context) (Result, error) {
 			}
 			continue
 		}
-		if err := s.pruneLibrary(ctx, l.id, seen, scannedRoots, &res); err != nil {
+		if err := s.pruneLibrary(ctx, l.id, seen, scannedRoots, unstableDirs, &res); err != nil {
 			return res, err
 		}
 		if l.kind == "video" && s.tmdb != nil {
@@ -170,6 +185,7 @@ func (s *Scanner) scanLibraryPath(
 	root string,
 	seriesIDs map[string]int64,
 	seen map[string]bool,
+	unstableDirs map[string]bool,
 	res *Result,
 ) (bool, error) {
 	info, err := os.Lstat(root)
@@ -243,6 +259,28 @@ func (s *Scanner) scanLibraryPath(
 			return nil
 		}
 
+		if libraryKind == "video" && s.stableAge > 0 {
+			info, err := d.Info()
+			if err != nil {
+				res.Warnings = append(res.Warnings, fmt.Sprintf("%s: %v", path, err))
+				walkFailed = true
+				return nil
+			}
+			if time.Since(info.ModTime()) < s.stableAge {
+				cleanPath := filepath.Clean(path)
+				exists, err := mediaItemExists(ctx, s.db, libraryID, path)
+				if err != nil {
+					return err
+				}
+				if exists {
+					seen[cleanPath] = true
+				} else {
+					unstableDirs[filepath.Dir(cleanPath)] = true
+				}
+				return nil
+			}
+		}
+
 		rel, err := filepath.Rel(root, path)
 		if err != nil {
 			res.Warnings = append(res.Warnings, fmt.Sprintf("%s: %v", path, err))
@@ -253,6 +291,14 @@ func (s *Scanner) scanLibraryPath(
 		media := ParsePath(rel)
 		if media.Title == "" {
 			media.Title = strings.TrimSuffix(d.Name(), filepath.Ext(d.Name()))
+		}
+
+		relinked, err := s.relinkMediaItem(ctx, libraryID, root, path, media)
+		if err != nil {
+			return err
+		}
+		if relinked {
+			res.Relinked++
 		}
 
 		var seriesID any
@@ -306,6 +352,7 @@ func (s *Scanner) pruneLibrary(
 	libraryID int64,
 	seen map[string]bool,
 	scannedRoots []string,
+	unstableDirs map[string]bool,
 	res *Result,
 ) error {
 	if len(scannedRoots) == 0 {
@@ -336,7 +383,9 @@ func (s *Scanner) pruneLibrary(
 			rows.Close()
 			return fmt.Errorf("library: leer ítem para podar: %w", err)
 		}
-		if !pathWithinAny(scannedRoots, path) || seen[filepath.Clean(path)] {
+		cleanPath := filepath.Clean(path)
+		if !pathWithinAny(scannedRoots, cleanPath) || seen[cleanPath] ||
+			unstableDirs[filepath.Dir(cleanPath)] {
 			continue
 		}
 		skipped := false

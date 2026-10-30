@@ -535,9 +535,14 @@ func TestScanBibliotecasAdmin(t *testing.T) {
 	token := loginToken(t, server.URL, "ana", "Clave-segura-1")
 
 	libDir := t.TempDir()
+	stamp := time.Now().Add(-10 * time.Minute)
 	for _, name := range []string{"Pelicula (1999).mkv", "Otra.mp4", "notas.txt"} {
-		if err := os.WriteFile(filepath.Join(libDir, name), []byte("x"), 0o644); err != nil {
+		file := filepath.Join(libDir, name)
+		if err := os.WriteFile(file, []byte("x"), 0o644); err != nil {
 			t.Fatalf("crear archivo: %v", err)
+		}
+		if err := os.Chtimes(file, stamp, stamp); err != nil {
+			t.Fatalf("fijar fecha del archivo: %v", err)
 		}
 	}
 
