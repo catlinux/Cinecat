@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/catlinux/cinecat/internal/metadata"
 )
 
 const (
@@ -67,20 +69,31 @@ type collectionDTO struct {
 	Edited      bool    `json:"edited"`
 	Favorite    bool    `json:"favorite"`
 	Watchlist   bool    `json:"watchlist"`
+	// TMDBCollectionID solo se usa en el detalle; no forma parte de la lista.
+	TMDBCollectionID *int64 `json:"-"`
+}
+
+type missingMovie struct {
+	TMDBID    int    `json:"tmdb_id"`
+	Title     string `json:"title"`
+	Year      int    `json:"year"`
+	PosterURL string `json:"poster_url"`
 }
 
 type collectionDetailDTO struct {
-	ID          int64          `json:"id"`
-	Name        string         `json:"name"`
-	Overview    *string        `json:"overview"`
-	PosterURL   *string        `json:"poster_url"`
-	BackdropURL *string        `json:"backdrop_url"`
-	ItemCount   int64          `json:"item_count"`
-	Source      string         `json:"source"`
-	Edited      bool           `json:"edited"`
-	Favorite    bool           `json:"favorite"`
-	Watchlist   bool           `json:"watchlist"`
-	Items       []mediaItemDTO `json:"items"`
+	ID               int64          `json:"id"`
+	Name             string         `json:"name"`
+	Overview         *string        `json:"overview"`
+	PosterURL        *string        `json:"poster_url"`
+	BackdropURL      *string        `json:"backdrop_url"`
+	ItemCount        int64          `json:"item_count"`
+	Source           string         `json:"source"`
+	Edited           bool           `json:"edited"`
+	Favorite         bool           `json:"favorite"`
+	Watchlist        bool           `json:"watchlist"`
+	TMDBCollectionID *int64         `json:"tmdb_collection_id"`
+	Missing          []missingMovie `json:"missing"`
+	Items            []mediaItemDTO `json:"items"`
 }
 
 type collectionsResponse struct {
@@ -108,6 +121,10 @@ type collectionItemRequest struct {
 
 type collectionOrderRequest struct {
 	MediaItemIDs *[]int64 `json:"media_item_ids"`
+}
+
+type matchCollectionRequest struct {
+	TMDBCollectionID int64 `json:"tmdb_collection_id"`
 }
 
 func (a *API) handleCollections(w http.ResponseWriter, r *http.Request) {
@@ -315,6 +332,7 @@ func queryCollectionBase(ctx context.Context, db *sql.DB, id int64, access libra
 	}
 	row := db.QueryRowContext(ctx, `
 		SELECT c.id, c.name, c.overview, `+collectionPosterSQL(access)+`, c.backdrop_url,
+		       c.tmdb_collection_id,
 		       `+collectionItemCountSQL(access)+`, c.source, c.edited, c.deleted,
 		       EXISTS (SELECT 1 FROM collection_lists cl_favorite
 		                WHERE cl_favorite.user_id = ?
@@ -329,15 +347,20 @@ func queryCollectionBase(ctx context.Context, db *sql.DB, id int64, access libra
 
 	var collection collectionDTO
 	var overview, poster, backdrop sql.NullString
+	var tmdbCollectionID sql.NullInt64
 	var edited, deleted, favorite, watchlist int
 	if err := row.Scan(&collection.ID, &collection.Name, &overview, &poster,
-		&backdrop, &collection.ItemCount, &collection.Source, &edited, &deleted,
+		&backdrop, &tmdbCollectionID, &collection.ItemCount, &collection.Source, &edited, &deleted,
 		&favorite, &watchlist); err != nil {
 		return collectionDTO{}, false, err
 	}
 	collection.Overview = stringPointer(overview)
 	collection.PosterURL = stringPointer(poster)
 	collection.BackdropURL = stringPointer(backdrop)
+	if tmdbCollectionID.Valid {
+		value := tmdbCollectionID.Int64
+		collection.TMDBCollectionID = &value
+	}
 	collection.Edited = edited != 0
 	collection.Favorite = favorite != 0
 	collection.Watchlist = watchlist != 0
@@ -370,27 +393,113 @@ func (a *API) handleCollection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	items, err := a.collectionMovieItems(r.Context(), id, sessionUserID(r), access)
+	detail, err := a.collectionDetailData(r.Context(), collection, access, sessionUserID(r), isAdminRequest(r), nil)
 	if err != nil {
-		log.Printf("library: leer películas de la colección %d: %v", id, err)
+		log.Printf("library: leer detalle de la colección %d: %v", id, err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
 		return
 	}
-	compactMediaItemListSlice(items, isAdminRequest(r))
+	writeJSON(w, http.StatusOK, detail)
+}
 
-	writeJSON(w, http.StatusOK, collectionDetailDTO{
-		ID:          collection.ID,
-		Name:        collection.Name,
-		Overview:    collection.Overview,
-		PosterURL:   collection.PosterURL,
-		BackdropURL: collection.BackdropURL,
-		ItemCount:   collection.ItemCount,
-		Source:      collection.Source,
-		Edited:      collection.Edited,
-		Favorite:    collection.Favorite,
-		Watchlist:   collection.Watchlist,
-		Items:       items,
-	})
+// collectionDetailData reúne las películas visibles y, si la colección está
+// identificada, las que faltan en la biblioteca. Los fallos de TMDB no rompen
+// el detalle: simplemente dejan la lista de faltantes vacía.
+func (a *API) collectionDetailData(
+	ctx context.Context,
+	collection collectionDTO,
+	access libraryAccess,
+	userID int64,
+	admin bool,
+	known *metadata.CollectionInfo,
+) (collectionDetailDTO, error) {
+	items, err := a.collectionMovieItems(ctx, collection.ID, userID, access)
+	if err != nil {
+		return collectionDetailDTO{}, err
+	}
+	compactMediaItemListSlice(items, admin)
+
+	missing := make([]missingMovie, 0)
+	if collection.TMDBCollectionID != nil && a.tmdb != nil {
+		details := known
+		if details == nil {
+			details, err = a.tmdb.CollectionDetails(ctx, int(*collection.TMDBCollectionID))
+			if err != nil {
+				log.Printf("library: ficha de la colección TMDB %d: %v",
+					*collection.TMDBCollectionID, err)
+				details = nil
+			}
+		}
+		if details != nil {
+			missing, err = a.missingCollectionMovies(ctx, access, details.Parts)
+			if err != nil {
+				log.Printf("library: calcular películas que faltan de la colección %d: %v",
+					collection.ID, err)
+				missing = make([]missingMovie, 0)
+			}
+		}
+	}
+
+	return collectionDetailDTO{
+		ID:               collection.ID,
+		Name:             collection.Name,
+		Overview:         collection.Overview,
+		PosterURL:        collection.PosterURL,
+		BackdropURL:      collection.BackdropURL,
+		ItemCount:        collection.ItemCount,
+		Source:           collection.Source,
+		Edited:           collection.Edited,
+		Favorite:         collection.Favorite,
+		Watchlist:        collection.Watchlist,
+		TMDBCollectionID: collection.TMDBCollectionID,
+		Missing:          missing,
+		Items:            items,
+	}, nil
+}
+
+func (a *API) missingCollectionMovies(
+	ctx context.Context,
+	access libraryAccess,
+	parts []metadata.Candidate,
+) ([]missingMovie, error) {
+	missing := make([]missingMovie, 0)
+	if len(parts) == 0 {
+		return missing, nil
+	}
+
+	rows, err := a.db.QueryContext(ctx, `
+		SELECT tmdb_id FROM media_items
+		 WHERE kind = 'movie' AND tmdb_id IS NOT NULL
+		   AND `+access.Clause("media_items"))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	present := make(map[int]bool)
+	for rows.Next() {
+		var tmdbID int
+		if err := rows.Scan(&tmdbID); err != nil {
+			return nil, err
+		}
+		present[tmdbID] = true
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	for _, part := range parts {
+		if present[part.TMDBID] {
+			continue
+		}
+		missing = append(missing, missingMovie{
+			TMDBID:    part.TMDBID,
+			Title:     part.Title,
+			Year:      part.Year,
+			PosterURL: part.PosterURL,
+		})
+	}
+	return missing, nil
 }
 
 func (a *API) collectionMovieItems(ctx context.Context, collectionID, userID int64, access libraryAccess) ([]mediaItemDTO, error) {
@@ -616,6 +725,175 @@ func (a *API) writeCollection(w http.ResponseWriter, r *http.Request, id int64) 
 		return
 	}
 	writeJSON(w, http.StatusOK, collection)
+}
+
+func (a *API) handleCollectionCandidates(w http.ResponseWriter, r *http.Request) {
+	collection, ok := a.loadAdminCollection(w, r)
+	if !ok {
+		return
+	}
+	if a.tmdb == nil {
+		writeJSONError(w, http.StatusServiceUnavailable, "TMDB no está configurado")
+		return
+	}
+
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
+	if query == "" {
+		query = collection.Name
+	}
+	candidates, err := a.tmdb.SearchCollections(r.Context(), query)
+	if errors.Is(err, metadata.ErrNotFound) {
+		candidates = nil
+	} else if err != nil {
+		log.Printf("library: buscar colecciones en TMDB: %v", err)
+		writeJSONError(w, http.StatusBadGateway, "no se pudo consultar TMDB")
+		return
+	}
+	if candidates == nil {
+		candidates = []metadata.CollectionCandidate{}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"candidates": candidates})
+}
+
+func (a *API) handleCollectionMatch(w http.ResponseWriter, r *http.Request) {
+	collection, ok := a.loadAdminCollection(w, r)
+	if !ok {
+		return
+	}
+	if a.tmdb == nil {
+		writeJSONError(w, http.StatusServiceUnavailable, "TMDB no está configurado")
+		return
+	}
+
+	var req matchCollectionRequest
+	if err := decodeJSONBody(w, r, &req); err != nil {
+		writeJSONBodyError(w, err)
+		return
+	}
+	if req.TMDBCollectionID <= 0 {
+		writeJSONError(w, http.StatusBadRequest, "tmdb_collection_id debe ser un entero positivo")
+		return
+	}
+
+	details, err := a.tmdb.CollectionDetails(r.Context(), int(req.TMDBCollectionID))
+	if errors.Is(err, metadata.ErrNotFound) {
+		writeJSONError(w, http.StatusNotFound, "colección no encontrada en TMDB")
+		return
+	}
+	if err != nil {
+		log.Printf("library: ficha de colección TMDB %d: %v", req.TMDBCollectionID, err)
+		writeJSONError(w, http.StatusBadGateway, "no se pudo consultar TMDB")
+		return
+	}
+	if details == nil {
+		writeJSONError(w, http.StatusNotFound, "colección no encontrada en TMDB")
+		return
+	}
+
+	tx, err := a.db.BeginTx(r.Context(), nil)
+	if err != nil {
+		log.Printf("library: iniciar enlace de la colección %d: %v", collection.ID, err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	var otherID int64
+	err = tx.QueryRowContext(r.Context(), `
+		SELECT id FROM collections
+		 WHERE tmdb_collection_id = ? AND id <> ?`,
+		req.TMDBCollectionID, collection.ID).Scan(&otherID)
+	switch {
+	case err == nil:
+		writeJSONError(w, http.StatusConflict, "otra colección ya tiene ese identificador de TMDB")
+		return
+	case !errors.Is(err, sql.ErrNoRows):
+		log.Printf("library: comprobar colección TMDB %d: %v", req.TMDBCollectionID, err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
+
+	edited := collection.Edited
+	if collection.Source == "tmdb" {
+		oldOverview := ""
+		if collection.Overview != nil {
+			oldOverview = strings.TrimSpace(*collection.Overview)
+		}
+		if details.Name != collection.Name || strings.TrimSpace(details.Overview) != oldOverview {
+			edited = true
+		}
+	}
+
+	if _, err := tx.ExecContext(r.Context(), `
+		UPDATE collections SET
+			tmdb_collection_id = ?, name = ?, overview = ?,
+			poster_url = ?, backdrop_url = ?, edited = ?
+		 WHERE id = ?`,
+		req.TMDBCollectionID, details.Name, nullableText(details.Overview),
+		nullableText(details.PosterURL), nullableText(details.BackdropURL),
+		edited, collection.ID); err != nil {
+		log.Printf("library: enlazar colección %d con TMDB: %v", collection.ID, err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		log.Printf("library: confirmar enlace de la colección %d: %v", collection.ID, err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
+
+	a.writeCollectionDetail(w, r, collection.ID, details)
+}
+
+func (a *API) handleCollectionMatchDelete(w http.ResponseWriter, r *http.Request) {
+	collection, ok := a.loadAdminCollection(w, r)
+	if !ok {
+		return
+	}
+	if collection.Source != "manual" {
+		writeJSONError(w, http.StatusConflict,
+			"las colecciones de TMDB no se pueden desvincular")
+		return
+	}
+
+	if _, err := a.db.ExecContext(r.Context(), `
+		UPDATE collections SET tmdb_collection_id = NULL WHERE id = ?`,
+		collection.ID); err != nil {
+		log.Printf("library: desvincular colección %d: %v", collection.ID, err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
+	a.writeCollectionDetail(w, r, collection.ID, nil)
+}
+
+func (a *API) writeCollectionDetail(
+	w http.ResponseWriter,
+	r *http.Request,
+	id int64,
+	known *metadata.CollectionInfo,
+) {
+	collection, deleted, err := queryCollectionBase(
+		r.Context(), a.db, id, accessFromRequest(r), sessionUserID(r))
+	if errors.Is(err, sql.ErrNoRows) || deleted {
+		writeJSONError(w, http.StatusNotFound, "colección no encontrada")
+		return
+	}
+	if err != nil {
+		log.Printf("library: leer colección %d: %v", id, err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
+	detail, err := a.collectionDetailData(
+		r.Context(), collection, accessFromRequest(r), sessionUserID(r),
+		isAdminRequest(r), known)
+	if err != nil {
+		log.Printf("library: leer detalle de la colección %d: %v", id, err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
+	writeJSON(w, http.StatusOK, detail)
 }
 
 func (a *API) requireMovieForCollection(w http.ResponseWriter, r *http.Request, itemID int64) bool {

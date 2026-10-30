@@ -37,6 +37,8 @@ type TMDBClient interface {
 	SeasonDetails(ctx context.Context, tvID, season int) (*metadata.Season, error)
 	MovieImages(ctx context.Context, tmdbID int) (*metadata.ImageOptions, error)
 	TVImages(ctx context.Context, tvID int) (*metadata.ImageOptions, error)
+	SearchCollections(ctx context.Context, query string) ([]metadata.CollectionCandidate, error)
+	CollectionDetails(ctx context.Context, id int) (*metadata.CollectionInfo, error)
 }
 
 // Scanner recorre las bibliotecas dadas de alta y puebla sus tablas.
@@ -520,6 +522,7 @@ func (s *Scanner) enrichMovieTMDB(ctx context.Context, libraryID int64, path str
 				res.Warnings = append(res.Warnings, fmt.Sprintf("%s: no se pudieron guardar los metadatos: %v", path, err))
 				return
 			}
+			s.fillCollectionOverview(ctx, itemID, path, res)
 			if !matchScore.Valid {
 				if _, err := s.db.ExecContext(ctx,
 					`UPDATE media_items SET match_score = NULL WHERE id = ?`, itemID); err != nil {
@@ -528,6 +531,10 @@ func (s *Scanner) enrichMovieTMDB(ctx context.Context, libraryID int64, path str
 			}
 			return
 		}
+
+		// Las fichas completas no vuelven a pedir MovieDetails, pero pueden
+		// tener pendiente la sinopsis de una colección creada antes.
+		s.fillCollectionOverview(ctx, itemID, path, res)
 
 		switch matchStatus.String {
 		case "manual", "none":
@@ -563,7 +570,55 @@ func (s *Scanner) enrichMovieTMDB(ctx context.Context, libraryID int64, path str
 		res.Warnings = append(res.Warnings, fmt.Sprintf("%s: no se pudieron guardar los metadatos: %v", path, err))
 		return
 	}
+	s.fillCollectionOverview(ctx, itemID, path, res)
 	res.Identified++
+}
+
+// fillCollectionOverview completa una sola vez la sinopsis de una colección
+// automática. Un fallo de TMDB se apunta como aviso y no interrumpe el escaneo.
+func (s *Scanner) fillCollectionOverview(ctx context.Context, itemID int64, path string, res *Result) {
+	if s.tmdb == nil {
+		return
+	}
+
+	var collectionID int64
+	var tmdbID sql.NullInt64
+	var overview sql.NullString
+	err := s.db.QueryRowContext(ctx, `
+		SELECT c.id, c.tmdb_collection_id, c.overview
+		  FROM collections c
+		  JOIN collection_items ci ON ci.collection_id = c.id
+		 WHERE ci.media_item_id = ?
+		   AND c.source = 'tmdb' AND c.edited = 0 AND c.deleted = 0
+		 LIMIT 1`, itemID).Scan(&collectionID, &tmdbID, &overview)
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+		return
+	case err != nil:
+		res.Warnings = append(res.Warnings,
+			fmt.Sprintf("%s: no se pudo comprobar la colección: %v", path, err))
+		return
+	}
+	if !tmdbID.Valid || tmdbID.Int64 <= 0 || overview.Valid {
+		return
+	}
+
+	details, err := s.tmdb.CollectionDetails(ctx, int(tmdbID.Int64))
+	if err != nil {
+		res.Warnings = append(res.Warnings,
+			fmt.Sprintf("%s: no se pudo obtener la sinopsis de la colección: %v", path, err))
+		return
+	}
+	if details == nil || strings.TrimSpace(details.Overview) == "" {
+		return
+	}
+	if _, err := s.db.ExecContext(ctx, `
+		UPDATE collections SET overview = ?
+		 WHERE id = ? AND overview IS NULL`,
+		details.Overview, collectionID); err != nil {
+		res.Warnings = append(res.Warnings,
+			fmt.Sprintf("%s: no se pudo guardar la sinopsis de la colección: %v", path, err))
+	}
 }
 
 // ApplyMovieDetails guarda la ficha completa en la fila. El título analizado

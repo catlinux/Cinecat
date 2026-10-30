@@ -551,6 +551,114 @@ func TestMovieCollectionOrdenaPorEstreno(t *testing.T) {
 	}
 }
 
+func TestSearchCollections(t *testing.T) {
+	api := newTestAPI(t)
+	results := make([]map[string]any, 0, 12)
+	for i := 0; i < 12; i++ {
+		results = append(results, map[string]any{
+			"id":          200 + i,
+			"name":        "Saga",
+			"overview":    "Sinopsis de la saga",
+			"poster_path": "/saga.jpg",
+		})
+	}
+	api.route("/search/collection", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("query") == "Nada" {
+			_ = json.NewEncoder(w).Encode(map[string]any{"results": []any{}})
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"results": results})
+	})
+	client := newAPIClient(t, api, t.TempDir(), nil, "clave-de-prueba")
+
+	candidates, err := client.SearchCollections(context.Background(), "Saga")
+	if err != nil {
+		t.Fatalf("SearchCollections: %v", err)
+	}
+	if len(candidates) != 10 {
+		t.Fatalf("candidatos = %d, se esperaban 10", len(candidates))
+	}
+	first := candidates[0]
+	if first.TMDBID != 200 || first.Name != "Saga" || first.Overview != "Sinopsis de la saga" ||
+		first.PosterURL != api.URL+"/img/w185/saga.jpg" {
+		t.Fatalf("candidato inesperado: %+v", first)
+	}
+	query := api.query("/search/collection")
+	if query.Get("language") != "es-ES" || query.Get("query") != "Saga" ||
+		query.Get("include_adult") != "false" {
+		t.Fatalf("parámetros inesperados: %v", query)
+	}
+
+	if _, err := client.SearchCollections(context.Background(), "Nada"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("sin resultados: %v, se esperaba ErrNotFound", err)
+	}
+}
+
+func TestCollectionDetails(t *testing.T) {
+	api := newTestAPI(t)
+	api.route("/collection/1570", jsonRoute(map[string]any{
+		"id":            1570,
+		"name":          "Jungla de cristal (colección)",
+		"overview":      "Sinopsis de la saga",
+		"poster_path":   "/saga.jpg",
+		"backdrop_path": "/saga-fondo.jpg",
+		"parts": []map[string]any{
+			{"id": 1573, "title": "La venganza", "release_date": "1995-05-19"},
+			{"id": 562, "title": "Jungla de cristal", "release_date": "1988-07-15", "poster_path": "/primera.jpg"},
+			{"id": 999, "title": "Sin estrenar", "release_date": ""},
+			{"id": 1572, "title": "Alerta roja", "release_date": "1990-07-02"},
+		},
+	}))
+	client := newAPIClient(t, api, t.TempDir(), nil, "clave-de-prueba")
+
+	info, err := client.CollectionDetails(context.Background(), 1570)
+	if err != nil {
+		t.Fatalf("CollectionDetails: %v", err)
+	}
+	if info.TMDBID != 1570 || info.Name != "Jungla de cristal (colección)" ||
+		info.Overview != "Sinopsis de la saga" ||
+		info.PosterURL != api.URL+"/img/w342/saga.jpg" ||
+		info.BackdropURL != api.URL+"/img/w1280/saga-fondo.jpg" {
+		t.Fatalf("colección inesperada: %+v", info)
+	}
+	var ids []int
+	for _, part := range info.Parts {
+		ids = append(ids, part.TMDBID)
+	}
+	if fmt.Sprint(ids) != "[562 1572 1573 999]" {
+		t.Fatalf("partes = %v, se esperaban por fecha y con la que no tiene fecha al final", ids)
+	}
+	if info.Parts[0].Year != 1988 ||
+		info.Parts[0].PosterURL != api.URL+"/img/w185/primera.jpg" {
+		t.Fatalf("primera parte inesperada: %+v", info.Parts[0])
+	}
+	if got := api.query("/collection/1570").Get("language"); got != "es-ES" {
+		t.Fatalf("language = %q", got)
+	}
+}
+
+func TestCollectionDetailsRespaldoDeSinopsis(t *testing.T) {
+	api := newTestAPI(t)
+	api.route("/collection/1570", jsonRoute(map[string]any{
+		"id": 1570, "name": "Saga", "overview": "",
+	}))
+	api.route("/collection/1570/translations", jsonRoute(map[string]any{
+		"translations": []map[string]any{
+			{"iso_639_1": "en", "iso_3166_1": "US", "data": map[string]any{"overview": "English"}},
+			{"iso_639_1": "es", "iso_3166_1": "MX", "data": map[string]any{"overview": "Sinopsis mexicana"}},
+		},
+	}))
+	client := newAPIClient(t, api, t.TempDir(), nil, "clave-de-prueba")
+
+	info, err := client.CollectionDetails(context.Background(), 1570)
+	if err != nil {
+		t.Fatalf("CollectionDetails: %v", err)
+	}
+	if info.Overview != "Sinopsis mexicana" {
+		t.Fatalf("sinopsis = %q", info.Overview)
+	}
+}
+
 func TestSearchMovies(t *testing.T) {
 	api := newTestAPI(t)
 	results := make([]map[string]any, 0, 12)

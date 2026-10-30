@@ -3,11 +3,14 @@ package library
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/catlinux/cinecat/internal/metadata"
 )
 
 func collectionHTTPMovie(t *testing.T, ts *libraryTestServer, title string, year int, poster, kind string) int64 {
@@ -234,6 +237,260 @@ func TestCollectionDetailOrdenPorAnioYOcultas(t *testing.T) {
 		if status, body := libraryHTTPGet(t, collectionHTTPURL(ts, id), ts.token); status != http.StatusNotFound {
 			t.Fatalf("colección %d: código = %d, cuerpo = %s", id, status, body)
 		}
+	}
+}
+
+func TestCollectionDetailTMDBMissingYAcceso(t *testing.T) {
+	fake := &fakeTMDB{
+		collectionDetails: &metadata.CollectionInfo{
+			TMDBID:   900,
+			Name:     "Saga",
+			Overview: "Sinopsis",
+			Parts: []metadata.Candidate{
+				{TMDBID: 101, Title: "Uno", Year: 2000, PosterURL: "https://images.example/uno.jpg"},
+				{TMDBID: 102, Title: "Dos", Year: 2001, PosterURL: "https://images.example/dos.jpg"},
+				{TMDBID: 103, Title: "Tres", Year: 2002, PosterURL: "https://images.example/tres.jpg"},
+			},
+		},
+	}
+	ts := newLibraryHTTPTestServer(t, fake)
+	visibleLibrary := createLibrary(t, ts.db, t.TempDir())
+	hiddenLibrary := createLibrary(t, ts.db, t.TempDir())
+	visibleItem := insertItemFixture(t, ts.db, itemFixture{
+		libraryID: visibleLibrary, path: filepath.Join(t.TempDir(), "visible.mkv"),
+		title: "Visible", kind: KindMovie, tmdbID: 101,
+	})
+	insertItemFixture(t, ts.db, itemFixture{
+		libraryID: hiddenLibrary, path: filepath.Join(t.TempDir(), "oculta.mkv"),
+		title: "Oculta", kind: KindMovie, tmdbID: 102,
+	})
+	collectionID := collectionHTTPSeed(t, ts.db, "Saga manual", "manual", 900, "", 0, 0)
+	collectionHTTPMember(t, ts.db, collectionID, visibleItem, 0, 0)
+
+	status, body := libraryHTTPGet(t, collectionHTTPURL(ts, collectionID), ts.token)
+	if status != http.StatusOK {
+		t.Fatalf("detalle admin: código = %d, cuerpo = %s", status, body)
+	}
+	var adminDetail collectionDetailDTO
+	if err := json.Unmarshal(body, &adminDetail); err != nil {
+		t.Fatalf("detalle admin: %v", err)
+	}
+	if adminDetail.TMDBCollectionID == nil || *adminDetail.TMDBCollectionID != 900 {
+		t.Fatalf("tmdb_collection_id = %v", adminDetail.TMDBCollectionID)
+	}
+	if len(adminDetail.Missing) != 1 || adminDetail.Missing[0].TMDBID != 103 {
+		t.Fatalf("faltantes del admin = %+v", adminDetail.Missing)
+	}
+
+	restrictedToken, _ := partialAccessToken(t, ts, visibleLibrary)
+	status, body = libraryHTTPGet(t, collectionHTTPURL(ts, collectionID), restrictedToken)
+	if status != http.StatusOK {
+		t.Fatalf("detalle restringido: código = %d, cuerpo = %s", status, body)
+	}
+	var restrictedDetail collectionDetailDTO
+	if err := json.Unmarshal(body, &restrictedDetail); err != nil {
+		t.Fatalf("detalle restringido: %v", err)
+	}
+	if len(restrictedDetail.Missing) != 2 ||
+		restrictedDetail.Missing[0].TMDBID != 102 ||
+		restrictedDetail.Missing[1].TMDBID != 103 {
+		t.Fatalf("faltantes con acceso limitado = %+v", restrictedDetail.Missing)
+	}
+
+	fake.collectionDetailsErr = errors.New("TMDB caído")
+	status, body = libraryHTTPGet(t, collectionHTTPURL(ts, collectionID), ts.token)
+	if status != http.StatusOK {
+		t.Fatalf("detalle sin TMDB: código = %d, cuerpo = %s", status, body)
+	}
+	var withoutTMDB collectionDetailDTO
+	if err := json.Unmarshal(body, &withoutTMDB); err != nil {
+		t.Fatalf("detalle sin TMDB: %v", err)
+	}
+	if len(withoutTMDB.Missing) != 0 {
+		t.Fatalf("sin TMDB no debe haber faltantes: %+v", withoutTMDB.Missing)
+	}
+
+	noTMDB := collectionHTTPSeed(t, ts.db, "Sin identificar", "manual", nil, "", 0, 0)
+	status, body = libraryHTTPGet(t, collectionHTTPURL(ts, noTMDB), ts.token)
+	if status != http.StatusOK {
+		t.Fatalf("detalle sin id: código = %d, cuerpo = %s", status, body)
+	}
+	var noTMDBDetail collectionDetailDTO
+	if err := json.Unmarshal(body, &noTMDBDetail); err != nil {
+		t.Fatalf("detalle sin id: %v", err)
+	}
+	if noTMDBDetail.TMDBCollectionID != nil || len(noTMDBDetail.Missing) != 0 {
+		t.Fatalf("detalle sin id inesperado: %+v", noTMDBDetail)
+	}
+}
+
+func TestCollectionCandidatesMatchYDesvincular(t *testing.T) {
+	details := &metadata.CollectionInfo{
+		TMDBID:      900,
+		Name:        "Saga TMDB",
+		Overview:    "Sinopsis de TMDB",
+		PosterURL:   "https://images.example/saga.jpg",
+		BackdropURL: "https://images.example/saga-fondo.jpg",
+	}
+	fake := &fakeTMDB{
+		searchCollections: []metadata.CollectionCandidate{
+			{TMDBID: 900, Name: "Saga TMDB", Overview: "Sinopsis", PosterURL: "https://images.example/c.jpg"},
+		},
+		collectionDetails: details,
+	}
+	ts := newLibraryHTTPTestServer(t, fake)
+	target := collectionHTTPSeed(t, ts.db, "Saga", "manual", nil, "", 0, 0)
+
+	status, body := libraryHTTPGet(t,
+		ts.URL+"/api/v1/collections/"+strconv.FormatInt(target, 10)+"/candidates", ts.token)
+	if status != http.StatusOK {
+		t.Fatalf("candidatos: código = %d, cuerpo = %s", status, body)
+	}
+	var candidates struct {
+		Candidates []metadata.CollectionCandidate `json:"candidates"`
+	}
+	if err := json.Unmarshal(body, &candidates); err != nil {
+		t.Fatalf("candidatos: %v", err)
+	}
+	if len(candidates.Candidates) != 1 || candidates.Candidates[0].TMDBID != 900 ||
+		fake.lastCollectionsQuery != "Saga" {
+		t.Fatalf("candidatos inesperados: %+v, consulta %q", candidates, fake.lastCollectionsQuery)
+	}
+	status, body = libraryHTTPGet(t,
+		ts.URL+"/api/v1/collections/"+strconv.FormatInt(target, 10)+"/candidates?q=Otra", ts.token)
+	if status != http.StatusOK || fake.lastCollectionsQuery != "Otra" {
+		t.Fatalf("candidatos con q: código = %d, cuerpo = %s, consulta = %q",
+			status, body, fake.lastCollectionsQuery)
+	}
+
+	status, body = libraryHTTPDo(t, http.MethodPut,
+		collectionHTTPURL(ts, target)+"/match", ts.token,
+		map[string]any{"tmdb_collection_id": 900})
+	if status != http.StatusOK {
+		t.Fatalf("enlazar: código = %d, cuerpo = %s", status, body)
+	}
+	var matched collectionDetailDTO
+	if err := json.Unmarshal(body, &matched); err != nil {
+		t.Fatalf("enlazar: %v", err)
+	}
+	if matched.TMDBCollectionID == nil || *matched.TMDBCollectionID != 900 ||
+		matched.Name != "Saga TMDB" || matched.Overview == nil || *matched.Overview != "Sinopsis de TMDB" ||
+		matched.PosterURL == nil || *matched.PosterURL != "https://images.example/saga.jpg" ||
+		matched.BackdropURL == nil || *matched.BackdropURL != "https://images.example/saga-fondo.jpg" ||
+		matched.Source != "manual" {
+		t.Fatalf("colección enlazada inesperada: %+v", matched)
+	}
+
+	other := collectionHTTPSeed(t, ts.db, "Otra con TMDB", "manual", 910, "", 0, 0)
+	target2 := collectionHTTPSeed(t, ts.db, "Otra", "manual", nil, "", 0, 0)
+	fake.collectionDetails = &metadata.CollectionInfo{TMDBID: 910, Name: "Otra con TMDB"}
+	status, body = libraryHTTPDo(t, http.MethodPut,
+		collectionHTTPURL(ts, target2)+"/match", ts.token,
+		map[string]any{"tmdb_collection_id": 910})
+	if status != http.StatusConflict {
+		t.Fatalf("duplicado: código = %d, cuerpo = %s (otra = %d)", status, body, other)
+	}
+
+	auto := collectionHTTPSeed(t, ts.db, "Misma", "tmdb", 920, "", 0, 0)
+	if _, err := ts.db.Exec(`UPDATE collections SET overview = ? WHERE id = ?`, "Misma", auto); err != nil {
+		t.Fatalf("overview de la colección: %v", err)
+	}
+	fake.collectionDetails = &metadata.CollectionInfo{
+		TMDBID: 930, Name: "Misma", Overview: "Misma",
+	}
+	status, body = libraryHTTPDo(t, http.MethodPut,
+		collectionHTTPURL(ts, auto)+"/match", ts.token,
+		map[string]any{"tmdb_collection_id": 930})
+	if status != http.StatusOK {
+		t.Fatalf("enlazar sin cambios: código = %d, cuerpo = %s", status, body)
+	}
+	var unchanged collectionDTO
+	if err := json.Unmarshal(body, &unchanged); err != nil {
+		t.Fatalf("enlazar sin cambios: %v", err)
+	}
+	var autoEdited int
+	if err := ts.db.QueryRow(`SELECT edited FROM collections WHERE id = ?`, auto).Scan(&autoEdited); err != nil {
+		t.Fatalf("leer edited: %v", err)
+	}
+	if autoEdited != 0 {
+		t.Fatal("un enlace sin cambios no debe marcar la colección editada")
+	}
+
+	auto2 := collectionHTTPSeed(t, ts.db, "Vieja", "tmdb", 940, "", 0, 0)
+	if _, err := ts.db.Exec(`UPDATE collections SET overview = ? WHERE id = ?`, "Vieja", auto2); err != nil {
+		t.Fatalf("overview de la colección: %v", err)
+	}
+	fake.collectionDetails = &metadata.CollectionInfo{
+		TMDBID: 950, Name: "Nueva", Overview: "Nueva",
+	}
+	status, body = libraryHTTPDo(t, http.MethodPut,
+		collectionHTTPURL(ts, auto2)+"/match", ts.token,
+		map[string]any{"tmdb_collection_id": 950})
+	if status != http.StatusOK {
+		t.Fatalf("enlazar con cambios: código = %d, cuerpo = %s", status, body)
+	}
+	if err := ts.db.QueryRow(`SELECT edited FROM collections WHERE id = ?`, auto2).Scan(&autoEdited); err != nil {
+		t.Fatalf("leer edited: %v", err)
+	}
+	if autoEdited != 1 {
+		t.Fatal("un enlace con cambios debe marcar la colección editada")
+	}
+
+	status, body = libraryHTTPDo(t, http.MethodDelete,
+		collectionHTTPURL(ts, target)+"/match", ts.token, nil)
+	if status != http.StatusOK {
+		t.Fatalf("desvincular manual: código = %d, cuerpo = %s", status, body)
+	}
+	var unlinked sql.NullInt64
+	if err := ts.db.QueryRow(`SELECT tmdb_collection_id FROM collections WHERE id = ?`, target).
+		Scan(&unlinked); err != nil {
+		t.Fatalf("leer desvinculada: %v", err)
+	}
+	if unlinked.Valid {
+		t.Fatalf("tmdb_collection_id debe quedar NULL: %+v", unlinked)
+	}
+	if status, body := libraryHTTPDo(t, http.MethodDelete,
+		collectionHTTPURL(ts, auto2)+"/match", ts.token, nil); status != http.StatusConflict {
+		t.Fatalf("desvincular automática: código = %d, cuerpo = %s", status, body)
+	}
+}
+
+func TestCollectionMatchPermisosYTMDB(t *testing.T) {
+	ts := newLibraryHTTPTestServer(t)
+	collectionID := collectionHTTPSeed(t, ts.db, "Saga", "manual", nil, "", 0, 0)
+	userToken := nonAdminToken(t, ts)
+	for _, request := range []struct {
+		name   string
+		method string
+		path   string
+		body   any
+	}{
+		{"candidatos", http.MethodGet, "/candidates", nil},
+		{"enlazar", http.MethodPut, "/match", map[string]any{"tmdb_collection_id": 900}},
+		{"desvincular", http.MethodDelete, "/match", nil},
+	} {
+		t.Run(request.name+" sin admin", func(t *testing.T) {
+			status, body := libraryHTTPDo(t, request.method,
+				collectionHTTPURL(ts, collectionID)+request.path, userToken, request.body)
+			if status != http.StatusForbidden {
+				t.Fatalf("código = %d, cuerpo = %s", status, body)
+			}
+		})
+	}
+	if status, body := libraryHTTPGet(t,
+		ts.URL+"/api/v1/collections/"+strconv.FormatInt(collectionID, 10)+"/candidates",
+		ts.token); status != http.StatusServiceUnavailable {
+		t.Fatalf("candidatos sin TMDB: código = %d, cuerpo = %s", status, body)
+	}
+	if status, body := libraryHTTPDo(t, http.MethodPut,
+		collectionHTTPURL(ts, collectionID)+"/match", ts.token,
+		map[string]any{"tmdb_collection_id": 900}); status != http.StatusServiceUnavailable {
+		t.Fatalf("enlazar sin TMDB: código = %d, cuerpo = %s", status, body)
+	}
+	if status, body := libraryHTTPDo(t, http.MethodPut,
+		collectionHTTPURL(ts, collectionID)+"/match", ts.token,
+		map[string]any{"tmdb_collection_id": 0}); status != http.StatusServiceUnavailable {
+		t.Fatalf("id inválido sin TMDB: código = %d, cuerpo = %s", status, body)
 	}
 }
 

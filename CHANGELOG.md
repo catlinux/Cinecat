@@ -7,6 +7,13 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.41.0] - 2026-10-30
+
+### Añadido
+
+- Servidor: las colecciones se pueden identificar con TMDB. La administración puede buscar colecciones, enlazarlas o desvincular las manuales, y el escáner completa la sinopsis de las colecciones automáticas una sola vez.
+- Servidor: la ficha de colección incluye el identificador de TMDB y las películas de la saga que faltan en la biblioteca visible para el usuario.
+
 ## [0.40.1] - 2026-10-30
 
 ### Corregido

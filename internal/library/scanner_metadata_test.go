@@ -46,6 +46,15 @@ type fakeTMDB struct {
 	tvImagesErr    error
 	tvImages       *metadata.ImageOptions
 	lastTVImagesID int
+
+	searchCollectionsCalls int
+	searchCollectionsErr   error
+	searchCollections      []metadata.CollectionCandidate
+	lastCollectionsQuery   string
+	collectionDetailsCalls int
+	collectionDetailsErr   error
+	collectionDetails      *metadata.CollectionInfo
+	lastCollectionDetails  int
 }
 
 func (f *fakeTMDB) SearchMovies(ctx context.Context, query string, year int) ([]metadata.Candidate, error) {
@@ -67,6 +76,30 @@ func (f *fakeTMDB) SearchMovies(ctx context.Context, query string, year int) ([]
 
 func (f *fakeTMDB) MovieCollection(ctx context.Context, movieID int) ([]metadata.Candidate, error) {
 	return nil, nil
+}
+
+func (f *fakeTMDB) SearchCollections(ctx context.Context, query string) ([]metadata.CollectionCandidate, error) {
+	f.searchCollectionsCalls++
+	f.lastCollectionsQuery = query
+	if f.searchCollectionsErr != nil {
+		return nil, f.searchCollectionsErr
+	}
+	if f.searchCollections == nil {
+		return nil, metadata.ErrNotFound
+	}
+	return f.searchCollections, nil
+}
+
+func (f *fakeTMDB) CollectionDetails(ctx context.Context, id int) (*metadata.CollectionInfo, error) {
+	f.collectionDetailsCalls++
+	f.lastCollectionDetails = id
+	if f.collectionDetailsErr != nil {
+		return nil, f.collectionDetailsErr
+	}
+	if f.collectionDetails == nil {
+		return &metadata.CollectionInfo{TMDBID: id}, nil
+	}
+	return f.collectionDetails, nil
 }
 
 func (f *fakeTMDB) MovieDetails(ctx context.Context, id int) (*metadata.Details, error) {
@@ -759,6 +792,126 @@ func TestScannerConTMDBRellenaColeccionPendiente(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestScannerRellenaSinopsisDeColeccionUnaSolaVez(t *testing.T) {
+	ctx := context.Background()
+	db := openTestDB(t)
+	root := t.TempDir()
+	file := filepath.Join(root, "Pelicula (1999).mkv")
+	writeFile(t, file)
+	libraryID := createLibrary(t, db, root)
+	itemID := insertItemFixture(t, db, itemFixture{
+		libraryID: libraryID, path: file, title: "Pelicula",
+		displayTitle: "Pelicula", year: 1999, kind: KindMovie,
+		tmdbID: 77, metadataSource: "tmdb", matchStatus: "auto", matchScore: 0.87,
+	})
+
+	fake := &fakeTMDB{
+		details: &metadata.Details{
+			TMDBID: 77,
+			Title:  "Pelicula",
+			Year:   1999,
+			Collection: &metadata.CollectionRef{
+				TMDBID: 900,
+				Name:   "La saga",
+			},
+		},
+		collectionDetails: &metadata.CollectionInfo{
+			TMDBID:   900,
+			Name:     "La saga",
+			Overview: "Sinopsis de la saga",
+		},
+	}
+	scanner := New(db).WithTMDB(fake)
+	res, err := scanner.Scan(ctx)
+	if err != nil {
+		t.Fatalf("Scan: %v", err)
+	}
+	if len(res.Warnings) != 0 {
+		t.Fatalf("avisos inesperados: %v", res.Warnings)
+	}
+	if fake.collectionDetailsCalls != 1 || fake.lastCollectionDetails != 900 {
+		t.Fatalf("fichas de colección = %d, última = %d",
+			fake.collectionDetailsCalls, fake.lastCollectionDetails)
+	}
+	overview := collectionOverview(t, db, 900)
+	if !overview.Valid || overview.String != "Sinopsis de la saga" {
+		t.Fatalf("sinopsis = %+v", overview)
+	}
+
+	fake.collectionDetailsCalls = 0
+	if _, err := scanner.Scan(ctx); err != nil {
+		t.Fatalf("segundo Scan: %v", err)
+	}
+	if fake.collectionDetailsCalls != 0 {
+		t.Fatalf("no debe repetirse la sinopsis: %d", fake.collectionDetailsCalls)
+	}
+
+	if _, err := db.Exec(`UPDATE collections SET edited = 1, overview = NULL
+		WHERE tmdb_collection_id = 900`); err != nil {
+		t.Fatalf("marcar colección editada: %v", err)
+	}
+	if _, err := db.Exec(`UPDATE media_items SET credits = NULL WHERE id = ?`, itemID); err != nil {
+		t.Fatalf("forzar ficha: %v", err)
+	}
+	fake.collectionDetailsCalls = 0
+	if _, err := scanner.Scan(ctx); err != nil {
+		t.Fatalf("Scan de colección editada: %v", err)
+	}
+	if fake.collectionDetailsCalls != 0 {
+		t.Fatalf("una colección editada no debe pedir sinopsis: %d", fake.collectionDetailsCalls)
+	}
+}
+
+func TestScannerAvisaSiFallaLaSinopsisDeColeccion(t *testing.T) {
+	ctx := context.Background()
+	db := openTestDB(t)
+	root := t.TempDir()
+	file := filepath.Join(root, "Pelicula (1999).mkv")
+	writeFile(t, file)
+	libraryID := createLibrary(t, db, root)
+	insertItemFixture(t, db, itemFixture{
+		libraryID: libraryID, path: file, title: "Pelicula",
+		displayTitle: "Pelicula", year: 1999, kind: KindMovie,
+		tmdbID: 77, metadataSource: "tmdb", matchStatus: "auto", matchScore: 0.87,
+	})
+
+	fake := &fakeTMDB{
+		details: &metadata.Details{
+			TMDBID: 77,
+			Title:  "Pelicula",
+			Year:   1999,
+			Collection: &metadata.CollectionRef{
+				TMDBID: 900,
+				Name:   "La saga",
+			},
+		},
+		collectionDetailsErr: errors.New("TMDB no responde"),
+	}
+	res, err := New(db).WithTMDB(fake).Scan(ctx)
+	if err != nil {
+		t.Fatalf("el fallo de TMDB no debe abortar: %v", err)
+	}
+	if fake.collectionDetailsCalls != 1 {
+		t.Fatalf("fichas de colección = %d", fake.collectionDetailsCalls)
+	}
+	if len(res.Warnings) != 1 {
+		t.Fatalf("avisos = %v, se esperaba uno", res.Warnings)
+	}
+	if overview := collectionOverview(t, db, 900); overview.Valid {
+		t.Fatalf("la sinopsis no debe guardarse: %+v", overview)
+	}
+}
+
+func collectionOverview(t *testing.T, db *sql.DB, tmdbID int) sql.NullString {
+	t.Helper()
+	var overview sql.NullString
+	if err := db.QueryRow(`SELECT overview FROM collections WHERE tmdb_collection_id = ?`,
+		tmdbID).Scan(&overview); err != nil {
+		t.Fatalf("leer sinopsis de la colección %d: %v", tmdbID, err)
+	}
+	return overview
 }
 
 func TestApplyMovieDetailsGuardaYClearCredits(t *testing.T) {

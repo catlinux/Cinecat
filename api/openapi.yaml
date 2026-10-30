@@ -1486,6 +1486,196 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/collections/{id}/candidates:
+    get:
+      summary: Busca colecciones candidatas en TMDB (solo administradores)
+      description: |
+        Busca colecciones por nombre en TMDB. Si no se indica `q`, usa el
+        nombre de la colección. Requiere una sesión con rol `admin`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - name: q
+          in: query
+          required: false
+          description: Texto a buscar; por defecto, el nombre de la colección.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Candidatos encontrados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionCandidatesResponse'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: El usuario no tiene rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: La colección no existe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: No se pudo consultar TMDB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: TMDB no está configurado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/collections/{id}/match:
+    put:
+      summary: Identifica una colección con TMDB (solo administradores)
+      description: |
+        Guarda el identificador, el nombre, la sinopsis y las imágenes de la
+        colección de TMDB. Si otra colección ya usa ese identificador responde
+        409. En las colecciones de TMDB solo marca `edited` cuando cambian el
+        nombre o la sinopsis.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MatchCollectionRequest'
+      responses:
+        '200':
+          description: Colección identificada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionDetail'
+        '400':
+          description: Cuerpo no válido o identificador incorrecto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: El usuario no tiene rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: La colección no existe o no está en TMDB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Otra colección ya tiene ese identificador de TMDB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: No se pudo consultar TMDB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: TMDB no está configurado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Desvincula una colección manual de TMDB (solo administradores)
+      description: |
+        Pone a NULL el identificador de TMDB de una colección manual. Las
+        colecciones automáticas de TMDB no se pueden desvincular.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        '200':
+          description: Colección desvinculada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectionDetail'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: El usuario no tiene rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: La colección no existe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: La colección es automática y no se puede desvincular
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/collections/{id}/items:
     post:
       summary: Añade una película a una colección (solo administradores)
@@ -6921,6 +7111,8 @@ components:
         - edited
         - favorite
         - watchlist
+        - tmdb_collection_id
+        - missing
         - items
       properties:
         id:
@@ -6951,11 +7143,75 @@ components:
           type: boolean
         watchlist:
           type: boolean
+        tmdb_collection_id:
+          type: integer
+          format: int64
+          nullable: true
+          description: Identificador de la colección en TMDB, si está identificada.
+        missing:
+          type: array
+          description: Películas de la colección de TMDB que no están en la biblioteca visible.
+          items:
+            $ref: '#/components/schemas/MissingMovie'
         items:
           type: array
           description: Películas no excluidas, en el orden de la colección.
           items:
             $ref: '#/components/schemas/MediaItem'
+      additionalProperties: false
+    MissingMovie:
+      type: object
+      required:
+        - tmdb_id
+        - title
+        - year
+        - poster_url
+      properties:
+        tmdb_id:
+          type: integer
+        title:
+          type: string
+        year:
+          type: integer
+        poster_url:
+          type: string
+      additionalProperties: false
+    CollectionCandidate:
+      type: object
+      required:
+        - tmdb_id
+        - name
+        - overview
+        - poster_url
+      properties:
+        tmdb_id:
+          type: integer
+        name:
+          type: string
+        overview:
+          type: string
+        poster_url:
+          type: string
+      additionalProperties: false
+    CollectionCandidatesResponse:
+      type: object
+      required:
+        - candidates
+      properties:
+        candidates:
+          type: array
+          items:
+            $ref: '#/components/schemas/CollectionCandidate'
+      additionalProperties: false
+    MatchCollectionRequest:
+      type: object
+      required:
+        - tmdb_collection_id
+      properties:
+        tmdb_collection_id:
+          type: integer
+          format: int64
+          minimum: 1
       additionalProperties: false
     CollectionsResponse:
       type: object

@@ -84,6 +84,24 @@ type CollectionRef struct {
 	BackdropURL string `json:"backdrop_url"`
 }
 
+// CollectionCandidate es un resultado de búsqueda de colecciones en TMDB.
+type CollectionCandidate struct {
+	TMDBID    int    `json:"tmdb_id"`
+	Name      string `json:"name"`
+	Overview  string `json:"overview"`
+	PosterURL string `json:"poster_url"`
+}
+
+// CollectionInfo es la ficha de una colección de TMDB y sus películas.
+type CollectionInfo struct {
+	TMDBID      int         `json:"tmdb_id"`
+	Name        string      `json:"name"`
+	Overview    string      `json:"overview"`
+	PosterURL   string      `json:"poster_url"`
+	BackdropURL string      `json:"backdrop_url"`
+	Parts       []Candidate `json:"parts"`
+}
+
 // CastCredit es una persona del reparto con su personaje y foto.
 type CastCredit struct {
 	ID        int
@@ -474,17 +492,37 @@ type collectionRefResponse struct {
 	BelongsToCollection *collectionRef `json:"belongs_to_collection"`
 }
 
+type collectionSearchResponse struct {
+	Results []struct {
+		ID         int    `json:"id"`
+		Name       string `json:"name"`
+		Overview   string `json:"overview"`
+		PosterPath string `json:"poster_path"`
+	} `json:"results"`
+}
+
+type collectionPart struct {
+	ID            int     `json:"id"`
+	Title         string  `json:"title"`
+	OriginalTitle string  `json:"original_title"`
+	ReleaseDate   string  `json:"release_date"`
+	Overview      string  `json:"overview"`
+	PosterPath    string  `json:"poster_path"`
+	Popularity    float64 `json:"popularity"`
+	VoteCount     int     `json:"vote_count"`
+}
+
 type collectionResponse struct {
-	Parts []struct {
-		ID            int     `json:"id"`
-		Title         string  `json:"title"`
-		OriginalTitle string  `json:"original_title"`
-		ReleaseDate   string  `json:"release_date"`
-		Overview      string  `json:"overview"`
-		PosterPath    string  `json:"poster_path"`
-		Popularity    float64 `json:"popularity"`
-		VoteCount     int     `json:"vote_count"`
-	} `json:"parts"`
+	Parts []collectionPart `json:"parts"`
+}
+
+type collectionDetailsResponse struct {
+	ID           int              `json:"id"`
+	Name         string           `json:"name"`
+	Overview     string           `json:"overview"`
+	PosterPath   string           `json:"poster_path"`
+	BackdropPath string           `json:"backdrop_path"`
+	Parts        []collectionPart `json:"parts"`
 }
 
 type castMember struct {
@@ -672,6 +710,98 @@ func (c *Client) SearchMovies(ctx context.Context, query string, year int) ([]Ca
 		})
 	}
 	return candidates, nil
+}
+
+// SearchCollections busca colecciones por nombre en TMDB.
+func (c *Client) SearchCollections(ctx context.Context, query string) ([]CollectionCandidate, error) {
+	query = strings.TrimSpace(query)
+	if query == "" {
+		return nil, errors.New("metadata: el nombre de la colección no puede estar vacío")
+	}
+
+	params := url.Values{}
+	params.Set("language", c.languageCode())
+	params.Set("query", query)
+	params.Set("include_adult", "false")
+
+	var response collectionSearchResponse
+	if err := c.getCachedJSON(ctx, "/search/collection", params, &response); err != nil {
+		return nil, err
+	}
+	if len(response.Results) == 0 {
+		return nil, ErrNotFound
+	}
+
+	candidates := make([]CollectionCandidate, 0, len(response.Results))
+	for _, result := range response.Results {
+		if len(candidates) == 10 {
+			break
+		}
+		candidates = append(candidates, CollectionCandidate{
+			TMDBID:    result.ID,
+			Name:      result.Name,
+			Overview:  result.Overview,
+			PosterURL: c.imageURLSize(result.PosterPath, "w185"),
+		})
+	}
+	return candidates, nil
+}
+
+// CollectionDetails devuelve la ficha de una colección y sus películas
+// ordenadas por fecha de estreno; las que no tienen fecha van al final.
+func (c *Client) CollectionDetails(ctx context.Context, id int) (*CollectionInfo, error) {
+	if id <= 0 {
+		return nil, errors.New("metadata: el id de la colección no es válido")
+	}
+
+	params := url.Values{}
+	params.Set("language", c.languageCode())
+
+	path := "/collection/" + strconv.Itoa(id)
+	var response collectionDetailsResponse
+	if err := c.getCachedJSON(ctx, path, params, &response); err != nil {
+		return nil, err
+	}
+
+	info := &CollectionInfo{
+		TMDBID:      response.ID,
+		Name:        response.Name,
+		Overview:    response.Overview,
+		PosterURL:   c.imageURLSize(response.PosterPath, "w342"),
+		BackdropURL: c.imageURLSize(response.BackdropPath, "w1280"),
+		Parts:       make([]Candidate, 0, len(response.Parts)),
+	}
+	if strings.TrimSpace(info.Overview) == "" {
+		if overview, _ := c.translatedOverview(ctx, path+"/translations"); overview != "" {
+			info.Overview = overview
+		}
+	}
+
+	parts := append([]collectionPart(nil), response.Parts...)
+	sort.SliceStable(parts, func(i, j int) bool {
+		left := strings.TrimSpace(parts[i].ReleaseDate)
+		right := strings.TrimSpace(parts[j].ReleaseDate)
+		if left == "" {
+			return false
+		}
+		if right == "" {
+			return true
+		}
+		return left < right
+	})
+	for _, part := range parts {
+		info.Parts = append(info.Parts, Candidate{
+			TMDBID:        part.ID,
+			Title:         part.Title,
+			OriginalTitle: part.OriginalTitle,
+			Year:          releaseYear(part.ReleaseDate),
+			Overview:      part.Overview,
+			PosterURL:     c.imageURLSize(part.PosterPath, "w185"),
+			Popularity:    part.Popularity,
+			VoteCount:     part.VoteCount,
+		})
+	}
+	return info, nil
 }
 
 // MovieCollection devuelve las películas de la colección (saga) a la que

@@ -7,6 +7,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.41.0] - 2026-10-30
+
+### Added
+
+- Server: collections can now be identified with TMDB. Administrators can search collections, link them or unlink manual ones, and the scanner fills in the synopsis of automatic collections once.
+- Server: the collection page includes the TMDB identifier and the films in the saga that are missing from the library visible to the user.
+
 ## [0.40.1] - 2026-10-30
 
 ### Fixed
