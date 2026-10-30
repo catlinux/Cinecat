@@ -6,15 +6,14 @@ Priorities: 🔴 blocking · 🟠 next phase · 🟢 later.
 
 This file contains only work that is still open. Published work is in the [CHANGELOG](CHANGELOG.en.md); the full status is in [status](docs/en/status.md).
 
-## 🔴 Blocking for multi-user use
+## 🔴 Before opening the instance to other users
 
-- **Users cannot be created.** There is no endpoint or screen to create, list, change role, reset password or delete users. Only the initial `admin` and `--hash-password` exist.
-- **No per-library permissions.** Any authenticated user sees every library, item, series and collection. The `libraries` table has no owner or ACL.
+- **Verify per-library access with a real browser** (U4 of the [plan](.agents/plans/usuarios-permisos/usuarios-permisos.PLAN.md)) and review U2 as a whole: a missed filter would leak content. The automatic leak test and the walkthrough with the real database already passed.
 
 ## 🟠 Next phase
 
 - **Identify collections on TMDB:** manual search, synopsis and "missing from your library".
-- **Users and profile:** user CRUD, own profile, portal customisation, open sessions and history.
+- **User profile:** portal customisation and history (user management and open sessions already exist).
 - **Activity** (playback history) in administration.
 - **Copy backups outside the volume** (another disk or machine): today they live in `/data/backups`, next to the database.
 - **User-uploaded subtitles:** needs a design first; today only embedded text and `.srt`/`.vtt`/`.ass` files next to the video are read.

@@ -6,15 +6,14 @@ Prioridades: 🔴 bloqueante · 🟠 próxima fase · 🟢 más adelante.
 
 Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en el [CHANGELOG](CHANGELOG.md); el estado completo, en [estado](docs/es/estado.md).
 
-## 🔴 Bloqueante para uso multiusuario
+## 🔴 Antes de abrir la instancia a otros usuarios
 
-- **No se pueden crear usuarios.** No hay endpoint ni pantalla para crear, listar, cambiar rol, restablecer contraseña o borrar usuarios. Solo existe el `admin` inicial y `--hash-password`.
-- **No hay permisos por biblioteca.** Cualquier usuario autenticado ve todas las bibliotecas, ítems, series y colecciones. La tabla `libraries` no tiene propietario ni ACL.
+- **Verificar el acceso por biblioteca con un navegador real** (U4 del [plan](.agents/plans/usuarios-permisos/usuarios-permisos.PLAN.md)) y revisión del conjunto de U2: un olvido de filtro sería una fuga de contenido. La prueba automática de fugas y el recorrido con la base real ya pasaron.
 
 ## 🟠 Próxima fase
 
 - **Identificar colecciones en TMDB:** búsqueda manual, sinopsis y «faltan en tu biblioteca».
-- **Usuarios y perfil:** CRUD de usuarios, perfil propio, personalización del portal, sesiones abiertas e historial.
+- **Perfil de usuario:** personalización del portal e historial (la gestión de usuarios y las sesiones abiertas ya existen).
 - **Actividad** (historial de reproducciones) en administración.
 - **Copiar las copias de seguridad fuera del volumen** (otro disco o equipo): hoy están en `/data/backups`, junto a la base.
 - **Subtítulos subidos por el usuario:** requiere diseño previo; hoy solo se leen incrustados de texto o archivos `.srt`/`.vtt`/`.ass` junto al vídeo.
