@@ -20,6 +20,17 @@ internal val NightGold = Color(0xFFE0B54A)
 internal val NightOrange = Color(0xFFF08A4B)
 internal val NightText = Color(0xFFF4E6D2)
 
+// Sin estos contenedores y superficies Material rellena con su paleta base
+// (lila y rosa), que asoma en la pastilla del menú lateral y en los diálogos.
+internal val GoldSoft = Color(0xFFF2E2B8)
+internal val OrangeSoft = Color(0xFFF4D3BD)
+internal val CreamDeep = Color(0xFFF3ECDD)
+internal val Line = Color(0xFFD8CBB8)
+internal val NightGoldSoft = Color(0xFF4A3A1C)
+internal val NightOrangeSoft = Color(0xFF5C2A14)
+internal val NightSurfaceHigh = Color(0xFF332226)
+internal val NightLine = Color(0xFF5E4A4D)
+
 internal val LightColors = lightColorScheme(
     primary = Maroon,
     onPrimary = TextOnDark,
@@ -27,14 +38,26 @@ internal val LightColors = lightColorScheme(
     onPrimaryContainer = TextOnDark,
     secondary = Gold,
     onSecondary = Ink,
+    secondaryContainer = GoldSoft,
+    onSecondaryContainer = Maroon,
     tertiary = Orange,
     onTertiary = TextOnDark,
+    tertiaryContainer = OrangeSoft,
+    onTertiaryContainer = MaroonDark,
     background = Cream,
     onBackground = Ink,
     surface = CreamLight,
     onSurface = Ink,
     surfaceVariant = CreamLight,
-    onSurfaceVariant = Ink
+    onSurfaceVariant = Ink,
+    surfaceTint = Maroon,
+    surfaceContainerLowest = CreamLight,
+    surfaceContainerLow = CreamLight,
+    surfaceContainer = Cream,
+    surfaceContainerHigh = CreamDeep,
+    surfaceContainerHighest = CreamDeep,
+    outline = Line,
+    outlineVariant = Line
 )
 
 internal val DarkColors = darkColorScheme(
@@ -44,12 +67,24 @@ internal val DarkColors = darkColorScheme(
     onPrimaryContainer = TextOnDark,
     secondary = NightGold,
     onSecondary = NightBackground,
+    secondaryContainer = NightGoldSoft,
+    onSecondaryContainer = NightText,
     tertiary = NightOrange,
     onTertiary = NightBackground,
+    tertiaryContainer = NightOrangeSoft,
+    onTertiaryContainer = NightText,
     background = NightBackground,
     onBackground = NightText,
     surface = NightSurface,
     onSurface = NightText,
     surfaceVariant = NightSurface,
-    onSurfaceVariant = NightText
+    onSurfaceVariant = NightText,
+    surfaceTint = NightPrimary,
+    surfaceContainerLowest = NightBackground,
+    surfaceContainerLow = NightSurface,
+    surfaceContainer = NightSurface,
+    surfaceContainerHigh = NightSurfaceHigh,
+    surfaceContainerHighest = NightSurfaceHigh,
+    outline = NightLine,
+    outlineVariant = NightLine
 )
