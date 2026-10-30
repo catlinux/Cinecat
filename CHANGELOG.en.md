@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.40.1] - 2026-10-30
+
+### Fixed
+
+- Scanner: when a file is converted to another format with a different extension and both coexist during the conversion, once the original disappears its progress, watched state, lists and preferences move to the new item instead of being lost. Only when there is a single successor in the same folder.
+
 ## [0.40.0] - 2026-10-30
 
 ### Added

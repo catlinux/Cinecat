@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.40.1] - 2026-10-30
+
+### Corregido
+
+- Escáner: si un archivo se convierte a otro formato con otra extensión y durante la conversión conviven ambos, al desaparecer el original su progreso, vistos, listas y preferencias pasan a la ficha nueva en lugar de perderse. Solo si hay una única sucesora en la misma carpeta.
+
 ## [0.40.0] - 2026-10-30
 
 ### Añadido

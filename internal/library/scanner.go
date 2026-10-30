@@ -378,6 +378,7 @@ func (s *Scanner) pruneLibrary(
 		return fmt.Errorf("library: listar ítems para podar: %w", err)
 	}
 	ids := make([]int64, 0)
+	prunedPaths := make(map[int64]string)
 	for rows.Next() {
 		var id int64
 		var path string
@@ -400,6 +401,7 @@ func (s *Scanner) pruneLibrary(
 		}
 		if !skipped {
 			ids = append(ids, id)
+			prunedPaths[id] = cleanPath
 		}
 	}
 	if err := rows.Err(); err != nil {
@@ -421,6 +423,9 @@ func (s *Scanner) pruneLibrary(
 	}
 	defer func() { _ = tx.Rollback() }()
 	for _, id := range ids {
+		if err := transferToSuccessor(ctx, tx, libraryID, scannedRoots, id, prunedPaths[id], seen); err != nil {
+			return err
+		}
 		if _, err := tx.ExecContext(ctx, `DELETE FROM media_items WHERE id = ?`, id); err != nil {
 			return fmt.Errorf("library: borrar ítem %d: %w", id, err)
 		}

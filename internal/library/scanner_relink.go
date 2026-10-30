@@ -1,4 +1,4 @@
-package library
+﻿package library
 
 import (
 	"context"
@@ -22,8 +22,8 @@ type relinkCandidate struct {
 }
 
 // relinkMediaItem conserva la ficha cuando un archivo se renombra o cambia de
-// extensión dentro de la misma carpeta. Solo actúa si la ruta nueva no tiene
-// fila y hay una única candidata cuya ruta antigua ya no existe.
+// extensiÃ³n dentro de la misma carpeta. Solo actÃºa si la ruta nueva no tiene
+// fila y hay una Ãºnica candidata cuya ruta antigua ya no existe.
 func (s *Scanner) relinkMediaItem(
 	ctx context.Context,
 	libraryID int64,
@@ -140,8 +140,8 @@ func mediaFromCandidate(candidate relinkCandidate, root string) Media {
 		media.Episode = int(candidate.episode.Int64)
 	}
 
-	// Las filas antiguas pueden no tener algún dato; se completa con el nombre
-	// de la ruta relativa, que es la misma fuente que usa el escáner.
+	// Las filas antiguas pueden no tener algÃºn dato; se completa con el nombre
+	// de la ruta relativa, que es la misma fuente que usa el escÃ¡ner.
 	needsParse := media.Title == "" || media.Kind == "" ||
 		!candidate.year.Valid || media.Year == 0
 	if media.Kind == KindEpisode {
@@ -187,4 +187,100 @@ func matchesMedia(old, current Media) bool {
 
 func normalizeMediaTitle(title string) string {
 	return strings.ToLower(strings.TrimSpace(title))
+}
+
+// userStateTables guardan datos de usuario ligados a una ficha. Su clave
+// primaria incluye media_item_id, asÃ­ que con UPDATE OR IGNORE el estado del
+// sucesor gana si ya lo tenÃ­a.
+var userStateTables = []string{
+	"playback_state", "watch_state", "playback_progress",
+	"collection_items", "item_preferences", "item_lists",
+}
+
+// transferToSuccessor traslada el estado de usuario de una ficha que se va a
+// podar a la ficha vista en este escaneo que la sustituye. Cubre la conversiÃ³n
+// de un archivo a otro formato con otra extensiÃ³n: durante el escaneo ambos
+// conviven, la ficha nueva nace aparte y la vieja se poda al desaparecer su
+// archivo. Solo actÃºa si hay una Ãºnica sucesora en la misma carpeta, con el
+// mismo nombre base o, si no, con el mismo tÃ­tulo, aÃ±o y episodio.
+func transferToSuccessor(
+	ctx context.Context,
+	tx *sql.Tx,
+	libraryID int64,
+	scannedRoots []string,
+	oldID int64,
+	oldPath string,
+	seen map[string]bool,
+) error {
+	root := ""
+	for _, candidate := range scannedRoots {
+		if pathWithin(candidate, oldPath) {
+			root = candidate
+			break
+		}
+	}
+	if root == "" {
+		return nil
+	}
+
+	var old relinkCandidate
+	if err := tx.QueryRowContext(ctx,
+		`SELECT id, path, title, year, kind, season, episode FROM media_items WHERE id = ?`, oldID,
+	).Scan(&old.id, &old.path, &old.title, &old.year, &old.kind, &old.season, &old.episode); err != nil {
+		return fmt.Errorf("library: leer %q para trasladar: %w", oldPath, err)
+	}
+
+	rows, err := tx.QueryContext(ctx, `
+		SELECT id, path, title, year, kind, season, episode
+		  FROM media_items
+		 WHERE library_id = ? AND id <> ?`, libraryID, oldID)
+	if err != nil {
+		return fmt.Errorf("library: listar sucesoras de %q: %w", oldPath, err)
+	}
+	defer rows.Close()
+
+	dir := filepath.Dir(oldPath)
+	oldBase := strings.TrimSuffix(filepath.Base(oldPath), filepath.Ext(oldPath))
+	oldMedia := mediaFromCandidate(old, root)
+
+	var exact, sameMetadata []int64
+	for rows.Next() {
+		var c relinkCandidate
+		if err := rows.Scan(&c.id, &c.path, &c.title, &c.year, &c.kind, &c.season, &c.episode); err != nil {
+			return fmt.Errorf("library: leer sucesora de %q: %w", oldPath, err)
+		}
+		cPath := filepath.Clean(c.path)
+		if filepath.Dir(cPath) != dir || !seen[cPath] {
+			continue
+		}
+		base := strings.TrimSuffix(filepath.Base(cPath), filepath.Ext(cPath))
+		if strings.EqualFold(base, oldBase) {
+			exact = append(exact, c.id)
+			continue
+		}
+		if matchesMedia(oldMedia, mediaFromCandidate(c, root)) {
+			sameMetadata = append(sameMetadata, c.id)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("library: recorrer sucesoras de %q: %w", oldPath, err)
+	}
+	rows.Close()
+
+	successors := exact
+	if len(successors) == 0 {
+		successors = sameMetadata
+	}
+	if len(successors) != 1 {
+		return nil
+	}
+	for _, table := range userStateTables {
+		if _, err := tx.ExecContext(ctx,
+			"UPDATE OR IGNORE "+table+" SET media_item_id = ? WHERE media_item_id = ?",
+			successors[0], oldID,
+		); err != nil {
+			return fmt.Errorf("library: trasladar %s de %q: %w", table, oldPath, err)
+		}
+	}
+	return nil
 }

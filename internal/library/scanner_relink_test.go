@@ -241,3 +241,42 @@ func TestScannerNoReenlazaSiElOriginalSigueExistiendo(t *testing.T) {
 		t.Fatalf("la copia debe tener una ficha nueva, no reutilizar %d", oldID)
 	}
 }
+
+func TestScannerTrasladaEstadoCuandoConvivenYSePodaElOriginal(t *testing.T) {
+	ctx := context.Background()
+	db := openTestDB(t)
+	root := t.TempDir()
+	oldPath := filepath.Join(root, "Pelicula (2010) x264.mp4")
+	newPath := filepath.Join(root, "Pelicula (2010) x265.mkv")
+	writeFile(t, oldPath)
+
+	libraryID := createLibrary(t, db, root)
+	addScannerLibraryPath(t, db, libraryID, root)
+	scanner := New(db).WithStableAge(0)
+	if _, err := scanner.Scan(ctx); err != nil {
+		t.Fatalf("primer Scan: %v", err)
+	}
+	oldID := mediaItemID(t, db, oldPath)
+	if _, err := db.Exec(`INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)`,
+		"ana", "x", "user"); err != nil {
+		t.Fatalf("crear usuario: %v", err)
+	}
+	userID := progressUserID(t, db, "ana")
+	setProgressRow(t, db, userID, oldID, 120, 600, "2026-10-26T10:00:00Z")
+
+	writeFile(t, newPath)
+	if _, err := scanner.Scan(ctx); err != nil {
+		t.Fatalf("Scan con ambos archivos: %v", err)
+	}
+	newID := mediaItemID(t, db, newPath)
+	if err := os.Remove(oldPath); err != nil {
+		t.Fatalf("borrar original: %v", err)
+	}
+	if _, err := scanner.Scan(ctx); err != nil {
+		t.Fatalf("Scan tras borrar el original: %v", err)
+	}
+	if count := countRows(t, &libraryTestServer{db: db},
+		`SELECT count(*) FROM playback_progress WHERE media_item_id = ?`, newID); count != 1 {
+		t.Fatalf("el progreso debe pasar a la ficha nueva %d: %d", newID, count)
+	}
+}
