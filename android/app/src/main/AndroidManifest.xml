@@ -29,6 +29,14 @@
             android:name=".update.UpdateInstallReceiver"
             android:exported="false" />
 
+        <receiver
+            android:name=".update.UpdateRelaunchReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
         <activity
             android:name=".MainActivity"
             android:banner="@drawable/tv_banner"

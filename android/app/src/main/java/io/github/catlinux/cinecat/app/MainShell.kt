@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Home
@@ -22,11 +21,14 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
@@ -148,24 +150,22 @@ fun MainShell(
                 NavigationRail {
                     Spacer(Modifier.height(8.dp))
                     tabs.forEach { tab ->
-                        NavigationRailItem(
+                        RailItem(
                             selected = currentDestination.hasRoute(tab.route::class),
                             onClick = { navigateTopLevel(tab.route) },
-                            modifier = Modifier.focusRing(RoundedCornerShape(16.dp)),
+                            isTelevision = isTelevision,
                             icon = { TabIcon(tab) },
-                            label = { Text(stringResource(tab.labelRes)) },
-                            alwaysShowLabel = true
+                            label = { Text(stringResource(tab.labelRes)) }
                         )
                     }
                     // En el riel la cuenta va aquí: en la TV el icono de la cabecera solo se
                     // alcanzaba con el mando recorriendo la fila entera hacia la derecha.
-                    NavigationRailItem(
+                    RailItem(
                         selected = false,
                         onClick = { navController.navigate(Account) },
-                        modifier = Modifier.focusRing(RoundedCornerShape(16.dp)),
+                        isTelevision = isTelevision,
                         icon = { Icon(Icons.Filled.AccountCircle, contentDescription = null) },
-                        label = { Text(stringResource(R.string.account_title)) },
-                        alwaysShowLabel = true
+                        label = { Text(stringResource(R.string.account_title)) }
                     )
                 }
             }
@@ -313,6 +313,35 @@ fun MainShell(
             }
         }
     }
+}
+
+@Composable
+private fun RailItem(
+    selected: Boolean,
+    onClick: () -> Unit,
+    isTelevision: Boolean,
+    icon: @Composable () -> Unit,
+    label: @Composable () -> Unit
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val focused by interactionSource.collectIsFocusedAsState()
+    val defaultColors = NavigationRailItemDefaults.colors()
+    val colors = if (isTelevision && focused) {
+        defaultColors.copy(
+            selectedIndicatorColor = MaterialTheme.colorScheme.tertiaryContainer
+        )
+    } else {
+        defaultColors
+    }
+    NavigationRailItem(
+        selected = selected || (isTelevision && focused),
+        onClick = onClick,
+        interactionSource = interactionSource,
+        colors = colors,
+        icon = icon,
+        label = label,
+        alwaysShowLabel = true
+    )
 }
 
 @Composable

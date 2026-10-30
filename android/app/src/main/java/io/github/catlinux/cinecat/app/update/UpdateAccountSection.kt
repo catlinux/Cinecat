@@ -51,6 +51,7 @@ fun AccountUpdateSection(
     val scope = rememberCoroutineScope()
     var showPermission by remember { mutableStateOf(false) }
     var permissionFallback by remember { mutableStateOf(false) }
+    val actionModifier = if (isTelevision) Modifier else Modifier.fillMaxWidth()
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -75,7 +76,7 @@ fun AccountUpdateSection(
         SecondaryActionButton(
             isTelevision = isTelevision,
             label = stringResource(R.string.update_check),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = actionModifier,
             onClick = { updater.check(force = true) }
         )
         when (val current = state) {
@@ -107,7 +108,7 @@ fun AccountUpdateSection(
                 SecondaryActionButton(
                     isTelevision = isTelevision,
                     label = stringResource(R.string.update_download),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = actionModifier,
                     onClick = { updater.download(current.update) }
                 )
             }
@@ -132,7 +133,7 @@ fun AccountUpdateSection(
                 PrimaryActionButton(
                     isTelevision = isTelevision,
                     label = stringResource(R.string.update_install),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = actionModifier,
                     onClick = {
                         if (!canInstallPackages(context)) {
                             showPermission = true
@@ -157,7 +158,7 @@ fun AccountUpdateSection(
                 SecondaryActionButton(
                     isTelevision = isTelevision,
                     label = stringResource(R.string.update_retry),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = actionModifier,
                     onClick = { updater.check(force = true) }
                 )
             }

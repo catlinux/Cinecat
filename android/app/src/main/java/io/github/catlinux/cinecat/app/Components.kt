@@ -88,14 +88,16 @@ fun PrimaryActionButton(
     label: String,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    fillWidth: Boolean = false,
     onClick: () -> Unit
 ) {
     if (isTelevision) {
         val shape = RoundedCornerShape(10.dp)
         TvButton(
             onClick = onClick,
-            modifier = modifier,
+            modifier = if (fillWidth) modifier.fillMaxWidth() else modifier,
             enabled = enabled,
+            scale = TvButtonDefaults.scale(focusedScale = 1f),
             shape = TvButtonDefaults.shape(shape = shape),
             colors = TvButtonDefaults.colors(
                 containerColor = MaterialTheme.colorScheme.primary,
@@ -134,14 +136,16 @@ fun SecondaryActionButton(
     label: String,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    fillWidth: Boolean = false,
     onClick: () -> Unit
 ) {
     if (isTelevision) {
         val shape = RoundedCornerShape(10.dp)
         TvButton(
             onClick = onClick,
-            modifier = modifier,
+            modifier = if (fillWidth) modifier.fillMaxWidth() else modifier,
             enabled = enabled,
+            scale = TvButtonDefaults.scale(focusedScale = 1f),
             shape = TvButtonDefaults.shape(shape = shape),
             colors = TvButtonDefaults.colors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant,
