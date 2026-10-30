@@ -107,7 +107,8 @@
     <string name="read_more">Leer más</string>
     <string name="read_less">Leer menos</string>
     <string name="no_synopsis">Sin sinopsis</string>
-    <string name="list_separator">, </string>
+    <string name="list_separator">", "</string>
+    <string name="meta_separator">" · "</string>
     <string name="rating_format">★ %1$s</string>
     <string name="backdrop_description">Fondo de %1$s</string>
     <string name="collection_empty">Esta colección todavía no tiene películas</string>

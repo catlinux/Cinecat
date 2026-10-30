@@ -1,10 +1,12 @@
 package io.github.catlinux.cinecat.app
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,12 +15,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -35,9 +42,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -127,6 +138,183 @@ fun DetailPoster(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxWidth().fillMaxHeight()
             )
+        }
+    }
+}
+
+/**
+ * Cabecera de ficha para TV: cartel, datos, todas las acciones en una fila y
+ * sinopsis, sobre el fondo. El foco baja siempre al primer elemento que el
+ * llamador indique para que no salte a una fila lejana.
+ */
+@Composable
+fun TvDetailHeader(
+    title: String,
+    backdropUrl: String?,
+    posterUrl: String?,
+    meta: String,
+    overview: String?,
+    primaryLabel: String?,
+    initialFocusRequester: FocusRequester,
+    nextFocusRequester: FocusRequester?,
+    backFocusRequester: FocusRequester,
+    favorite: Boolean,
+    watchlist: Boolean,
+    watched: Boolean,
+    watchedLabel: String,
+    onPrimary: (() -> Unit)?,
+    onToggleFavorite: () -> Unit,
+    onToggleWatchlist: () -> Unit,
+    onToggleWatched: () -> Unit
+) {
+    val showPrimary = primaryLabel != null && onPrimary != null
+    Box(modifier = Modifier.fillMaxWidth()) {
+        DetailBackdrop(title = title, url = backdropUrl, height = 380.dp)
+        // Velo crema opaco a la izquierda: los datos y la sinopsis van encima y,
+        // sobre fondos claros, no se leían.
+        val veil = MaterialTheme.colorScheme.background
+        // matchParentSize: dentro de un LazyColumn fillMaxSize no tiene altura máxima.
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(
+                    Brush.horizontalGradient(
+                        0f to veil.copy(alpha = 0.96f),
+                        0.6f to veil.copy(alpha = 0.88f),
+                        1f to veil.copy(alpha = 0.35f)
+                    )
+                )
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 28.dp, end = 28.dp, top = 72.dp, bottom = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(18.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            DetailPoster(
+                title = title,
+                url = posterUrl,
+                width = 180.dp
+            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (meta.isNotBlank()) {
+                    Text(
+                        text = meta,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (showPrimary) {
+                        Button(
+                            onClick = onPrimary,
+                            modifier = Modifier
+                                .focusRequester(initialFocusRequester)
+                                .tvActionFocus(backFocusRequester, nextFocusRequester)
+                                .focusRing(RoundedCornerShape(50))
+                        ) {
+                            Text(primaryLabel)
+                        }
+                    }
+                    val firstActionModifier = if (!showPrimary) {
+                        Modifier.focusRequester(initialFocusRequester)
+                    } else {
+                        Modifier
+                    }
+                    DetailActionChip(
+                        label = stringResource(R.string.favorite),
+                        active = favorite,
+                        modifier = firstActionModifier.tvActionFocus(
+                            backFocusRequester,
+                            nextFocusRequester
+                        ),
+                        icon = {
+                            Icon(
+                                imageVector = if (favorite) {
+                                    Icons.Filled.Favorite
+                                } else {
+                                    Icons.Filled.FavoriteBorder
+                                },
+                                contentDescription = null
+                            )
+                        },
+                        onClick = onToggleFavorite
+                    )
+                    DetailActionChip(
+                        label = stringResource(R.string.watchlist),
+                        active = watchlist,
+                        modifier = Modifier.tvActionFocus(
+                            backFocusRequester,
+                            nextFocusRequester
+                        ),
+                        icon = {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_watchlist),
+                                contentDescription = null
+                            )
+                        },
+                        onClick = onToggleWatchlist
+                    )
+                    DetailActionChip(
+                        label = watchedLabel,
+                        active = watched,
+                        modifier = Modifier.tvActionFocus(
+                            backFocusRequester,
+                            nextFocusRequester
+                        ),
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Filled.CheckCircle,
+                                contentDescription = null
+                            )
+                        },
+                        onClick = onToggleWatched
+                    )
+                }
+                Text(
+                    text = overview?.trim()
+                        .takeIf { !it.isNullOrEmpty() }
+                        ?: stringResource(R.string.no_synopsis),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 4,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun Modifier.tvActionFocus(
+    back: FocusRequester,
+    next: FocusRequester?
+): Modifier {
+    if (!LocalIsTelevision.current) {
+        return this
+    }
+    return focusProperties {
+        up = back
+        if (next != null) {
+            down = next
         }
     }
 }

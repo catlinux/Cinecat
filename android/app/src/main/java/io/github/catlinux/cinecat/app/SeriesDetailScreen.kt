@@ -72,6 +72,7 @@ fun SeriesDetailScreen(
     val state by viewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val actionError = stringResource(R.string.detail_action_error)
+    val backFocusRequester = remember { FocusRequester() }
     val tablet = useNavigationRail(LocalConfiguration.current.screenWidthDp)
     val horizontalPadding = if (tablet) 28.dp else 16.dp
 
@@ -90,26 +91,44 @@ fun SeriesDetailScreen(
                 message = stringResource(R.string.series_detail_error),
                 onRetry = viewModel::retry
             )
-            is SeriesDetailUiState.Ready -> SeriesDetailContent(
-                state = current,
-                tablet = tablet,
-                horizontalPadding = horizontalPadding,
-                onSelectSeason = viewModel::selectSeason,
-                onRetrySeason = viewModel::retrySeason,
-                onToggleFavorite = viewModel::toggleFavorite,
-                onToggleWatchlist = viewModel::toggleWatchlist,
-                onToggleSeriesWatched = viewModel::toggleSeriesWatched,
-                onToggleSeasonWatched = viewModel::toggleSeasonWatched,
-                onToggleEpisodeWatched = viewModel::toggleEpisodeWatched,
-                onPlayEpisode = onPlayEpisode,
-                onOpenSeries = onOpenSeries
-            )
+            is SeriesDetailUiState.Ready -> if (LocalIsTelevision.current) {
+                TvSeriesDetailContent(
+                    state = current,
+                    horizontalPadding = horizontalPadding,
+                    backFocusRequester = backFocusRequester,
+                    onSelectSeason = viewModel::selectSeason,
+                    onRetrySeason = viewModel::retrySeason,
+                    onToggleFavorite = viewModel::toggleFavorite,
+                    onToggleWatchlist = viewModel::toggleWatchlist,
+                    onToggleSeriesWatched = viewModel::toggleSeriesWatched,
+                    onToggleSeasonWatched = viewModel::toggleSeasonWatched,
+                    onToggleEpisodeWatched = viewModel::toggleEpisodeWatched,
+                    onPlayEpisode = onPlayEpisode,
+                    onOpenSeries = onOpenSeries
+                )
+            } else {
+                SeriesDetailContent(
+                    state = current,
+                    tablet = tablet,
+                    horizontalPadding = horizontalPadding,
+                    onSelectSeason = viewModel::selectSeason,
+                    onRetrySeason = viewModel::retrySeason,
+                    onToggleFavorite = viewModel::toggleFavorite,
+                    onToggleWatchlist = viewModel::toggleWatchlist,
+                    onToggleSeriesWatched = viewModel::toggleSeriesWatched,
+                    onToggleSeasonWatched = viewModel::toggleSeasonWatched,
+                    onToggleEpisodeWatched = viewModel::toggleEpisodeWatched,
+                    onPlayEpisode = onPlayEpisode,
+                    onOpenSeries = onOpenSeries
+                )
+            }
         }
         DetailBackButton(
             onBack = onBack,
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .padding(16.dp)
+                .focusRequester(backFocusRequester)
         )
         SnackbarHost(
             hostState = snackbarHostState,
@@ -472,11 +491,12 @@ private fun SeriesActions(
 }
 
 @Composable
-private fun SeasonTabs(
+internal fun SeasonTabs(
     seasons: List<Season>,
     selectedSeason: Int?,
     horizontalPadding: androidx.compose.ui.unit.Dp,
-    onSelectSeason: (Int) -> Unit
+    onSelectSeason: (Int) -> Unit,
+    firstTabFocusRequester: FocusRequester? = null
 ) {
     val selectedIndex = seasons.indexOfFirst { it.season == selectedSeason }
         .coerceAtLeast(0)
@@ -500,7 +520,13 @@ private fun SeasonTabs(
             Tab(
                 selected = index == selectedIndex,
                 onClick = { onSelectSeason(season.season) },
-                modifier = Modifier.focusRing(RoundedCornerShape(8.dp)),
+                modifier = if (index == 0 && firstTabFocusRequester != null) {
+                    Modifier
+                        .focusRequester(firstTabFocusRequester)
+                        .focusRing(RoundedCornerShape(8.dp))
+                } else {
+                    Modifier.focusRing(RoundedCornerShape(8.dp))
+                },
                 text = {
                     Text(
                         text = labels[index],
@@ -514,7 +540,7 @@ private fun SeasonTabs(
 }
 
 @Composable
-private fun SeasonHeader(
+internal fun SeasonHeader(
     season: Season?,
     detail: io.github.catlinux.cinecat.core.api.SeasonDetail,
     horizontalPadding: androidx.compose.ui.unit.Dp,
@@ -564,7 +590,7 @@ private fun SeasonHeader(
 }
 
 @Composable
-private fun EpisodeRow(
+internal fun EpisodeRow(
     item: MediaItem,
     horizontalPadding: androidx.compose.ui.unit.Dp,
     onClick: () -> Unit,
@@ -691,7 +717,7 @@ private fun EpisodeRow(
     }
 }
 
-private fun seasonFor(
+internal fun seasonFor(
     state: SeriesDetailUiState.Ready,
     seasonNumber: Int
 ): Season? = state.seasons.firstOrNull { it.season == seasonNumber }

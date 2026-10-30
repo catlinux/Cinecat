@@ -36,7 +36,8 @@ import io.github.catlinux.cinecat.core.api.tmdbImage
 fun MediaPosterCard(
     item: MediaItem,
     width: Dp,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     PosterCard(
         title = item.title,
@@ -44,7 +45,8 @@ fun MediaPosterCard(
         posterUrl = tmdbImage(item.posterUrl, "w342"),
         progress = item.progress,
         width = width,
-        onClick = onClick
+        onClick = onClick,
+        modifier = modifier
     )
 }
 
@@ -52,7 +54,8 @@ fun MediaPosterCard(
 fun SeriesPosterCard(
     series: Series,
     width: Dp,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     PosterCard(
         title = series.title,
@@ -60,7 +63,8 @@ fun SeriesPosterCard(
         posterUrl = tmdbImage(series.posterUrl, "w342"),
         progress = null,
         width = width,
-        onClick = onClick
+        onClick = onClick,
+        modifier = modifier
     )
 }
 
@@ -128,10 +132,11 @@ private fun PosterCard(
     posterUrl: String?,
     progress: PlaybackProgress?,
     width: Dp,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .width(width)
             .clickable(onClick = onClick)
             .tvFocusPadding()

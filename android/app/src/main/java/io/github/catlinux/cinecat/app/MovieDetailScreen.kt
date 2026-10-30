@@ -60,6 +60,7 @@ fun MovieDetailScreen(
     val state by viewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val actionError = stringResource(R.string.detail_action_error)
+    val backFocusRequester = remember { FocusRequester() }
     val tablet = useNavigationRail(LocalConfiguration.current.screenWidthDp)
     val horizontalPadding = if (tablet) 28.dp else 16.dp
 
@@ -78,23 +79,38 @@ fun MovieDetailScreen(
                 message = stringResource(R.string.movie_detail_error),
                 onRetry = viewModel::retry
             )
-            is MovieDetailUiState.Ready -> MovieDetailContent(
-                state = current,
-                tablet = tablet,
-                horizontalPadding = horizontalPadding,
-                onPlay = onPlay,
-                onOpenMovie = onOpenMovie,
-                onOpenCollection = onOpenCollection,
-                onToggleFavorite = viewModel::toggleFavorite,
-                onToggleWatchlist = viewModel::toggleWatchlist,
-                onToggleWatched = viewModel::toggleWatched
-            )
+            is MovieDetailUiState.Ready -> if (LocalIsTelevision.current) {
+                TvMovieDetailContent(
+                    state = current,
+                    horizontalPadding = horizontalPadding,
+                    backFocusRequester = backFocusRequester,
+                    onPlay = onPlay,
+                    onOpenMovie = onOpenMovie,
+                    onOpenCollection = onOpenCollection,
+                    onToggleFavorite = viewModel::toggleFavorite,
+                    onToggleWatchlist = viewModel::toggleWatchlist,
+                    onToggleWatched = viewModel::toggleWatched
+                )
+            } else {
+                MovieDetailContent(
+                    state = current,
+                    tablet = tablet,
+                    horizontalPadding = horizontalPadding,
+                    onPlay = onPlay,
+                    onOpenMovie = onOpenMovie,
+                    onOpenCollection = onOpenCollection,
+                    onToggleFavorite = viewModel::toggleFavorite,
+                    onToggleWatchlist = viewModel::toggleWatchlist,
+                    onToggleWatched = viewModel::toggleWatched
+                )
+            }
         }
         DetailBackButton(
             onBack = onBack,
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .padding(16.dp)
+                .focusRequester(backFocusRequester)
         )
         SnackbarHost(
             hostState = snackbarHostState,
