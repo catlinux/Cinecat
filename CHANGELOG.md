@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.40.0] - 2026-10-30
+
+### Añadido
+
+- Android TV: Películas y Series muestran a la derecha una columna de iniciales (A–Z y #) para saltar al primer título de cada letra; solo aparece con el orden por título. Sin probar aún en la TV.
+
 ## [0.39.0] - 2026-10-30
 
 ### Añadido

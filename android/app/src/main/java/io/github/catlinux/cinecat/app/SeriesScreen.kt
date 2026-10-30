@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -108,7 +109,8 @@ fun SeriesScreen(
                     gridState = gridState,
                     horizontalPadding = horizontalPadding,
                     onOpenSeries = onOpenSeries,
-                    onRetry = viewModel::retry
+                    onRetry = viewModel::retry,
+                    ensureLoaded = viewModel::ensureLoaded
                 )
             }
         }
@@ -121,40 +123,50 @@ private fun SeriesGrid(
     gridState: LazyGridState,
     horizontalPadding: androidx.compose.ui.unit.Dp,
     onOpenSeries: (Long) -> Unit,
-    onRetry: () -> Unit
+    onRetry: () -> Unit,
+    ensureLoaded: suspend (Int) -> Unit
 ) {
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 110.dp),
-        state = gridState,
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(
-            start = horizontalPadding,
-            end = horizontalPadding,
-            top = 12.dp,
-            bottom = 24.dp
-        ),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        items(state.paged.items, key = { it.id }) { series ->
-            BoxWithConstraints {
-                SeriesPosterCard(
-                    series = series,
-                    width = maxWidth,
-                    onClick = { onOpenSeries(series.id) }
-                )
+    Row(modifier = Modifier.fillMaxSize()) {
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(minSize = 110.dp),
+            state = gridState,
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight(),
+            contentPadding = PaddingValues(
+                start = horizontalPadding,
+                end = horizontalPadding,
+                top = 12.dp,
+                bottom = 24.dp
+            ),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            items(state.paged.items, key = { it.id }) { series ->
+                BoxWithConstraints {
+                    SeriesPosterCard(
+                        series = series,
+                        width = maxWidth,
+                        onClick = { onOpenSeries(series.id) }
+                    )
+                }
+            }
+            if (state.paged.loading && state.paged.items.isNotEmpty()) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    CatalogMoreLoading()
+                }
+            }
+            if (state.paged.error && state.paged.items.isNotEmpty()) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    CatalogMoreError(onRetry = onRetry)
+                }
             }
         }
-        if (state.paged.loading && state.paged.items.isNotEmpty()) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                CatalogMoreLoading()
-            }
-        }
-        if (state.paged.error && state.paged.items.isNotEmpty()) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                CatalogMoreError(onRetry = onRetry)
-            }
-        }
+        TvLetterIndex(
+            letters = state.letters,
+            gridState = gridState,
+            ensureLoaded = ensureLoaded
+        )
     }
 }
 

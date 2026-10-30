@@ -22,7 +22,6 @@ This file contains only work that is still open. Published work is in the [CHANG
 - **Review the 7-day TMDB TTL** against the current terms before accepting the production cache.
 - **Expose a `transcode` playback mode** in the API; copied or re-encoded HLS still reports `remux`.
 - **Android and Android TV app** (plan in `.agents/plans/apps-android/apps-android.PLAN.md`): Movies, Series, Collections and Search with a TV layout (only the detail page and Account have one); on the phone, smaller posters, untruncated titles and "Collections" on one line; PiP on the phone; store the chosen track on the server; test AVI over HLS on the TV; HLS with AAC 5.1 when the device supports it (today AC-3 is converted to stereo AAC); consider `compileSdk 36`.
-- **Letter index in Movies and Series on TV:** an A–Z and "#" column on the right edge to jump to the first title of each letter; needs the server to report where each letter starts.
 - **Pages of converted files:** when a film is converted from H.264 to H.265 with a different extension, the scanner treats it as new and loses progress and watched state. Probably because the new and old files coexist during the conversion; review `scanner_relink.go`.
 
 ## 🟢 Later

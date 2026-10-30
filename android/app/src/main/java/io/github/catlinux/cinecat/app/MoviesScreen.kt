@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -111,7 +112,8 @@ fun MoviesScreen(
                     gridState = gridState,
                     horizontalPadding = horizontalPadding,
                     onOpenMovie = onOpenMovie,
-                    onRetry = viewModel::retry
+                    onRetry = viewModel::retry,
+                    ensureLoaded = viewModel::ensureLoaded
                 )
             }
         }
@@ -124,40 +126,50 @@ private fun MovieGrid(
     gridState: LazyGridState,
     horizontalPadding: androidx.compose.ui.unit.Dp,
     onOpenMovie: (Long) -> Unit,
-    onRetry: () -> Unit
+    onRetry: () -> Unit,
+    ensureLoaded: suspend (Int) -> Unit
 ) {
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 110.dp),
-        state = gridState,
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(
-            start = horizontalPadding,
-            end = horizontalPadding,
-            top = 12.dp,
-            bottom = 24.dp
-        ),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        items(state.paged.items, key = { it.id }) { item ->
-            BoxWithConstraints {
-                MediaPosterCard(
-                    item = item,
-                    width = maxWidth,
-                    onClick = { onOpenMovie(item.id) }
-                )
+    Row(modifier = Modifier.fillMaxSize()) {
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(minSize = 110.dp),
+            state = gridState,
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight(),
+            contentPadding = PaddingValues(
+                start = horizontalPadding,
+                end = horizontalPadding,
+                top = 12.dp,
+                bottom = 24.dp
+            ),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            items(state.paged.items, key = { it.id }) { item ->
+                BoxWithConstraints {
+                    MediaPosterCard(
+                        item = item,
+                        width = maxWidth,
+                        onClick = { onOpenMovie(item.id) }
+                    )
+                }
+            }
+            if (state.paged.loading && state.paged.items.isNotEmpty()) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    CatalogMoreLoading()
+                }
+            }
+            if (state.paged.error && state.paged.items.isNotEmpty()) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    CatalogMoreError(onRetry = onRetry)
+                }
             }
         }
-        if (state.paged.loading && state.paged.items.isNotEmpty()) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                CatalogMoreLoading()
-            }
-        }
-        if (state.paged.error && state.paged.items.isNotEmpty()) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                CatalogMoreError(onRetry = onRetry)
-            }
-        }
+        TvLetterIndex(
+            letters = state.letters,
+            gridState = gridState,
+            ensureLoaded = ensureLoaded
+        )
     }
 }
 

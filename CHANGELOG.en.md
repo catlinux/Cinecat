@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.40.0] - 2026-10-30
+
+### Added
+
+- Android TV: Movies and Series show a column of initials (A–Z and #) on the right to jump to the first title of each letter; it only appears when sorted by title. Not yet tested on the TV.
+
 ## [0.39.0] - 2026-10-30
 
 ### Added
