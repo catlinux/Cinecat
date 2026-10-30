@@ -1,10 +1,10 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { ApiError } from '$lib/api';
-import type { CollectionDetail, ItemsResponse } from '$lib/api';
+import type { CollectionCandidate, CollectionDetail, ItemsResponse } from '$lib/api';
 import { createApiClient } from '$lib/api-factory';
 import { moveItem } from '$lib/collections';
 import { requireSessionToken } from '$lib/session';
-import type { Actions, PageServerLoad } from './$types';
+import type { Action, Actions, PageServerLoad } from './$types';
 
 function collectionID(params: { id?: string }): number | null {
 	const id = Number(params.id);
@@ -27,6 +27,42 @@ function manageFailure(cause: unknown) {
 		}
 		if (cause.status === 404) {
 			return fail(404, { manage: true, message: 'Colección no encontrada.' });
+		}
+	}
+	return fail(502, { manage: true, message: 'No se pudo completar la operación.' });
+}
+
+function identificationFailure(cause: unknown) {
+	if (cause instanceof ApiError) {
+		if (cause.status === 401) {
+			redirect(303, '/login');
+		}
+		if (cause.status === 400) {
+			return fail(400, { manage: true, message: cause.message || 'Datos no válidos.' });
+		}
+		if (cause.status === 403) {
+			return fail(403, {
+				manage: true,
+				message: 'Solo los administradores pueden identificar colecciones.'
+			});
+		}
+		if (cause.status === 404) {
+			return fail(404, { manage: true, message: cause.message || 'Colección no encontrada.' });
+		}
+		if (cause.status === 409) {
+			return fail(409, {
+				manage: true,
+				message: cause.message || 'La colección no se puede identificar.'
+			});
+		}
+		if (cause.status === 503) {
+			return fail(503, {
+				manage: true,
+				message: 'TMDB no está configurado en el servidor'
+			});
+		}
+		if (cause.status === 502) {
+			return fail(502, { manage: true, message: 'No se pudo consultar TMDB' });
 		}
 	}
 	return fail(502, { manage: true, message: 'No se pudo completar la operación.' });
@@ -83,6 +119,20 @@ export const load: PageServerLoad = async ({ params, locals, fetch, url, parent 
 		searchError,
 		manage: isAdmin && (url.searchParams.get('gestionar') === '1' || searchQuery !== '')
 	};
+};
+
+const unmatchAction: Action = async ({ locals, fetch, params }) => {
+	const token = requireSessionToken(locals);
+	const id = collectionID(params);
+	if (id === null) {
+		return fail(404, { manage: true, message: 'Colección no encontrada.' });
+	}
+	try {
+		await createApiClient(fetch).resetCollectionMatch(id, token);
+	} catch (cause) {
+		return identificationFailure(cause);
+	}
+	return { success: true, manage: true, message: 'Colección desvinculada de TMDB.' };
 };
 
 export const actions: Actions = {
@@ -178,6 +228,51 @@ export const actions: Actions = {
 		}
 		return { success: true, manage: true, message: 'Película quitada de la colección.' };
 	},
+
+	candidates: async ({ request, locals, fetch, params }) => {
+		const token = requireSessionToken(locals);
+		const id = collectionID(params);
+		if (id === null) {
+			return fail(404, { manage: true, message: 'Colección no encontrada.' });
+		}
+		const form = await request.formData();
+		const query = String(form.get('q') ?? '').trim();
+		try {
+			const response = await createApiClient(fetch).getCollectionCandidates(id, query, token);
+			return {
+				manage: true,
+				matchSearched: true,
+				matchQuery: query,
+				search: { q: query },
+				candidates: (response.candidates ?? []) as CollectionCandidate[]
+			};
+		} catch (cause) {
+			return identificationFailure(cause);
+		}
+	},
+
+	match: async ({ request, locals, fetch, params }) => {
+		const token = requireSessionToken(locals);
+		const id = collectionID(params);
+		if (id === null) {
+			return fail(404, { manage: true, message: 'Colección no encontrada.' });
+		}
+		const form = await request.formData();
+		const tmdbCollectionID = Number(
+			String(form.get('tmdb_collection_id') ?? form.get('tmdb_id') ?? '')
+		);
+		if (!Number.isInteger(tmdbCollectionID) || tmdbCollectionID <= 0) {
+			return fail(400, { manage: true, message: 'Colección de TMDB no válida.' });
+		}
+		try {
+			await createApiClient(fetch).matchCollection(id, tmdbCollectionID, token);
+		} catch (cause) {
+			return identificationFailure(cause);
+		}
+		return { success: true, manage: true, message: 'Colección identificada en TMDB.' };
+	},
+
+	unmatch: unmatchAction,
 
 	move: async ({ request, locals, fetch, params }) => {
 		const token = requireSessionToken(locals);

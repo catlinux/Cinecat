@@ -3,12 +3,15 @@ import type { MediaItem } from './api';
 import {
 	collectionApiQuery,
 	collectionFiltersActive,
+	collectionIdentificationLabel,
 	firstUnwatched,
 	formatCollectionCount,
+	formatMissingYear,
 	formatViewedCount,
 	hasUnwatched,
 	moveItem,
 	readCollectionFilters,
+	tmdbCollectionURL,
 	viewedCount
 } from './collections';
 
@@ -79,6 +82,31 @@ describe('textos y estado de colecciones', () => {
 		expect(moveItem([1, 2, 3], 3, 'down')).toEqual([1, 2, 3]);
 		expect(moveItem([1], 1, 'up')).toEqual([1]);
 		expect(moveItem([1, 2], 9, 'up')).toEqual([1, 2]);
+	});
+});
+
+describe('identificación de colecciones en TMDB', () => {
+	it('construye el enlace solo con un id válido', () => {
+		expect(tmdbCollectionURL(900)).toBe('https://www.themoviedb.org/collection/900');
+		expect(tmdbCollectionURL(null)).toBeNull();
+		expect(tmdbCollectionURL(0)).toBeNull();
+		expect(tmdbCollectionURL(-3)).toBeNull();
+	});
+
+	it('describe el estado de identificación', () => {
+		expect(collectionIdentificationLabel({ tmdb_collection_id: 900 })).toBe(
+			'Identificada en TMDB con el id 900'
+		);
+		expect(collectionIdentificationLabel({ tmdb_collection_id: null })).toBe(
+			'Sin identificar en TMDB'
+		);
+		expect(collectionIdentificationLabel({})).toBe('Sin identificar en TMDB');
+	});
+
+	it('formatea el año de una película que falta', () => {
+		expect(formatMissingYear(1999)).toBe('1999');
+		expect(formatMissingYear(0)).toBe('Año desconocido');
+		expect(formatMissingYear(Number.NaN)).toBe('Año desconocido');
 	});
 });
 

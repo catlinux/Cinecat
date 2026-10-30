@@ -7,6 +7,13 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.42.0] - 2026-10-31
+
+### Añadido
+
+- Web: la ficha de colección muestra la sinopsis y las películas de la saga que faltan en la biblioteca visible, con su cartel y año.
+- Web: la administración puede buscar colecciones en TMDB, enlazarlas con la ficha y desvincular las manuales, con el estado de identificación y enlace a TMDB.
+
 ## [0.41.0] - 2026-10-30
 
 ### Añadido

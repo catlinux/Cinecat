@@ -12,7 +12,6 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 
 ## 🟠 Próxima fase
 
-- **Identificar colecciones en TMDB desde el cliente web:** búsqueda manual, sinopsis y «faltan en tu biblioteca» (la API ya existe).
 - **Perfil de usuario:** personalización del portal e historial (la gestión de usuarios y las sesiones abiertas ya existen).
 - **Actividad** (historial de reproducciones) en administración.
 - **Copiar las copias de seguridad fuera del volumen** (otro disco o equipo): hoy están en `/data/backups`, junto a la base.

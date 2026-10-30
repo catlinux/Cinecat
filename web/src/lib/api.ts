@@ -236,8 +236,28 @@ export interface CollectionsResponse {
 	offset: number;
 }
 
+export interface MissingMovie {
+	tmdb_id: number;
+	title: string;
+	year: number;
+	poster_url: string;
+}
+
 export interface CollectionDetail extends Collection {
+	tmdb_collection_id: number | null;
+	missing: MissingMovie[];
 	items: MediaItem[];
+}
+
+export interface CollectionCandidate {
+	tmdb_id: number;
+	name: string;
+	overview: string;
+	poster_url: string;
+}
+
+export interface CollectionCandidatesResponse {
+	candidates: CollectionCandidate[];
 }
 
 export type CollectionSort = 'name' | 'added' | 'size';
@@ -1553,6 +1573,38 @@ export class ApiClient {
 
 	async getCollection(id: number, token: string): Promise<CollectionDetail> {
 		return this.get<CollectionDetail>(`/api/v1/collections/${id}`, token);
+	}
+
+	async getCollectionCandidates(
+		id: number,
+		query: string,
+		token: string
+	): Promise<CollectionCandidatesResponse> {
+		const clean = query.trim();
+		const suffix = clean ? `?${new URLSearchParams({ q: clean })}` : '';
+		return this.get<CollectionCandidatesResponse>(
+			`/api/v1/collections/${id}/candidates${suffix}`,
+			token
+		);
+	}
+
+	async matchCollection(
+		id: number,
+		tmdbCollectionID: number,
+		token: string
+	): Promise<CollectionDetail> {
+		return this.put<CollectionDetail>(
+			`/api/v1/collections/${id}/match`,
+			{ tmdb_collection_id: tmdbCollectionID },
+			token
+		);
+	}
+
+	async resetCollectionMatch(id: number, token: string): Promise<CollectionDetail> {
+		return this.request<CollectionDetail>(`/api/v1/collections/${id}/match`, {
+			method: 'DELETE',
+			token
+		});
 	}
 
 	async getAllCollections(token: string): Promise<Collection[]> {

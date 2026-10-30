@@ -7,6 +7,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.42.0] - 2026-10-31
+
+### Added
+
+- Web: the collection page shows the synopsis and the films in the saga that are missing from the visible library, with their poster and year.
+- Web: administrators can search TMDB collections, link them to the page and unlink manual ones, with the identification status and a link to TMDB.
+
 ## [0.41.0] - 2026-10-30
 
 ### Added

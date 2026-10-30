@@ -85,3 +85,24 @@ export function moveItem(
 	[result[index], result[target]] = [result[target], result[index]];
 	return result;
 }
+
+export function tmdbCollectionURL(tmdbID: number | null | undefined): string | null {
+	if (tmdbID === null || tmdbID === undefined || !Number.isInteger(tmdbID) || tmdbID <= 0) {
+		return null;
+	}
+	return `https://www.themoviedb.org/collection/${tmdbID}`;
+}
+
+export function collectionIdentificationLabel(collection: {
+	tmdb_collection_id?: number | null;
+}): string {
+	const id = collection.tmdb_collection_id;
+	if (id === null || id === undefined || !Number.isInteger(id) || id <= 0) {
+		return 'Sin identificar en TMDB';
+	}
+	return `Identificada en TMDB con el id ${id}`;
+}
+
+export function formatMissingYear(year: number): string {
+	return Number.isFinite(year) && year > 0 ? String(Math.floor(year)) : 'Año desconocido';
+}

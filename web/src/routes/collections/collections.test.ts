@@ -1,6 +1,6 @@
 import { render } from 'svelte/server';
 import { describe, expect, it, vi } from 'vitest';
-import type { Collection, CollectionDetail, MediaItem } from '$lib/api';
+import type { Collection, CollectionCandidate, CollectionDetail, MediaItem } from '$lib/api';
 import { DEFAULT_PUBLIC_UI } from '$lib/settings';
 import CollectionPage from './[id]/+page.svelte';
 import { actions as detailActions, load as loadDetail } from './[id]/+page.server';
@@ -69,6 +69,15 @@ const collection: Collection = {
 
 const detail: CollectionDetail = {
 	...collection,
+	tmdb_collection_id: 900,
+	missing: [
+		{
+			tmdb_id: 99,
+			title: 'La que falta',
+			year: 2005,
+			poster_url: 'https://images.example/falta.jpg'
+		}
+	],
 	items: [movie(1, 'Primera', true), movie(2, 'Segunda', false)]
 };
 
@@ -405,6 +414,105 @@ describe('acciones del detalle', () => {
 			)
 		).rejects.toMatchObject({ status: 303, location: '/login' });
 	});
+
+	it('busca colecciones candidatas en TMDB', async () => {
+		const candidate = {
+			tmdb_id: 900,
+			name: 'La saga completa',
+			overview: 'Una sinopsis de la saga.',
+			poster_url: 'https://images.example/saga.jpg'
+		};
+		const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ candidates: [candidate] }));
+
+		const result = (await detailActions.candidates!(
+			actionEvent(fetchMock, 'candidates', { q: 'La saga' }) as never
+		)) as {
+			manage?: boolean;
+			matchSearched?: boolean;
+			matchQuery?: string;
+			candidates: CollectionCandidate[];
+		};
+
+		expect(result.manage).toBe(true);
+		expect(result.matchSearched).toBe(true);
+		expect(result.matchQuery).toBe('La saga');
+		expect(result.candidates).toEqual([candidate]);
+		const [url, init] = fetchMock.mock.calls[0];
+		expect(String(url)).toBe(
+			'http://api.test/api/v1/collections/5/candidates?q=La+saga'
+		);
+		expect(init.method ?? 'GET').toBe('GET');
+	});
+
+	it('identifica la colección con TMDB', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(jsonResponse(detail));
+		const result = (await detailActions.match!(
+			actionEvent(fetchMock, 'match', { tmdb_collection_id: '900' }) as never
+		)) as { success?: boolean; manage?: boolean; message?: string };
+
+		expect(result.success).toBe(true);
+		expect(result.manage).toBe(true);
+		expect(result.message).toContain('identificada');
+		const [url, init] = fetchMock.mock.calls[0];
+		expect(String(url)).toBe('http://api.test/api/v1/collections/5/match');
+		expect(init.method).toBe('PUT');
+		expect(JSON.parse(init.body)).toEqual({ tmdb_collection_id: 900 });
+	});
+
+	it('desvincula una colección manual de TMDB', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(jsonResponse(detail));
+		const result = (await detailActions.unmatch!(
+			actionEvent(fetchMock, 'unmatch') as never
+		)) as { success?: boolean; manage?: boolean; message?: string };
+
+		expect(result.success).toBe(true);
+		expect(result.manage).toBe(true);
+		expect(result.message).toContain('desvinculada');
+		const [url, init] = fetchMock.mock.calls[0];
+		expect(String(url)).toBe('http://api.test/api/v1/collections/5/match');
+		expect(init.method).toBe('DELETE');
+	});
+
+	it('muestra los 409 de TMDB y los errores de identificación', async () => {
+		const conflict = vi.fn().mockResolvedValue(
+			jsonResponse({ error: 'otra colección ya tiene ese identificador de TMDB' }, 409)
+		);
+		const conflictResult = (await detailActions.match!(
+			actionEvent(conflict, 'match', { tmdb_collection_id: '900' }) as never
+		)) as { status: number; data: { manage: boolean; message: string } };
+		expect(conflictResult.status).toBe(409);
+		expect(conflictResult.data.manage).toBe(true);
+		expect(conflictResult.data.message).toContain('otra colección');
+
+		const unmatchConflict = vi.fn().mockResolvedValue(
+			jsonResponse({ error: 'las colecciones de TMDB no se pueden desvincular' }, 409)
+		);
+		const unmatchResult = (await detailActions.unmatch!(
+			actionEvent(unmatchConflict, 'unmatch') as never
+		)) as { status: number; data: { message: string } };
+		expect(unmatchResult.status).toBe(409);
+		expect(unmatchResult.data.message).toContain('no se pueden desvincular');
+
+		const invalid = vi.fn();
+		const invalidResult = (await detailActions.match!(
+			actionEvent(invalid, 'match', { tmdb_collection_id: '0' }) as never
+		)) as { status: number; data: { message: string } };
+		expect(invalidResult.status).toBe(400);
+		expect(invalidResult.data.message).toContain('TMDB');
+		expect(invalid).not.toHaveBeenCalled();
+
+		for (const [status, expected] of [
+			[502, 'No se pudo consultar TMDB'],
+			[503, 'TMDB no está configurado']
+		] as const) {
+			const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ error: 'fallo' }, status));
+			const result = (await detailActions.candidates!(
+				actionEvent(fetchMock, 'candidates', { q: 'Saga' }) as never
+			)) as { status: number; data: { message: string } };
+			expect(result.status).toBe(status);
+			expect(result.data.message).toContain(expected);
+		}
+	});
 });
 
 describe('render del listado', () => {
@@ -459,7 +567,17 @@ describe('render del detalle', () => {
 		expect(body).not.toContain('Gestionar colección');
 	});
 
-	it('muestra la gestión solo al administrador', () => {
+	it('muestra las películas que faltan para todos los usuarios', () => {
+		const { body } = render(CollectionPage, {
+			props: { data: detailData() as never }
+		});
+		expect(body).toContain('Faltan en tu biblioteca');
+		expect(body).toContain('La que falta');
+		expect(body).toContain('2005');
+		expect(body).toContain('Cartel de La que falta');
+	});
+
+	it('muestra la identificación de TMDB solo al administrador', () => {
 		const { body } = render(CollectionPage, {
 			props: {
 				data: detailData({ isAdmin: true, manage: true }) as never
@@ -467,6 +585,49 @@ describe('render del detalle', () => {
 		});
 		expect(body).toContain('Gestionar colección');
 		expect(body).toContain('Colección automática');
+		expect(body).toContain('Identificación en TMDB');
+		expect(body).toContain('Identificada en TMDB con el id 900');
+		expect(body).toContain('https://www.themoviedb.org/collection/900');
+		expect(body).toContain('Las colecciones automáticas de TMDB no se pueden desvincular');
 		expect(body).toContain('Sí, borrar esta colección');
+	});
+
+	it('permite desvincular una colección manual con confirmación', () => {
+		const { body } = render(CollectionPage, {
+			props: {
+				data: detailData({
+					isAdmin: true,
+					manage: true,
+					collection: { ...detail, source: 'manual' }
+				}) as never
+			}
+		});
+		expect(body).toContain('Desvincular de TMDB');
+		expect(body).toContain('Sí, desvincular');
+	});
+
+	it('muestra candidatos y el buscador de TMDB', () => {
+		const { body } = render(CollectionPage, {
+			props: {
+				data: detailData({ isAdmin: true, manage: true }) as never,
+				form: {
+					manage: true,
+					matchSearched: true,
+					matchQuery: 'La saga',
+					candidates: [
+						{
+							tmdb_id: 900,
+							name: 'La saga completa',
+							overview: 'Una sinopsis de la saga.',
+							poster_url: 'https://images.example/saga.jpg'
+						}
+					]
+				} as never
+			}
+		});
+		expect(body).toContain('Buscar colección en TMDB');
+		expect(body).toContain('La saga completa');
+		expect(body).toContain('Usar esta');
+		expect(body).toContain('value="La saga"');
 	});
 });

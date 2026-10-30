@@ -1,24 +1,37 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import type { CollectionDetail, MediaItem } from '$lib/api';
+	import type { CollectionCandidate, CollectionDetail, MediaItem } from '$lib/api';
+	import {
+		collectionIdentificationLabel,
+		tmdbCollectionURL
+	} from '$lib/collections';
+	import { truncateSynopsis } from '$lib/media';
 
 	let {
 		collection,
 		searchQuery,
 		searchResults,
 		searchError,
+		candidates = [],
+		matchQuery = '',
+		matchSearched = false,
 		open
 	}: {
 		collection: CollectionDetail;
 		searchQuery: string;
 		searchResults: MediaItem[];
 		searchError: string | null;
+		candidates?: CollectionCandidate[];
+		matchQuery?: string;
+		matchSearched?: boolean;
 		open: boolean;
 	} = $props();
 
 	const collectionIDs = $derived(new Set(collection.items.map((item) => item.id)));
 	const posterChoices = $derived(collection.items.filter((item) => item.poster_url));
 	const backdropChoices = $derived(collection.items.filter((item) => item.backdrop_url));
+	const identification = $derived(collectionIdentificationLabel(collection));
+	const tmdbURL = $derived(tmdbCollectionURL(collection.tmdb_collection_id));
 </script>
 
 <details class="admin-card collection-admin" id="gestionar" open={open}>
@@ -32,6 +45,104 @@
 				Colección manual.
 			{/if}
 		</p>
+
+		<section class="collection-admin-section">
+			<h2>Identificación en TMDB</h2>
+			<p class="collection-tmdb-status">
+				<span>{identification}.</span>
+				{#if tmdbURL}
+					<a class="text-link" href={tmdbURL} target="_blank" rel="noopener noreferrer">
+						Ver ficha en TMDB
+					</a>
+				{/if}
+			</p>
+
+			<form
+				class="match-search collection-tmdb-search"
+				method="POST"
+				action="?/candidates"
+				use:enhance
+			>
+				<label>
+					Buscar colección en TMDB
+					<input
+						name="q"
+						type="search"
+						value={matchQuery}
+						placeholder={collection.name}
+						autocomplete="off"
+					/>
+				</label>
+				<button class="button" type="submit">Buscar</button>
+			</form>
+
+			{#if matchSearched && candidates.length === 0}
+				<p class="admin-note" role="status">
+					Sin candidatos: prueba con otro nombre o deja el campo vacío para buscar por el nombre
+					de la colección.
+				</p>
+			{/if}
+
+			{#if candidates.length > 0}
+				<ul class="match-candidates" aria-label="Colecciones de TMDB">
+					{#each candidates as candidate (candidate.tmdb_id)}
+						<li class="match-candidate">
+							{#if candidate.poster_url}
+								<img
+									class="match-poster"
+									src={candidate.poster_url}
+									alt={`Cartel de ${candidate.name}`}
+									loading="lazy"
+								/>
+							{:else}
+								<span class="match-poster match-poster--empty" aria-hidden="true">
+									{candidate.name.slice(0, 1)}
+								</span>
+							{/if}
+							<div class="match-candidate-info">
+								<p class="match-title">{candidate.name}</p>
+								<p class="match-meta">TMDB · {candidate.tmdb_id}</p>
+								{#if candidate.overview}
+									<p class="match-overview">{truncateSynopsis(candidate.overview)}</p>
+								{/if}
+							</div>
+							<form method="POST" action="?/match" use:enhance>
+								<input
+									type="hidden"
+									name="tmdb_collection_id"
+									value={candidate.tmdb_id}
+								/>
+								<button
+									class="button"
+									type="submit"
+									aria-label={`Usar la colección ${candidate.name}`}
+								>
+									Usar esta
+								</button>
+							</form>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+
+			{#if collection.tmdb_collection_id}
+				{#if collection.source === 'manual'}
+					<details class="collection-delete collection-unlink">
+						<summary>Desvincular de TMDB</summary>
+						<p>
+							La colección seguirá existiendo, pero dejará de estar identificada con TMDB.
+						</p>
+						<form method="POST" action="?/unmatch" use:enhance>
+							<button class="button-danger" type="submit">Sí, desvincular</button>
+						</form>
+					</details>
+				{:else}
+					<p class="admin-note">
+						Las colecciones automáticas de TMDB no se pueden desvincular.
+					</p>
+				{/if}
+			{/if}
+		</section>
 
 		<section class="collection-admin-section">
 			<h2>Datos</h2>
@@ -209,3 +320,36 @@
 		</details>
 	</div>
 </details>
+
+<style>
+	.collection-tmdb-status {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 0.35rem 0.8rem;
+		margin: 0;
+		color: var(--texto-suave);
+		font-size: 0.88rem;
+	}
+
+	.collection-tmdb-search {
+		grid-template-columns: minmax(0, 1fr) auto;
+	}
+
+	.collection-unlink {
+		margin-top: 1rem;
+	}
+
+	.collection-unlink p {
+		margin: 0.65rem 0 0;
+		color: var(--texto-apagado);
+		font-size: 0.82rem;
+		line-height: 1.5;
+	}
+
+	@media (max-width: 700px) {
+		.collection-tmdb-search {
+			grid-template-columns: 1fr;
+		}
+	}
+</style>
