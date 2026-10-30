@@ -10,19 +10,22 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.foundation.focusable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Border
 import androidx.tv.material3.Button as TvButton
@@ -48,15 +51,35 @@ fun Modifier.dpadFieldNavigation(): Modifier {
 }
 
 /**
- * Da el foco a un elemento al entrar en la pantalla. En una ficha larga, el botón
- * Reproducir queda fuera de pantalla y el mando no lo encuentra desde el botón
- * Atrás; con el foco dentro de la lista, abajo la va desplazando hasta él.
+ * En TV el campo se enfoca sin abrir el teclado: solo aparece al pulsar centro o
+ * Enter. Se oculta también tras el primer frame porque el campo lo pide al enfocarse.
  */
 @Composable
-fun Modifier.initialFocus(): Modifier {
-    val requester = remember { FocusRequester() }
-    LaunchedEffect(requester) { runCatching { requester.requestFocus() } }
-    return focusRequester(requester).focusable()
+fun Modifier.tvKeyboardOnDemand(): Modifier {
+    if (!LocalIsTelevision.current) return this
+    val keyboard = LocalSoftwareKeyboardController.current
+    var focused by remember { mutableStateOf(false) }
+    LaunchedEffect(focused) {
+        if (focused) {
+            keyboard?.hide()
+            withFrameNanos { }
+            keyboard?.hide()
+        } else {
+            keyboard?.hide()
+        }
+    }
+    return onFocusChanged { state ->
+        focused = state.isFocused
+        if (state.isFocused) keyboard?.hide()
+    }.onPreviewKeyEvent { event ->
+        when (event.key) {
+            Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
+                if (event.type == KeyEventType.KeyUp) keyboard?.show()
+                true
+            }
+            else -> false
+        }
+    }
 }
 
 @Composable

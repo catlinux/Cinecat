@@ -96,7 +96,10 @@ fun LoginScreen(
                 OutlinedTextField(
                     value = state.username,
                     onValueChange = viewModel::onUsernameChanged,
-                    modifier = Modifier.fillMaxWidth().dpadFieldNavigation(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .dpadFieldNavigation()
+                        .tvKeyboardOnDemand(),
                     label = { Text(stringResource(R.string.login_username)) },
                     singleLine = true,
                     enabled = !state.submitting && state.retrySeconds == 0,
@@ -108,7 +111,10 @@ fun LoginScreen(
                 OutlinedTextField(
                     value = state.password,
                     onValueChange = viewModel::onPasswordChanged,
-                    modifier = Modifier.fillMaxWidth().dpadFieldNavigation(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .dpadFieldNavigation()
+                        .tvKeyboardOnDemand(),
                     label = { Text(stringResource(R.string.login_password)) },
                     singleLine = true,
                     enabled = !state.submitting && state.retrySeconds == 0,

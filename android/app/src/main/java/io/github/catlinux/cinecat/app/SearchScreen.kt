@@ -71,7 +71,8 @@ fun SearchScreen(
                 .fillMaxWidth()
                 .padding(top = 8.dp)
                 .focusRequester(focusRequester)
-                .dpadFieldNavigation(),
+                .dpadFieldNavigation()
+                .tvKeyboardOnDemand(),
             singleLine = true,
             placeholder = { Text(stringResource(R.string.search_hint)) },
             leadingIcon = {
