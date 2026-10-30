@@ -574,6 +574,7 @@ private fun EpisodeRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
+            .tvFocusPadding()
             .padding(horizontal = horizontalPadding, vertical = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.Top

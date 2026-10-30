@@ -41,6 +41,7 @@ fun CollectionPosterCard(
         modifier = Modifier
             .width(width)
             .clickable(onClick = onClick)
+            .tvFocusPadding()
     ) {
         Box(
             modifier = Modifier

@@ -14,6 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.onFocusChanged
@@ -25,7 +26,6 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.node.DelegatableNode
 import androidx.compose.ui.node.DrawModifierNode
@@ -37,7 +37,7 @@ import kotlinx.coroutines.launch
 val LocalIsTelevision = staticCompositionLocalOf { false }
 
 /**
- * Indica el foco de las tarjetas con un borde y un pequeño zoom, sin depender
+ * Indica el foco de las tarjetas con un borde, sin depender
  * del ripple de Material 3, que en la TV apenas se distingue.
  */
 class FocusIndication(private val color: Color) : IndicationNodeFactory {
@@ -71,15 +71,11 @@ private class FocusIndicationNode(
     }
 
     override fun ContentDrawScope.draw() {
+        // Sin zoom: la lista recorta la tarjeta ampliada en los bordes de la fila.
         val value = progress.value
+        drawContent()
         if (value <= 0f) {
-            drawContent()
             return
-        }
-        val zoom = 1f + 0.05f * value
-        val content = { drawContent() }
-        scale(zoom, zoom, center) {
-            content()
         }
         val stroke = 3.dp.toPx()
         drawRoundRect(
@@ -126,3 +122,9 @@ fun Modifier.focusRing(shape: Shape = RoundedCornerShape(10.dp)): Modifier {
             }
         }
 }
+
+// Margen para que el marco de foco no pise el título ni el cartel de la tarjeta.
+@Composable
+fun Modifier.tvFocusPadding(): Modifier =
+    if (LocalIsTelevision.current) this.padding(6.dp) else this
+

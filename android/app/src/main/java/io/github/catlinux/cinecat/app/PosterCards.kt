@@ -79,6 +79,7 @@ fun EpisodeCard(
         modifier = Modifier
             .width(width)
             .clickable(onClick = onClick)
+            .tvFocusPadding()
     ) {
         Artwork(
             url = imageUrl,
@@ -133,6 +134,7 @@ private fun PosterCard(
         modifier = Modifier
             .width(width)
             .clickable(onClick = onClick)
+            .tvFocusPadding()
     ) {
         Artwork(
             url = posterUrl,
