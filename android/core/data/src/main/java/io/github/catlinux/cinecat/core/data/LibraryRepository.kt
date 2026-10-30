@@ -68,7 +68,8 @@ class LibraryRepository(
         collectionId: Long? = null,
         seriesId: Long? = null,
         limit: Int? = null,
-        offset: Int? = null
+        offset: Int? = null,
+        letters: Boolean? = null
     ): ApiResult<ItemsResponse> = withApi {
         it.items(
             kind = kind,
@@ -81,7 +82,8 @@ class LibraryRepository(
             collectionId = collectionId,
             seriesId = seriesId,
             limit = limit,
-            offset = offset
+            offset = offset,
+            letters = letters
         )
     }
 
@@ -98,9 +100,18 @@ class LibraryRepository(
         genre: String? = null,
         sort: String? = null,
         limit: Int? = null,
-        offset: Int? = null
+        offset: Int? = null,
+        letters: Boolean? = null
     ): ApiResult<SeriesResponse> = withApi {
-        it.series(q = q, letter = letter, genre = genre, sort = sort, limit = limit, offset = offset)
+        it.series(
+            q = q,
+            letter = letter,
+            genre = genre,
+            sort = sort,
+            limit = limit,
+            offset = offset,
+            letters = letters
+        )
     }
 
     suspend fun seriesDetail(id: Long): ApiResult<SeriesDetail> = withApi {

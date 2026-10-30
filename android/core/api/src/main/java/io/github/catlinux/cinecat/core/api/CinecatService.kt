@@ -50,7 +50,8 @@ interface CinecatService {
         @Query("collection_id") collectionId: Long?,
         @Query("series_id") seriesId: Long?,
         @Query("limit") limit: Int?,
-        @Query("offset") offset: Int?
+        @Query("offset") offset: Int?,
+        @Query("letters") letters: Boolean?
     ): ItemsResponse
 
     @GET("api/v1/items/{id}")
@@ -75,7 +76,8 @@ interface CinecatService {
         @Query("genre") genre: String?,
         @Query("sort") sort: String?,
         @Query("limit") limit: Int?,
-        @Query("offset") offset: Int?
+        @Query("offset") offset: Int?,
+        @Query("letters") letters: Boolean?
     ): SeriesResponse
 
     @GET("api/v1/series/{id}")

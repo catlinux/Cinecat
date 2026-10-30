@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import io.github.catlinux.cinecat.core.api.ApiResult
 import io.github.catlinux.cinecat.core.api.GenresResponse
 import io.github.catlinux.cinecat.core.api.ItemsResponse
+import io.github.catlinux.cinecat.core.api.LetterIndex
 import io.github.catlinux.cinecat.core.api.MediaItem
 import io.github.catlinux.cinecat.core.data.LibraryRepository
 import java.io.IOException
@@ -20,7 +21,8 @@ data class MoviesUiState(
     val paged: PagedListState<MediaItem> = PagedListState(),
     val genres: List<String> = emptyList(),
     val sort: String = "title",
-    val genre: String? = null
+    val genre: String? = null,
+    val letters: List<LetterIndex> = emptyList()
 ) {
     val initialLoading: Boolean get() = paged.initialLoading
     val isEmpty: Boolean
@@ -28,18 +30,19 @@ data class MoviesUiState(
 }
 
 class MoviesViewModel(
-    private val loadPage: suspend (sort: String, genre: String?, offset: Int) -> ApiResult<ItemsResponse>,
+    private val loadPage: suspend (sort: String, genre: String?, offset: Int, letters: Boolean) -> ApiResult<ItemsResponse>,
     private val loadGenres: suspend () -> ApiResult<GenresResponse>,
     private val scope: CoroutineScope
 ) : ViewModel() {
     constructor(repository: LibraryRepository, scope: CoroutineScope) : this(
-        loadPage = { sort, genre, offset ->
+        loadPage = { sort, genre, offset, letters ->
             repository.items(
                 kind = "movie",
                 sort = sort,
                 genre = genre,
                 limit = PagedListState.PAGE_SIZE,
-                offset = offset
+                offset = offset,
+                letters = letters
             )
         },
         loadGenres = { repository.genres("movie") },
@@ -63,7 +66,11 @@ class MoviesViewModel(
         }
         pageJob?.cancel()
         pageJob = null
-        _state.value = _state.value.copy(sort = sort, paged = PagedListState())
+        _state.value = _state.value.copy(
+            sort = sort,
+            paged = PagedListState(),
+            letters = emptyList()
+        )
         loadMore()
     }
 
@@ -73,7 +80,11 @@ class MoviesViewModel(
         }
         pageJob?.cancel()
         pageJob = null
-        _state.value = _state.value.copy(genre = genre, paged = PagedListState())
+        _state.value = _state.value.copy(
+            genre = genre,
+            paged = PagedListState(),
+            letters = emptyList()
+        )
         loadMore()
     }
 
@@ -86,7 +97,7 @@ class MoviesViewModel(
         _state.value = current.copy(paged = started)
         pageJob = scope.launch {
             val result = try {
-                loadPage(sort, genre, offset)
+                loadPage(sort, genre, offset, offset == 0 && sort == "title")
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
@@ -105,6 +116,11 @@ class MoviesViewModel(
                             )
                             is ApiResult.HttpError -> latest.paged.failure()
                             is ApiResult.NetworkError -> latest.paged.failure()
+                        },
+                        letters = if (result is ApiResult.Success && offset == 0) {
+                            result.value.letters
+                        } else {
+                            latest.letters
                         }
                     )
                 }
@@ -114,6 +130,22 @@ class MoviesViewModel(
 
     fun retry() {
         loadMore()
+    }
+
+    suspend fun ensureLoaded(index: Int) {
+        while (_state.value.paged.items.size <= index) {
+            val before = _state.value.paged
+            if (before.error || before.endReached) {
+                return
+            }
+            loadMore()
+            val job = pageJob ?: return
+            job.join()
+            val after = _state.value.paged
+            if (after.error || after.endReached || after.items.size <= before.items.size) {
+                return
+            }
+        }
     }
 
     private fun loadGenresOnce() {

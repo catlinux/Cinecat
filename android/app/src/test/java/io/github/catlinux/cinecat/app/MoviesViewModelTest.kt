@@ -4,6 +4,7 @@ import io.github.catlinux.cinecat.core.api.ApiResult
 import io.github.catlinux.cinecat.core.api.GenreCount
 import io.github.catlinux.cinecat.core.api.GenresResponse
 import io.github.catlinux.cinecat.core.api.ItemsResponse
+import io.github.catlinux.cinecat.core.api.LetterIndex
 import io.github.catlinux.cinecat.core.api.MediaItem
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -20,7 +21,7 @@ class MoviesViewModelTest {
     fun changingSortAndGenreResetsAndSendsTheFilters() = runTest {
         val requests = mutableListOf<Request>()
         val viewModel = MoviesViewModel(
-            loadPage = { sort, genre, offset ->
+            loadPage = { sort, genre, offset, _ ->
                 requests += Request(sort, genre, offset)
                 ApiResult.Success(ItemsResponse(emptyList(), 0, 60, offset))
             },
@@ -51,7 +52,7 @@ class MoviesViewModelTest {
     fun loadMoreRequestsTheNextOffset() = runTest {
         val offsets = mutableListOf<Int>()
         val viewModel = MoviesViewModel(
-            loadPage = { _, _, offset ->
+            loadPage = { _, _, offset, _ ->
                 offsets += offset
                 ApiResult.Success(
                     ItemsResponse(
@@ -71,6 +72,70 @@ class MoviesViewModelTest {
         advanceUntilIdle()
 
         assertEquals(listOf(0, 60), offsets)
+    }
+
+    @Test
+    fun lettersAreStoredWithTheFirstPageAndClearedWhenSortChanges() = runTest {
+        val requests = mutableListOf<Pair<String, Boolean>>()
+        val viewModel = MoviesViewModel(
+            loadPage = { sort, _, offset, letters ->
+                requests += sort to letters
+                ApiResult.Success(
+                    ItemsResponse(
+                        items = List(1) { index -> mediaItem(offset + index.toLong()) },
+                        total = 2,
+                        limit = 1,
+                        offset = offset,
+                        letters = if (offset == 0 && sort == "title") {
+                            listOf(LetterIndex("A", 0, 2))
+                        } else {
+                            emptyList()
+                        }
+                    )
+                )
+            },
+            loadGenres = { ApiResult.Success(GenresResponse(emptyList())) },
+            scope = this
+        )
+
+        advanceUntilIdle()
+
+        assertEquals(listOf(LetterIndex("A", 0, 2)), viewModel.state.value.letters)
+        assertEquals("title" to true, requests.first())
+
+        viewModel.setSort("year")
+        advanceUntilIdle()
+
+        assertTrue(viewModel.state.value.letters.isEmpty())
+        assertEquals("year" to false, requests.last())
+    }
+
+    @Test
+    fun ensureLoadedLoadsPagesUntilTheIndexIsCovered() = runTest {
+        val offsets = mutableListOf<Int>()
+        val viewModel = MoviesViewModel(
+            loadPage = { _, _, offset, _ ->
+                offsets += offset
+                ApiResult.Success(
+                    ItemsResponse(
+                        items = List(60) { index -> mediaItem(offset + index.toLong()) },
+                        total = 180,
+                        limit = 60,
+                        offset = offset
+                    )
+                )
+            },
+            loadGenres = { ApiResult.Success(GenresResponse(emptyList())) },
+            scope = this
+        )
+
+        advanceUntilIdle()
+        assertEquals(listOf(0), offsets)
+
+        viewModel.ensureLoaded(70)
+
+        assertEquals(listOf(0, 60), offsets)
+        assertEquals(120, viewModel.state.value.paged.items.size)
     }
 
     private fun mediaItem(id: Long): MediaItem = MediaItem(

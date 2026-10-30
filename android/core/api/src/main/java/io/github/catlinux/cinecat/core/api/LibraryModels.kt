@@ -70,11 +70,19 @@ data class MediaItem(
 )
 
 @Serializable
+data class LetterIndex(
+    val letter: String = "",
+    val offset: Int = 0,
+    val count: Int = 0
+)
+
+@Serializable
 data class ItemsResponse(
     val items: List<MediaItem> = emptyList(),
     val total: Long = 0,
     val limit: Int = 0,
-    val offset: Int = 0
+    val offset: Int = 0,
+    val letters: List<LetterIndex> = emptyList()
 )
 
 @Serializable
@@ -102,7 +110,8 @@ data class SeriesResponse(
     val series: List<Series> = emptyList(),
     val total: Long = 0,
     val limit: Int = 0,
-    val offset: Int = 0
+    val offset: Int = 0,
+    val letters: List<LetterIndex> = emptyList()
 )
 
 @Serializable

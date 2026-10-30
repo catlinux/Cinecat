@@ -128,6 +128,38 @@ class LibraryApiTest {
     }
 
     @Test
+    fun lettersAreSentAndParsedForItemsAndSeries() = runTest {
+        server.enqueue(
+            jsonResponse(
+                """{"items":[],"total":0,"limit":0,"offset":0,"letters":[{"letter":"A","offset":0,"count":12},{"letter":"#","offset":20,"count":2}]}"""
+            )
+        )
+        val items = api().items(sort = "title", letters = true)
+        assertTrue(items is ApiResult.Success)
+        val itemLetters = (items as ApiResult.Success).value.letters
+        assertEquals(2, itemLetters.size)
+        assertEquals("A", itemLetters[0].letter)
+        assertEquals(0, itemLetters[0].offset)
+        assertEquals(12, itemLetters[0].count)
+        assertEquals("#", itemLetters[1].letter)
+        assertTrue(server.takeRequest().path.orEmpty().contains("letters=true"))
+
+        server.enqueue(
+            jsonResponse(
+                """{"series":[],"total":0,"limit":0,"offset":0,"letters":[{"letter":"B","offset":3,"count":4}]}"""
+            )
+        )
+        val series = api().series(sort = "title", letters = true)
+        assertTrue(series is ApiResult.Success)
+        val seriesLetters = (series as ApiResult.Success).value.letters
+        assertEquals(1, seriesLetters.size)
+        assertEquals("B", seriesLetters[0].letter)
+        assertEquals(3, seriesLetters[0].offset)
+        assertEquals(4, seriesLetters[0].count)
+        assertTrue(server.takeRequest().path.orEmpty().contains("letters=true"))
+    }
+
+    @Test
     fun nullQueryParametersAreNotSent() = runTest {
         server.enqueue(jsonResponse(itemsJson()))
         api().items(watched = null, limit = null)
