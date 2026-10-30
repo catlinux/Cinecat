@@ -28,6 +28,8 @@ Edit `.env`:
 - `CINECAT_TMDB_API_KEY`: TMDB key for complete metadata; without it, OMDb can be used for movie synopsis and poster only.
 - `CINECAT_OMDB_API_KEY`: optional, fallback without TMDB.
 - `CINECAT_SCAN_INTERVAL`: automatic interval; `0` disables it.
+- `CINECAT_WATCH`: folder watching; enabled by default (`1`); `0`, `false` or `off` disable it.
+- `CINECAT_WATCH_QUIET`: time without changes before rescanning (`2m` by default).
 - `CINECAT_ADMIN_PASSWORD`: password for `admin` on first start.
 - `CINECAT_TRUSTED_PROXIES`: trusted networks for `X-Forwarded-For`; loopback and private networks by default.
 - `CINECAT_API_PORT` and `CINECAT_WEB_PORT`: only if 8080/8081 are taken.

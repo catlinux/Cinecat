@@ -167,6 +167,10 @@ func main() {
 
 	scanJob := library.NewScanJob(scanner)
 	defer scanJob.Close()
+	if watchEnabled() {
+		watcher := library.NewLibraryWatcher(st.DB(), scanJob, watchQuiet(), 10*time.Minute)
+		go watcher.Run(ctx)
+	}
 	go scheduleScans(ctx, scanJob, time.Minute, newStoreScanSettings(settingsStore))
 
 	updateChecker := update.NewChecker(update.CheckerOptions{Current: applicationVersion()})
@@ -383,6 +387,35 @@ func scheduleScans(ctx context.Context, job scanStarter, initialDelay time.Durat
 			}
 		}
 	}
+}
+
+const (
+	envWatch          = "CINECAT_WATCH"
+	envWatchQuiet     = "CINECAT_WATCH_QUIET"
+	defaultWatchQuiet = 2 * time.Minute
+)
+
+func watchEnabled() bool {
+	value := strings.ToLower(strings.TrimSpace(os.Getenv(envWatch)))
+	switch value {
+	case "0", "false", "off":
+		return false
+	default:
+		return true
+	}
+}
+
+func watchQuiet() time.Duration {
+	value := strings.TrimSpace(os.Getenv(envWatchQuiet))
+	if value == "" {
+		return defaultWatchQuiet
+	}
+	quiet, err := time.ParseDuration(value)
+	if err != nil {
+		log.Printf("cinecatd: %s no es una duración válida (%q); se usa %s", envWatchQuiet, value, defaultWatchQuiet)
+		return defaultWatchQuiet
+	}
+	return quiet
 }
 
 // cleanupPairings borra las vinculaciones caducadas o consumidas hace tiempo.

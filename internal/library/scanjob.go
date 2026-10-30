@@ -16,6 +16,7 @@ type ScanStatus struct {
 	Files              int        `json:"files"`
 	Upserted           int        `json:"upserted"`
 	Relinked           int        `json:"relinked"`
+	SkippedUnstable    int        `json:"skipped_unstable"`
 	Identified         int        `json:"identified"`
 	Unidentified       int        `json:"unidentified"`
 	SeriesIdentified   int        `json:"series_identified"`
@@ -27,14 +28,17 @@ type ScanStatus struct {
 // ScanJob ejecuta como máximo un escaneo a la vez y conserva el último estado
 // para poder consultarlo mientras corre y cuando termina.
 type ScanJob struct {
-	mu      sync.Mutex
-	running bool
-	closed  bool
-	status  ScanStatus
-	scan    func(context.Context) (Result, error)
-	wg      sync.WaitGroup
-	service context.Context
-	cancel  context.CancelFunc
+	mu         sync.Mutex
+	running    bool
+	closed     bool
+	status     ScanStatus
+	scan       func(context.Context) (Result, error)
+	wg         sync.WaitGroup
+	service    context.Context
+	cancel     context.CancelFunc
+	stableAge  time.Duration
+	retryGrace time.Duration
+	retry      *time.Timer
 }
 
 // NewScanJob crea el trabajo de escaneo. El contexto de servicio que se usa
@@ -43,12 +47,14 @@ type ScanJob struct {
 func NewScanJob(scanner *Scanner) *ScanJob {
 	ctx, cancel := context.WithCancel(context.Background())
 	job := &ScanJob{
-		status:  ScanStatus{Warnings: []string{}},
-		service: ctx,
-		cancel:  cancel,
+		status:     ScanStatus{Warnings: []string{}},
+		service:    ctx,
+		cancel:     cancel,
+		retryGrace: 10 * time.Second,
 	}
 	if scanner != nil {
 		job.scan = scanner.Scan
+		job.stableAge = scanner.stableAge
 	}
 	return job
 }
@@ -97,6 +103,7 @@ func (j *ScanJob) Start(ctx context.Context) bool {
 		j.status.Files = result.Files
 		j.status.Upserted = result.Upserted
 		j.status.Relinked = result.Relinked
+		j.status.SkippedUnstable = result.SkippedUnstable
 		j.status.Identified = result.Identified
 		j.status.Unidentified = result.Unidentified
 		j.status.SeriesIdentified = result.SeriesIdentified
@@ -109,6 +116,16 @@ func (j *ScanJob) Start(ctx context.Context) bool {
 			j.status.Error = err.Error()
 		} else {
 			j.status.Error = ""
+		}
+		if err == nil && result.SkippedUnstable > 0 && !j.closed {
+			delay := j.stableAge + j.retryGrace
+			if delay <= 0 {
+				delay = j.retryGrace
+			}
+			if j.retry != nil {
+				j.retry.Stop()
+			}
+			j.retry = time.AfterFunc(delay, j.retryScan)
 		}
 		j.mu.Unlock()
 	}()
@@ -150,6 +167,21 @@ func (j *ScanJob) Close() {
 	j.mu.Lock()
 	j.closed = true
 	j.cancel()
+	if j.retry != nil {
+		j.retry.Stop()
+		j.retry = nil
+	}
 	j.mu.Unlock()
 	j.wg.Wait()
+}
+
+func (j *ScanJob) retryScan() {
+	j.mu.Lock()
+	if j.closed {
+		j.mu.Unlock()
+		return
+	}
+	j.retry = nil
+	j.mu.Unlock()
+	j.StartService()
 }

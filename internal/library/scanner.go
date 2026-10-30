@@ -86,6 +86,7 @@ type Result struct {
 	Files              int
 	Upserted           int
 	Relinked           int
+	SkippedUnstable    int
 	Identified         int
 	Unidentified       int
 	SeriesIdentified   int
@@ -267,6 +268,7 @@ func (s *Scanner) scanLibraryPath(
 				return nil
 			}
 			if time.Since(info.ModTime()) < s.stableAge {
+				res.SkippedUnstable++
 				cleanPath := filepath.Clean(path)
 				exists, err := mediaItemExists(ctx, s.db, libraryID, path)
 				if err != nil {

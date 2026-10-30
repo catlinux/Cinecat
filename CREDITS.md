@@ -55,6 +55,7 @@ Cinecat builds on the work of other people and projects. This list includes **al
 | [Fanart.tv](https://fanart.tv) | Arte adicional / Extra artwork | Términos de la API / API terms |
 | [modernc.org/sqlite](https://gitlab.com/cznic/sqlite) | Driver SQLite en Go puro usado por el servidor / Pure-Go SQLite driver used by the server | BSD-3-Clause |
 | [golang.org/x/crypto](https://github.com/golang/crypto) | Hash de contraseñas con argon2id / Password hashing with argon2id | BSD-3-Clause |
+| [fsnotify](https://github.com/fsnotify/fsnotify) v1.10.1 | Vigilancia de carpetas de las bibliotecas del servidor / Server library folder watching | BSD-3-Clause |
 | [Fraunces](https://github.com/undercasetype/Fraunces) variable | Tipografía de títulos del cliente web, empaquetada en `web/static/fonts/Fraunces-Variable.ttf` / Web client display typeface, bundled | OFL-1.1 (`web/static/fonts/OFL-Fraunces.txt`) |
 | [Fraunces](https://github.com/undercasetype/Fraunces) variable (app Android) | Tipografía de títulos de la app Android, empaquetada en `android/ui/common/src/main/res/font/fraunces_variable.ttf` / Android app display typeface, bundled | OFL-1.1 (`android/ui/common/src/main/res/raw/ofl_fraunces.txt`) |
 | [Inter](https://github.com/rsms/inter) variable | Tipografía de texto del cliente web, empaquetada en `web/static/fonts/Inter-Variable.ttf` / Web client body typeface, bundled | OFL-1.1 (`web/static/fonts/OFL-Inter.txt`) |

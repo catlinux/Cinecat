@@ -28,6 +28,8 @@ Edita `.env`:
 - `CINECAT_TMDB_API_KEY`: clave de TMDB para fichas completas; si falta, se puede usar OMDb solo para sinopsis y cartel de películas.
 - `CINECAT_OMDB_API_KEY`: opcional, respaldo sin TMDB.
 - `CINECAT_SCAN_INTERVAL`: intervalo automático; `0` lo desactiva.
+- `CINECAT_WATCH`: vigilancia de carpetas; activada por defecto (`1`); `0`, `false` u `off` la desactivan.
+- `CINECAT_WATCH_QUIET`: tiempo sin cambios antes de reescanear (`2m` por defecto).
 - `CINECAT_ADMIN_PASSWORD`: contraseña del `admin` del primer arranque.
 - `CINECAT_TRUSTED_PROXIES`: redes de confianza para `X-Forwarded-For`; por defecto loopback y redes privadas.
 - `CINECAT_API_PORT` y `CINECAT_WEB_PORT`: solo si 8080/8081 están ocupados.

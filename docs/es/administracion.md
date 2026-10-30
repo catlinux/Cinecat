@@ -129,6 +129,8 @@ Leídas por el servidor:
 | `CINECAT_TMDB_API_KEY` | vacío | Activa TMDB; tiene prioridad sobre OMDb. |
 | `CINECAT_OMDB_API_KEY` | vacío | Activa OMDb solo si no hay TMDB. |
 | `CINECAT_SCAN_INTERVAL` | `6h` | Defecto inicial de `scan.interval`. |
+| `CINECAT_WATCH` | `1` | Vigila las carpetas y lanza un escaneo cuando cambian; `0`, `false` u `off` lo desactivan. |
+| `CINECAT_WATCH_QUIET` | `2m` | Tiempo sin cambios antes de lanzar el escaneo; el máximo de espera es de 10 minutos. |
 | `CINECAT_MEDIA_ROOTS` | `/media` | Raíces permitidas para las carpetas de biblioteca y el navegador; separadas por `:` en Linux y `;` en Windows. |
 | `CINECAT_ADMIN_PASSWORD` | vacío | Contraseña del `admin` creado en el primer arranque; si falta, se genera y se imprime una vez. |
 | `CINECAT_RUN_DIR` | `/run/cinecat-update` | Directorio compartido para las peticiones de actualización. |

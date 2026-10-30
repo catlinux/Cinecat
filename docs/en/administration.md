@@ -129,6 +129,8 @@ Read by the server:
 | `CINECAT_TMDB_API_KEY` | empty | Enables TMDB; takes precedence over OMDb. |
 | `CINECAT_OMDB_API_KEY` | empty | Enables OMDb only when TMDB is absent. |
 | `CINECAT_SCAN_INTERVAL` | `6h` | Initial default for `scan.interval`. |
+| `CINECAT_WATCH` | `1` | Watches the folders and starts a scan when they change; `0`, `false` or `off` disable it. |
+| `CINECAT_WATCH_QUIET` | `2m` | Time without changes before starting the scan; the maximum wait is 10 minutes. |
 | `CINECAT_MEDIA_ROOTS` | `/media` | Allowed roots for library folders and the browser; separated by `:` on Linux and `;` on Windows. |
 | `CINECAT_ADMIN_PASSWORD` | empty | Password for the `admin` created on first start; if absent, one is generated and printed once. |
 | `CINECAT_RUN_DIR` | `/run/cinecat-update` | Shared directory for update requests. |

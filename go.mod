@@ -3,6 +3,7 @@ module github.com/catlinux/cinecat
 go 1.26
 
 require (
+	github.com/fsnotify/fsnotify v1.10.1
 	golang.org/x/crypto v0.33.0
 	modernc.org/sqlite v1.35.0
 )
