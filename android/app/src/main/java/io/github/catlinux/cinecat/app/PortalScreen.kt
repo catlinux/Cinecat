@@ -51,8 +51,8 @@ fun PortalScreen(
     val widthDp = LocalConfiguration.current.screenWidthDp
     val tablet = useNavigationRail(widthDp)
     val horizontalPadding = if (tablet) 28.dp else 16.dp
-    val posterWidth = if (tablet) 150.dp else 120.dp
-    val episodeWidth = if (tablet) 300.dp else 230.dp
+    val posterWidth = if (tablet) 150.dp else 104.dp
+    val episodeWidth = if (tablet) 300.dp else 210.dp
     val refreshing = (state as? PortalUiState.Ready)?.refreshing == true
 
     // Sin pantalla táctil no hay gesto de tirar; el indicador solo se veía moverse al navegar.
