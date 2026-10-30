@@ -2,7 +2,7 @@
 
 [Español](../es/hoja-de-ruta.md) · [Back to README](../../README.en.md) · [Status](status.md)
 
-The current version is **0.35.2**. Feature details, versions and limits are in [status](status.md); this page only summarises the phases.
+The current version is **0.36.0**. Feature details, versions and limits are in [status](status.md); this page only summarises the phases.
 
 ## Phase 0: preparation (`0.0.x`) — done
 
@@ -30,7 +30,7 @@ The agreed order is: favorites and watchlist; collections from the movie page an
 
 ## Phase 4: Android and Android TV — in progress
 
-Kotlin + Jetpack Compose + Media3/ExoPlayer, with optional libmpv. Done: the server (device sessions, TV pairing by code, native capabilities in playback, a stable API contract and TMDB images served by the server itself) and a single APK for phone and TV that signs in, browses the library and plays. Since 0.35.0 the app is published signed on GitHub and updates itself. Still missing: the TV's own interface and background playback.
+Kotlin + Jetpack Compose + Media3/ExoPlayer, with optional libmpv. Done: the server (device sessions, TV pairing by code, native capabilities in playback, a stable API contract and TMDB images served by the server itself) and a single APK for phone and TV that signs in, browses the library and plays. Since 0.35.0 the app is published signed on GitHub and updates itself. Since 0.36.0 the TV is driven with the remote with visible focus. Still missing: background playback and picture-in-picture on phones.
 
 ## Phase 5: first stable release (`1.0.0`) — future
 

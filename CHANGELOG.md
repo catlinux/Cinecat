@@ -7,6 +7,18 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.36.0] - 2026-10-30
+
+### Añadido
+
+- App Android en TV: foco bien visible con el mando. Las tarjetas (carteles, episodios, colecciones), el menú lateral y los botones, chips y pestañas de las fichas muestran un marco naranja al enfocarse.
+- App Android en TV: al abrir una ficha, el foco va directo a Reproducir o Reanudar.
+
+### Cambiado
+
+- App Android en TV: los campos de texto (Servidor, Iniciar sesión, Buscar) se enfocan sin abrir el teclado; se abre al pulsar el centro del mando y Atrás lo cierra.
+- App Android en el móvil: las etiquetas de la barra inferior van en una sola línea («Colecciones» ya no se parte) y los carteles del portal son algo más estrechos.
+
 ## [0.35.2] - 2026-10-30
 
 ### Corregido

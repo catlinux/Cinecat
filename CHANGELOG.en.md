@@ -7,6 +7,18 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.36.0] - 2026-10-30
+
+### Added
+
+- Android app on TV: clearly visible focus with the remote. Cards (posters, episodes, collections), the side rail and the buttons, chips and tabs on detail pages show an orange frame when focused.
+- Android app on TV: opening a detail page puts the focus straight on Play or Resume.
+
+### Changed
+
+- Android app on TV: text fields (Server, Sign in, Search) take focus without opening the keyboard; it opens with the remote's centre button and Back closes it.
+- Android app on phones: bottom bar labels stay on one line ("Collections" no longer wraps) and portal posters are slightly narrower.
+
 ## [0.35.2] - 2026-10-30
 
 ### Fixed
