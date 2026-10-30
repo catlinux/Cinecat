@@ -33,7 +33,7 @@ class ClientUpdateApiTest {
         val result = api().clientUpdate(3400)
 
         assertTrue(result is ApiResult.Success)
-        val update = (result as ApiResult.Success).value
+        val update = (result as ApiResult.Success).value.update
         requireNotNull(update)
         assertEquals("0.34.1", update.version)
         assertEquals(3401L, update.versionCode)
@@ -52,11 +52,11 @@ class ClientUpdateApiTest {
 
     @Test
     fun noContentMeansNoUpdate() = runTest {
-        server.enqueue(MockResponse().setResponseCode(204))
+        server.enqueue(MockResponse().setResponseCode(204).setHeader("X-Cinecat-Update-Reason", "disabled"))
 
         val result = api().clientUpdate(3401)
 
-        assertEquals(ApiResult.Success(null), result)
+        assertEquals(ApiResult.Success(ClientUpdateCheck(update = null, reason = "disabled")), result)
         assertEquals("/api/v1/system/client-update?platform=android&version_code=3401", server.takeRequest().path)
     }
 

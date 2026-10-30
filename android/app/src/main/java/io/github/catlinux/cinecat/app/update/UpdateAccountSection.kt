@@ -88,6 +88,14 @@ fun AccountUpdateSection(
                 text = stringResource(R.string.update_up_to_date),
                 style = MaterialTheme.typography.bodyMedium
             )
+            UpdateState.ServerChecksDisabled -> Text(
+                text = stringResource(R.string.update_server_disabled),
+                style = MaterialTheme.typography.bodyMedium
+            )
+            UpdateState.NotPublished -> Text(
+                text = stringResource(R.string.update_not_published),
+                style = MaterialTheme.typography.bodyMedium
+            )
             is UpdateState.Available -> {
                 Text(
                     text = stringResource(

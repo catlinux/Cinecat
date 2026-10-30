@@ -7,6 +7,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.37.1] - 2026-10-30
+
+### Fixed
+
+- Android app: "Check for updates" said "You have the latest version" even when the server had update checks disabled or could not get the APK. It now says so (the server sends the reason in the `X-Cinecat-Update-Reason` header).
+- Server: if it cannot get the published APK's SHA-256, it logs the error and retries after 2 minutes instead of 10.
+
 ## [0.37.0] - 2026-10-30
 
 ### Added

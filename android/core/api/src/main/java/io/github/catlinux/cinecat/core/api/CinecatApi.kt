@@ -89,12 +89,16 @@ class CinecatApi(
         )
     }
 
-    suspend fun clientUpdate(versionCode: Long): ApiResult<ClientUpdate?> = call {
+    suspend fun clientUpdate(versionCode: Long): ApiResult<ClientUpdateCheck> = call {
         val response = service.clientUpdate("android", versionCode)
         if (!response.isSuccessful) {
             throw retrofit2.HttpException(response)
         }
-        if (response.code() == 204) null else response.body()
+        if (response.code() == 204) {
+            ClientUpdateCheck(update = null, reason = response.headers()["X-Cinecat-Update-Reason"])
+        } else {
+            ClientUpdateCheck(update = response.body())
+        }
     }
 
     suspend fun item(id: Long): ApiResult<MediaItem> = call { service.item(id) }

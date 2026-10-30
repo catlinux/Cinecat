@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -16,7 +17,7 @@ const (
 	defaultReleaseBaseURL = "https://github.com/catlinux/Cinecat/releases/download"
 	defaultClientTimeout  = 15 * time.Second
 	maxChecksumBytes      = 1 << 10
-	checksumFailureTTL    = 10 * time.Minute
+	checksumFailureTTL    = 2 * time.Minute
 )
 
 type checksumCacheEntry struct {
@@ -106,6 +107,7 @@ func (c *ClientUpdate) sha256(ctx context.Context, version string) (string, bool
 
 	sha, err := c.fetchSHA256(ctx, version)
 	if err != nil {
+		log.Printf("update: no se pudo obtener el SHA-256 del APK %s: %v", version, err)
 		c.cache[version] = checksumCacheEntry{
 			expires: now.Add(checksumFailureTTL),
 		}
@@ -171,7 +173,7 @@ func (a *API) handleClientUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.URL.Query().Get("platform") != "android" {
-		w.WriteHeader(http.StatusNoContent)
+		noClientUpdate(w, "platform")
 		return
 	}
 	rawCode := r.URL.Query().Get("version_code")
@@ -185,18 +187,22 @@ func (a *API) handleClientUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !a.enabled() || a.checker == nil || a.clientUpdate == nil {
-		w.WriteHeader(http.StatusNoContent)
+		noClientUpdate(w, "disabled")
 		return
 	}
 
 	version, serverCode, ok := normalizedVersion(a.checker.Current())
-	if !ok || clientCode >= serverCode {
-		w.WriteHeader(http.StatusNoContent)
+	if !ok {
+		noClientUpdate(w, "server-version")
+		return
+	}
+	if clientCode >= serverCode {
+		noClientUpdate(w, "current")
 		return
 	}
 	sha, ok := a.clientUpdate.sha256(r.Context(), version)
 	if !ok {
-		w.WriteHeader(http.StatusNoContent)
+		noClientUpdate(w, "unavailable")
 		return
 	}
 
@@ -221,6 +227,15 @@ func (a *API) handleClientUpdate(w http.ResponseWriter, r *http.Request) {
 		Notes:       notes,
 	})
 }
+
+// noClientUpdate responde 204 indicando el motivo, para que la app no diga
+// «estás al día» cuando en realidad la búsqueda está desactivada o falla.
+func noClientUpdate(w http.ResponseWriter, reason string) {
+	w.Header().Set(clientUpdateReasonHeader, reason)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+const clientUpdateReasonHeader = "X-Cinecat-Update-Reason"
 
 func normalizedVersion(value string) (string, int, bool) {
 	version, ok := ParseSemver(value)

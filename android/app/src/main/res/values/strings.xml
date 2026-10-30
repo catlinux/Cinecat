@@ -133,6 +133,8 @@
     <string name="update_check">Buscar actualizaciones</string>
     <string name="update_checking">Comprobando…</string>
     <string name="update_up_to_date">Tienes la última versión</string>
+    <string name="update_server_disabled">El servidor no tiene activada la búsqueda de actualizaciones (Administración → Sistema).</string>
+    <string name="update_not_published">El servidor no ha podido obtener el APK de su versión; vuelve a probar en unos minutos.</string>
     <string name="update_available">Versión %1$s disponible</string>
     <string name="update_download">Descargar</string>
     <string name="update_downloading">Descargando %1$d %%</string>

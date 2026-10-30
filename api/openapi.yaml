@@ -531,6 +531,15 @@ paths:
                 $ref: '#/components/schemas/ClientUpdateResponse'
         '204':
           description: No hay actualización, la comprobación está desactivada o no se pudo obtener la suma
+          headers:
+            X-Cinecat-Update-Reason:
+              description: |
+                Motivo: `disabled` (búsqueda de actualizaciones desactivada),
+                `current` (el cliente ya está al día), `unavailable` (no se pudo
+                obtener el APK publicado), `server-version` o `platform`.
+              schema:
+                type: string
+                enum: [disabled, current, unavailable, server-version, platform]
         '400':
           description: version_code ausente, no entero o negativo
           content:

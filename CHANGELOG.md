@@ -7,6 +7,13 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.37.1] - 2026-10-30
+
+### Corregido
+
+- App Android: «Buscar actualizaciones» decía «Tienes la última versión» aunque el servidor tuviera desactivada la búsqueda o no hubiera podido obtener el APK. Ahora lo indica (el servidor envía el motivo en la cabecera `X-Cinecat-Update-Reason`).
+- Servidor: si no puede obtener el SHA-256 del APK publicado, lo deja en el registro y vuelve a intentarlo a los 2 minutos en lugar de a los 10.
+
 ## [0.37.0] - 2026-10-30
 
 ### Añadido

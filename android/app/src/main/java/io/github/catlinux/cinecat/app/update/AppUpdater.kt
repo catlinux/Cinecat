@@ -51,6 +51,8 @@ sealed interface UpdateState {
     data object Idle : UpdateState
     data object Checking : UpdateState
     data object UpToDate : UpdateState
+    data object ServerChecksDisabled : UpdateState
+    data object NotPublished : UpdateState
     data class Available(val update: ClientUpdate) : UpdateState
     data class Downloading(val progress: Float) : UpdateState
     data class Ready(val update: ClientUpdate, val apkFile: File) : UpdateState
@@ -229,7 +231,14 @@ class AppUpdater(
         when (val result = api.clientUpdate(installedCode)) {
             is ApiResult.Success -> {
                 saveLastCheck(checkedAt)
-                _state.value = result.value?.let(UpdateState::Available) ?: UpdateState.UpToDate
+                val check = result.value
+                val update = check.update
+                _state.value = when {
+                    update != null -> UpdateState.Available(update)
+                    check.reason == "disabled" -> UpdateState.ServerChecksDisabled
+                    check.reason == "unavailable" -> UpdateState.NotPublished
+                    else -> UpdateState.UpToDate
+                }
             }
             is ApiResult.HttpError -> {
                 _state.value = UpdateState.Failed(UpdateFailure.Network, result.message)
@@ -297,7 +306,8 @@ class AppUpdater(
 
     private fun updateIdleState(value: UpdateState) {
         when (_state.value) {
-            UpdateState.Idle, UpdateState.UpToDate, UpdateState.Checking -> {
+            UpdateState.Idle, UpdateState.UpToDate, UpdateState.Checking,
+            UpdateState.ServerChecksDisabled, UpdateState.NotPublished -> {
                 _state.value = value
             }
             else -> Unit
