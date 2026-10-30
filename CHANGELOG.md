@@ -7,6 +7,22 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.38.0] - 2026-10-30
+
+### Añadido
+
+- App Android en TV: ficha propia de película y serie, con el cartel, el título, los datos y una sola fila de acciones (Reproducir, Favorito, Por ver, Visto) sobre el fondo con un velo para que se lea; el foco empieza en Reproducir y recorre la ficha en orden.
+- App Android: tras instalar una actualización, la app se vuelve a abrir sola (en Android 10 o posterior el sistema puede impedirlo).
+
+### Cambiado
+
+- App Android en TV: Cuenta en dos columnas que caben en pantalla; los botones ya no se agrandan al enfocarlos.
+- App Android en TV: el menú lateral marca el elemento enfocado con la pastilla de color en lugar de un marco.
+
+### Corregido
+
+- App Android: las listas (géneros, datos) salían sin espacio tras la coma.
+
 ## [0.37.1] - 2026-10-30
 
 ### Corregido

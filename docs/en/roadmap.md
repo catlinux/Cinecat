@@ -2,7 +2,7 @@
 
 [Español](../es/hoja-de-ruta.md) · [Back to README](../../README.en.md) · [Status](status.md)
 
-The current version is **0.37.1**. Feature details, versions and limits are in [status](status.md); this page only summarises the phases.
+The current version is **0.38.0**. Feature details, versions and limits are in [status](status.md); this page only summarises the phases.
 
 ## Phase 0: preparation (`0.0.x`) — done
 

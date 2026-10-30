@@ -7,6 +7,22 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.38.0] - 2026-10-30
+
+### Added
+
+- Android app on TV: dedicated movie and series page, with the poster, title, details and a single row of actions (Play, Favourite, To watch, Watched) over a veiled backdrop so it reads well; focus starts on Play and moves through the page in order.
+- Android app: after installing an update, the app reopens by itself (on Android 10 or later the system may prevent it).
+
+### Changed
+
+- Android app on TV: Account in two columns that fit on screen; buttons no longer grow when focused.
+- Android app on TV: the side rail marks the focused item with the colour pill instead of a frame.
+
+### Fixed
+
+- Android app: lists (genres, details) had no space after the comma.
+
 ## [0.37.1] - 2026-10-30
 
 ### Fixed
