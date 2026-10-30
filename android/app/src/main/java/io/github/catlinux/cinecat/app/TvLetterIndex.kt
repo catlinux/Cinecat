@@ -17,6 +17,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -24,7 +25,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.catlinux.cinecat.core.api.LetterIndex
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Devuelve la inicial de la fila que contiene [index], usando los tramos que
@@ -74,6 +78,16 @@ fun TvLetterIndex(
                 onClick = {
                     scope.launch {
                         ensureLoaded(letter.offset)
+                        // scrollToItem se limita a los elementos que la cuadrícula
+                        // ya conoce: hay que esperar a que reciba las páginas nuevas.
+                        withTimeoutOrNull(2_000) {
+                            snapshotFlow { gridState.layoutInfo.totalItemsCount }
+                                .first { it > letter.offset }
+                        }
+                        gridState.scrollToItem(letter.offset)
+                        // Tras cargar varias páginas la cuadrícula aún se asienta y
+                        // desplaza la primera colocación unas filas.
+                        delay(300)
                         gridState.scrollToItem(letter.offset)
                     }
                 },

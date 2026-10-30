@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.42.1] - 2026-10-31
+
+### Corregido
+
+- Android TV: al saltar a una inicial lejana en la columna A–Z de Películas y Series, la lista se quedaba unas filas antes de la letra; ahora espera a que la cuadrícula reciba las páginas cargadas y recoloca. Probado en la TV con más de 600 películas.
+
 ## [0.42.0] - 2026-10-31
 
 ### Añadido

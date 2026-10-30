@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.42.1] - 2026-10-31
+
+### Fixed
+
+- Android TV: when jumping to a distant initial in the A–Z column of Movies and Series, the list stopped a few rows before the letter; it now waits for the grid to receive the loaded pages and repositions. Tested on the TV with over 600 movies.
+
 ## [0.42.0] - 2026-10-31
 
 ### Added
