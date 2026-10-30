@@ -18,7 +18,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
@@ -40,9 +42,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
@@ -131,18 +136,36 @@ private fun SeriesDetailContent(
     onOpenSeries: (Long) -> Unit
 ) {
     val series = state.series
+    val isTelevision = LocalIsTelevision.current
+    val initialFocusRequester = remember(series.id) { FocusRequester() }
+    val listState = rememberLazyListState()
+    val hasNextEpisode = series.nextEpisode != null
+
+    LaunchedEffect(isTelevision, series.id, hasNextEpisode) {
+        if (isTelevision) {
+            // La lista no compone las acciones si quedan fuera de pantalla; las acercamos antes de pedir foco.
+            runCatching { listState.scrollToItem(1) }
+            withFrameNanos { }
+            val focused = runCatching { initialFocusRequester.requestFocus() }
+            if (focused.isFailure) {
+                runCatching { listState.scrollToItem(2) }
+                withFrameNanos { }
+                runCatching { initialFocusRequester.requestFocus() }
+            }
+        }
+    }
+
     LazyColumn(
+        state = listState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 24.dp)
     ) {
         item(key = "hero") {
-            Box(Modifier.initialFocus()) {
-                DetailBackdrop(
-                    title = series.title,
-                    url = tmdbImage(series.backdropUrl ?: series.posterUrl, "w1280"),
-                    height = if (tablet) 360.dp else 240.dp
-                )
-            }
+            DetailBackdrop(
+                title = series.title,
+                url = tmdbImage(series.backdropUrl ?: series.posterUrl, "w1280"),
+                height = if (tablet) 360.dp else 240.dp
+            )
         }
         item(key = "info") {
             SeriesInfoRow(
@@ -163,6 +186,8 @@ private fun SeriesDetailContent(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(start = horizontalPadding, end = horizontalPadding, top = 20.dp)
+                        .focusRequester(initialFocusRequester)
+                        .focusRing(RoundedCornerShape(50))
                 ) {
                     val code = formatEpisodeCode(next.season, next.episode)
                         .ifBlank { next.episodeTitle ?: next.title }
@@ -174,6 +199,7 @@ private fun SeriesDetailContent(
             SeriesActions(
                 state = state,
                 horizontalPadding = horizontalPadding,
+                initialFocusRequester = if (hasNextEpisode) null else initialFocusRequester,
                 onToggleFavorite = onToggleFavorite,
                 onToggleWatchlist = onToggleWatchlist,
                 onToggleSeriesWatched = onToggleSeriesWatched
@@ -260,7 +286,10 @@ private fun SeriesDetailContent(
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        TextButton(onClick = onRetrySeason) {
+                        TextButton(
+                            onClick = onRetrySeason,
+                            modifier = Modifier.focusRing(RoundedCornerShape(50))
+                        ) {
                             Text(stringResource(R.string.retry))
                         }
                     }
@@ -389,6 +418,7 @@ private fun SeriesInfoRow(
 private fun SeriesActions(
     state: SeriesDetailUiState.Ready,
     horizontalPadding: androidx.compose.ui.unit.Dp,
+    initialFocusRequester: FocusRequester?,
     onToggleFavorite: () -> Unit,
     onToggleWatchlist: () -> Unit,
     onToggleSeriesWatched: () -> Unit
@@ -403,6 +433,7 @@ private fun SeriesActions(
         DetailActionChip(
             label = stringResource(R.string.favorite),
             active = state.series.favorite,
+            modifier = initialFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier,
             icon = {
                 Icon(
                     imageVector = if (state.series.favorite) {
@@ -469,6 +500,7 @@ private fun SeasonTabs(
             Tab(
                 selected = index == selectedIndex,
                 onClick = { onSelectSeason(season.season) },
+                modifier = Modifier.focusRing(RoundedCornerShape(8.dp)),
                 text = {
                     Text(
                         text = labels[index],
@@ -596,7 +628,10 @@ private fun EpisodeRow(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                IconButton(onClick = onToggleWatched) {
+                IconButton(
+                    onClick = onToggleWatched,
+                    modifier = Modifier.focusRing(CircleShape)
+                ) {
                     Icon(
                         imageVector = Icons.Filled.CheckCircle,
                         contentDescription = stringResource(

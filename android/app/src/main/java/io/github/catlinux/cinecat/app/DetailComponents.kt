@@ -55,10 +55,12 @@ fun DetailBackButton(
 ) {
     IconButton(
         onClick = onBack,
-        modifier = modifier.background(
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f),
-            shape = CircleShape
-        )
+        modifier = modifier
+            .background(
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f),
+                shape = CircleShape
+            )
+            .focusRing(CircleShape)
     ) {
         Icon(
             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -73,11 +75,13 @@ fun DetailActionChip(
     label: String,
     active: Boolean,
     icon: @Composable () -> Unit,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     FilterChip(
         selected = active,
         onClick = onClick,
+        modifier = modifier.focusRing(RoundedCornerShape(8.dp)),
         label = { Text(label) },
         leadingIcon = icon,
         colors = FilterChipDefaults.filterChipColors(
@@ -231,7 +235,10 @@ fun DetailSynopsis(
                 }
             )
             if (hasOverflow || expanded) {
-                TextButton(onClick = { expanded = !expanded }) {
+                TextButton(
+                    onClick = { expanded = !expanded },
+                    modifier = Modifier.focusRing(RoundedCornerShape(50))
+                ) {
                     Text(
                         stringResource(
                             if (expanded) R.string.read_less else R.string.read_more

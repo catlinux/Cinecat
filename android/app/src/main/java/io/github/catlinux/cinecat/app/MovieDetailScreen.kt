@@ -16,7 +16,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Favorite
@@ -33,8 +35,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -113,18 +118,35 @@ private fun MovieDetailContent(
     onToggleWatched: () -> Unit
 ) {
     val item = state.item
+    val isTelevision = LocalIsTelevision.current
+    val playFocusRequester = remember(item.id) { FocusRequester() }
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(isTelevision, item.id) {
+        if (isTelevision) {
+            // La lista no compone las acciones si quedan fuera de pantalla; las acercamos antes de pedir foco.
+            runCatching { listState.scrollToItem(1) }
+            withFrameNanos { }
+            val focused = runCatching { playFocusRequester.requestFocus() }
+            if (focused.isFailure) {
+                runCatching { listState.scrollToItem(2) }
+                withFrameNanos { }
+                runCatching { playFocusRequester.requestFocus() }
+            }
+        }
+    }
+
     LazyColumn(
+        state = listState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 24.dp)
     ) {
         item(key = "hero") {
-            Box(Modifier.initialFocus()) {
-                DetailBackdrop(
-                    title = item.title,
-                    url = tmdbImage(item.backdropUrl ?: item.posterUrl, "w1280"),
-                    height = if (tablet) 360.dp else 240.dp
-                )
-            }
+            DetailBackdrop(
+                title = item.title,
+                url = tmdbImage(item.backdropUrl ?: item.posterUrl, "w1280"),
+                height = if (tablet) 360.dp else 240.dp
+            )
         }
         item(key = "info") {
             MovieInfoRow(
@@ -137,6 +159,7 @@ private fun MovieDetailContent(
             MovieActions(
                 item = item,
                 horizontalPadding = horizontalPadding,
+                playFocusRequester = playFocusRequester,
                 onPlay = onPlay,
                 onToggleFavorite = onToggleFavorite,
                 onToggleWatchlist = onToggleWatchlist,
@@ -198,6 +221,7 @@ private fun MovieDetailContent(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(start = horizontalPadding, end = horizontalPadding, top = 20.dp)
+                        .focusRing(RoundedCornerShape(50))
                 ) {
                     Text(stringResource(R.string.part_of_collection, collection.name))
                 }
@@ -323,6 +347,7 @@ private fun MovieInfoRow(
 private fun MovieActions(
     item: MediaItem,
     horizontalPadding: androidx.compose.ui.unit.Dp,
+    playFocusRequester: FocusRequester,
     onPlay: (Long, Double) -> Unit,
     onToggleFavorite: () -> Unit,
     onToggleWatchlist: () -> Unit,
@@ -338,7 +363,10 @@ private fun MovieActions(
         val position = progress?.positionSeconds?.takeIf { it > 0.0 }
         Button(
             onClick = { onPlay(item.id, position ?: 0.0) },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(playFocusRequester)
+                .focusRing(RoundedCornerShape(50))
         ) {
             Text(
                 stringResource(
