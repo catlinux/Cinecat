@@ -37,7 +37,10 @@ fun CollectionsScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val gridState = rememberLazyGridState()
-    val tablet = useNavigationRail(LocalConfiguration.current.screenWidthDp)
+    val configuration = LocalConfiguration.current
+    val tablet = useNavigationRail(configuration.screenWidthDp)
+    val mobile = !tablet && !LocalIsTelevision.current &&
+        configuration.screenWidthDp < configuration.screenHeightDp
     val horizontalPadding = if (tablet) 28.dp else 16.dp
     val sortOptions = collectionSortOptions()
     val sortLabel = sortOptions.firstOrNull { it.value == state.sort }?.label
@@ -98,7 +101,8 @@ fun CollectionsScreen(
                     gridState = gridState,
                     horizontalPadding = horizontalPadding,
                     onOpenCollection = onOpenCollection,
-                    onRetry = viewModel::retry
+                    onRetry = viewModel::retry,
+                    mobile = mobile
                 )
             }
         }
@@ -111,10 +115,11 @@ private fun CollectionsGrid(
     gridState: LazyGridState,
     horizontalPadding: androidx.compose.ui.unit.Dp,
     onOpenCollection: (Long) -> Unit,
-    onRetry: () -> Unit
+    onRetry: () -> Unit,
+    mobile: Boolean
 ) {
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 150.dp),
+        columns = if (mobile) GridCells.Fixed(3) else GridCells.Adaptive(minSize = 150.dp),
         state = gridState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(
@@ -123,7 +128,7 @@ private fun CollectionsGrid(
             top = 12.dp,
             bottom = 24.dp
         ),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(if (mobile) 8.dp else 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         items(state.paged.items, key = { it.id }) { collection ->
@@ -131,7 +136,8 @@ private fun CollectionsGrid(
                 CollectionPosterCard(
                     collection = collection,
                     width = maxWidth,
-                    onClick = { onOpenCollection(collection.id) }
+                    onClick = { onOpenCollection(collection.id) },
+                    compact = mobile
                 )
             }
         }

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -19,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -34,9 +36,12 @@ import io.github.catlinux.cinecat.core.api.tmdbImage
 fun CollectionPosterCard(
     collection: Collection,
     width: Dp,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    compact: Boolean = false
 ) {
     val posterUrl = tmdbImage(collection.posterUrl, "w342")
+    val titleLineHeight = 15.sp
+    val titleHeight = with(LocalDensity.current) { titleLineHeight.toDp() * 3f }
     Column(
         modifier = Modifier
             .width(width)
@@ -77,11 +82,12 @@ fun CollectionPosterCard(
         Spacer(Modifier.height(8.dp))
         Text(
             text = collection.name,
-            maxLines = 2,
+            modifier = if (compact) Modifier.heightIn(min = titleHeight) else Modifier,
+            maxLines = if (compact) 3 else 2,
             overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.titleLarge.copy(
-                fontSize = 15.sp,
-                lineHeight = 19.sp,
+                fontSize = if (compact) 12.sp else 15.sp,
+                lineHeight = if (compact) titleLineHeight else 19.sp,
                 fontWeight = FontWeight.SemiBold
             ),
             color = MaterialTheme.colorScheme.onBackground
@@ -92,7 +98,11 @@ fun CollectionPosterCard(
                 collection.itemCount.toInt(),
                 collection.itemCount
             ),
-            style = MaterialTheme.typography.labelMedium,
+            style = if (compact) {
+                MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, lineHeight = 12.sp)
+            } else {
+                MaterialTheme.typography.labelMedium
+            },
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }

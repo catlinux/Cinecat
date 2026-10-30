@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.42.2] - 2026-10-31
+
+### Cambiado
+
+- Android móvil: Películas y Series muestran cuatro columnas y Colecciones tres, con carteles más pequeños y títulos de hasta tres líneas para que no se corten. La etiqueta «Colecciones» de la barra inferior cabe en una línea.
+
 ## [0.42.1] - 2026-10-31
 
 ### Corregido

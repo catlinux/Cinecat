@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.42.2] - 2026-10-31
+
+### Changed
+
+- Android mobile: Movies and Series show four columns and Collections three, with smaller posters and titles up to three lines so they are not cut off. The "Collections" label in the bottom bar fits on one line.
+
 ## [0.42.1] - 2026-10-31
 
 ### Fixed

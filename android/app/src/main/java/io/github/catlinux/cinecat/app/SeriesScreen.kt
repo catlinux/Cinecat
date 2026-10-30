@@ -38,7 +38,10 @@ fun SeriesScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val gridState = rememberLazyGridState()
-    val tablet = useNavigationRail(LocalConfiguration.current.screenWidthDp)
+    val configuration = LocalConfiguration.current
+    val tablet = useNavigationRail(configuration.screenWidthDp)
+    val mobile = !tablet && !LocalIsTelevision.current &&
+        configuration.screenWidthDp < configuration.screenHeightDp
     val horizontalPadding = if (tablet) 28.dp else 16.dp
     val sortOptions = seriesSortOptions()
     val allGenres = stringResource(R.string.filter_all)
@@ -110,7 +113,8 @@ fun SeriesScreen(
                     horizontalPadding = horizontalPadding,
                     onOpenSeries = onOpenSeries,
                     onRetry = viewModel::retry,
-                    ensureLoaded = viewModel::ensureLoaded
+                    ensureLoaded = viewModel::ensureLoaded,
+                    mobile = mobile
                 )
             }
         }
@@ -124,11 +128,12 @@ private fun SeriesGrid(
     horizontalPadding: androidx.compose.ui.unit.Dp,
     onOpenSeries: (Long) -> Unit,
     onRetry: () -> Unit,
-    ensureLoaded: suspend (Int) -> Unit
+    ensureLoaded: suspend (Int) -> Unit,
+    mobile: Boolean
 ) {
     Row(modifier = Modifier.fillMaxSize()) {
         LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize = 110.dp),
+            columns = if (mobile) GridCells.Fixed(4) else GridCells.Adaptive(minSize = 110.dp),
             state = gridState,
             modifier = Modifier
                 .weight(1f)
@@ -139,7 +144,7 @@ private fun SeriesGrid(
                 top = 12.dp,
                 bottom = 24.dp
             ),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(if (mobile) 8.dp else 12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             items(state.paged.items, key = { it.id }) { series ->
@@ -147,7 +152,8 @@ private fun SeriesGrid(
                     SeriesPosterCard(
                         series = series,
                         width = maxWidth,
-                        onClick = { onOpenSeries(series.id) }
+                        onClick = { onOpenSeries(series.id) },
+                        compact = mobile
                     )
                 }
             }

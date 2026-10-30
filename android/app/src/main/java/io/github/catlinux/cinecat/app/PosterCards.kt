@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -37,7 +39,8 @@ fun MediaPosterCard(
     item: MediaItem,
     width: Dp,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    compact: Boolean = false
 ) {
     PosterCard(
         title = item.title,
@@ -46,7 +49,8 @@ fun MediaPosterCard(
         progress = item.progress,
         width = width,
         onClick = onClick,
-        modifier = modifier
+        modifier = modifier,
+        compact = compact
     )
 }
 
@@ -55,7 +59,8 @@ fun SeriesPosterCard(
     series: Series,
     width: Dp,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    compact: Boolean = false
 ) {
     PosterCard(
         title = series.title,
@@ -64,7 +69,8 @@ fun SeriesPosterCard(
         progress = null,
         width = width,
         onClick = onClick,
-        modifier = modifier
+        modifier = modifier,
+        compact = compact
     )
 }
 
@@ -133,8 +139,11 @@ private fun PosterCard(
     progress: PlaybackProgress?,
     width: Dp,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    compact: Boolean = false
 ) {
+    val titleLineHeight = 15.sp
+    val titleHeight = with(LocalDensity.current) { titleLineHeight.toDp() * 3f }
     Column(
         modifier = modifier
             .width(width)
@@ -154,11 +163,12 @@ private fun PosterCard(
         Spacer(Modifier.height(8.dp))
         Text(
             text = title,
-            maxLines = 2,
+            modifier = if (compact) Modifier.heightIn(min = titleHeight) else Modifier,
+            maxLines = if (compact) 3 else 2,
             overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.titleLarge.copy(
-                fontSize = 15.sp,
-                lineHeight = 19.sp,
+                fontSize = if (compact) 12.sp else 15.sp,
+                lineHeight = if (compact) titleLineHeight else 19.sp,
                 fontWeight = FontWeight.SemiBold
             ),
             color = MaterialTheme.colorScheme.onBackground
@@ -166,7 +176,11 @@ private fun PosterCard(
         year?.let {
             Text(
                 text = it.toString(),
-                style = MaterialTheme.typography.labelMedium,
+                style = if (compact) {
+                    MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, lineHeight = 12.sp)
+                } else {
+                    MaterialTheme.typography.labelMedium
+                },
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }

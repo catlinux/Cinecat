@@ -41,7 +41,10 @@ fun MoviesScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val gridState = rememberLazyGridState()
-    val tablet = useNavigationRail(LocalConfiguration.current.screenWidthDp)
+    val configuration = LocalConfiguration.current
+    val tablet = useNavigationRail(configuration.screenWidthDp)
+    val mobile = !tablet && !LocalIsTelevision.current &&
+        configuration.screenWidthDp < configuration.screenHeightDp
     val horizontalPadding = if (tablet) 28.dp else 16.dp
     val sortOptions = movieSortOptions()
     val allGenres = stringResource(R.string.filter_all)
@@ -113,7 +116,8 @@ fun MoviesScreen(
                     horizontalPadding = horizontalPadding,
                     onOpenMovie = onOpenMovie,
                     onRetry = viewModel::retry,
-                    ensureLoaded = viewModel::ensureLoaded
+                    ensureLoaded = viewModel::ensureLoaded,
+                    mobile = mobile
                 )
             }
         }
@@ -127,11 +131,12 @@ private fun MovieGrid(
     horizontalPadding: androidx.compose.ui.unit.Dp,
     onOpenMovie: (Long) -> Unit,
     onRetry: () -> Unit,
-    ensureLoaded: suspend (Int) -> Unit
+    ensureLoaded: suspend (Int) -> Unit,
+    mobile: Boolean
 ) {
     Row(modifier = Modifier.fillMaxSize()) {
         LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize = 110.dp),
+            columns = if (mobile) GridCells.Fixed(4) else GridCells.Adaptive(minSize = 110.dp),
             state = gridState,
             modifier = Modifier
                 .weight(1f)
@@ -142,7 +147,7 @@ private fun MovieGrid(
                 top = 12.dp,
                 bottom = 24.dp
             ),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(if (mobile) 8.dp else 12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             items(state.paged.items, key = { it.id }) { item ->
@@ -150,7 +155,8 @@ private fun MovieGrid(
                     MediaPosterCard(
                         item = item,
                         width = maxWidth,
-                        onClick = { onOpenMovie(item.id) }
+                        onClick = { onOpenMovie(item.id) },
+                        compact = mobile
                     )
                 }
             }

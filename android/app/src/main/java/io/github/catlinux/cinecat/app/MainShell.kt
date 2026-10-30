@@ -36,6 +36,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.NavHost
@@ -92,7 +93,10 @@ fun MainShell(
 ) {
     val navController = rememberNavController()
     val tabs = remember { mainTabs() }
-    val useRail = useNavigationRail(LocalConfiguration.current.screenWidthDp)
+    val configuration = LocalConfiguration.current
+    val useRail = useNavigationRail(configuration.screenWidthDp)
+    val compactBottomLabels = !useRail && !isTelevision &&
+        configuration.screenWidthDp < configuration.screenHeightDp
     val currentEntry by navController.currentBackStackEntryAsState()
     val currentDestination = currentEntry?.destination
     val isTopLevel = currentDestination != null &&
@@ -129,7 +133,15 @@ fun MainShell(
                             label = {
                                 Text(
                                     text = stringResource(tab.labelRes),
-                                    style = MaterialTheme.typography.labelSmall,
+                                    style = if (compactBottomLabels) {
+                                        MaterialTheme.typography.labelSmall.copy(
+                                            fontSize = 9.sp,
+                                            lineHeight = 11.sp,
+                                            letterSpacing = 0.sp
+                                        )
+                                    } else {
+                                        MaterialTheme.typography.labelSmall
+                                    },
                                     maxLines = 1,
                                     softWrap = false,
                                     overflow = TextOverflow.Ellipsis
