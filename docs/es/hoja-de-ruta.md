@@ -2,7 +2,7 @@
 
 [English](../en/roadmap.md) · [Volver al README](../../README.md) · [Estado](estado.md)
 
-La versión actual es **0.36.0**. El detalle de funciones, versiones y límites está en [estado](estado.md); esta página solo resume las fases.
+La versión actual es **0.37.0**. El detalle de funciones, versiones y límites está en [estado](estado.md); esta página solo resume las fases.
 
 ## Fase 0: preparación (`0.0.x`) — hecha
 

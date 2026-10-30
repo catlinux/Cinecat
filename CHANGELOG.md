@@ -7,6 +7,18 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.37.0] - 2026-10-30
+
+### Añadido
+
+- Servidor: vigila las carpetas de las bibliotecas y reescanea solo cuando cambian, tras 2 minutos sin cambios o como mucho cada 10 minutos si no paran. Se desactiva con `CINECAT_WATCH=0` y la espera se ajusta con `CINECAT_WATCH_QUIET`. Si no puede vigilar una carpeta (por ejemplo, una unidad de red), sigue el escaneo periódico.
+- Servidor: pedir un archivo que ya no existe en disco lanza un escaneo (como mucho uno por minuto) y la respuesta explica que la biblioteca se está actualizando.
+
+### Corregido
+
+- Servidor: al renombrar o cambiar la extensión de un vídeo dentro de su carpeta (por ejemplo al convertirlo de H.264 a H.265), el escaneo borraba la ficha y creaba otra, y se perdían el progreso, los vistos, los favoritos y la identificación. Ahora la ficha se conserva y pasa a la ruta nueva.
+- Servidor: el escaneo ya no procesa los vídeos modificados en los últimos 2 minutos, que pueden estar a medio escribir, ni borra fichas de su carpeta mientras tanto; repite el escaneo cuando terminan.
+
 ## [0.36.0] - 2026-10-30
 
 ### Añadido

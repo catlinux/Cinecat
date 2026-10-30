@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"net/http"
 	"net/url"
@@ -634,6 +635,12 @@ func (a *API) resolveMediaReason(w http.ResponseWriter, r *http.Request, id int6
 	}
 
 	stat, err := os.Stat(safePath)
+	if errors.Is(err, fs.ErrNotExist) {
+		a.scanForMissingFile()
+		writeJSONError(w, http.StatusNotFound,
+			"el archivo ha cambiado y la biblioteca se está actualizando; vuelve a intentarlo en unos minutos")
+		return "", "", "", false
+	}
 	if err != nil || stat.IsDir() {
 		writeJSONError(w, http.StatusNotFound, "archivo no encontrado")
 		return "", "", "", false

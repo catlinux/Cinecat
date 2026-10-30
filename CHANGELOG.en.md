@@ -7,6 +7,18 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.37.0] - 2026-10-30
+
+### Added
+
+- Server: watches the library folders and rescans by itself when they change, after 2 minutes without changes or at most every 10 minutes if they keep coming. Disable it with `CINECAT_WATCH=0`; tune the wait with `CINECAT_WATCH_QUIET`. If a folder cannot be watched (for example a network drive), periodic scanning still applies.
+- Server: requesting a file that no longer exists on disk starts a scan (at most one per minute) and the response explains that the library is being updated.
+
+### Fixed
+
+- Server: renaming a video or changing its extension within its folder (for example when converting it from H.264 to H.265) made the scan delete its entry and create a new one, losing progress, watched state, favourites and identification. The entry is now kept and moved to the new path.
+- Server: scans no longer process videos modified in the last 2 minutes, which may still be being written, nor delete entries in their folder meanwhile; the scan is repeated once they settle.
+
 ## [0.36.0] - 2026-10-30
 
 ### Added
