@@ -117,10 +117,17 @@ type itemCollection struct {
 }
 
 type itemsResponse struct {
-	Items  []mediaItemDTO `json:"items"`
-	Total  int64          `json:"total"`
-	Limit  int            `json:"limit"`
-	Offset int            `json:"offset"`
+	Items   []mediaItemDTO `json:"items"`
+	Total   int64          `json:"total"`
+	Limit   int            `json:"limit"`
+	Offset  int            `json:"offset"`
+	Letters []letterIndex  `json:"letters,omitempty"`
+}
+
+type letterIndex struct {
+	Letter string `json:"letter"`
+	Offset int64  `json:"offset"`
+	Count  int64  `json:"count"`
 }
 
 type genreCount struct {
@@ -376,7 +383,55 @@ func floatPointer(v sql.NullFloat64) *float64 {
 	return &value
 }
 
-func itemFilters(r *http.Request, userID int64, access libraryAccess, minCollectionItems ...int) (string, []any, error) {
+func parseLetters(r *http.Request) (bool, error) {
+	switch value := strings.TrimSpace(r.URL.Query().Get("letters")); value {
+	case "", "false":
+		return false, nil
+	case "true":
+		return true, nil
+	default:
+		return false, errors.New("letters debe ser true o false")
+	}
+}
+
+func lettersRequestedForSort(letters bool, sort string) bool {
+	return letters && (sort == "" || sort == "title")
+}
+
+func scanLetterIndexes(rows *sql.Rows) ([]letterIndex, error) {
+	indexes := make([]letterIndex, 0)
+	for rows.Next() {
+		var index letterIndex
+		if err := rows.Scan(&index.Letter, &index.Offset, &index.Count); err != nil {
+			return nil, err
+		}
+		indexes = append(indexes, index)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return indexes, nil
+}
+
+func queryItemLetters(ctx context.Context, db *sql.DB, where string, args []any) ([]letterIndex, error) {
+	rows, err := db.QueryContext(ctx, `
+		SELECT sort_letter, MIN(rn) - 1, COUNT(*)
+		  FROM (
+		        SELECT sort_letter,
+		               row_number() OVER (ORDER BY sort_title COLLATE NOCASE, id) AS rn
+		          FROM media_items`+where+`
+		       )
+		 WHERE sort_letter IS NOT NULL AND sort_letter <> ''
+		 GROUP BY sort_letter
+		 ORDER BY MIN(rn) - 1`, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanLetterIndexes(rows)
+}
+
+func itemFilters(r *http.Request, userID int64, access libraryAccess, includeLetter bool, minCollectionItems ...int) (string, []any, error) {
 	query := r.URL.Query()
 	// Los clips viven en media_items como kind=movie; el listado de películas
 	// solo debe ver los ítems de bibliotecas de vídeo visibles.
@@ -431,14 +486,16 @@ func itemFilters(r *http.Request, userID int64, access libraryAccess, minCollect
 		clauses = append(clauses, "("+strings.Join(parts, " OR ")+")")
 	}
 
-	if raw := strings.TrimSpace(query.Get("letter")); raw != "" {
-		letter, err := parseLetter(raw)
-		if err != nil {
-			return "", nil, err
-		}
-		if letter != "" {
-			clauses = append(clauses, "sort_letter = ?")
-			args = append(args, letter)
+	if includeLetter {
+		if raw := strings.TrimSpace(query.Get("letter")); raw != "" {
+			letter, err := parseLetter(raw)
+			if err != nil {
+				return "", nil, err
+			}
+			if letter != "" {
+				clauses = append(clauses, "sort_letter = ?")
+				args = append(args, letter)
+			}
 		}
 	}
 

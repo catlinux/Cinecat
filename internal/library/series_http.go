@@ -38,10 +38,11 @@ type seriesListDTO struct {
 }
 
 type seriesResponse struct {
-	Series []seriesListDTO `json:"series"`
-	Total  int64           `json:"total"`
-	Limit  int             `json:"limit"`
-	Offset int             `json:"offset"`
+	Series  []seriesListDTO `json:"series"`
+	Total   int64           `json:"total"`
+	Limit   int             `json:"limit"`
+	Offset  int             `json:"offset"`
+	Letters []letterIndex   `json:"letters,omitempty"`
 }
 
 type seriesSeasonDTO struct {
@@ -136,6 +137,12 @@ func (a *API) handleSeries(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	query := r.URL.Query()
+	letters, err := parseLetters(r)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	sortParam := strings.TrimSpace(query.Get("sort"))
 	q := strings.TrimSpace(query.Get("q"))
 	letter := strings.TrimSpace(query.Get("letter"))
 	if letter != "" {
@@ -171,10 +178,6 @@ func (a *API) handleSeries(w http.ResponseWriter, r *http.Request) {
 			OR LOWER(s.directors) LIKE LOWER(?) ESCAPE '\')`
 		args = append(args, pattern, pattern, pattern, pattern, pattern)
 	}
-	if letter != "" {
-		where += " AND s.sort_letter = ?"
-		args = append(args, letter)
-	}
 	if genre != "" {
 		where += ` AND EXISTS (
 			SELECT 1 FROM json_each(CASE WHEN s.genres IS NOT NULL AND json_valid(s.genres)
@@ -186,10 +189,17 @@ func (a *API) handleSeries(w http.ResponseWriter, r *http.Request) {
 		where += " AND (s.match_status IS NULL OR s.match_status = 'none')"
 	}
 
+	whereWithLetter := where
+	argsWithLetter := append([]any{}, args...)
+	if letter != "" {
+		whereWithLetter += " AND s.sort_letter = ?"
+		argsWithLetter = append(argsWithLetter, letter)
+	}
+
 	var total int64
 	if err := a.db.QueryRowContext(r.Context(),
-		`SELECT count(*) FROM series s WHERE `+where+` AND (`+access.Clause("s")+`)`,
-		args...).Scan(&total); err != nil {
+		`SELECT count(*) FROM series s WHERE `+whereWithLetter+` AND (`+access.Clause("s")+`)`,
+		argsWithLetter...).Scan(&total); err != nil {
 		log.Printf("library: contar series: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
 		return
@@ -207,8 +217,18 @@ func (a *API) handleSeries(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var letterIndexes []letterIndex
+	if lettersRequestedForSort(letters, sortParam) {
+		letterIndexes, err = querySeriesLetters(r.Context(), a.db, where, args, access)
+		if err != nil {
+			log.Printf("library: calcular letras de series: %v", err)
+			writeJSONError(w, http.StatusInternalServerError, "error interno")
+			return
+		}
+	}
+
 	userID := sessionUserID(r)
-	series, err := querySeriesList(r.Context(), a.db, userID, where, order, args, limit, offset, access)
+	series, err := querySeriesList(r.Context(), a.db, userID, whereWithLetter, order, argsWithLetter, limit, offset, access)
 	if err != nil {
 		log.Printf("library: listar series: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
@@ -216,7 +236,7 @@ func (a *API) handleSeries(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, seriesResponse{
-		Series: series, Total: total, Limit: limit, Offset: offset,
+		Series: series, Total: total, Limit: limit, Offset: offset, Letters: letterIndexes,
 	})
 }
 
@@ -274,6 +294,31 @@ func querySeriesList(
 		return nil, err
 	}
 	return series, nil
+}
+
+func querySeriesLetters(
+	ctx context.Context,
+	db *sql.DB,
+	where string,
+	args []any,
+	access libraryAccess,
+) ([]letterIndex, error) {
+	rows, err := db.QueryContext(ctx, `
+		SELECT sort_letter, MIN(rn) - 1, COUNT(*)
+		  FROM (
+		        SELECT s.sort_letter,
+		               row_number() OVER (ORDER BY s.sort_title COLLATE NOCASE, s.id) AS rn
+		          FROM series s
+		         WHERE `+where+` AND (`+access.Clause("s")+`)
+		       )
+		 WHERE sort_letter IS NOT NULL AND sort_letter <> ''
+		 GROUP BY sort_letter
+		 ORDER BY MIN(rn) - 1`, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanLetterIndexes(rows)
 }
 
 func queryRecentSeries(ctx context.Context, db *sql.DB, userID int64, access libraryAccess, limit int) ([]seriesListDTO, error) {

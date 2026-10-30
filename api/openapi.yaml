@@ -1954,6 +1954,16 @@ paths:
           required: false
           schema:
             type: string
+        - name: letters
+          in: query
+          description: |
+            Con `true`, añade `letters` con la posición de la primera entrada
+            de cada inicial en el listado completo ordenado por título. Solo se
+            calcula con `sort=title` o sin `sort`; con otros órdenes se omite.
+            El filtro `letter` no afecta a este índice.
+          required: false
+          schema:
+            type: boolean
         - name: genre
           in: query
           description: |
@@ -3294,6 +3304,16 @@ paths:
             type: string
             minLength: 1
             maxLength: 1
+        - name: letters
+          in: query
+          description: |
+            Con `true`, añade `letters` con la posición de la primera serie
+            de cada inicial en el listado completo ordenado por título. Solo se
+            calcula con `sort=title` o sin `sort`; con otros órdenes se omite.
+            El filtro `letter` no afecta a este índice.
+          required: false
+          schema:
+            type: boolean
         - name: genre
           in: query
           schema:
@@ -7135,6 +7155,35 @@ components:
           type: integer
         offset:
           type: integer
+        letters:
+          type: array
+          description: |
+            Índice de iniciales calculado sobre el listado completo ordenado
+            por título, ignorando el filtro `letter`. Se omite si no se pidió
+            con `letters=true` o si el orden no es `title`/por defecto.
+          items:
+            $ref: '#/components/schemas/LetterIndex'
+      additionalProperties: false
+    LetterIndex:
+      type: object
+      required:
+        - letter
+        - offset
+        - count
+      properties:
+        letter:
+          type: string
+          description: Inicial de A a Z o `#`.
+        offset:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Posición basada en cero del primer elemento de la inicial.
+        count:
+          type: integer
+          format: int64
+          minimum: 1
+          description: Número de elementos con esa inicial.
       additionalProperties: false
     SimilarSeriesResponse:
       type: object
@@ -7526,6 +7575,14 @@ components:
           type: integer
         offset:
           type: integer
+        letters:
+          type: array
+          description: |
+            Índice de iniciales calculado sobre el listado completo ordenado
+            por título, ignorando el filtro `letter`. Se omite si no se pidió
+            con `letters=true` o si el orden no es `title`/por defecto.
+          items:
+            $ref: '#/components/schemas/LetterIndex'
       additionalProperties: false
     SimilarItemsResponse:
       type: object

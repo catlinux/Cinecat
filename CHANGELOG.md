@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.39.0] - 2026-10-30
+
+### Añadido
+
+- API de biblioteca: `GET /api/v1/items` y `GET /api/v1/series` aceptan `letters=true` y devuelven el índice de iniciales con la posición y el número de elementos de cada una.
+
 ## [0.38.1] - 2026-10-30
 
 ### Corregido

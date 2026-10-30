@@ -239,6 +239,12 @@ func (a *API) handleItems(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	letters, err := parseLetters(r)
+	if err != nil {
+		writeJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	sortParam := strings.TrimSpace(r.URL.Query().Get("sort"))
 	if err := BackfillSortKeys(r.Context(), a.db); err != nil {
 		log.Printf("library: normalizar títulos: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
@@ -247,7 +253,7 @@ func (a *API) handleItems(w http.ResponseWriter, r *http.Request) {
 
 	userID := sessionUserID(r)
 	access := accessFromRequest(r)
-	where, args, err := itemFilters(r, userID, access, a.collectionMin())
+	where, args, err := itemFilters(r, userID, access, true, a.collectionMin())
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -256,6 +262,21 @@ func (a *API) handleItems(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
+	}
+
+	var letterIndexes []letterIndex
+	if lettersRequestedForSort(letters, sortParam) {
+		letterWhere, letterArgs, err := itemFilters(r, userID, access, false, a.collectionMin())
+		if err != nil {
+			writeJSONError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		letterIndexes, err = queryItemLetters(r.Context(), a.db, letterWhere, letterArgs)
+		if err != nil {
+			log.Printf("library: calcular letras de ítems: %v", err)
+			writeJSONError(w, http.StatusInternalServerError, "error interno")
+			return
+		}
 	}
 
 	var total int64
@@ -316,10 +337,11 @@ func (a *API) handleItems(w http.ResponseWriter, r *http.Request) {
 	compactMediaItemListSlice(items, isAdminRequest(r))
 
 	writeJSON(w, http.StatusOK, itemsResponse{
-		Items:  items,
-		Total:  total,
-		Limit:  limit,
-		Offset: offset,
+		Items:   items,
+		Total:   total,
+		Limit:   limit,
+		Offset:  offset,
+		Letters: letterIndexes,
 	})
 }
 

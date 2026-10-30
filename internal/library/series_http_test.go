@@ -940,3 +940,131 @@ func TestSeriesFiltraAccesoParcial(t *testing.T) {
 		t.Fatalf("episodios admin = %d", len(season.Items))
 	}
 }
+
+func TestSeriesLetrasIndiceYFiltros(t *testing.T) {
+	ts := newLibraryHTTPTestServer(t)
+	libraryID := createLibrary(t, ts.db, t.TempDir())
+	for _, item := range []seriesHTTPFixture{
+		{libraryID: libraryID, folder: "100", title: "100% Series"},
+		{libraryID: libraryID, folder: "alpha", title: "Alpha"},
+		{libraryID: libraryID, folder: "anatomia", title: "Anatomia"},
+		{libraryID: libraryID, folder: "beta", title: "Beta"},
+		{libraryID: libraryID, folder: "matrix", title: "The Matrix", displayTitle: "The Matrix"},
+	} {
+		insertSeriesHTTPFixture(t, ts, item)
+	}
+
+	status, body := libraryHTTPGet(t, ts.URL+"/api/v1/series?sort=title&letters=true", ts.token)
+	if status != http.StatusOK {
+		t.Fatalf("letras de series: código = %d, cuerpo = %s", status, body)
+	}
+	var response seriesResponse
+	if err := json.Unmarshal(body, &response); err != nil {
+		t.Fatalf("letras de series: %v", err)
+	}
+	letters := letterIndexMap(response.Letters)
+	want := map[string]letterIndex{
+		"#": {Letter: "#", Offset: 0, Count: 1},
+		"A": {Letter: "A", Offset: 1, Count: 2},
+		"B": {Letter: "B", Offset: 3, Count: 1},
+		"M": {Letter: "M", Offset: 4, Count: 1},
+	}
+	for letter, expected := range want {
+		if letters[letter] != expected {
+			t.Fatalf("letra %s = %+v, se esperaba %+v (todas: %+v)", letter, letters[letter], expected, response.Letters)
+		}
+	}
+
+	status, body = libraryHTTPGet(t, ts.URL+"/api/v1/series?sort=title&letters=true&q=Alpha", ts.token)
+	if status != http.StatusOK {
+		t.Fatalf("letras de series con q: código = %d, cuerpo = %s", status, body)
+	}
+	response = seriesResponse{}
+	if err := json.Unmarshal(body, &response); err != nil {
+		t.Fatalf("letras de series con q: %v", err)
+	}
+	letters = letterIndexMap(response.Letters)
+	if len(letters) != 1 || letters["A"].Offset != 0 || letters["A"].Count != 1 {
+		t.Fatalf("letras de series con q inesperadas: %+v", response.Letters)
+	}
+
+	status, body = libraryHTTPGet(t, ts.URL+"/api/v1/series?sort=title&letters=true&letter=A", ts.token)
+	if status != http.StatusOK {
+		t.Fatalf("letras de series con letter: código = %d, cuerpo = %s", status, body)
+	}
+	response = seriesResponse{}
+	if err := json.Unmarshal(body, &response); err != nil {
+		t.Fatalf("letras de series con letter: %v", err)
+	}
+	if response.Total != 2 || len(response.Letters) != 4 {
+		t.Fatalf("letter no debe filtrar el índice de series: %+v", response)
+	}
+
+	status, body = libraryHTTPGet(t, ts.URL+"/api/v1/series?letters=true", ts.token)
+	if status != http.StatusOK {
+		t.Fatalf("series letters sin sort: código = %d, cuerpo = %s", status, body)
+	}
+	response = seriesResponse{}
+	if err := json.Unmarshal(body, &response); err != nil {
+		t.Fatalf("series letters sin sort: %v", err)
+	}
+	if len(response.Letters) != 4 {
+		t.Fatalf("series letters sin sort inesperadas: %+v", response.Letters)
+	}
+
+	status, body = libraryHTTPGet(t, ts.URL+"/api/v1/series?sort=title", ts.token)
+	if status != http.StatusOK {
+		t.Fatalf("series sin letters: código = %d, cuerpo = %s", status, body)
+	}
+	response = seriesResponse{}
+	if err := json.Unmarshal(body, &response); err != nil {
+		t.Fatalf("series sin letters: %v", err)
+	}
+	if len(response.Letters) != 0 {
+		t.Fatalf("letters no debe aparecer sin letters=true: %+v", response.Letters)
+	}
+
+	status, body = libraryHTTPGet(t, ts.URL+"/api/v1/series?sort=year&letters=true", ts.token)
+	if status != http.StatusOK {
+		t.Fatalf("series letters con sort year: código = %d, cuerpo = %s", status, body)
+	}
+	response = seriesResponse{}
+	if err := json.Unmarshal(body, &response); err != nil {
+		t.Fatalf("series letters con sort year: %v", err)
+	}
+	if len(response.Letters) != 0 {
+		t.Fatalf("letters no debe aparecer con sort=year: %+v", response.Letters)
+	}
+
+	status, body = libraryHTTPGet(t, ts.URL+"/api/v1/series?letters=quizas", ts.token)
+	if status != http.StatusBadRequest {
+		t.Fatalf("series letters inválido: código = %d, cuerpo = %s", status, body)
+	}
+}
+
+func TestSeriesLetrasRespetaPermisos(t *testing.T) {
+	ts := newLibraryHTTPTestServer(t)
+	visibleLibrary := createLibrary(t, ts.db, t.TempDir())
+	hiddenLibrary := createLibrary(t, ts.db, t.TempDir())
+	insertSeriesHTTPFixture(t, ts, seriesHTTPFixture{
+		libraryID: visibleLibrary, folder: "alpha", title: "Alpha",
+	})
+	insertSeriesHTTPFixture(t, ts, seriesHTTPFixture{
+		libraryID: hiddenLibrary, folder: "zulu", title: "Zulu",
+	})
+	token, _ := partialAccessToken(t, ts, visibleLibrary)
+
+	status, body := libraryHTTPGet(t, ts.URL+"/api/v1/series?sort=title&letters=true", token)
+	if status != http.StatusOK {
+		t.Fatalf("letras de series con permisos: código = %d, cuerpo = %s", status, body)
+	}
+	var response seriesResponse
+	if err := json.Unmarshal(body, &response); err != nil {
+		t.Fatalf("letras de series con permisos: %v", err)
+	}
+	if response.Total != 1 || len(response.Letters) != 1 ||
+		response.Letters[0].Letter != "A" || response.Letters[0].Offset != 0 ||
+		response.Letters[0].Count != 1 {
+		t.Fatalf("las letras de series deben respetar las bibliotecas visibles: %+v", response)
+	}
+}

@@ -630,3 +630,139 @@ func TestItemDTOConTrailerYCreditosConID(t *testing.T) {
 		t.Fatalf("créditos con id inesperados: %+v", item.Credits)
 	}
 }
+
+func letterIndexMap(indexes []letterIndex) map[string]letterIndex {
+	result := make(map[string]letterIndex, len(indexes))
+	for _, index := range indexes {
+		result[index.Letter] = index
+	}
+	return result
+}
+
+func TestItemsLetrasIndiceYFiltros(t *testing.T) {
+	ts := newLibraryHTTPTestServer(t)
+	libraryID := createLibrary(t, ts.db, t.TempDir())
+	for _, item := range []itemFixture{
+		{libraryID: libraryID, path: "/media/100.mkv", title: "100% Cine"},
+		{libraryID: libraryID, path: "/media/alpha.mkv", title: "Alpha"},
+		{libraryID: libraryID, path: "/media/anatomia.mkv", title: "Anatomia"},
+		{libraryID: libraryID, path: "/media/beta.mkv", title: "Beta"},
+		{libraryID: libraryID, path: "/media/matrix.mkv", title: "The Matrix", displayTitle: "The Matrix"},
+	} {
+		insertItemFixture(t, ts.db, item)
+	}
+
+	status, body := libraryHTTPGet(t, ts.URL+"/api/v1/items?sort=title&letters=true", ts.token)
+	if status != http.StatusOK {
+		t.Fatalf("letras de ítems: código = %d, cuerpo = %s", status, body)
+	}
+	var response itemsResponse
+	if err := json.Unmarshal(body, &response); err != nil {
+		t.Fatalf("letras de ítems: %v", err)
+	}
+	letters := letterIndexMap(response.Letters)
+	want := map[string]letterIndex{
+		"#": {Letter: "#", Offset: 0, Count: 1},
+		"A": {Letter: "A", Offset: 1, Count: 2},
+		"B": {Letter: "B", Offset: 3, Count: 1},
+		"M": {Letter: "M", Offset: 4, Count: 1},
+	}
+	for letter, expected := range want {
+		if letters[letter] != expected {
+			t.Fatalf("letra %s = %+v, se esperaba %+v (todas: %+v)", letter, letters[letter], expected, response.Letters)
+		}
+	}
+
+	status, body = libraryHTTPGet(t, ts.URL+"/api/v1/items?sort=title&letters=true&q=Alpha", ts.token)
+	if status != http.StatusOK {
+		t.Fatalf("letras con q: código = %d, cuerpo = %s", status, body)
+	}
+	response = itemsResponse{}
+	if err := json.Unmarshal(body, &response); err != nil {
+		t.Fatalf("letras con q: %v", err)
+	}
+	letters = letterIndexMap(response.Letters)
+	if len(letters) != 1 || letters["A"].Offset != 0 || letters["A"].Count != 1 {
+		t.Fatalf("letras con q inesperadas: %+v", response.Letters)
+	}
+
+	status, body = libraryHTTPGet(t, ts.URL+"/api/v1/items?sort=title&letters=true&letter=A", ts.token)
+	if status != http.StatusOK {
+		t.Fatalf("letras con letter: código = %d, cuerpo = %s", status, body)
+	}
+	response = itemsResponse{}
+	if err := json.Unmarshal(body, &response); err != nil {
+		t.Fatalf("letras con letter: %v", err)
+	}
+	if response.Total != 2 || len(response.Letters) != 4 {
+		t.Fatalf("letter no debe filtrar el índice: %+v", response)
+	}
+
+	status, body = libraryHTTPGet(t, ts.URL+"/api/v1/items?letters=true", ts.token)
+	if status != http.StatusOK {
+		t.Fatalf("letters sin sort: código = %d, cuerpo = %s", status, body)
+	}
+	response = itemsResponse{}
+	if err := json.Unmarshal(body, &response); err != nil {
+		t.Fatalf("letters sin sort: %v", err)
+	}
+	if len(response.Letters) != 4 {
+		t.Fatalf("letters sin sort inesperadas: %+v", response.Letters)
+	}
+
+	status, body = libraryHTTPGet(t, ts.URL+"/api/v1/items?sort=title", ts.token)
+	if status != http.StatusOK {
+		t.Fatalf("sin letters: código = %d, cuerpo = %s", status, body)
+	}
+	response = itemsResponse{}
+	if err := json.Unmarshal(body, &response); err != nil {
+		t.Fatalf("sin letters: %v", err)
+	}
+	if len(response.Letters) != 0 {
+		t.Fatalf("letters no debe aparecer sin letters=true: %+v", response.Letters)
+	}
+
+	status, body = libraryHTTPGet(t, ts.URL+"/api/v1/items?sort=year&letters=true", ts.token)
+	if status != http.StatusOK {
+		t.Fatalf("letters con sort year: código = %d, cuerpo = %s", status, body)
+	}
+	response = itemsResponse{}
+	if err := json.Unmarshal(body, &response); err != nil {
+		t.Fatalf("letters con sort year: %v", err)
+	}
+	if len(response.Letters) != 0 {
+		t.Fatalf("letters no debe aparecer con sort=year: %+v", response.Letters)
+	}
+
+	status, body = libraryHTTPGet(t, ts.URL+"/api/v1/items?letters=quizas", ts.token)
+	if status != http.StatusBadRequest {
+		t.Fatalf("letters inválido: código = %d, cuerpo = %s", status, body)
+	}
+}
+
+func TestItemsLetrasRespetaPermisos(t *testing.T) {
+	ts := newLibraryHTTPTestServer(t)
+	visibleLibrary := createLibrary(t, ts.db, t.TempDir())
+	hiddenLibrary := createLibrary(t, ts.db, t.TempDir())
+	insertItemFixture(t, ts.db, itemFixture{
+		libraryID: visibleLibrary, path: "/media/alpha.mkv", title: "Alpha",
+	})
+	insertItemFixture(t, ts.db, itemFixture{
+		libraryID: hiddenLibrary, path: "/media/zulu.mkv", title: "Zulu",
+	})
+	token, _ := partialAccessToken(t, ts, visibleLibrary)
+
+	status, body := libraryHTTPGet(t, ts.URL+"/api/v1/items?sort=title&letters=true", token)
+	if status != http.StatusOK {
+		t.Fatalf("letras con permisos: código = %d, cuerpo = %s", status, body)
+	}
+	var response itemsResponse
+	if err := json.Unmarshal(body, &response); err != nil {
+		t.Fatalf("letras con permisos: %v", err)
+	}
+	if response.Total != 1 || len(response.Letters) != 1 ||
+		response.Letters[0].Letter != "A" || response.Letters[0].Offset != 0 ||
+		response.Letters[0].Count != 1 {
+		t.Fatalf("las letras deben respetar las bibliotecas visibles: %+v", response)
+	}
+}

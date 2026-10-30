@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.39.0] - 2026-10-30
+
+### Added
+
+- Library API: `GET /api/v1/items` and `GET /api/v1/series` accept `letters=true` and return the initial index with the position and number of items for each letter.
+
 ## [0.38.1] - 2026-10-30
 
 ### Fixed
