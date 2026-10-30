@@ -84,6 +84,7 @@ fun MovieDetailScreen(
                     state = current,
                     horizontalPadding = horizontalPadding,
                     backFocusRequester = backFocusRequester,
+                    onBack = onBack,
                     onPlay = onPlay,
                     onOpenMovie = onOpenMovie,
                     onOpenCollection = onOpenCollection,
@@ -105,13 +106,15 @@ fun MovieDetailScreen(
                 )
             }
         }
-        DetailBackButton(
-            onBack = onBack,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(16.dp)
-                .focusRequester(backFocusRequester)
-        )
+        if (!LocalIsTelevision.current || state !is MovieDetailUiState.Ready) {
+            DetailBackButton(
+                onBack = onBack,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(16.dp)
+                    .focusRequester(backFocusRequester)
+            )
+        }
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier

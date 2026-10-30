@@ -96,6 +96,7 @@ fun SeriesDetailScreen(
                     state = current,
                     horizontalPadding = horizontalPadding,
                     backFocusRequester = backFocusRequester,
+                    onBack = onBack,
                     onSelectSeason = viewModel::selectSeason,
                     onRetrySeason = viewModel::retrySeason,
                     onToggleFavorite = viewModel::toggleFavorite,
@@ -123,13 +124,15 @@ fun SeriesDetailScreen(
                 )
             }
         }
-        DetailBackButton(
-            onBack = onBack,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(16.dp)
-                .focusRequester(backFocusRequester)
-        )
+        if (!LocalIsTelevision.current || state !is SeriesDetailUiState.Ready) {
+            DetailBackButton(
+                onBack = onBack,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(16.dp)
+                    .focusRequester(backFocusRequester)
+            )
+        }
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier

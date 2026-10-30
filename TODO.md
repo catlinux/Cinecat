@@ -22,7 +22,9 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 - **Tests HLS reales y CI:** los tests se saltan sin `ffmpeg`/`ffprobe`; no hay flujo automático que los ejecute en Linux.
 - **Revisar el TTL de 7 días de TMDB** contra los términos vigentes antes de dar por buena la caché de producción.
 - **Exponer un modo de reproducción `transcode`** en la API; hoy el HLS copiado o recodificado sigue anunciándose como `remux`.
-- **App Android y Android TV** (plan en `.agents/plans/apps-android/apps-android.PLAN.md`): interfaz propia de TV (A4: foco visible, filas para el mando, sin teclado automático); en el móvil, carteles más pequeños, títulos sin cortes y «Colecciones» en una línea; PiP en el móvil; guardar en el servidor la pista elegida; probar audio AC-3 y AVI por HLS en la TV; HLS con AAC 5.1 cuando el equipo lo admita; valorar `compileSdk 36`.
+- **App Android y Android TV** (plan en `.agents/plans/apps-android/apps-android.PLAN.md`): Películas, Series, Colecciones y Buscar con diseño de TV (solo la ficha y Cuenta lo tienen); en el móvil, carteles más pequeños, títulos sin cortes y «Colecciones» en una línea; PiP en el móvil; guardar en el servidor la pista elegida; probar AVI por HLS en la TV; HLS con AAC 5.1 cuando el equipo lo admita (hoy el AC-3 se convierte a AAC estéreo); valorar `compileSdk 36`.
+- **Índice de letras en Películas y Series de la TV:** columna A–Z y «#» en el borde derecho para saltar al primer título de cada letra; necesita que el servidor indique en qué posición empieza cada letra.
+- **Fichas de archivos convertidos:** al pasar una película de H.264 a H.265 con otra extensión, el escáner la trata como nueva y pierde progreso y vistos. Probablemente porque el archivo nuevo y el viejo conviven durante la conversión; revisar `scanner_relink.go`.
 
 ## 🟢 Más adelante
 

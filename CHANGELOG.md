@@ -7,6 +7,14 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.38.1] - 2026-10-30
+
+### Corregido
+
+- App Android: el menú lateral, los botones con borde y los diálogos mostraban el lila y el rosa por defecto de Material; ahora usan los crema, dorado y granate de la dirección «Marquesina».
+- App Android en TV: el botón «atrás» de la ficha de película y serie flotaba sobre el reparto al bajar; ahora se desplaza con la ficha y se sigue alcanzando con la flecha arriba.
+- App Android en TV: Cuenta se abría con el foco en «Cerrar sesión», y un clic sin querer cerraba la sesión; ahora empieza en «Buscar actualizaciones» y «Cerrar sesión» es un botón secundario.
+
 ## [0.38.0] - 2026-10-30
 
 ### Añadido

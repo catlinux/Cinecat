@@ -23,7 +23,6 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -44,12 +43,12 @@ fun AccountScreen(
 ) {
     val scope = rememberCoroutineScope()
     val server = session.server.toString().removeSuffix("/")
-    val logoutFocusRequester = remember { FocusRequester() }
+    val updateFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(isTelevision) {
         if (isTelevision) {
             withFrameNanos { }
-            runCatching { logoutFocusRequester.requestFocus() }
+            runCatching { updateFocusRequester.requestFocus() }
         }
     }
 
@@ -92,11 +91,10 @@ fun AccountScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.height(8.dp))
-                    PrimaryActionButton(
+                    SecondaryActionButton(
                         isTelevision = true,
                         fillWidth = false,
                         label = stringResource(R.string.home_logout),
-                        modifier = Modifier.focusRequester(logoutFocusRequester),
                         onClick = { scope.launch { repository.logout() } }
                     )
                     SecondaryActionButton(
@@ -107,7 +105,11 @@ fun AccountScreen(
                     )
                 }
                 Column(modifier = Modifier.weight(1f)) {
-                    AccountUpdateSection(updater = updater, isTelevision = true)
+                    AccountUpdateSection(
+                        updater = updater,
+                        isTelevision = true,
+                        initialFocusRequester = updateFocusRequester
+                    )
                 }
             }
         } else {

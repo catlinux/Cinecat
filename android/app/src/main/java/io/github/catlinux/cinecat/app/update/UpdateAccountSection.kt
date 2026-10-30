@@ -24,6 +24,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -43,7 +45,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun AccountUpdateSection(
     updater: AppUpdater,
-    isTelevision: Boolean
+    isTelevision: Boolean,
+    initialFocusRequester: FocusRequester? = null
 ) {
     val state by updater.state.collectAsState()
     val autoEnabled by updater.autoEnabled.collectAsState()
@@ -76,7 +79,8 @@ fun AccountUpdateSection(
         SecondaryActionButton(
             isTelevision = isTelevision,
             label = stringResource(R.string.update_check),
-            modifier = actionModifier,
+            modifier = initialFocusRequester?.let { actionModifier.focusRequester(it) }
+                ?: actionModifier,
             onClick = { updater.check(force = true) }
         )
         when (val current = state) {

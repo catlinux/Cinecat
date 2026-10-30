@@ -7,6 +7,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.38.1] - 2026-10-30
+
+### Fixed
+
+- Android app: the side rail, outlined buttons and dialogs showed Material's default lilac and pink; they now use the cream, gold and maroon of the "Marquesina" direction.
+- Android app on TV: the "back" button on the movie and series page floated over the cast when scrolling; it now scrolls with the page and is still reached with the up arrow.
+- Android app on TV: Account opened with focus on "Sign out", so an accidental click signed you out; it now starts on "Check for updates" and "Sign out" is a secondary button.
+
 ## [0.38.0] - 2026-10-30
 
 ### Added

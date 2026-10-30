@@ -158,6 +158,7 @@ fun TvDetailHeader(
     initialFocusRequester: FocusRequester,
     nextFocusRequester: FocusRequester?,
     backFocusRequester: FocusRequester,
+    onBack: () -> Unit,
     favorite: Boolean,
     watchlist: Boolean,
     watched: Boolean,
@@ -184,6 +185,13 @@ fun TvDetailHeader(
                         1f to veil.copy(alpha = 0.35f)
                     )
                 )
+        )
+        DetailBackButton(
+            onBack = onBack,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(16.dp)
+                .focusRequester(backFocusRequester)
         )
         Row(
             modifier = Modifier
