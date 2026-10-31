@@ -11,6 +11,7 @@ Only users with the `admin` role can open `/admin`. The server checks the role o
 | `/admin` | Summary | Server and web versions, last scan, movie/series/collection counts, and links to unidentified titles. |
 | `/admin/libraries` | Libraries | Create libraries with a name, type and several folders, choose folders on the server, rename, add or remove folders, scan, delete and upload files. |
 | `/admin/trash` | Trash | Restore or permanently delete what was moved to the trash, and empty expired entries. |
+| `/admin/activity` | Activity | Latest playbacks from all users, with a per-user filter. |
 | `/admin/settings/scan` | Scan | Interval and scan at startup. |
 | `/admin/settings/metadata` | Metadata | TMDB language and identification threshold. |
 | `/admin/settings/ui` | Interface | Name, texts, menu, grid, order, collections, series, theme and accent. |
@@ -38,7 +39,7 @@ A library can group several folders, even on different disks. The first folder i
 
 A `clips` library walks its folders like a movie library, but identifies nothing: it does not query TMDB or OMDb, does not infer a year, does not create series or collections and makes no external metadata requests. The title comes from the file name, replacing `_` and `.` with spaces; for example, `2019-08-15_Cumple.de.Ana.mp4` is shown as "2019-08-15 Cumple de Ana".
 
-Videos from these libraries are not mixed with movies in listings, searches, filters, recommendations, collections, portal counts or the administration summary. They keep watched state, progress, preferences and playback, and can appear in "Continue watching". The **Vídeos** section of the web app lets you browse their folders and subfolders, open a minimal detail page and play them. The Music type has its own scan and API; the Music web screen will arrive in a later task.
+Videos from these libraries are not mixed with movies in listings, searches, filters, recommendations, collections, portal counts or the administration summary. They keep watched state, progress, preferences and playback, and can appear in "Continue watching". The **Vídeos** section of the web app lets you browse their folders and subfolders, open a minimal detail page and play them. The Music type has its own scan, API and web screen.
 
 ### Music libraries
 
@@ -77,6 +78,10 @@ On a movie or series page, as an administrator, open **Corregir ficha**:
 4. **Volver a automático** clears the correction and retries identification from the filename.
 
 Under **Cambiar imagen** you can set a poster or backdrop URL, choose one TMDB offers, or **Restaurar la de TMDB**. Manually set images are not overwritten by scans.
+
+## Identifying collections in TMDB
+
+On a collection page, **Gestionar colección** includes **Identificación en TMDB**. From there you can search for a collection by name and use a candidate with **Usar esta**: its identifier, name, synopsis and images are saved, and the page links to TMDB. You can also unlink a manual collection that is already identified; automatic TMDB collections cannot be unlinked. The page also lists the films in the saga that are missing from your visible library, with their poster and year.
 
 ## Settings
 
@@ -149,9 +154,13 @@ Anything outside the visible libraries responds as if it did not exist: listings
 
 In **Administration → Users** you can create an account with a name, password and role, choose its libraries (or tick "All, including future libraries"), change its role, enable or disable it, reset its password and delete it. User accounts must have at least one library or access to all. The administrator cannot delete, disable or remove the admin role from their own account, and at least one active administrator must remain. Resetting a password, changing a role, disabling or deleting an account closes all its sessions.
 
-Every session records its device and type. **Your account** lists your open sessions (device, last activity, expiry) so you can close any of them, and each user card in **Users** does the same for administrators. Web sessions last 24 hours; native app sessions will last 90 days, both renewed while in use.
+Every session records its device and type. **Your account** lists your open sessions (device, last activity, expiry) so you can close any of them, and each user card in **Users** does the same for administrators. Web sessions last 24 hours; native app sessions last 90 days, both renewed while in use.
 
-**Pair a device:** the Android and Android TV apps will be able to sign in without typing the password. The device shows an `XXXX-XXXX` code and a QR code; open it (or go to **/vincular** from Your account), check that the device name is yours and press "Vincular". The code expires after 10 minutes and works once. Only approve a code you see on your own screen: if someone sends you one, it would give them access to your account.
+**Pair a device:** the Android and Android TV apps can sign in without typing the password. The device shows an `XXXX-XXXX` code and a QR code; open it (or go to **/vincular** from Your account), check that the device name is yours and press "Vincular". The code expires after 10 minutes and works once. Only approve a code you see on your own screen: if someone sends you one, it would give them access to your account.
+
+## Activity
+
+**Administration → Activity** (`/admin/activity`) shows the latest playbacks from all users. Each row shows the user, title (and series, season and episode when applicable), position and duration, whether it is watched and the most recent progress or watched date. You can filter by user and clear the filter; when there is no data the page explains it. Only administrators can see it. The API is `GET /api/v1/activity` and accepts `limit` and `user_id`.
 
 ## Uploading files and trash
 

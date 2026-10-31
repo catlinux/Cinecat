@@ -14,7 +14,7 @@ Para cerrar sesión, entra en `/login` y pulsa «Cerrar sesión». La sesión se
 
 ## El portal
 
-El portal es la página de inicio. Arriba verás el nombre del servidor, el eslogan y el texto de bienvenida que haya configurado el administrador. Después aparecen los accesos a **Películas**, **Colecciones**, **Series** y, si existen bibliotecas de Vídeos o Música con contenido, **Vídeos** y **Música**.
+El portal es la página de inicio. Arriba verás el nombre del servidor, el eslogan y el texto de bienvenida que haya configurado el administrador. Después aparecen los accesos a **Películas**, **Colecciones**, **Series** y, si existen bibliotecas de Vídeos o Música con contenido, **Vídeos** y **Música**. Películas, Colecciones y Series se ocultan cuando tu cuenta no tiene contenido en ellas; si la consulta falla, se muestran todas.
 
 Debajo se muestran, solo si tienen contenido:
 
@@ -47,7 +47,7 @@ Si eres administrador verás además «Sin identificar (N)», que muestra las pe
 
 «Colecciones» agrupa sagas y ciclos. Puedes buscar por nombre y ordenar por **Nombre**, **Añadidas** o **Tamaño**. Al abrir una colección verás su descripción, sus películas y un botón para reproducir la primera sin ver (o la primera, si ya están todas vistas).
 
-Si eres administrador, dentro de una colección aparece «Gestionar colección» para cambiar nombre, descripción, cartel o fondo, añadir o quitar películas, reordenarlas y borrar la colección.
+Si eres administrador, dentro de una colección aparece «Gestionar colección» para cambiar nombre, descripción, cartel o fondo, añadir o quitar películas, reordenarlas y borrar la colección. También incluye **Identificación en TMDB**: puedes buscar la colección por nombre, vincularla con un candidato o desvincular una colección manual. Si está identificada, la ficha muestra las películas de la saga que faltan en tu biblioteca visible, con cartel y año.
 
 ### Series
 

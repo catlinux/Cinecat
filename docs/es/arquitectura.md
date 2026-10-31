@@ -2,12 +2,12 @@
 
 [English](../en/architecture.md) · [Volver al README](../../README.md) · [Estado](estado.md)
 
-Cinecat tiene un servidor Go, un cliente web SvelteKit y un despliegue Docker con Apache delante. Las apps Android y Android TV forman parte de la visión, pero todavía no existen. Esta página describe lo que hay construido y separa con claridad lo que aún no está.
+Cinecat tiene un servidor Go, un cliente web SvelteKit, una app Android para móvil, tableta y Android TV, y un despliegue Docker con Apache delante. Esta página describe lo que hay construido y separa con claridad lo que aún no está.
 
 ## Vista general
 
 ```
- Navegador / clientes futuros
+ Navegador y apps Android / TV
             │ HTTPS
             ▼
  ┌─────────────────────┐
@@ -67,7 +67,7 @@ Las respuestas de error usan `{error}` o `{message}` según el endpoint; los có
 ## Reproducción
 
 - **Directa:** `.mp4` y `.m4v` se sirven con `http.ServeContent`, con soporte de rangos.
-- **HLS:** el resto de extensiones se recodifica a H.264 + AAC estéreo y se sirve por segmentos MPEG-TS de 6 s. La playlist es VOD si se conoce la duración; si no, se usa la playlist `event` de FFmpeg.
+- **HLS:** el resto de extensiones se sirve por segmentos MPEG-TS de 6 s; el vídeo se copia cuando el contenedor, el códec y el equipo lo permiten, y si no se recodifica a H.264 + AAC estéreo. La playlist es VOD si se conoce la duración; si no, se usa la playlist `event` de FFmpeg.
 - **Control:** máximo de transcodificaciones simultáneas, procesos con prioridad baja, parada por inactividad y límite de segmentos por delante. Ver [reproducción](reproduccion.md).
 
 ## Seguridad
@@ -78,18 +78,16 @@ Las respuestas de error usan `{error}` o `{message}` según el endpoint; los có
 - Roles `admin` y `user`; los endpoints de administración comprueban el rol en el servidor.
 - Cookie de sesión `httpOnly`, `SameSite=Lax` y `Secure` cuando llega por HTTPS.
 - Bloqueo tras cinco intentos fallidos y mensajes de login que no distinguen usuario inexistente de contraseña incorrecta.
-- URLs de reproducción firmadas con HMAC-SHA256, TTL de 8 horas y clave por proceso.
+- URLs de reproducción firmadas con HMAC-SHA256, TTL de 8 horas y clave persistida junto a la base de datos.
 - Validación de rutas dentro de la biblioteca y escaneo sin seguir enlaces simbólicos.
 - Sin telemetría. Las conexiones salientes son a TMDB, OMDb y GitHub solo cuando corresponde.
 
 ### Límites conocidos
 
-- El bloqueo de login se indexa por usuario, no por IP; puede usarse para bloquear temporalmente una cuenta.
+- El bloqueo de login vive en memoria del proceso y depende de que el proxy reenvíe bien la IP.
 - No hay CORS: el despliegue depende de que Apache una el origen.
-- No hay permisos por biblioteca: cualquier usuario autenticado ve todo el catálogo.
-- No hay creación de usuarios ni revocación de sesiones desde la web.
-- `/media` se monta en solo lectura; no hay subida ni borrado de archivos.
-- Las URLs de reproducción no están ligadas al usuario y dejan de valer al reiniciar el servidor.
+- Las URLs de reproducción no están ligadas al usuario, aunque sobreviven a los reinicios porque la clave de firma se guarda junto a la base.
+- `/media` se monta en solo lectura por defecto; con `rw` se habilitan subidas y papelera para vídeo, no para música.
 
 El detalle y el orden de mejora están en [estado](estado.md) y [tareas abiertas](../../TODO.md).
 
@@ -99,11 +97,11 @@ El detalle y el orden de mejora están en [estado](estado.md) y [tareas abiertas
 |---|---|---|
 | Servidor | Go, SQLite, FFmpeg externo | Implementado. |
 | Web | TypeScript + SvelteKit + hls.js | Implementado. |
-| Android / Android TV | Kotlin + Jetpack Compose + Media3/ExoPlayer, libmpv opcional | Decidido, sin código. |
+| Android / Android TV | Kotlin + Jetpack Compose + Media3/ExoPlayer, libmpv opcional | Implementado. |
 | Despliegue | Docker Compose + Apache del host | Implementado. |
 
 ## Decisiones de seguridad
 
-La plataforma puede exponerse a internet, así que HTTPS, contraseñas fuertes y una superficie mínima son requisitos. El PIN de perfiles y los permisos por biblioteca siguen siendo objetivos de diseño; no deben confundirse con funciones ya disponibles.
+La plataforma puede exponerse a internet, así que HTTPS, contraseñas fuertes y una superficie mínima son requisitos. Los perfiles con PIN siguen siendo un objetivo de diseño; los permisos por biblioteca ya están implementados.
 
 Ver también [SECURITY.md](../../SECURITY.md) y [licencias y créditos](licencias-y-creditos.md).

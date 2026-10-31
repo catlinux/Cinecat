@@ -2,7 +2,7 @@
 
 [Español](../es/hoja-de-ruta.md) · [Back to README](../../README.en.md) · [Status](status.md)
 
-The current version is **0.38.1**. Feature details, versions and limits are in [status](status.md); this page only summarises the phases.
+The current version is **0.48.0**. Feature details, versions and limits are in [status](status.md); this page only summarises the phases.
 
 ## Phase 0: preparation (`0.0.x`) — done
 
@@ -18,7 +18,7 @@ Login and session, library, detail page, player, light/dark themes and accessibi
 
 ## Phase 3: advanced playback (`0.8.0`–`0.13.0`) — partial
 
-Fallback transcoding, progressive segmentation, seeking, FFmpeg supervision, custom controls, audio, text subtitles and preferences were implemented. Per-device capability decisions, H.265, hardware, HDR, image subtitles and ABR remain outside.
+Fallback transcoding, progressive segmentation, seeking, FFmpeg supervision, custom controls, audio, text subtitles and preferences were implemented. Per-device capability decisions, H.265, copy mode without re-encoding and hardware acceleration came later. HDR, deinterlacing, image subtitles and ABR remain outside.
 
 ## Phase 3b: metadata, series and administration (`0.11.0`–`0.16.0`) — done
 
@@ -26,11 +26,11 @@ TMDB, full detail pages, collections, series, hot settings, administration panel
 
 ## Next batches
 
-The agreed order is: favorites and watchlist; collections from the movie page and collection identification; libraries with multiple folders and a browser; upload/deletion with a trash bin; users and profile; sessions, devices, activity and backups; user-uploaded subtitles; plugins; DLNA/UPnP; library types; Android and Android TV clients. Details are in [status](status.md).
+Favorites and watchlist, collections and their TMDB identification, libraries with multiple folders, upload and trash, users, sessions, activity, backups and the Android and Android TV clients are done. Still pending: user profiles, user-uploaded subtitles, advanced playback (HDR, image subtitles, ABR and audio), plugins, DLNA/UPnP and other library types. Details are in [status](status.md).
 
-## Phase 4: Android and Android TV — in progress
+## Phase 4: Android and Android TV — done, with improvements pending
 
-Kotlin + Jetpack Compose + Media3/ExoPlayer, with optional libmpv. Done: the server (device sessions, TV pairing by code, native capabilities in playback, a stable API contract and TMDB images served by the server itself) and a single APK for phone and TV that signs in, browses the library and plays. Since 0.35.0 the app is published signed on GitHub and updates itself. Since 0.36.0 the TV is driven with the remote with visible focus. Still missing: background playback and picture-in-picture on phones.
+Kotlin + Jetpack Compose + Media3/ExoPlayer, with optional libmpv. Done: the server (device sessions, TV pairing by code, native capabilities in playback, a stable API contract and TMDB images served by the server itself) and a single APK for phones, tablets and TV that signs in, browses the library and plays. Since 0.35.0 the app is published signed on GitHub and updates itself. Since 0.36.0 the TV is driven with the remote with visible focus; since 0.40.0 it has an A–Z index, since 0.43.0 picture-in-picture on phones, and since 0.46.0 it remembers audio, subtitles and quality. Still missing: background playback and HLS with 5.1 AAC on devices that support it.
 
 ## Phase 5: first stable release (`1.0.0`) — future
 

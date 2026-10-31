@@ -2,12 +2,12 @@
 
 [Español](../es/arquitectura.md) · [Back to README](../../README.en.md) · [Status](status.md)
 
-Cinecat has a Go server, a SvelteKit web client and a Docker deployment with Apache in front. Android and Android TV apps are part of the vision but do not exist yet. This page describes what is built and clearly separates what is not.
+Cinecat has a Go server, a SvelteKit web client, an Android app for phones, tablets and Android TV, and a Docker deployment with Apache in front. This page describes what is built and clearly separates what is not.
 
 ## Overview
 
 ```
- Browser / future clients
+ Browser and Android / TV apps
             │ HTTPS
             ▼
  ┌─────────────────────┐
@@ -67,7 +67,7 @@ Error responses use `{error}` or `{message}` depending on the endpoint; common c
 ## Playback
 
 - **Direct:** `.mp4` and `.m4v` are served with `http.ServeContent`, including range support.
-- **HLS:** other extensions are re-encoded to H.264 + stereo AAC and served in 6 s MPEG-TS segments. The playlist is VOD when the duration is known; otherwise FFmpeg's `event` playlist is used.
+- **HLS:** other extensions are served in 6 s MPEG-TS segments; the video is copied when the container, codec and device allow it, and otherwise re-encoded to H.264 + stereo AAC. The playlist is VOD when the duration is known; otherwise FFmpeg's `event` playlist is used.
 - **Control:** maximum simultaneous transcodes, low-priority processes, idle stop and a limit on segments generated ahead. See [playback](playback.md).
 
 ## Security
@@ -78,7 +78,7 @@ Error responses use `{error}` or `{message}` depending on the endpoint; common c
 - `admin` and `user` roles; admin endpoints check the role on the server.
 - Session cookie `httpOnly`, `SameSite=Lax` and `Secure` when received over HTTPS.
 - Lockout after five failed attempts per user+IP pair, with an additional limit of 20 failures per IP, and login messages that do not reveal whether the user exists. The IP comes from `RemoteAddr`; `X-Forwarded-For` is only accepted from the ranges in `CINECAT_TRUSTED_PROXIES`.
-- Playback URLs signed with HMAC-SHA256, 8-hour TTL and a per-process key.
+- Playback URLs signed with HMAC-SHA256, 8-hour TTL and a key persisted next to the database.
 - Path validation inside the library and scanning without following symlinks.
 - No telemetry. Outgoing connections go to TMDB, OMDb and GitHub only when relevant.
 
@@ -86,10 +86,8 @@ Error responses use `{error}` or `{message}` depending on the endpoint; common c
 
 - Login lockout lives in process memory and is not shared across instances; if the proxy does not forward the IP or the trusted ranges are wrong, it falls back to the direct origin.
 - There is no CORS: the deployment relies on Apache unifying the origin.
-- There are no per-library permissions: any authenticated user sees the whole catalogue.
-- There is no user creation or session revocation from the web app.
-- `/media` is mounted read-only; there is no file upload or deletion.
-- Playback URLs are not bound to the user and stop working after a server restart.
+- Playback URLs are not bound to the user, although they survive restarts because the signing key is stored next to the database.
+- `/media` is mounted read-only by default; with `rw`, uploads and the trash are enabled for video, not music.
 
 Details and the improvement order are in [status](status.md) and [open tasks](../../TODO.en.md).
 
@@ -99,11 +97,11 @@ Details and the improvement order are in [status](status.md) and [open tasks](..
 |---|---|---|
 | Server | Go, SQLite, external FFmpeg | Implemented. |
 | Web | TypeScript + SvelteKit + hls.js | Implemented. |
-| Android / Android TV | Kotlin + Jetpack Compose + Media3/ExoPlayer, optional libmpv | Decided, no code. |
+| Android / Android TV | Kotlin + Jetpack Compose + Media3/ExoPlayer, optional libmpv | Implemented. |
 | Deployment | Docker Compose + host Apache | Implemented. |
 
 ## Security decisions
 
-The platform may be exposed to the internet, so HTTPS, strong passwords and a minimal surface are requirements. PIN profiles and per-library permissions remain design goals; they should not be confused with features that are already available.
+The platform may be exposed to the internet, so HTTPS, strong passwords and a minimal surface are requirements. PIN profiles remain a design goal; per-library permissions are already implemented.
 
 See also [SECURITY.md](../../SECURITY.md) and [licenses and credits](licenses-and-credits.md).

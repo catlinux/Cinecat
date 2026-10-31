@@ -11,6 +11,7 @@ Solo los usuarios con rol `admin` pueden entrar en `/admin`. El servidor comprue
 | `/admin` | Resumen | Versiones del servidor y de la web, último escaneo, recuentos de películas, series y colecciones, y enlaces a los títulos sin identificar. |
 | `/admin/libraries` | Bibliotecas | Crear bibliotecas con nombre, tipo y varias carpetas, elegir carpetas en el servidor, renombrar, añadir o quitar carpetas, escanear, borrar y subir archivos. |
 | `/admin/trash` | Papelera | Restaurar o eliminar definitivamente lo movido a la papelera y vaciar lo caducado. |
+| `/admin/activity` | Actividad | Últimas reproducciones de todos los usuarios, con filtro por usuario. |
 | `/admin/settings/scan` | Escaneo | Intervalo y escaneo al arrancar. |
 | `/admin/settings/metadata` | Metadatos | Idioma de TMDB y umbral de identificación. |
 | `/admin/settings/ui` | Interfaz | Nombre, textos, menú, rejilla, orden, colecciones, series, tema y acento. |
@@ -38,7 +39,7 @@ Una biblioteca puede agrupar varias carpetas, incluso de discos distintos. La pr
 
 Una biblioteca de tipo `clips` recorre sus carpetas igual que una de películas, pero no identifica nada: no consulta TMDB ni OMDb, no deduce año, no crea series ni colecciones y no pide metadatos externos. El título sale del nombre del archivo, cambiando `_` y `.` por espacios; por ejemplo, `2019-08-15_Cumple.de.Ana.mp4` se muestra como «2019-08-15 Cumple de Ana».
 
-Los vídeos de estas bibliotecas no se mezclan con las películas en listados, búsquedas, filtros, recomendaciones, colecciones, recuentos del portal ni del resumen de administración. Sí conservan visto, progreso, preferencias y reproducción, y pueden aparecer en «Continuar viendo». La sección **Vídeos** de la web permite navegar por sus carpetas y subcarpetas, abrir una ficha mínima y reproducirlos. El tipo Música tiene su propio escaneo y API; la pantalla web de Música llegará en una tarea posterior.
+Los vídeos de estas bibliotecas no se mezclan con las películas en listados, búsquedas, filtros, recomendaciones, colecciones, recuentos del portal ni del resumen de administración. Sí conservan visto, progreso, preferencias y reproducción, y pueden aparecer en «Continuar viendo». La sección **Vídeos** de la web permite navegar por sus carpetas y subcarpetas, abrir una ficha mínima y reproducirlos. El tipo Música tiene su propio escaneo, API y pantalla web.
 
 ### Bibliotecas de Música
 
@@ -77,6 +78,10 @@ En la ficha de una película o serie, como administrador, abre **Corregir ficha*
 4. **Volver a automático** limpia la corrección y reintenta la identificación por el nombre del archivo.
 
 En **Cambiar imagen** puedes fijar una URL de cartel o fondo, elegir una de las que ofrece TMDB o **Restaurar la de TMDB**. Las imágenes fijadas a mano no las pisa el escaneo.
+
+## Identificar colecciones en TMDB
+
+En la ficha de una colección, **Gestionar colección** incluye **Identificación en TMDB**. Desde ahí puedes buscar una colección por nombre y usar un candidato con **Usar esta**: se guardan su identificador, nombre, sinopsis e imágenes, y la ficha enlaza a TMDB. También puedes desvincular una colección manual ya identificada; las colecciones automáticas de TMDB no se pueden desvincular. La ficha muestra además las películas de la saga que faltan en tu biblioteca visible, con cartel y año.
 
 ## Ajustes
 
@@ -149,9 +154,13 @@ Lo que queda fuera de las bibliotecas visibles responde igual que si no existier
 
 En **Administración → Usuarios** puedes crear una cuenta con nombre, contraseña y rol, elegir sus bibliotecas (o marcar «Todas, también las que se creen en el futuro»), cambiar el rol, activar o desactivar la cuenta, restablecer su contraseña y borrarla. Las cuentas de usuario deben tener al menos una biblioteca o el acceso a todas. El administrador no puede borrarse, desactivarse ni quitarse el rol a sí mismo, y siempre debe quedar un administrador activo. Restablecer la contraseña, cambiar el rol, desactivar o borrar una cuenta cierra todas sus sesiones.
 
-Cada sesión guarda su dispositivo y su tipo. **Tu cuenta** lista tus sesiones abiertas (dispositivo, última actividad y caducidad) para que puedas cerrar cualquiera, y cada tarjeta de **Usuarios** hace lo mismo para el administrador. Las sesiones web duran 24 horas y las de las apps nativas durarán 90 días, ambas renovadas mientras se usan.
+Cada sesión guarda su dispositivo y su tipo. **Tu cuenta** lista tus sesiones abiertas (dispositivo, última actividad y caducidad) para que puedas cerrar cualquiera, y cada tarjeta de **Usuarios** hace lo mismo para el administrador. Las sesiones web duran 24 horas y las de las apps nativas duran 90 días, ambas renovadas mientras se usan.
 
-**Vincular un dispositivo:** las apps de Android y Android TV podrán iniciar sesión sin escribir la contraseña. El dispositivo muestra un código `XXXX-XXXX` y un QR; ábrelo (o entra en **/vincular** desde Tu cuenta), comprueba que el nombre del dispositivo es el tuyo y pulsa «Vincular». El código caduca a los 10 minutos y sirve una sola vez. Aprueba solo un código que veas en tu propia pantalla: si alguien te pasa uno, daría acceso a tu cuenta.
+**Vincular un dispositivo:** las apps de Android y Android TV pueden iniciar sesión sin escribir la contraseña. El dispositivo muestra un código `XXXX-XXXX` y un QR; ábrelo (o entra en **/vincular** desde Tu cuenta), comprueba que el nombre del dispositivo es el tuyo y pulsa «Vincular». El código caduca a los 10 minutos y sirve una sola vez. Aprueba solo un código que veas en tu propia pantalla: si alguien te pasa uno, daría acceso a tu cuenta.
+
+## Actividad
+
+**Administración → Actividad** (`/admin/activity`) muestra las últimas reproducciones de todos los usuarios. Cada fila indica usuario, título (y serie, temporada y episodio cuando corresponde), posición y duración, si está visto y la fecha más reciente del progreso o de la marca de visto. Puedes filtrar por usuario y quitar el filtro; si no hay datos, la página lo explica. Solo los administradores pueden verla. La API es `GET /api/v1/activity` y admite `limit` y `user_id`.
 
 ## Subir archivos y papelera
 

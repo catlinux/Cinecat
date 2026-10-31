@@ -132,10 +132,10 @@ The apps declare in `caps` what their device plays: containers (`mkv`, `mp4`), v
 
 ## Signed URLs
 
-- HMAC-SHA256 with a random 32-byte key per process.
+- HMAC-SHA256 with a random 32-byte key stored next to the database.
 - Default TTL: 8 hours.
 - The signature covers the identifier and expiry; it is not bound to the user. Anyone with the URL can use it until it expires.
-- Restarting the server changes the key, so previous URLs stop working.
+- The key is kept across restarts, so earlier URLs keep working until they expire.
 
 ## What format to store
 

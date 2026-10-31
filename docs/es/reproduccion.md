@@ -132,10 +132,10 @@ Las apps declaran en `caps` lo que su equipo reproduce: contenedores (`mkv`, `mp
 
 ## URLs firmadas
 
-- HMAC-SHA256 con una clave aleatoria de 32 bytes por proceso.
+- HMAC-SHA256 con una clave aleatoria de 32 bytes guardada junto a la base de datos.
 - TTL por defecto: 8 horas.
 - La firma cubre el identificador y la caducidad; no está ligada al usuario. Cualquiera con la URL puede usarla hasta que expire.
-- Al reiniciar el servidor cambia la clave y las URLs anteriores dejan de valer.
+- La clave se conserva entre reinicios, así que las URLs anteriores siguen valiendo hasta su caducidad.
 
 ## Qué formato conviene guardar
 

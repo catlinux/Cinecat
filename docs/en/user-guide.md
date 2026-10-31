@@ -14,7 +14,7 @@ To sign out, open `/login` and press "Cerrar sesión". The session is stored in 
 
 ## The portal
 
-The portal is the home page. At the top you see the server name, tagline and welcome text configured by the administrator. Then come the entry points for **Películas**, **Colecciones**, **Series** and, when Vídeos or Música libraries have content, **Vídeos** and **Música**.
+The portal is the home page. At the top you see the server name, tagline and welcome text configured by the administrator. Then come the entry points for **Películas**, **Colecciones**, **Series** and, when Vídeos or Música libraries have content, **Vídeos** and **Música**. Movies, Collections and Series are hidden when your account has no content in them; if the request fails, all of them are shown.
 
 Below, only when they have content:
 
@@ -47,7 +47,7 @@ Administrators also see "Sin identificar (N)", which shows movies the scanner co
 
 "Colecciones" groups sagas and cycles. You can search by name and sort by **Nombre**, **Añadidas** or **Tamaño**. Opening a collection shows its description, its movies and a button to play the first unwatched one (or the first one, if all are watched).
 
-Administrators see "Gestionar colección" inside a collection to change its name, description, poster or backdrop, add or remove movies, reorder them and delete the collection.
+Administrators see "Gestionar colección" inside a collection to change its name, description, poster or backdrop, add or remove movies, reorder them and delete the collection. It also includes **Identificación en TMDB**: you can search for the collection by name, link it to a candidate or unlink a manual collection. When it is identified, the page shows the films in the saga that are missing from your visible library, with their poster and year.
 
 ### Series
 

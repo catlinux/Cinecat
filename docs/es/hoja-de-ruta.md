@@ -2,7 +2,7 @@
 
 [English](../en/roadmap.md) · [Volver al README](../../README.md) · [Estado](estado.md)
 
-La versión actual es **0.38.1**. El detalle de funciones, versiones y límites está en [estado](estado.md); esta página solo resume las fases.
+La versión actual es **0.48.0**. El detalle de funciones, versiones y límites está en [estado](estado.md); esta página solo resume las fases.
 
 ## Fase 0: preparación (`0.0.x`) — hecha
 
@@ -18,7 +18,7 @@ Login y sesión, biblioteca, ficha, reproductor, temas claro/oscuro y accesibili
 
 ## Fase 3: reproducción avanzada (`0.8.0`–`0.13.0`) — parcial
 
-Se implementaron la transcodificación de respaldo, la segmentación progresiva, los saltos, la supervisión de FFmpeg, los controles propios, audio, subtítulos de texto y preferencias. La decisión por capacidades del dispositivo, H.265, hardware, HDR, subtítulos de imagen y ABR siguen fuera.
+Se implementaron la transcodificación de respaldo, la segmentación progresiva, los saltos, la supervisión de FFmpeg, los controles propios, audio, subtítulos de texto y preferencias. Después llegaron la decisión por capacidades del dispositivo, H.265, la copia sin recodificar y la aceleración por hardware. HDR, desentrelazado, subtítulos de imagen y ABR siguen fuera.
 
 ## Fase 3b: fichas, series y administración (`0.11.0`–`0.16.0`) — hecha
 
@@ -26,11 +26,11 @@ TMDB, fichas completas, colecciones, series, ajustes en caliente, panel de admin
 
 ## Próximas tandas
 
-El orden acordado es: favoritos y próximas a ver; colecciones desde la ficha e identificación de colecciones; bibliotecas con varias carpetas y navegador; subida/borrado con papelera; usuarios y perfil; sesiones, dispositivos, actividad y copias; subtítulos subidos; complementos; DLNA/UPnP; tipos de biblioteca; clientes Android y Android TV. El detalle está en [estado](estado.md).
+Ya están hechos los favoritos y próximas a ver, las colecciones y su identificación en TMDB, las bibliotecas con varias carpetas, la subida y papelera, los usuarios, las sesiones, la actividad, las copias y los clientes Android y Android TV. Quedan el perfil de usuario, los subtítulos subidos, la reproducción avanzada (HDR, subtítulos de imagen, ABR y audio), los complementos, DLNA/UPnP y otros tipos de biblioteca. El detalle está en [estado](estado.md).
 
-## Fase 4: Android y Android TV — en curso
+## Fase 4: Android y Android TV — hecha, con mejoras pendientes
 
-Kotlin + Jetpack Compose + Media3/ExoPlayer, con libmpv opcional. Hecho: el servidor (sesiones de dispositivo, vinculación de la TV por código, capacidades nativas en la reproducción, contrato estable de la API e imágenes de TMDB servidas por el propio servidor) y un solo APK para móvil y TV que inicia sesión, recorre la biblioteca y reproduce. Desde la 0.35.0 la app se publica firmada en GitHub y se actualiza sola. Desde la 0.36.0 la TV se maneja con el mando con foco visible. Falta la reproducción en segundo plano y la imagen en ventana en el móvil.
+Kotlin + Jetpack Compose + Media3/ExoPlayer, con libmpv opcional. Hecho: el servidor (sesiones de dispositivo, vinculación de la TV por código, capacidades nativas en la reproducción, contrato estable de la API e imágenes de TMDB servidas por el propio servidor) y un solo APK para móvil, tableta y TV que inicia sesión, recorre la biblioteca y reproduce. Desde la 0.35.0 la app se publica firmada en GitHub y se actualiza sola. Desde la 0.36.0 la TV se maneja con el mando con foco visible; desde la 0.40.0 tiene índice A–Z, desde la 0.43.0 imagen en imagen en el móvil, y desde la 0.46.0 recuerda audio, subtítulos y calidad. Falta la reproducción en segundo plano y HLS con AAC 5.1 en los equipos que lo admitan.
 
 ## Fase 5: primera versión estable (`1.0.0`) — futura
 

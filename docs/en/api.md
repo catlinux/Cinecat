@@ -2,7 +2,7 @@
 
 [Español](../es/api.md) · [Back to README](../../README.en.md) · [Architecture and security](architecture.md)
 
-Cinecat exposes an HTTP API so Android and Android TV apps can sign in, browse the library and play content without relying on the web client. The native apps are not in the repository yet; this is the contract they must use when implemented. This page summarises the contract and the rules native clients must follow; the exact details of every operation are in the OpenAPI document.
+Cinecat exposes an HTTP API so Android and Android TV apps can sign in, browse the library and play content without relying on the web client. The native apps use this contract. This page summarises its rules and main operations; the exact details of every operation are in the OpenAPI document.
 
 ## The contract
 
@@ -88,6 +88,20 @@ Polling status codes:
 | `410` | Pairing expired or already used. |
 | `404` | Invalid identifier or secret. |
 
+## Available sections
+
+`GET /api/v1/sections` tells which sections have content for the session user:
+
+```json
+{"movies": true, "series": false, "collections": true}
+```
+
+`movies` is true when there is at least one accessible movie, `series` when there is at least one accessible series and `collections` when there is at least one visible collection with an accessible movie. Administrators always receive all three as true. The web app and the apps use this response to hide empty sections; if the call fails or an older server returns `404`, they must show all of them.
+
+## Activity (administrators only)
+
+`GET /api/v1/activity` returns the latest playbacks from all users. It combines progress and watched marks into one entry per user and item, using the most recent date, and includes user, title, series, season, episode, position, duration and watched state. It accepts `limit` (maximum 200; 50 by default) and `user_id` to filter. It requires the `admin` role.
+
 ## Playback
 
 `GET /api/v1/items/{id}/play` prepares playback and accepts these query parameters:
@@ -107,11 +121,13 @@ The `/stream` URL is relative to the server, signed and valid for 8 hours. It do
 
 Progress is stored with `PUT /api/v1/items/{id}/progress` and a body such as `{"position_seconds": 300, "duration_seconds": 1800}`; `DELETE` on the same route clears it. At 90 % of the duration the server marks the item as watched and removes progress. Watched state is controlled with `PUT` and `DELETE /api/v1/items/{id}/watched`.
 
+Audio, subtitle and quality preferences are read with `GET /api/v1/items/{id}/preferences`, which returns `audio_index`, `subtitle_id` and `quality` (or `null` when there is no preference). They are saved with `PUT` on the same route and a partial body: absent fields are left untouched, `null` clears them and an empty `subtitle_id` means "no subtitles". `DELETE` removes all the user's preferences for that item. The apps restore them when the item is reopened.
+
 ## Images
 
-On item pages, `poster_url` and `backdrop_url` are TMDB URLs that the app can load directly, without going through the API.
+On item pages, `poster_url` and `backdrop_url` are paths relative to the server (`/api/v1/images/tmdb/...`), not `image.tmdb.org` URLs. The image is served by the server itself and requires the session, like the rest of the authenticated routes.
 
-Clip thumbnails and music covers are served by the server and require the session:
+Clip thumbnails and music covers are also served by the server and require the session:
 
 - `GET /api/v1/items/{id}/thumbnail` returns the clip thumbnail.
 - `GET /api/v1/music/albums/{id}/cover` returns the album cover.

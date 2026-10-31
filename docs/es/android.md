@@ -2,7 +2,7 @@
 
 [English](../en/android.md) · [Volver al README](../../README.md) · [Arquitectura y seguridad](arquitectura.md)
 
-Cinecat incluye una única app Android para móvil, tableta y Android TV. Ahora mismo inicia sesión, permite recorrer la biblioteca y reproduce en el móvil, la tableta y la TV; la TV aún no tiene su interfaz propia.
+Cinecat incluye una única app Android para móvil, tableta y Android TV. Inicia sesión, permite recorrer la biblioteca y reproduce en los tres; la TV tiene una interfaz propia pensada para el mando.
 
 ## Estado actual
 
@@ -11,7 +11,9 @@ Al abrirla por primera vez pide la dirección del servidor (solo HTTPS) y la com
 - **Móvil y tableta:** inicio de sesión con usuario y contraseña, o con un código de vinculación.
 - **TV:** vinculación por código. La TV muestra un código `XXXX-XXXX` y un QR; se abre `<servidor>/vincular` en el móvil o el ordenador, se inicia sesión y se aprueba el código (ver [API: vincular un dispositivo](api.md#vincular-un-dispositivo)).
 
-La sesión del dispositivo dura 90 días y se renueva con el uso; aparece en «Mi cuenta → Sesiones abiertas» de la web, donde se puede cerrar. El token se guarda cifrado con una clave del Android Keystore y la app no entra en las copias de seguridad de Android. Tras iniciar sesión, el móvil muestra el portal con las mismas filas y el mismo orden que la web (configurables en Administración), y una barra inferior (riel lateral en tableta) con Películas, Series, Colecciones y Buscar. Películas y series se ven en cuadrícula con orden y género; las fichas de película, serie (con temporadas y episodios) y colección permiten marcar favorito, «por ver» y visto. La cuenta (usuario, servidor, cerrar sesión, cambiar de servidor) está en el icono del portal. En la TV, por ahora, se ve la misma interfaz que en la tableta, manejable con el mando. La interfaz cambia entre la disposición móvil y la de TV según el tipo de dispositivo.
+La sesión del dispositivo dura 90 días y se renueva con el uso; aparece en «Mi cuenta → Sesiones abiertas» de la web, donde se puede cerrar. El token se guarda cifrado con una clave del Android Keystore y la app no entra en las copias de seguridad de Android. Tras iniciar sesión, el móvil muestra el portal con las mismas filas y el mismo orden que la web (configurables en Administración), y una barra inferior (riel lateral en tableta y TV) con Inicio, Películas, Series, Colecciones y Buscar. **Películas**, **Series** y **Colecciones** desaparecen de la barra cuando el usuario no tiene contenido en ellas; si la consulta de secciones falla o el servidor es anterior a la 0.47.0, se muestran todas. Inicio, Buscar y Cuenta siguen siempre disponibles. Películas y series se ven en cuadrícula con orden y género; las fichas de película, serie (con temporadas y episodios) y colección permiten marcar favorito, «por ver» y visto. La cuenta (usuario, servidor, cerrar sesión, cambiar de servidor) está en el riel de TV y tableta y en el icono del portal en el móvil.
+
+En la TV, Películas y Series tienen una columna de iniciales (**A–Z** y **#**) para saltar al primer título de cada letra cuando el orden es por título; se probó con más de 600 películas. La interfaz cambia entre la disposición móvil y la de TV según el tipo de dispositivo.
 
 ### IP local del servidor
 
@@ -21,7 +23,7 @@ Si el dominio del servidor apunta a la IP pública y el router no tiene DNS loca
 
 - Android 8.0 o superior (`minSdk 26`).
 - Servidor Cinecat 0.30.0 o superior.
-- Para compilar: JDK 17 y Android SDK con la plataforma 35.
+- Para compilar: JDK 17 y Android SDK con la plataforma 36.
 
 ## Compilación
 
@@ -52,7 +54,7 @@ Si ya tenías instalada una versión anterior a la 0.35.0, desinstálala antes: 
 
 ### Actualización automática
 
-Al arrancar y cada 12 horas, la app pregunta al servidor si hay un APK más nuevo: el de la versión del servidor, si su `versionCode` es mayor que el instalado. Si «Actualizar automáticamente» está activo (en Cuenta → Actualizaciones), lo descarga de la *release* de GitHub y ofrece «Instalar». Antes comprueba el SHA-256, que el APK sea de Cinecat, de una versión mayor y firmado con la misma clave que la app instalada. En Android 9 y anteriores el sistema siempre pide confirmar la instalación; la primera vez hay que permitir a Cinecat instalar aplicaciones (Ajustes → Seguridad → Orígenes desconocidos en la TV). El servidor solo consulta GitHub si la comprobación de actualizaciones está activada en Administración.
+Al arrancar y cada 12 horas, la app pregunta al servidor si hay un APK más nuevo: el de la versión del servidor, si su `versionCode` es mayor que el instalado. Si «Actualizar automáticamente» está activo (en Cuenta → Actualizaciones), lo descarga de la *release* de GitHub y ofrece «Instalar». Antes comprueba el SHA-256, que el APK sea de Cinecat, de una versión mayor y firmado con la misma clave que la app instalada. Mientras se instala se muestra una pantalla completa **«Actualizando Cinecat»**; al volver a abrir la app aparece una vez el aviso **«Cinecat actualizado»** con la versión instalada. En Android 9 y anteriores el sistema siempre pide confirmar la instalación; la primera vez hay que permitir a Cinecat instalar aplicaciones (Ajustes → Seguridad → Orígenes desconocidos en la TV). El servidor solo consulta GitHub si la comprobación de actualizaciones está activada en Administración.
 
 ### Versión de pruebas
 
@@ -87,5 +89,7 @@ Así, `0.32.0` produce el código `3200`. El identificador de la app es `io.gith
 ## Reproducción
 
 La app no incluye FFmpeg ni libmpv. Reproduce con Media3 (ExoPlayer): al abrir una película o episodio envía al servidor los códecs que el equipo decodifica (y los de audio que admite por HDMI en passthrough), y el servidor decide entre reproducción directa y HLS, recodificando lo que el equipo no pueda reproducir. Si la reproducción directa falla, la app pide HLS una vez. Reanuda donde se dejó y guarda el progreso cada 10 s, al pausar y al salir, compartido con la web.
+
+El reproductor recuerda en el servidor el audio, los subtítulos y la calidad elegidos para cada elemento y los restaura al reabrirlo, siempre que sigan existiendo; si ya no están, ignora esa preferencia. En el móvil, al salir de la app mientras se reproduce un vídeo, el reproductor pasa a una ventana de imagen en imagen sin los controles de la app; al cerrar la ventana se detiene la reproducción y se guarda el progreso.
 
 En la TV, con el mando: centro pausa o reanuda, izquierda y derecha retroceden o avanzan 10 s, abajo muestra los controles, arriba o Menú abre «Pistas» (audio y subtítulos) y Atrás sale. En el móvil la reproducción va a pantalla completa en horizontal. En las series, la ficha ofrece el siguiente episodio.

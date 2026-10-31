@@ -4,7 +4,7 @@
 
 **Languages / Idiomas:** [Español](README.md) · English
 
-**Status:** server and web client implemented; the Android and Android TV app already signs in, browses the library and plays on phones and TVs, still without its own TV interface ([documentation](docs/en/android.md)). Version `0.38.1`.
+**Status:** server and web client implemented; the Android and Android TV app signs in, browses the library and plays on phones, tablets and TVs, with a dedicated remote-friendly TV interface ([documentation](docs/en/android.md)). Version `0.48.0`.
 
 Cinecat is for people who keep their own video library at home and want a carefully designed interface, control over playback and Spanish-language metadata without depending on an external service. It is not a clone: it reuses what is legal from other projects, with credits, and writes the rest from scratch.
 
@@ -16,7 +16,8 @@ Cinecat is for people who keep their own video library at home and want a carefu
 - **Collections:** automatic TMDB sagas and manual collections, with editing, ordering, poster and backdrop.
 - **Playback:** direct play for compatible MP4/M4V files; HLS for the rest, copying the video when the container, codec, browser, height and keyframe index allow it or re-encoding to H.264 + stereo AAC, with seeking, audio tracks, text subtitles as WebVTT, quality choices and per-user, per-movie preferences.
 - **Web interface:** portal with "Continue watching", "Next episode" and "Recently added"; movie, series and collection lists with search and filters; full detail pages; custom player with keyboard shortcuts; light, dark or system theme; side or top navigation.
-- **Administration:** summary, libraries, scan progress, hot settings, metadata correction, images and updates from System.
+- **Administration:** summary, libraries, scan progress, hot settings, metadata correction, images, TMDB collection identification, user activity and updates from System.
+- **Android and Android TV apps:** one app for phones, tablets and TV, with session or pairing, library, a Media3 player that remembers audio, subtitles and quality, picture-in-picture on phones, an A–Z index on TV and automatic updates.
 - **Updates:** the server checks tags and release notes; "Update now" hands the request to a host systemd service that backs up the database, updates, checks and rolls back on failure. See [updates](docs/en/updates.md).
 
 What is still missing, in detail and in order, is in [status](docs/en/status.md).
@@ -98,4 +99,4 @@ Author and maintainer: **Catlinux** ([github.com/catlinux](https://github.com/ca
 ## Data attribution
 
 This product uses the TMDB API but is not endorsed or certified by TMDB.
-(Once clients exist, this notice and the TMDB logo will appear on the "About" screen.)
+(This notice and the TMDB logo will appear on the clients' "About" screen.)
