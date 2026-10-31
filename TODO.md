@@ -16,7 +16,7 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 - **Tests HLS reales y CI:** los tests se saltan sin `ffmpeg`/`ffprobe`; no hay flujo automático que los ejecute en Linux.
 - **Revisar el TTL de 7 días de TMDB** contra los términos vigentes antes de dar por buena la caché de producción.
 - **Exponer un modo de reproducción `transcode`** en la API; hoy el HLS copiado o recodificado sigue anunciándose como `remux`.
-- **App Android y Android TV** (plan en `.agents/plans/apps-android/apps-android.PLAN.md`): Colecciones y Buscar con diseño de TV (Películas y Series ya tienen cuadrícula e índice A–Z; la ficha y Cuenta, diseño propio); guardar en el servidor la pista elegida; probar AVI por HLS en la TV; HLS con AAC 5.1 cuando el equipo lo admita (hoy el AC-3 se convierte a AAC estéreo); valorar `compileSdk 36`.
+- **App Android y Android TV** (plan en `.agents/plans/apps-android/apps-android.PLAN.md`): en la TV, títulos largos de Colecciones cortados con «…» (Películas, Series, Buscar, ficha y Cuenta ya están bien); guardar en el servidor la pista elegida; probar AVI por HLS en la TV; HLS con AAC 5.1 cuando el equipo lo admita (hoy el AC-3 se convierte a AAC estéreo); valorar `compileSdk 36`.
 
 ## 🟢 Más adelante
 
