@@ -1,7 +1,11 @@
 package io.github.catlinux.cinecat.app
 
 import io.github.catlinux.cinecat.core.api.ApiResult
+import io.github.catlinux.cinecat.core.api.AudioTrack
+import io.github.catlinux.cinecat.core.api.ItemPreferences
 import io.github.catlinux.cinecat.core.api.PlayResponse
+import io.github.catlinux.cinecat.core.api.PreferencesPatch
+import io.github.catlinux.cinecat.core.api.QualityOption
 import io.github.catlinux.cinecat.core.api.SubtitleOption
 import java.io.IOException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -148,12 +152,83 @@ class PlayerViewModelTest {
         assertEquals(listOf(12.5 to 100.0), saved)
     }
 
+    @Test
+    fun usesSavedPreferencesThatStillExist() = runTest {
+        val preferences = ItemPreferences(
+            audioIndex = 1,
+            subtitleId = "e1",
+            quality = "720"
+        )
+        val viewModel = viewModel(
+            loadPreferences = { ApiResult.Success(preferences) },
+            play = {
+                ApiResult.Success(
+                    PlayResponse(
+                        url = "/stream",
+                        mode = "remux",
+                        audioTracks = listOf(
+                            AudioTrack(index = 0, language = "es"),
+                            AudioTrack(index = 1, language = "en")
+                        ),
+                        selectedAudio = 0,
+                        qualities = listOf(
+                            QualityOption("auto", "Auto"),
+                            QualityOption("720", "720p")
+                        ),
+                        selectedQuality = "auto",
+                        subtitles = listOf(
+                            SubtitleOption(id = "e0", language = "es", url = "/e0.vtt"),
+                            SubtitleOption(id = "e1", language = "en", url = "/e1.vtt")
+                        ),
+                        selectedSubtitle = "e0"
+                    )
+                )
+            }
+        )
+        advanceUntilIdle()
+
+        val ready = viewModel.state.value as PlayerUiState.Ready
+        assertEquals(1, ready.selectedAudio)
+        assertEquals("e1", ready.selectedSubtitle)
+        assertEquals("720", ready.selectedQuality)
+        assertEquals(listOf(false, true), ready.subtitles.map { it.selected })
+    }
+
+    @Test
+    fun preferenceFailuresDoNotStopPlaybackOrSavingOtherChanges() = runTest {
+        val saved = mutableListOf<PreferencesPatch>()
+        val viewModel = viewModel(
+            loadPreferences = { ApiResult.NetworkError(IOException("sin red")) },
+            savePreferences = {
+                saved += it
+                ApiResult.NetworkError(IOException("sin red"))
+            }
+        )
+        advanceUntilIdle()
+
+        assertTrue(viewModel.state.value is PlayerUiState.Ready)
+        viewModel.savePlaybackPreferences(audioIndex = 1, quality = "720")
+        advanceUntilIdle()
+
+        assertEquals(
+            listOf(PreferencesPatch(audioIndex = 1, quality = "720")),
+            saved
+        )
+        assertTrue(viewModel.state.value is PlayerUiState.Ready)
+    }
+
     private fun TestScope.viewModel(
         origin: okhttp3.HttpUrl? = "http://servidor.local".toHttpUrl(),
         play: suspend (String?) -> ApiResult<PlayResponse> = {
             ApiResult.Success(PlayResponse(url = "/stream", mode = "direct"))
         },
         saveProgress: suspend (Double, Double) -> ApiResult<Unit> = { _, _ ->
+            ApiResult.Success(Unit)
+        },
+        loadPreferences: suspend () -> ApiResult<ItemPreferences> = {
+            ApiResult.Success(ItemPreferences())
+        },
+        savePreferences: suspend (PreferencesPatch) -> ApiResult<Unit> = {
             ApiResult.Success(Unit)
         }
     ): PlayerViewModel = PlayerViewModel(
@@ -162,6 +237,8 @@ class PlayerViewModelTest {
         caps = "caps",
         loadPlayback = play,
         persistProgress = saveProgress,
+        loadPreferences = loadPreferences,
+        persistPreferences = savePreferences,
         serverUrl = { origin },
         scope = this
     )

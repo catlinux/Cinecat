@@ -7,6 +7,20 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.46.0] - 2026-10-31
+
+### Added
+
+- Android and TV: the player remembers on the server the audio track, subtitles and quality chosen for each item and restores them when reopened.
+
+### Changed
+
+- Android: `compileSdk` moves to 36 (`targetSdk` unchanged).
+
+### Fixed
+
+- TV: long collection titles are no longer cut with "…" at two lines (three are allowed).
+
 ## [0.45.0] - 2026-10-31
 
 ### Added

@@ -69,10 +69,40 @@ class PlaybackRepositoryTest {
     }
 
     @Test
+    fun preferencesUseTheItemEndpoints() = runTest {
+        val api = createApi(server.url("/"), OkHttpClient())
+        val repository = PlaybackRepository(apiProvider = { api })
+        server.enqueue(
+            jsonResponse(
+                """{"audio_index":1,"subtitle_id":"e1","quality":"720"}"""
+            )
+        )
+
+        val preferences = repository.itemPreferences(7)
+        assertTrue(preferences is ApiResult.Success)
+        val value = (preferences as ApiResult.Success).value
+        assertEquals(1, value.audioIndex)
+        assertEquals("e1", value.subtitleId)
+        assertEquals("720", value.quality)
+        assertEquals("/api/v1/items/7/preferences", server.takeRequest().path)
+
+        server.enqueue(MockResponse().setResponseCode(204))
+        assertTrue(
+            repository.savePreferences(7, audioIndex = 1, quality = "720") is ApiResult.Success
+        )
+        val request = server.takeRequest()
+        assertEquals("PUT", request.method)
+        assertEquals("/api/v1/items/7/preferences", request.path)
+        assertEquals("""{"audio_index":1,"quality":"720"}""", request.body.readUtf8())
+    }
+
+    @Test
     fun withoutServerReturnsNetworkError() = runTest {
         val repository = PlaybackRepository(apiProvider = { null })
         assertTrue(repository.play(7) is ApiResult.NetworkError)
         assertTrue(repository.saveProgress(7, 1.0, 2.0) is ApiResult.NetworkError)
+        assertTrue(repository.itemPreferences(7) is ApiResult.NetworkError)
+        assertTrue(repository.savePreferences(7, audioIndex = 0) is ApiResult.NetworkError)
     }
 
     private fun jsonResponse(body: String): MockResponse =

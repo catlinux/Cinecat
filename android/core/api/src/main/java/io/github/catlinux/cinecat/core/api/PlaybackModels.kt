@@ -58,3 +58,17 @@ data class ProgressRequest(
     @SerialName("position_seconds") val positionSeconds: Double,
     @SerialName("duration_seconds") val durationSeconds: Double
 )
+
+@Serializable
+data class ItemPreferences(
+    @SerialName("audio_index") val audioIndex: Int? = null,
+    @SerialName("subtitle_id") val subtitleId: String? = null,
+    val quality: String? = null
+)
+
+@Serializable
+data class PreferencesPatch(
+    @SerialName("audio_index") val audioIndex: Int? = null,
+    @SerialName("subtitle_id") val subtitleId: String? = null,
+    val quality: String? = null
+)

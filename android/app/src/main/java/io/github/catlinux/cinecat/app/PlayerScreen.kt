@@ -61,6 +61,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
 import androidx.media3.common.VideoSize
+import androidx.media3.common.Format
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -97,6 +98,7 @@ fun PlayerScreen(
     }
     var isPlaying by remember(exoPlayer) { mutableStateOf(false) }
     var tracks by remember(exoPlayer) { mutableStateOf<Tracks?>(null) }
+    var appliedAudioStream by remember(exoPlayer) { mutableStateOf<String?>(null) }
     var showTracks by remember { mutableStateOf(false) }
     var playerView by remember { mutableStateOf<PlayerView?>(null) }
     val rootFocus = remember { FocusRequester() }
@@ -203,6 +205,17 @@ fun PlayerScreen(
         runCatching { rootFocus.requestFocus() }
     }
 
+    LaunchedEffect(tracks, state) {
+        val ready = state as? PlayerUiState.Ready ?: return@LaunchedEffect
+        val currentTracks = tracks ?: return@LaunchedEffect
+        if (appliedAudioStream == ready.streamUrl) {
+            return@LaunchedEffect
+        }
+        if (applyAudioSelection(exoPlayer, currentTracks, ready.selectedAudio)) {
+            appliedAudioStream = ready.streamUrl
+        }
+    }
+
     // Compose retiene el foco y las teclas no llegan a la PlayerView: el mando se
     // gestiona aquí, antes que cualquier hijo.
     Box(
@@ -298,7 +311,20 @@ fun PlayerScreen(
                         TrackDialog(
                             player = exoPlayer,
                             tracks = tracks,
-                            onDismiss = { showTracks = false }
+                            subtitles = current.subtitles,
+                            onDismiss = { showTracks = false },
+                            onAudioSelected = { index ->
+                                viewModel.savePlaybackPreferences(
+                                    audioIndex = index,
+                                    quality = current.selectedQuality.takeIf { it.isNotBlank() }
+                                )
+                            },
+                            onSubtitleSelected = { subtitleId ->
+                                viewModel.savePlaybackPreferences(
+                                    subtitleId = subtitleId,
+                                    quality = current.selectedQuality.takeIf { it.isNotBlank() }
+                                )
+                            }
                         )
                     }
                 }
@@ -341,7 +367,10 @@ private fun PlayerViewSurface(
 private fun TrackDialog(
     player: Player,
     tracks: Tracks?,
-    onDismiss: () -> Unit
+    subtitles: List<PlayerSubtitle>,
+    onDismiss: () -> Unit,
+    onAudioSelected: (Int) -> Unit,
+    onSubtitleSelected: (String) -> Unit
 ) {
     val groups = tracks?.groups.orEmpty()
         .filter { it.type == C.TRACK_TYPE_AUDIO || it.type == C.TRACK_TYPE_TEXT }
@@ -361,19 +390,35 @@ private fun TrackDialog(
                 if (groups.isEmpty()) {
                     Text(stringResource(R.string.player_no_tracks))
                 }
+                var nextAudioIndex = 0
                 groups.filter { it.type == C.TRACK_TYPE_AUDIO }.forEach { group ->
                     Text(
                         text = stringResource(R.string.player_audio),
                         style = MaterialTheme.typography.titleMedium
                     )
-                    TrackGroupRows(player, group, C.TRACK_TYPE_AUDIO)
+                    TrackGroupRows(
+                        player = player,
+                        group = group,
+                        type = C.TRACK_TYPE_AUDIO,
+                        firstIndex = nextAudioIndex,
+                        onSelected = { _, index -> onAudioSelected(index) }
+                    )
+                    nextAudioIndex += group.mediaTrackGroup.length
                 }
                 groups.filter { it.type == C.TRACK_TYPE_TEXT }.forEach { group ->
                     Text(
                         text = stringResource(R.string.player_subtitles),
                         style = MaterialTheme.typography.titleMedium
                     )
-                    TrackGroupRows(player, group, C.TRACK_TYPE_TEXT)
+                    TrackGroupRows(
+                        player = player,
+                        group = group,
+                        type = C.TRACK_TYPE_TEXT
+                    ) { format, _ ->
+                        format.id
+                            ?.takeIf { id -> subtitles.any { it.id == id } }
+                            ?.let(onSubtitleSelected)
+                    }
                 }
                 if (groups.any { it.type == C.TRACK_TYPE_TEXT }) {
                     TextButton(
@@ -382,6 +427,7 @@ private fun TrackDialog(
                                 player.trackSelectionParameters.buildUpon()
                                     .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
                                     .build()
+                            onSubtitleSelected("")
                         }
                     ) {
                         Text(stringResource(R.string.player_disable_subtitles))
@@ -394,7 +440,13 @@ private fun TrackDialog(
 
 @SuppressLint("UnsafeOptInUsageError")
 @Composable
-private fun TrackGroupRows(player: Player, group: Tracks.Group, type: Int) {
+private fun TrackGroupRows(
+    player: Player,
+    group: Tracks.Group,
+    type: Int,
+    firstIndex: Int = 0,
+    onSelected: (Format, Int) -> Unit = { _, _ -> }
+) {
     for (index in 0 until group.mediaTrackGroup.length) {
         val format = group.mediaTrackGroup.getFormat(index)
         val label = format.label?.takeIf { it.isNotBlank() }
@@ -411,6 +463,7 @@ private fun TrackGroupRows(player: Player, group: Tracks.Group, type: Int) {
                     TrackSelectionOverride(group.mediaTrackGroup, index)
                 )
                 player.trackSelectionParameters = parameters.build()
+                onSelected(format, firstIndex + index)
             }
         ) {
             Text(
@@ -422,6 +475,31 @@ private fun TrackGroupRows(player: Player, group: Tracks.Group, type: Int) {
             )
         }
     }
+}
+
+@SuppressLint("UnsafeOptInUsageError")
+private fun applyAudioSelection(player: Player, tracks: Tracks, index: Int): Boolean {
+    if (index < 0) {
+        return false
+    }
+    var ordinal = 0
+    for (group in tracks.groups) {
+        if (group.type != C.TRACK_TYPE_AUDIO) {
+            continue
+        }
+        for (trackIndex in 0 until group.mediaTrackGroup.length) {
+            if (ordinal == index) {
+                player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+                    .setOverrideForType(
+                        TrackSelectionOverride(group.mediaTrackGroup, trackIndex)
+                    )
+                    .build()
+                return true
+            }
+            ordinal++
+        }
+    }
+    return false
 }
 
 @Composable
@@ -453,6 +531,7 @@ private fun PlayerUiState.Ready.toMediaItem(): ExoMediaItem {
     val subtitleConfigurations = subtitles.map { subtitle ->
         ExoMediaItem.SubtitleConfiguration.Builder(Uri.parse(subtitle.url))
             .setMimeType(MimeTypes.TEXT_VTT)
+            .setId(subtitle.id)
             .setLanguage(subtitle.language)
             .setLabel(subtitle.label)
             .setSelectionFlags(

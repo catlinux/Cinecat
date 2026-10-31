@@ -128,6 +128,35 @@ class CinecatApi(
         service.saveProgress(id, ProgressRequest(position, duration))
     }
 
+    suspend fun itemPreferences(id: Long): ApiResult<ItemPreferences> = call {
+        service.itemPreferences(id)
+    }
+
+    suspend fun getItemPreferences(id: Long): ApiResult<ItemPreferences> = itemPreferences(id)
+
+    suspend fun getPreferences(id: Long): ApiResult<ItemPreferences> = itemPreferences(id)
+
+    suspend fun saveItemPreferences(id: Long, patch: PreferencesPatch): ApiResult<Unit> = call {
+        service.saveItemPreferences(id, patch)
+    }
+
+    suspend fun savePreferences(id: Long, patch: PreferencesPatch): ApiResult<Unit> =
+        saveItemPreferences(id, patch)
+
+    suspend fun savePreferences(
+        id: Long,
+        audioIndex: Int? = null,
+        subtitleId: String? = null,
+        quality: String? = null
+    ): ApiResult<Unit> = saveItemPreferences(
+        id,
+        PreferencesPatch(
+            audioIndex = audioIndex,
+            subtitleId = subtitleId,
+            quality = quality
+        )
+    )
+
     suspend fun series(
         q: String? = null,
         letter: String? = null,

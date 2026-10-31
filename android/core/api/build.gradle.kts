@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "io.github.catlinux.cinecat.core.api"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 26

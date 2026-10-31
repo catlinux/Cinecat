@@ -169,6 +169,15 @@ interface CinecatService {
         @Body request: ProgressRequest
     )
 
+    @GET("api/v1/items/{id}/preferences")
+    suspend fun itemPreferences(@Path("id") id: Long): ItemPreferences
+
+    @PUT("api/v1/items/{id}/preferences")
+    suspend fun saveItemPreferences(
+        @Path("id") id: Long,
+        @Body request: PreferencesPatch
+    )
+
     @PUT("api/v1/items/{id}/watched")
     suspend fun setWatched(@Path("id") id: Long)
 

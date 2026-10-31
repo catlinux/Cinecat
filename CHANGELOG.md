@@ -7,6 +7,20 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.46.0] - 2026-10-31
+
+### Añadido
+
+- Android y TV: el reproductor recuerda en el servidor la pista de audio, los subtítulos y la calidad elegidos para cada elemento y los restaura al reabrirlo.
+
+### Cambiado
+
+- Android: `compileSdk` pasa a 36 (sin cambiar `targetSdk`).
+
+### Corregido
+
+- TV: los títulos largos de Colecciones ya no se cortan con «…» a las dos líneas (se permiten tres).
+
 ## [0.45.0] - 2026-10-31
 
 ### Añadido

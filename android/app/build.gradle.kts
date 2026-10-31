@@ -24,7 +24,7 @@ val hasReleaseSigning = releaseKeystore.isNotEmpty() &&
 
 android {
     namespace = "io.github.catlinux.cinecat.app"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "io.github.catlinux.cinecat"

@@ -40,8 +40,12 @@ fun CollectionPosterCard(
     compact: Boolean = false
 ) {
     val posterUrl = tmdbImage(collection.posterUrl, "w342")
-    val titleLineHeight = 15.sp
-    val titleHeight = with(LocalDensity.current) { titleLineHeight.toDp() * 3f }
+    val television = LocalIsTelevision.current
+    val threeLines = compact || television
+    val titleLineHeight = if (compact) 15.sp else 19.sp
+    val titleHeight = with(LocalDensity.current) {
+        if (threeLines) titleLineHeight.toDp() * 3f else 0.dp
+    }
     Column(
         modifier = Modifier
             .width(width)
@@ -82,12 +86,12 @@ fun CollectionPosterCard(
         Spacer(Modifier.height(8.dp))
         Text(
             text = collection.name,
-            modifier = if (compact) Modifier.heightIn(min = titleHeight) else Modifier,
-            maxLines = if (compact) 3 else 2,
+            modifier = if (threeLines) Modifier.heightIn(min = titleHeight) else Modifier,
+            maxLines = if (threeLines) 3 else 2,
             overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.titleLarge.copy(
                 fontSize = if (compact) 12.sp else 15.sp,
-                lineHeight = if (compact) titleLineHeight else 19.sp,
+                lineHeight = titleLineHeight,
                 fontWeight = FontWeight.SemiBold
             ),
             color = MaterialTheme.colorScheme.onBackground
