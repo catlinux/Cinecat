@@ -6,16 +6,11 @@ Priorities: 🔴 blocking · 🟠 next phase · 🟢 later.
 
 This file contains only work that is still open. Published work is in the [CHANGELOG](CHANGELOG.en.md); the full status is in [status](docs/en/status.md).
 
-## 🔴 Before opening the instance to other users
-
-- **Verify per-library access on the web** (U4 of the [plan](.agents/plans/usuarios-permisos/usuarios-permisos.PLAN.md)) and review U2 as a whole: a missed filter would leak content. With user `prova` (Series only) on the real environment, the Android app was checked on 2026-10-31: home, Movies, Collections, Series, search and account with no leaks. The web still has to be walked through with that user.
-
 ## 🟠 Next phase
 
 - **User profile:** portal customisation and history (user management and open sessions already exist).
 - **Activity** (playback history) in administration.
 - **Copy backups outside the volume** (another disk or machine): today they live in `/data/backups`, next to the database.
-- **Hide Movies and Collections from users without movies:** a user with only a series library still sees those tabs in the app (and on the web), with "No movie matches". There is no data leak, but it is confusing; the server needs to say which sections the user has, because movie and series libraries are the same type.
 - **User-uploaded subtitles:** needs a design first; today only embedded text and `.srt`/`.vtt`/`.ass` files next to the video are read.
 - **Advanced playback:** per-device profiles, HDR/10-bit, deinterlacing, image subtitles and unsupported audio.
 - **Real HLS tests and CI:** tests are skipped without `ffmpeg`/`ffprobe`; no automated Linux job runs them.
@@ -25,6 +20,7 @@ This file contains only work that is still open. Published work is in the [CHANG
 
 ## 🟢 Later
 
+- 🟢 **Hide Movies and Collections from users without movies:** a user with only a series library still sees those tabs in the app (and on the web), with "No movie matches". There is no data leak, but it is confusing and it was decided to leave it for now; the server needs to say which sections the user has, because movie and series libraries are the same type.
 - 🟢 **Share login lockout between several server instances** (today it is process memory).
 - 🟢 **Notify the administrator after many failed attempts.**
 - 🟢 **Purge thumbnails for items that no longer exist.**

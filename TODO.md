@@ -6,16 +6,11 @@ Prioridades: 🔴 bloqueante · 🟠 próxima fase · 🟢 más adelante.
 
 Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en el [CHANGELOG](CHANGELOG.md); el estado completo, en [estado](docs/es/estado.md).
 
-## 🔴 Antes de abrir la instancia a otros usuarios
-
-- **Verificar el acceso por biblioteca en la web** (U4 del [plan](.agents/plans/usuarios-permisos/usuarios-permisos.PLAN.md)) y revisión del conjunto de U2: un olvido de filtro sería una fuga de contenido. Con el usuario `prova` (solo Series) en el entorno real, la app de Android ya se comprobó el 2026-10-31: inicio, Películas, Colecciones, Series, búsqueda y cuenta sin fugas. Falta recorrer la web con ese usuario.
-
 ## 🟠 Próxima fase
 
 - **Perfil de usuario:** personalización del portal e historial (la gestión de usuarios y las sesiones abiertas ya existen).
 - **Actividad** (historial de reproducciones) en administración.
 - **Copiar las copias de seguridad fuera del volumen** (otro disco o equipo): hoy están en `/data/backups`, junto a la base.
-- **Ocultar Películas y Colecciones a quien no tiene películas:** un usuario con solo una biblioteca de series sigue viendo esas pestañas en la app (y en la web), con «Ninguna película coincide». No hay fuga de datos, pero confunde; requiere que el servidor indique qué secciones tiene el usuario, porque las bibliotecas de películas y series son del mismo tipo.
 - **Subtítulos subidos por el usuario:** requiere diseño previo; hoy solo se leen incrustados de texto o archivos `.srt`/`.vtt`/`.ass` junto al vídeo.
 - **Reproducción avanzada:** perfiles por dispositivo, HDR/10 bits, desentrelazado, subtítulos de imagen y audio no soportado.
 - **Tests HLS reales y CI:** los tests se saltan sin `ffmpeg`/`ffprobe`; no hay flujo automático que los ejecute en Linux.
@@ -25,6 +20,7 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 
 ## 🟢 Más adelante
 
+- 🟢 **Ocultar Películas y Colecciones a quien no tiene películas:** un usuario con solo una biblioteca de series sigue viendo esas pestañas en la app (y en la web), con «Ninguna película coincide». No hay fuga de datos, pero confunde y se decidió dejarlo por ahora; requiere que el servidor indique qué secciones tiene el usuario, porque las bibliotecas de películas y series son del mismo tipo.
 - 🟢 **Bloqueo de login compartido entre varias instancias del servidor** (hoy es memoria del proceso).
 - 🟢 **Aviso al administrador tras muchos intentos fallidos.**
 - 🟢 **Purgar miniaturas de ítems que ya no existen.**
