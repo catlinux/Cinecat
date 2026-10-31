@@ -13,6 +13,7 @@ This file contains only work that is still open. Published work is in the [CHANG
 - **Advanced playback:** per-device profiles, HDR/10-bit, deinterlacing, image subtitles and unsupported audio.
 - **Verify the "Servidor y web" GitHub Actions workflow** (`.github/workflows/server-web.yml`, runs the Go tests with FFmpeg and the web tests): check its first run is green.
 - **Review the 7-day TMDB TTL** against the current terms before accepting the production cache.
+- **Android and Android TV app, check on a device:** that remembering the audio track, subtitles and quality (0.46.0) saves and restores with an item that has external server subtitles or several audio tracks; with a "The Bear" episode (subtitle embedded in the TS, no server id) there is nothing to save. Tracks with no language or title all show as "Pistas"; "Track 1", "Track 2" or "Embedded" would be clearer.
 - **Android and Android TV app** (plan in `.agents/plans/apps-android/apps-android.PLAN.md`): HLS with AAC 5.1 when the device supports it (today AC-3 is converted to stereo AAC).
 
 ## 🟢 Later

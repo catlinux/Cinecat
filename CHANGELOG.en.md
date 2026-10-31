@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.48.2] - 2026-10-31
+
+### Fixed
+
+- Android: on the home screen, a long app name no longer pushes the Account icon off the screen (seen in the test variant, "Cinecat (pruebas)").
+
 ## [0.48.1] - 2026-10-31
 
 ### Fixed

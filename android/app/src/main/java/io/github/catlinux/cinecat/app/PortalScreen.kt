@@ -146,9 +146,9 @@ private fun PortalHeader(
                 fontSize = 48.sp,
                 lineHeight = 52.sp
             ),
-            color = MaterialTheme.colorScheme.primary
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.weight(1f)
         )
-        Spacer(Modifier.weight(1f))
         if (onOpenAccount != null) {
             IconButton(onClick = onOpenAccount) {
                 Icon(

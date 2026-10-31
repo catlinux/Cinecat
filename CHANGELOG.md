@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.48.2] - 2026-10-31
+
+### Corregido
+
+- Android: en el inicio, un nombre de aplicación largo ya no empuja el icono de Cuenta fuera de la pantalla (se veía en la variante de pruebas, «Cinecat (pruebas)»).
+
 ## [0.48.1] - 2026-10-31
 
 ### Corregido
