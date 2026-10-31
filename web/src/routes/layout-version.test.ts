@@ -29,6 +29,7 @@ function layoutData(serverVersion: string | null, serverCommit: string | null = 
 		hasClips: false,
 		hasMusic: false,
 		hasAnyLibraryAccess: true,
+		sections: { movies: true, series: true, collections: true },
 		isHome: false,
 		activeCategory: null,
 		serverVersion,

@@ -55,6 +55,12 @@ export interface LibrariesResponse {
 	libraries: Library[];
 }
 
+export interface SectionsResponse {
+	movies: boolean;
+	series: boolean;
+	collections: boolean;
+}
+
 export interface UploadTargetRoot {
 	library_id: number;
 	library_name: string;
@@ -1079,6 +1085,10 @@ export class ApiClient {
 
 	async listLibraries(token: string): Promise<LibrariesResponse> {
 		return this.get<LibrariesResponse>('/api/v1/libraries', token);
+	}
+
+	async getSections(token: string): Promise<SectionsResponse> {
+		return this.get<SectionsResponse>('/api/v1/sections', token);
 	}
 
 	async getUploadTargets(token: string): Promise<UploadTargetsResponse> {

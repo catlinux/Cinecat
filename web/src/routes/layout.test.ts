@@ -25,6 +25,7 @@ function layoutData(overrides: Record<string, unknown> = {}) {
 		hasClips: false,
 		hasMusic: false,
 		hasAnyLibraryAccess: true,
+		sections: { movies: true, series: true, collections: true },
 		isHome: false,
 		activeCategory: null,
 		serverVersion: null,
@@ -43,7 +44,19 @@ function loadEvent(fetchImpl: typeof fetch, pathname = '/music') {
 	};
 }
 
-function layoutFetch(libraries: unknown[] = [], role: 'admin' | 'user' = 'user', allLibraries = false) {
+const ALL_SECTIONS = { movies: true, series: true, collections: true };
+const NO_SECTIONS = { movies: false, series: false, collections: false };
+
+function layoutFetch(
+	libraries: unknown[] = [],
+	role: 'admin' | 'user' = 'user',
+	allLibraries = false,
+	sections?: { movies: boolean; series: boolean; collections: boolean }
+) {
+	const hasVideo = libraries.some(
+		(library) => (library as { kind?: string }).kind === 'video'
+	);
+	const available = sections ?? (role === 'admin' || hasVideo ? ALL_SECTIONS : NO_SECTIONS);
 	return vi.fn(async (input: RequestInfo | URL) => {
 		const url = String(input);
 		if (url.endsWith('/api/v1/system/version')) {
@@ -57,6 +70,9 @@ function layoutFetch(libraries: unknown[] = [], role: 'admin' | 'user' = 'user',
 		}
 		if (url.endsWith('/api/v1/libraries')) {
 			return jsonResponse({ libraries });
+		}
+		if (url.endsWith('/api/v1/sections')) {
+			return jsonResponse(available);
 		}
 		throw new Error(`URL inesperada: ${url}`);
 	});
@@ -211,9 +227,16 @@ describe('menú filtrado por bibliotecas visibles', () => {
 		}
 	});
 
-	it('un usuario con una biblioteca de vídeo ve Películas, Series y Colecciones', async () => {
+	it('un usuario con contenido de vídeo ve Películas, Series y Colecciones', async () => {
 		const result = (await load(
-			loadEvent(layoutFetch([{ id: 1, kind: 'video', name: 'Pelis', item_count: 0 }])) as never
+			loadEvent(
+				layoutFetch(
+					[{ id: 1, kind: 'video', name: 'Pelis', item_count: 3 }],
+					'user',
+					false,
+					ALL_SECTIONS
+				)
+			) as never
 		)) as any;
 		expect(result.hasVideo).toBe(true);
 		expect(result.hasClips).toBe(false);
@@ -226,12 +249,63 @@ describe('menú filtrado por bibliotecas visibles', () => {
 		expect(body).not.toContain('href="/music"');
 	});
 
+	it('oculta las secciones de vídeo vacías aunque el usuario tenga la biblioteca', async () => {
+		const result = (await load(
+			loadEvent(
+				layoutFetch(
+					[{ id: 1, kind: 'video', name: 'Pelis', item_count: 0 }],
+					'user',
+					false,
+					NO_SECTIONS
+				)
+			) as never
+		)) as any;
+		expect(result.sections).toEqual(NO_SECTIONS);
+		for (const layout of ['side', 'top'] as const) {
+			const body = renderedFor(result, layout);
+			expect(body).not.toContain('href="/movies"');
+			expect(body).not.toContain('href="/series"');
+			expect(body).not.toContain('href="/collections"');
+		}
+	});
+
+	it('mantiene Series si solo tiene series y oculta las demás secciones vacías', async () => {
+		const sections = { movies: false, series: true, collections: false };
+		const result = (await load(
+			loadEvent(layoutFetch([{ id: 1, kind: 'video', name: 'Series', item_count: 1 }], 'user', false, sections)) as never
+		)) as any;
+		for (const layout of ['side', 'top'] as const) {
+			const body = renderedFor(result, layout);
+			expect(body).not.toContain('href="/movies"');
+			expect(body).toContain('href="/series"');
+			expect(body).not.toContain('href="/collections"');
+		}
+	});
+
+	it('muestra todas las secciones si falla la consulta de secciones', async () => {
+		const fetchMock = layoutFetch([], 'user', false, NO_SECTIONS);
+		const implementation = fetchMock.getMockImplementation()!;
+		fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+			if (String(input).endsWith('/api/v1/sections')) {
+				throw new Error('sin conexión');
+			}
+			return implementation(input);
+		});
+		const result = (await load(loadEvent(fetchMock as never) as never)) as any;
+		expect(result.sections).toEqual(ALL_SECTIONS);
+		const body = renderedFor(result);
+		for (const href of ['/movies', '/series', '/collections']) {
+			expect(body).toContain(`href="${href}"`);
+		}
+	});
+
 	it('el administrador ve todas las secciones aunque no haya bibliotecas', async () => {
 		const result = (await load(loadEvent(layoutFetch([], 'admin')) as never)) as any;
 		expect(result.isAdmin).toBe(true);
 		expect(result.hasVideo).toBe(true);
 		expect(result.hasClips).toBe(true);
 		expect(result.hasMusic).toBe(true);
+		expect(result.sections).toEqual(ALL_SECTIONS);
 		const body = renderedFor(result);
 		for (const href of ['/movies', '/series', '/collections', '/videos', '/music']) {
 			expect(body).toContain(`href="${href}"`);

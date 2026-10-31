@@ -14,6 +14,11 @@
 	let { data, children }: { data: LayoutData; children: Snippet } = $props();
 
 	const ui = $derived({ ...DEFAULT_PUBLIC_UI, ...(data.ui ?? {}) });
+	const sections = $derived({
+		movies: data.sections?.movies !== false,
+		series: data.sections?.series !== false,
+		collections: data.sections?.collections !== false
+	});
 	const sideNav = $derived(ui.nav_layout === 'side');
 	const musicVisible = $derived(musicPlayer.tracks.length > 0);
 	const versionLabel = $derived(
@@ -69,7 +74,9 @@
 			isHome={data.isHome ?? false}
 			isAdmin={data.isAdmin}
 			hasSession={data.hasSession}
-			hasVideo={data.hasVideo ?? true}
+			hasMovies={sections.movies}
+			hasCollections={sections.collections}
+			hasSeries={sections.series}
 			hasClips={data.hasClips}
 			hasMusic={data.hasMusic}
 			{versionLabel}
@@ -93,29 +100,29 @@
 							class:category-active={data.isHome}
 							aria-current={data.isHome ? 'page' : undefined}>Inicio</a
 						>
-						{#if data.hasVideo ?? true}
+						{#if sections.movies}
 							<a
 								href="/movies"
 								class:category-active={data.activeCategory === 'movies'}
 								aria-current={data.activeCategory === 'movies' ? 'page' : undefined}
 								>Películas</a
 							>
-							{#if ui.show_collections}
-								<a
-									href="/collections"
-									class:category-active={data.activeCategory === 'collections'}
-									aria-current={data.activeCategory === 'collections' ? 'page' : undefined}
-									>Colecciones</a
-								>
-							{/if}
-							{#if ui.show_series}
-								<a
-									href="/series"
-									class:category-active={data.activeCategory === 'series'}
-									aria-current={data.activeCategory === 'series' ? 'page' : undefined}
-									>Series</a
-								>
-							{/if}
+						{/if}
+						{#if sections.collections && ui.show_collections}
+							<a
+								href="/collections"
+								class:category-active={data.activeCategory === 'collections'}
+								aria-current={data.activeCategory === 'collections' ? 'page' : undefined}
+								>Colecciones</a
+							>
+						{/if}
+						{#if sections.series && ui.show_series}
+							<a
+								href="/series"
+								class:category-active={data.activeCategory === 'series'}
+								aria-current={data.activeCategory === 'series' ? 'page' : undefined}
+								>Series</a
+							>
 						{/if}
 						{#if data.hasClips}
 							<a

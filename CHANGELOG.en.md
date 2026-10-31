@@ -7,6 +7,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.47.0] - 2026-10-31
+
+### Added
+
+- New `GET /api/v1/sections`: tells whether the user has accessible movies, series and collections (administrators always get all three).
+
+### Changed
+
+- Web: navigation hides Movies, Series and Collections when the user has no content in them; if the query fails everything is shown.
+
 ## [0.46.0] - 2026-10-31
 
 ### Added

@@ -113,6 +113,7 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.Handle("GET /api/v1/images/tmdb/{size}/{file}", sessionCookieAsBearer(a.requireSession(a.handleTMDBImage)))
 	mux.Handle("GET /api/v1/genres", a.requireSession(a.handleGenres))
 	mux.Handle("GET /api/v1/home", a.requireSession(a.handleHome))
+	mux.Handle("GET /api/v1/sections", a.requireSession(a.handleSections))
 	mux.Handle("GET /api/v1/lists/{list}", a.requireSession(a.handleLists))
 	mux.Handle("GET /api/v1/collections", a.requireSession(a.handleCollections))
 	mux.Handle("GET /api/v1/collections/{id}", a.requireSession(a.handleCollection))

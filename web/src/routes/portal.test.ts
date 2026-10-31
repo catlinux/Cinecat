@@ -144,6 +144,7 @@ function portalData(overrides: Record<string, unknown> = {}) {
 		isAdmin: false,
 		hasVideo: true,
 		hasAnyLibraryAccess: true,
+		sections: { movies: true, series: true, collections: true },
 		isHome: false,
 		activeCategory: null,
 		serverVersion: null,

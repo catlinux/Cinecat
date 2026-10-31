@@ -1,7 +1,14 @@
 import type { LayoutServerLoad } from './$types';
 import { createApiClient } from '$lib/api-factory';
+import type { SectionsResponse } from '$lib/api';
 import { DEFAULT_PUBLIC_UI, parsePublicUI, type PublicUI } from '$lib/settings';
 import { webVersion } from '$lib/version';
+
+const ALL_SECTIONS: SectionsResponse = {
+	movies: true,
+	series: true,
+	collections: true
+};
 
 // Expone en el layout si hay sesión y si el usuario es administrador. La
 // consulta del rol solo se hace con sesión; si la API falla, se oculta la
@@ -56,6 +63,7 @@ export const load: LayoutServerLoad = async ({ locals, fetch, url }) => {
 			hasClips: false,
 			hasMusic: false,
 			hasAnyLibraryAccess: false,
+			sections: ALL_SECTIONS,
 			isHome,
 			activeCategory,
 			serverVersion,
@@ -102,6 +110,15 @@ export const load: LayoutServerLoad = async ({ locals, fetch, url }) => {
 		hasAnyLibraryAccess = unrestricted;
 	}
 
+	// Si las secciones no se pueden consultar, la navegación debe seguir
+	// mostrando todo: un fallo de red no puede ocultar contenido al usuario.
+	let sections: SectionsResponse = ALL_SECTIONS;
+	try {
+		sections = await createApiClient(fetch).getSections(locals.sessionToken);
+	} catch {
+		sections = ALL_SECTIONS;
+	}
+
 	return {
 		hasSession: true,
 		isAdmin,
@@ -109,6 +126,7 @@ export const load: LayoutServerLoad = async ({ locals, fetch, url }) => {
 		hasClips,
 		hasMusic,
 		hasAnyLibraryAccess,
+		sections,
 		isHome,
 		activeCategory,
 		serverVersion,

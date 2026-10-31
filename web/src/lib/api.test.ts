@@ -170,6 +170,20 @@ describe('ApiClient', () => {
 		expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe('Bearer token-abc');
 	});
 
+	it('consulta las secciones disponibles para el usuario', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(
+			jsonResponse({ movies: false, series: true, collections: false })
+		);
+		const client = new ApiClient({ baseUrl: 'http://api.test', fetch: fetchMock });
+
+		const sections = await client.getSections('token-abc');
+
+		expect(sections).toEqual({ movies: false, series: true, collections: false });
+		const [url, init] = fetchMock.mock.calls[0];
+		expect(url).toBe('http://api.test/api/v1/sections');
+		expect(init.headers.Authorization).toBe('Bearer token-abc');
+	});
+
 	it('convierte un fallo de red en ApiError con estado 0', async () => {
 		const fetchMock = vi.fn().mockRejectedValue(new Error('sin conexión'));
 		const client = new ApiClient({ baseUrl: 'http://api.test', fetch: fetchMock });
