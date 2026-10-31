@@ -15,7 +15,7 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 - **Tests HLS reales y CI:** los tests se saltan sin `ffmpeg`/`ffprobe`; no hay flujo automático que los ejecute en Linux.
 - **Revisar el TTL de 7 días de TMDB** contra los términos vigentes antes de dar por buena la caché de producción.
 - **Exponer un modo de reproducción `transcode`** en la API; hoy el HLS copiado o recodificado sigue anunciándose como `remux`.
-- **App Android y Android TV** (plan en `.agents/plans/apps-android/apps-android.PLAN.md`): probar AVI por HLS en la TV; HLS con AAC 5.1 cuando el equipo lo admita (hoy el AC-3 se convierte a AAC estéreo).
+- **App Android y Android TV** (plan en `.agents/plans/apps-android/apps-android.PLAN.md`): HLS con AAC 5.1 cuando el equipo lo admita (hoy el AC-3 se convierte a AAC estéreo).
 
 ## 🟢 Más adelante
 
