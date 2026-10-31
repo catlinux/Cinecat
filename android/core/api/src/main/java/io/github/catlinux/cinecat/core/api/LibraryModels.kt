@@ -4,6 +4,14 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
+data class SectionsResponse(
+    // Si el servidor omite un campo, se muestra la sección en lugar de esconderla.
+    val movies: Boolean = true,
+    val series: Boolean = true,
+    val collections: Boolean = true
+)
+
+@Serializable
 data class HomeResponse(
     @SerialName("continue") val continueWatching: List<MediaItem> = emptyList(),
     @SerialName("next_up") val nextUp: List<MediaItem> = emptyList(),

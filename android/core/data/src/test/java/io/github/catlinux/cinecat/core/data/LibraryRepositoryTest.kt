@@ -7,6 +7,7 @@ import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -62,6 +63,24 @@ class LibraryRepositoryTest {
         assertEquals(listOf(4L), rows[3].seriesItems.map { it.id })
         assertEquals(listOf(5L), rows[4].mediaItems.map { it.id })
         assertEquals(listOf(6L), rows[5].seriesItems.map { it.id })
+    }
+
+    @Test
+    fun sectionsUseTheSectionsEndpoint() = runTest {
+        val api = createApi(server.url("/"), OkHttpClient())
+        val repository = LibraryRepository(apiProvider = { api })
+        server.enqueue(
+            jsonResponse("""{"movies":false,"series":true,"collections":false}""")
+        )
+
+        val result = repository.sections()
+
+        assertTrue(result is ApiResult.Success)
+        val sections = (result as ApiResult.Success).value
+        assertFalse(sections.movies)
+        assertTrue(sections.series)
+        assertFalse(sections.collections)
+        assertEquals("/api/v1/sections", server.takeRequest().path)
     }
 
     @Test

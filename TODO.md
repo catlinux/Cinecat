@@ -19,7 +19,6 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 
 ## 🟢 Más adelante
 
-- 🟢 **Ocultar Películas y Colecciones a quien no tiene películas:** un usuario con solo una biblioteca de series sigue viendo esas pestañas en la app (y en la web), con «Ninguna película coincide». No hay fuga de datos, pero confunde y se decidió dejarlo por ahora; requiere que el servidor indique qué secciones tiene el usuario, porque las bibliotecas de películas y series son del mismo tipo.
 - 🟢 **Bloqueo de login compartido entre varias instancias del servidor** (hoy es memoria del proceso).
 - 🟢 **Aviso al administrador tras muchos intentos fallidos.**
 - 🟢 **Purgar miniaturas de ítems que ya no existen.**

@@ -30,8 +30,11 @@ import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.ui.Modifier
@@ -49,6 +52,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import io.github.catlinux.cinecat.core.api.ApiResult
+import io.github.catlinux.cinecat.core.api.SectionsResponse
 import io.github.catlinux.cinecat.core.data.SessionState
 import kotlinx.serialization.Serializable
 
@@ -82,7 +87,7 @@ data class CollectionDetail(val id: Long)
 @Serializable
 data class Player(val itemId: Long, val startSeconds: Double = 0.0)
 
-private data class MainTab(
+internal data class MainTab(
     @StringRes val labelRes: Int,
     val route: Any,
     val icon: ImageVector? = null,
@@ -97,7 +102,16 @@ fun MainShell(
     onChangeServer: () -> Unit
 ) {
     val navController = rememberNavController()
-    val tabs = remember { mainTabs() }
+    val allTabs = remember { mainTabs() }
+    // null significa que no se pudo consultar; en ese caso se muestran todos.
+    var sections by remember { mutableStateOf<SectionsResponse?>(null) }
+    LaunchedEffect(container) {
+        sections = when (val result = container.libraryRepository.sections()) {
+            is ApiResult.Success -> result.value
+            is ApiResult.HttpError, is ApiResult.NetworkError -> null
+        }
+    }
+    val tabs = remember(allTabs, sections) { visibleMainTabs(allTabs, sections) }
     val configuration = LocalConfiguration.current
     val useRail = useNavigationRail(configuration.screenWidthDp)
     val compactBottomLabels = !useRail && !isTelevision &&
@@ -120,6 +134,18 @@ fun MainShell(
                 launchSingleTop = true
                 restoreState = true
             }
+        }
+    }
+
+    LaunchedEffect(sections, currentDestination) {
+        if (sections == null) {
+            return@LaunchedEffect
+        }
+        val destination = currentDestination ?: return@LaunchedEffect
+        val wasTopLevel = allTabs.any { tab -> destination.hasRoute(tab.route::class) }
+        val stillVisible = tabs.any { tab -> destination.hasRoute(tab.route::class) }
+        if (wasTopLevel && !stillVisible) {
+            navigateTopLevel(Portal)
         }
     }
 
@@ -378,7 +404,24 @@ private fun TabIcon(tab: MainTab) {
     }
 }
 
-private fun mainTabs(): List<MainTab> = listOf(
+internal fun visibleMainTabs(
+    allTabs: List<MainTab>,
+    sections: SectionsResponse?
+): List<MainTab> {
+    if (sections == null) {
+        return allTabs
+    }
+    return allTabs.filter { tab ->
+        when (tab.route) {
+            Movies -> sections.movies
+            Series -> sections.series
+            Collections -> sections.collections
+            else -> true
+        }
+    }
+}
+
+internal fun mainTabs(): List<MainTab> = listOf(
     MainTab(R.string.nav_portal, Portal, icon = Icons.Filled.Home),
     MainTab(R.string.nav_movies, Movies, iconRes = R.drawable.ic_nav_movies),
     MainTab(R.string.nav_series, Series, iconRes = R.drawable.ic_nav_series),

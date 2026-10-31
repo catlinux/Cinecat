@@ -59,6 +59,8 @@ class CinecatApi(
 
     suspend fun home(): ApiResult<HomeResponse> = call { service.home() }
 
+    suspend fun sections(): ApiResult<SectionsResponse> = call { service.sections() }
+
     suspend fun publicSettings(): ApiResult<PublicSettings> = call { service.publicSettings() }
 
     suspend fun items(

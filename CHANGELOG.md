@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.48.0] - 2026-10-31
+
+### Cambiado
+
+- Android y TV: la barra oculta Películas, Series y Colecciones cuando el usuario no tiene contenido en ellas (requiere servidor 0.47.0 o superior; con uno anterior se muestran todas).
+
 ## [0.47.0] - 2026-10-31
 
 ### Añadido

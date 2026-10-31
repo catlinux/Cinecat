@@ -12,6 +12,7 @@ import io.github.catlinux.cinecat.core.api.MediaItem
 import io.github.catlinux.cinecat.core.api.PortalRow
 import io.github.catlinux.cinecat.core.api.PublicSettings
 import io.github.catlinux.cinecat.core.api.SeasonDetail
+import io.github.catlinux.cinecat.core.api.SectionsResponse
 import io.github.catlinux.cinecat.core.api.Series as ApiSeries
 import io.github.catlinux.cinecat.core.api.SeriesDetail
 import io.github.catlinux.cinecat.core.api.SeriesResponse
@@ -54,6 +55,8 @@ class LibraryRepository(
     private val apiProvider: () -> CinecatApi?
 ) {
     suspend fun home(): ApiResult<HomeResponse> = withApi { it.home() }
+
+    suspend fun sections(): ApiResult<SectionsResponse> = withApi { it.sections() }
 
     suspend fun publicSettings(): ApiResult<PublicSettings> = withApi { it.publicSettings() }
 

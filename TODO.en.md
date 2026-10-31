@@ -19,7 +19,6 @@ This file contains only work that is still open. Published work is in the [CHANG
 
 ## 🟢 Later
 
-- 🟢 **Hide Movies and Collections from users without movies:** a user with only a series library still sees those tabs in the app (and on the web), with "No movie matches". There is no data leak, but it is confusing and it was decided to leave it for now; the server needs to say which sections the user has, because movie and series libraries are the same type.
 - 🟢 **Share login lockout between several server instances** (today it is process memory).
 - 🟢 **Notify the administrator after many failed attempts.**
 - 🟢 **Purge thumbnails for items that no longer exist.**

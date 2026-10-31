@@ -38,6 +38,22 @@ class LibraryApiTest {
     }
 
     @Test
+    fun parsesAvailableSectionsAndIgnoresUnknownFields() = runTest {
+        server.enqueue(
+            jsonResponse(
+                """{"movies":false,"series":true,"collections":false,"unknown":true}"""
+            )
+        )
+        val sections = api().sections()
+        assertTrue(sections is ApiResult.Success)
+        val value = (sections as ApiResult.Success).value
+        assertFalse(value.movies)
+        assertTrue(value.series)
+        assertFalse(value.collections)
+        assertEquals("/api/v1/sections", server.takeRequest().path)
+    }
+
+    @Test
     fun parsesLibraryReadsAndIgnoresUnknownFields() = runTest {
         server.enqueue(jsonResponse(homeJson()))
         val home = api().home()

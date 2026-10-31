@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.48.0] - 2026-10-31
+
+### Changed
+
+- Android and TV: the bar hides Movies, Series and Collections when the user has no content in them (needs server 0.47.0 or later; with an older one all are shown).
+
 ## [0.47.0] - 2026-10-31
 
 ### Added

@@ -35,6 +35,9 @@ interface CinecatService {
     @GET("api/v1/home")
     suspend fun home(): HomeResponse
 
+    @GET("api/v1/sections")
+    suspend fun sections(): SectionsResponse
+
     @GET("api/v1/settings/public")
     suspend fun publicSettings(): PublicSettings
 
