@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.43.2] - 2026-10-31
+
+### Corregido
+
+- Android: la barra lateral (TV y tableta) recupera la separación entre destinos que perdió en 0.43.1 al hacerla desplazable.
+
 ## [0.43.1] - 2026-10-31
 
 ### Corregido

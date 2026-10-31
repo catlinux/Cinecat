@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.43.2] - 2026-10-31
+
+### Fixed
+
+- Android: the side rail (TV and tablet) regains the spacing between destinations it lost in 0.43.1 when it was made scrollable.
+
 ## [0.43.1] - 2026-10-31
 
 ### Fixed
