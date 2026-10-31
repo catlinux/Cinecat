@@ -20,7 +20,6 @@ This file contains only work that is still open. Published work is in the [CHANG
 - 🟢 **Copy backups outside the volume** (another disk or machine): today they live in `/data/backups`, next to the database. The user does not want it for now.
 - 🟢 **Share login lockout between several server instances** (today it is process memory).
 - 🟢 **Notify the administrator after many failed attempts.**
-- 🟢 **Purge thumbnails for items that no longer exist.**
 - **Plugins**, still at the design stage.
 - **DLNA/UPnP**, still at the design stage.
 - **Library types** other than video (music, photos or others) when the model is addressed.

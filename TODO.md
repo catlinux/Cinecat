@@ -20,7 +20,6 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 - 🟢 **Copiar las copias de seguridad fuera del volumen** (otro disco o equipo): hoy están en `/data/backups`, junto a la base. El usuario no lo quiere por ahora.
 - 🟢 **Bloqueo de login compartido entre varias instancias del servidor** (hoy es memoria del proceso).
 - 🟢 **Aviso al administrador tras muchos intentos fallidos.**
-- 🟢 **Purgar miniaturas de ítems que ya no existen.**
 - **Complementos**, todavía en diseño.
 - **DLNA/UPnP**, todavía en diseño.
 - **Tipos de biblioteca** distintos de vídeo (música, fotos u otros) cuando se aborde el modelo.

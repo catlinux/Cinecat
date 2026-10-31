@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.48.1] - 2026-10-31
+
+### Fixed
+
+- Server: video thumbnails whose item no longer exists are removed from disk in the daily maintenance (together with the expired trash) instead of piling up forever.
+
 ## [0.48.0] - 2026-10-31
 
 ### Changed

@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.48.1] - 2026-10-31
+
+### Corregido
+
+- Servidor: las miniaturas de vídeo cuyo ítem ya no existe se borran del disco en el mantenimiento diario (junto a la papelera caducada), en lugar de acumularse para siempre.
+
 ## [0.48.0] - 2026-10-31
 
 ### Cambiado

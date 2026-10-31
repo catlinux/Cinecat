@@ -892,12 +892,19 @@ func (a *API) purgeExpiredTrash(ctx context.Context, actor string) (int, error) 
 	return purged, nil
 }
 
-// StartTrashPurger ejecuta una purga al arrancar y después cada 24 horas hasta
-// que se cancele el contexto del servicio.
+// StartTrashPurger ejecuta el mantenimiento diario al arrancar y después cada
+// 24 horas: purga la papelera caducada y las miniaturas huérfanas.
 func (a *API) StartTrashPurger(ctx context.Context) {
-	if _, err := a.purgeExpiredTrash(ctx, "sistema"); err != nil && ctx.Err() == nil {
-		log.Printf("library: papelera: primera purga: %v", err)
+	runMaintenance := func() {
+		if _, err := a.purgeExpiredTrash(ctx, "sistema"); err != nil && ctx.Err() == nil {
+			log.Printf("library: papelera: purga: %v", err)
+		}
+		if _, err := a.purgeOrphanThumbnails(ctx, time.Now()); err != nil && ctx.Err() == nil {
+			log.Printf("library: miniaturas: purga: %v", err)
+		}
 	}
+
+	runMaintenance()
 	ticker := time.NewTicker(24 * time.Hour)
 	defer ticker.Stop()
 	for {
@@ -905,9 +912,7 @@ func (a *API) StartTrashPurger(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			if _, err := a.purgeExpiredTrash(ctx, "sistema"); err != nil && ctx.Err() == nil {
-				log.Printf("library: papelera: purga diaria: %v", err)
-			}
+			runMaintenance()
 		}
 	}
 }
