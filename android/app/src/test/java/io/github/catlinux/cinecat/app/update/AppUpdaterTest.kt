@@ -35,6 +35,25 @@ class AppUpdaterTest {
     }
 
     @Test
+    fun normalizesTheDebugVersionSuffix() {
+        assertEquals("0.44.0", normalizeAppVersion(" 0.44.0-debug "))
+        assertEquals("0.44.0", normalizeAppVersion("0.44.0"))
+        assertNull(normalizeAppVersion("   "))
+        assertNull(normalizeAppVersion(null))
+    }
+
+    @Test
+    fun showsTheUpdatedNoticeOnlyWhenTheSavedVersionMatches() {
+        assertTrue(shouldShowUpdatedNotice("0.44.0", "0.44.0"))
+        assertTrue(shouldShowUpdatedNotice("0.44.0", "0.44.0-debug"))
+        assertTrue(shouldShowUpdatedNotice(" 0.44.0-debug ", "0.44.0"))
+        assertFalse(shouldShowUpdatedNotice("0.44.0", "0.43.0"))
+        assertFalse(shouldShowUpdatedNotice(null, "0.44.0"))
+        assertFalse(shouldShowUpdatedNotice("0.44.0", null))
+        assertFalse(shouldShowUpdatedNotice("", "0.44.0"))
+    }
+
+    @Test
     fun copiesAndVerifiesTheChecksum() {
         val content = "contenido del apk".toByteArray()
         val target = File.createTempFile("cinecat-update", ".apk").apply { delete() }

@@ -151,6 +151,11 @@ fun AccountUpdateSection(
                     }
                 )
             }
+            is UpdateState.Installing -> Text(
+                text = stringResource(R.string.update_installing_version, current.version),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             is UpdateState.Failed -> {
                 Text(
                     text = stringResource(

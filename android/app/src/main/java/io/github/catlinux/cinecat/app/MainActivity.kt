@@ -20,12 +20,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import io.github.catlinux.cinecat.app.update.UpdateCompletedDialog
+import io.github.catlinux.cinecat.app.update.UpdateInstallingOverlay
 import io.github.catlinux.cinecat.app.update.UpdateReadyDialog
 import io.github.catlinux.cinecat.app.update.UpdateInstallPermissionDialog
 import io.github.catlinux.cinecat.app.update.UpdateState
 import io.github.catlinux.cinecat.app.update.canInstallPackages
 import io.github.catlinux.cinecat.app.update.installDownloadedUpdate
+import io.github.catlinux.cinecat.app.update.normalizeAppVersion
 import io.github.catlinux.cinecat.app.update.openUnknownSourcesSettings
+import io.github.catlinux.cinecat.app.update.shouldShowUpdatedNotice
 import io.github.catlinux.cinecat.ui.common.theme.CinecatTheme
 
 class MainActivity : ComponentActivity() {
@@ -135,12 +139,29 @@ private fun UpdateCoordinator(container: AppContainer) {
     var dismissedVersion by rememberSaveable { mutableStateOf<String?>(null) }
     var showPermission by remember { mutableStateOf(false) }
     var permissionFallback by remember { mutableStateOf(false) }
+    var completedVersion by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(container, context) {
+        val pending = container.appUpdater.pendingInstallVersion()
+        val installed = runCatching {
+            context.packageManager.getPackageInfo(context.packageName, 0).versionName
+        }.getOrNull()
+        if (shouldShowUpdatedNotice(pending, installed)) {
+            completedVersion = normalizeAppVersion(pending)
+        }
+        container.appUpdater.clearPendingInstallVersion()
+    }
 
     LaunchedEffect(autoEnabled, state) {
         val current = state
         if (autoEnabled && current is UpdateState.Available) {
             container.appUpdater.download(current.update)
         }
+    }
+
+    val installing = state as? UpdateState.Installing
+    if (installing != null) {
+        UpdateInstallingOverlay(installing.version)
     }
 
     val ready = state as? UpdateState.Ready
@@ -176,5 +197,8 @@ private fun UpdateCoordinator(container: AppContainer) {
             },
             onDismiss = { showPermission = false }
         )
+    }
+    completedVersion?.let { version ->
+        UpdateCompletedDialog(version = version, onDismiss = { completedVersion = null })
     }
 }

@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.45.0] - 2026-10-31
+
+### Añadido
+
+- Android y TV: al instalar una actualización se muestra una pantalla completa «Actualizando Cinecat» en lugar de que la app desaparezca sin aviso, y al reabrirse aparece una vez el aviso «Cinecat actualizado» con la versión instalada.
+
 ## [0.44.0] - 2026-10-31
 
 ### Añadido

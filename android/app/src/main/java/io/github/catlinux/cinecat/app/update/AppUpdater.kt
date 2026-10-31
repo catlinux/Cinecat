@@ -12,6 +12,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import io.github.catlinux.cinecat.core.api.ApiResult
 import io.github.catlinux.cinecat.core.api.CinecatApi
 import io.github.catlinux.cinecat.core.api.ClientUpdate
@@ -56,6 +57,7 @@ sealed interface UpdateState {
     data class Available(val update: ClientUpdate) : UpdateState
     data class Downloading(val progress: Float) : UpdateState
     data class Ready(val update: ClientUpdate, val apkFile: File) : UpdateState
+    data class Installing(val version: String) : UpdateState
     data class Failed(val reason: UpdateFailure, val detail: String? = null) : UpdateState
     data object Disabled : UpdateState
 }
@@ -70,6 +72,21 @@ fun isAllowedDownloadUrl(url: String): Boolean {
 fun shouldCheck(lastCheckMillis: Long, nowMillis: Long): Boolean {
     return lastCheckMillis <= 0L ||
         nowMillis - lastCheckMillis >= UPDATE_CHECK_INTERVAL_MILLIS
+}
+
+/** Normaliza el nombre de versión de la app y quita el sufijo de depuración. */
+fun normalizeAppVersion(versionName: String?): String? {
+    return versionName
+        ?.trim()
+        ?.removeSuffix("-debug")
+        ?.takeIf { it.isNotEmpty() }
+}
+
+/** Indica si la instalación guardada coincide con la versión que acaba de arrancar. */
+fun shouldShowUpdatedNotice(savedVersion: String?, installedVersion: String?): Boolean {
+    val saved = normalizeAppVersion(savedVersion) ?: return false
+    val installed = normalizeAppVersion(installedVersion) ?: return false
+    return saved == installed
 }
 
 fun copyWithSha256(
@@ -190,12 +207,28 @@ class AppUpdater(
 
     // Copiar el APK a la sesión del instalador lleva segundos en la TV: fuera del hilo principal.
     fun install(context: Context, apkFile: File) {
+        val ready = _state.value as? UpdateState.Ready ?: return
+        val version = ready.update.version
+        _state.value = UpdateState.Installing(version)
         scope.launch(Dispatchers.IO) {
+            runCatching {
+                preferences.edit { it[PENDING_INSTALL_VERSION] = version }
+            }
             try {
                 UpdateInstaller.install(context, apkFile)
             } catch (error: Exception) {
                 reportInstallFailure(error.message)
             }
+        }
+    }
+
+    suspend fun pendingInstallVersion(): String? {
+        return runCatching { preferences.data.first()[PENDING_INSTALL_VERSION] }.getOrNull()
+    }
+
+    suspend fun clearPendingInstallVersion() {
+        runCatching {
+            preferences.edit { it.remove(PENDING_INSTALL_VERSION) }
         }
     }
 
@@ -398,6 +431,7 @@ class AppUpdater(
     private companion object {
         val LAST_CHECK = longPreferencesKey("app_update_last_check")
         val AUTO_ENABLED = booleanPreferencesKey("app_update_auto")
+        val PENDING_INSTALL_VERSION = stringPreferencesKey("app_update_pending_version")
     }
 }
 

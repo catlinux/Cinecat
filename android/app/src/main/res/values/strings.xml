@@ -142,6 +142,12 @@
     <string name="update_ready">Versión %1$s lista</string>
     <string name="update_ready_title">Actualización lista</string>
     <string name="update_install">Instalar</string>
+    <string name="update_installing_title">Actualizando Cinecat</string>
+    <string name="update_installing_version">Actualizando Cinecat a la versión %1$s</string>
+    <string name="update_installing_note">No apagues el equipo. La aplicación se abrirá sola al terminar.</string>
+    <string name="update_completed_title">Cinecat actualizado</string>
+    <string name="update_completed_message">Se ha instalado la versión %1$s</string>
+    <string name="update_accept">Aceptar</string>
     <string name="update_later">Más tarde</string>
     <string name="update_retry">Reintentar</string>
     <string name="update_failed">No se pudo actualizar: %1$s</string>
