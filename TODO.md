@@ -9,16 +9,15 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 ## 🟠 Próxima fase
 
 - **Perfil de usuario:** personalización del portal e historial (la gestión de usuarios y las sesiones abiertas ya existen).
-- **Copiar las copias de seguridad fuera del volumen** (otro disco o equipo): hoy están en `/data/backups`, junto a la base.
 - **Subtítulos subidos por el usuario:** requiere diseño previo; hoy solo se leen incrustados de texto o archivos `.srt`/`.vtt`/`.ass` junto al vídeo.
 - **Reproducción avanzada:** perfiles por dispositivo, HDR/10 bits, desentrelazado, subtítulos de imagen y audio no soportado.
-- **Tests HLS reales y CI:** los tests se saltan sin `ffmpeg`/`ffprobe`; no hay flujo automático que los ejecute en Linux.
+- **Verificar el flujo «Servidor y web» de GitHub Actions** (`.github/workflows/server-web.yml`, ejecuta los tests de Go con FFmpeg y los de la web): comprobar su primera ejecución en verde.
 - **Revisar el TTL de 7 días de TMDB** contra los términos vigentes antes de dar por buena la caché de producción.
-- **Exponer un modo de reproducción `transcode`** en la API; hoy el HLS copiado o recodificado sigue anunciándose como `remux`.
 - **App Android y Android TV** (plan en `.agents/plans/apps-android/apps-android.PLAN.md`): HLS con AAC 5.1 cuando el equipo lo admita (hoy el AC-3 se convierte a AAC estéreo).
 
 ## 🟢 Más adelante
 
+- 🟢 **Copiar las copias de seguridad fuera del volumen** (otro disco o equipo): hoy están en `/data/backups`, junto a la base. El usuario no lo quiere por ahora.
 - 🟢 **Bloqueo de login compartido entre varias instancias del servidor** (hoy es memoria del proceso).
 - 🟢 **Aviso al administrador tras muchos intentos fallidos.**
 - 🟢 **Purgar miniaturas de ítems que ya no existen.**
@@ -30,6 +29,7 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 
 ## Descartado y por qué
 
+- **Modo `transcode` en la API:** el valor `mode` de `GET /api/v1/items/{id}/play` sigue siendo `remux` para el HLS copiado o recodificado. Cambiarlo rompería a las apps ya instaladas, que comparan con `remux`; `reason` ya indica por qué no va en directo.
 - **Caddy como proxy propio:** se descartó en 0.3.1; el Apache del host ya gestiona los vhosts y HTTPS.
 - **Segmentos fMP4 para la copia:** se descartaron; los contenedores reales y los timestamps hacían inviable un fMP4 fiable. La copia usa MPEG-TS con cortes en fotogramas clave reales; la recodificación sigue usando H.264.
 - **OMDb como fuente principal:** TMDB pasó a ser la fuente principal en 0.11.0; OMDb queda como respaldo si no hay clave de TMDB.

@@ -9,16 +9,15 @@ This file contains only work that is still open. Published work is in the [CHANG
 ## 🟠 Next phase
 
 - **User profile:** portal customisation and history (user management and open sessions already exist).
-- **Copy backups outside the volume** (another disk or machine): today they live in `/data/backups`, next to the database.
 - **User-uploaded subtitles:** needs a design first; today only embedded text and `.srt`/`.vtt`/`.ass` files next to the video are read.
 - **Advanced playback:** per-device profiles, HDR/10-bit, deinterlacing, image subtitles and unsupported audio.
-- **Real HLS tests and CI:** tests are skipped without `ffmpeg`/`ffprobe`; no automated Linux job runs them.
+- **Verify the "Servidor y web" GitHub Actions workflow** (`.github/workflows/server-web.yml`, runs the Go tests with FFmpeg and the web tests): check its first run is green.
 - **Review the 7-day TMDB TTL** against the current terms before accepting the production cache.
-- **Expose a `transcode` playback mode** in the API; copied or re-encoded HLS still reports `remux`.
 - **Android and Android TV app** (plan in `.agents/plans/apps-android/apps-android.PLAN.md`): HLS with AAC 5.1 when the device supports it (today AC-3 is converted to stereo AAC).
 
 ## 🟢 Later
 
+- 🟢 **Copy backups outside the volume** (another disk or machine): today they live in `/data/backups`, next to the database. The user does not want it for now.
 - 🟢 **Share login lockout between several server instances** (today it is process memory).
 - 🟢 **Notify the administrator after many failed attempts.**
 - 🟢 **Purge thumbnails for items that no longer exist.**
@@ -31,6 +30,7 @@ This file contains only work that is still open. Published work is in the [CHANG
 
 ## Discarded and why
 
+- **`transcode` mode in the API:** `mode` in `GET /api/v1/items/{id}/play` stays `remux` for copied or re-encoded HLS. Changing it would break already installed apps, which compare against `remux`; `reason` already says why it is not direct.
 - **Caddy as a bundled proxy:** discarded in 0.3.1; the host Apache already manages vhosts and HTTPS.
 - **fMP4 segments for copy mode:** discarded; real containers and timestamps made reliable fMP4 unviable. Copying uses MPEG-TS with cuts at real keyframes; re-encoding still uses H.264.
 - **OMDb as the main source:** TMDB became the main source in 0.11.0; OMDb is a fallback when there is no TMDB key.

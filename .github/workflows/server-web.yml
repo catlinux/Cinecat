@@ -1,0 +1,62 @@
+name: Servidor y web
+
+on:
+  push:
+    paths:
+      - 'cmd/**'
+      - 'internal/**'
+      - 'api/**'
+      - 'go.mod'
+      - 'go.sum'
+      - 'web/**'
+      - '.github/workflows/server-web.yml'
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      # Sin ffmpeg y ffprobe los tests de HLS y de claves se omiten en silencio.
+      - name: Instalar FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+
+      - name: Tests del servidor
+        run: go test ./...
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Comprobar tipos
+        run: npm run check
+
+      - name: Tests de la web
+        run: npm test
