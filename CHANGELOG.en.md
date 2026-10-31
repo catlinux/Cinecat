@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.43.1] - 2026-10-31
+
+### Fixed
+
+- Android phone in landscape: the side rail did not fit its six destinations and "Account" ended up off screen; it now scrolls.
+
 ## [0.43.0] - 2026-10-31
 
 ### Added

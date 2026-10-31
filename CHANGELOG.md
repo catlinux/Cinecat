@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.43.1] - 2026-10-31
+
+### Corregido
+
+- Android móvil en horizontal: la barra lateral no cabía con sus seis destinos y «Cuenta» quedaba fuera de pantalla; ahora se desplaza.
+
 ## [0.43.0] - 2026-10-31
 
 ### Añadido

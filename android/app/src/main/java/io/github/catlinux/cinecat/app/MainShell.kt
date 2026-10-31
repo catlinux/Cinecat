@@ -3,6 +3,7 @@ package io.github.catlinux.cinecat.app
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -11,6 +12,9 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.Alignment
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Home
@@ -160,25 +164,31 @@ fun MainShell(
         ) {
             if (useRail && isTopLevel) {
                 NavigationRail {
-                    Spacer(Modifier.height(8.dp))
-                    tabs.forEach { tab ->
+                    // En un móvil horizontal los seis destinos no caben en el alto: se desplaza.
+                    Column(
+                        modifier = Modifier.fillMaxHeight().verticalScroll(rememberScrollState()),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Spacer(Modifier.height(8.dp))
+                        tabs.forEach { tab ->
+                            RailItem(
+                                selected = currentDestination.hasRoute(tab.route::class),
+                                onClick = { navigateTopLevel(tab.route) },
+                                isTelevision = isTelevision,
+                                icon = { TabIcon(tab) },
+                                label = { Text(stringResource(tab.labelRes)) }
+                            )
+                        }
+                        // En el riel la cuenta va aquí: en la TV el icono de la cabecera solo se
+                        // alcanzaba con el mando recorriendo la fila entera hacia la derecha.
                         RailItem(
-                            selected = currentDestination.hasRoute(tab.route::class),
-                            onClick = { navigateTopLevel(tab.route) },
+                            selected = false,
+                            onClick = { navController.navigate(Account) },
                             isTelevision = isTelevision,
-                            icon = { TabIcon(tab) },
-                            label = { Text(stringResource(tab.labelRes)) }
+                            icon = { Icon(Icons.Filled.AccountCircle, contentDescription = null) },
+                            label = { Text(stringResource(R.string.account_title)) }
                         )
                     }
-                    // En el riel la cuenta va aquí: en la TV el icono de la cabecera solo se
-                    // alcanzaba con el mando recorriendo la fila entera hacia la derecha.
-                    RailItem(
-                        selected = false,
-                        onClick = { navController.navigate(Account) },
-                        isTelevision = isTelevision,
-                        icon = { Icon(Icons.Filled.AccountCircle, contentDescription = null) },
-                        label = { Text(stringResource(R.string.account_title)) }
-                    )
                 }
             }
             Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
