@@ -1,7 +1,10 @@
 package io.github.catlinux.cinecat.app
 
+import android.app.PictureInPictureParams
 import android.content.res.Configuration
+import android.os.Build
 import android.os.Bundle
+import android.util.Rational
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -32,6 +35,10 @@ class MainActivity : ComponentActivity() {
         val isTv = isTelevision(resources.configuration.uiMode and Configuration.UI_MODE_TYPE_MASK)
         val container = (application as CinecatApplication).container
         setContent {
+            val pictureInPicture = container.pictureInPicture
+            LaunchedEffect(pictureInPicture.eligible, pictureInPicture.aspectRatio) {
+                updatePictureInPictureParams(pictureInPicture)
+            }
             CinecatTheme {
                 CompositionLocalProvider(LocalIsTelevision provides isTv) {
                     if (isTv) {
@@ -53,7 +60,70 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         val container = (application as CinecatApplication).container
+        val pictureInPicture = container.pictureInPicture
+        pictureInPicture.inPip = isInPictureInPictureMode
+        if (!pictureInPicture.inPip) {
+            pictureInPicture.wasInPip = false
+        }
         container.appUpdater.check()
+    }
+
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            return
+        }
+        val pictureInPicture = (application as CinecatApplication).container.pictureInPicture
+        if (!pictureInPicture.eligible || isInPictureInPictureMode) {
+            return
+        }
+        runCatching {
+            enterPictureInPictureMode(pictureInPictureParams(pictureInPicture))
+        }
+    }
+
+    override fun onPictureInPictureModeChanged(
+        isInPictureInPictureMode: Boolean,
+        newConfig: Configuration
+    ) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        val pictureInPicture = (application as CinecatApplication).container.pictureInPicture
+        pictureInPicture.inPip = isInPictureInPictureMode
+        if (isInPictureInPictureMode) {
+            pictureInPicture.wasInPip = true
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        val pictureInPicture = (application as CinecatApplication).container.pictureInPicture
+        if (pictureInPicture.wasInPip) {
+            pictureInPicture.eligible = false
+            pictureInPicture.requestStop()
+            pictureInPicture.wasInPip = false
+            pictureInPicture.inPip = false
+        }
+    }
+
+    private fun updatePictureInPictureParams(pictureInPicture: PictureInPictureController) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            return
+        }
+        setPictureInPictureParams(pictureInPictureParams(pictureInPicture))
+    }
+
+    private fun pictureInPictureParams(
+        pictureInPicture: PictureInPictureController
+    ): PictureInPictureParams {
+        val builder = PictureInPictureParams.Builder()
+            .setAspectRatio(
+                Rational(pictureInPicture.aspectRatio.width, pictureInPicture.aspectRatio.height)
+            )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            builder.setAutoEnterEnabled(pictureInPicture.eligible)
+            builder.setSeamlessResizeEnabled(false)
+        }
+        return builder.build()
     }
 }
 

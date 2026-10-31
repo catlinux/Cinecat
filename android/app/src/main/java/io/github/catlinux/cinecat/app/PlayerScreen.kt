@@ -5,6 +5,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.pm.ActivityInfo
+import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -59,6 +60,7 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
+import androidx.media3.common.VideoSize
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -77,6 +79,13 @@ fun PlayerScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
+    val pictureInPicture = remember(context) {
+        (context.applicationContext as CinecatApplication).container.pictureInPicture
+    }
+    val supportsPictureInPicture = remember(context) {
+        context.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
+    }
+    val inPip = pictureInPicture.inPip
     val exoPlayer = remember(client, context) {
         ExoPlayer.Builder(context)
             .setMediaSourceFactory(
@@ -102,6 +111,32 @@ fun PlayerScreen(
         }
     }
 
+    val pipEligible = isPipEligible(
+        hasVideo = state is PlayerUiState.Ready,
+        isPlaying = isPlaying,
+        isTelevision = isTelevision,
+        supportsPip = supportsPictureInPicture
+    )
+    LaunchedEffect(pipEligible) {
+        pictureInPicture.eligible = pipEligible
+    }
+    LaunchedEffect(inPip) {
+        if (inPip) {
+            showTracks = false
+        }
+    }
+    DisposableEffect(pictureInPicture, exoPlayer) {
+        pictureInPicture.onStopRequested = {
+            saveCurrentProgress()
+            exoPlayer.pause()
+        }
+        onDispose {
+            pictureInPicture.eligible = false
+            pictureInPicture.aspectRatio = PipAspectRatio.Default
+            pictureInPicture.onStopRequested = null
+        }
+    }
+
     DisposableEffect(exoPlayer) {
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(playing: Boolean) {
@@ -113,6 +148,10 @@ fun PlayerScreen(
 
             override fun onTracksChanged(currentTracks: Tracks) {
                 tracks = currentTracks
+            }
+
+            override fun onVideoSizeChanged(videoSize: VideoSize) {
+                pictureInPicture.aspectRatio = pipAspectRatio(videoSize.width, videoSize.height)
             }
 
             override fun onPlayerError(error: PlaybackException) {
@@ -173,7 +212,7 @@ fun PlayerScreen(
             .focusRequester(rootFocus)
             .focusable()
             .onPreviewKeyEvent { event ->
-                if (state !is PlayerUiState.Ready || showTracks) {
+                if (inPip || state !is PlayerUiState.Ready || showTracks) {
                     return@onPreviewKeyEvent false
                 }
                 val action: (() -> Unit) = when (event.key) {
@@ -197,61 +236,71 @@ fun PlayerScreen(
             }
     ) {
         when (val current = state) {
-            PlayerUiState.Loading -> Column(
-                modifier = Modifier.align(Alignment.Center),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                Text(
-                    text = stringResource(R.string.loading),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = Color.White
-                )
+            PlayerUiState.Loading -> if (!inPip) {
+                Column(
+                    modifier = Modifier.align(Alignment.Center),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        text = stringResource(R.string.loading),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color.White
+                    )
+                }
             }
-            is PlayerUiState.Error -> Column(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .padding(32.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Text(
-                    text = current.message ?: stringResource(R.string.player_error),
-                    style = MaterialTheme.typography.headlineSmall,
-                    // El fondo es negro en ambos temas.
-                    color = Color.White
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Button(onClick = viewModel::retry) {
-                        Text(stringResource(R.string.retry))
-                    }
-                    OutlinedButton(onClick = onBack) {
-                        Text(stringResource(R.string.back))
+            is PlayerUiState.Error -> if (!inPip) {
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        text = current.message ?: stringResource(R.string.player_error),
+                        style = MaterialTheme.typography.headlineSmall,
+                        // El fondo es negro en ambos temas.
+                        color = Color.White
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Button(onClick = viewModel::retry) {
+                            Text(stringResource(R.string.retry))
+                        }
+                        OutlinedButton(onClick = onBack) {
+                            Text(stringResource(R.string.back))
+                        }
                     }
                 }
             }
             is PlayerUiState.Ready -> {
-                PlayerViewSurface(exoPlayer = exoPlayer, onCreated = { playerView = it })
-                TextButton(
-                    onClick = { showTracks = true },
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(16.dp)
-                        .background(
-                            color = Color.Black.copy(alpha = 0.55f),
-                            shape = RoundedCornerShape(8.dp)
-                        ),
-                    colors = ButtonDefaults.textButtonColors(contentColor = Color.White)
-                ) {
-                    Text(stringResource(R.string.player_tracks))
-                }
-                if (showTracks) {
-                    TrackDialog(
-                        player = exoPlayer,
-                        tracks = tracks,
-                        onDismiss = { showTracks = false }
-                    )
+                PlayerViewSurface(
+                    exoPlayer = exoPlayer,
+                    showControls = !inPip,
+                    onCreated = { playerView = it }
+                )
+                if (!inPip) {
+                    TextButton(
+                        onClick = { showTracks = true },
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(16.dp)
+                            .background(
+                                color = Color.Black.copy(alpha = 0.55f),
+                                shape = RoundedCornerShape(8.dp)
+                            ),
+                        colors = ButtonDefaults.textButtonColors(contentColor = Color.White)
+                    ) {
+                        Text(stringResource(R.string.player_tracks))
+                    }
+                    if (showTracks) {
+                        TrackDialog(
+                            player = exoPlayer,
+                            tracks = tracks,
+                            onDismiss = { showTracks = false }
+                        )
+                    }
                 }
             }
         }
@@ -260,12 +309,16 @@ fun PlayerScreen(
 
 @SuppressLint("UnsafeOptInUsageError")
 @Composable
-private fun PlayerViewSurface(exoPlayer: ExoPlayer, onCreated: (PlayerView) -> Unit) {
+private fun PlayerViewSurface(
+    exoPlayer: ExoPlayer,
+    showControls: Boolean,
+    onCreated: (PlayerView) -> Unit
+) {
     AndroidView(
         factory = { context ->
             PlayerView(context).apply {
                 player = exoPlayer
-                useController = true
+                useController = showControls
                 keepScreenOn = true
                 setShutterBackgroundColor(android.graphics.Color.BLACK)
                 onCreated(this)
@@ -274,6 +327,10 @@ private fun PlayerViewSurface(exoPlayer: ExoPlayer, onCreated: (PlayerView) -> U
         update = { view ->
             view.player = exoPlayer
             view.keepScreenOn = true
+            view.useController = showControls
+            if (!showControls) {
+                view.hideController()
+            }
         },
         modifier = Modifier.fillMaxSize()
     )

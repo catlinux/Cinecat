@@ -33,6 +33,7 @@ import okhttp3.OkHttpClient
 class AppContainer(context: Context) {
     private val appContext = context.applicationContext
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    val pictureInPicture = PictureInPictureController()
 
     internal val dataStore = PreferenceDataStoreFactory.create(
         scope = appScope,

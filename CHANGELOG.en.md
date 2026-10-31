@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.43.0] - 2026-10-31
+
+### Added
+
+- Android mobile: when leaving the app while a video is playing, the player moves to a picture-in-picture window without the app controls. Closing the window stops playback and saves progress.
+
 ## [0.42.2] - 2026-10-31
 
 ### Changed

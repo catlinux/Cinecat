@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.43.0] - 2026-10-31
+
+### Añadido
+
+- Android móvil: al salir de la app mientras se reproduce un vídeo, el reproductor pasa a una ventana de imagen en imagen sin los controles de la app. Al cerrar la ventana se detiene la reproducción y se guarda el progreso.
+
 ## [0.42.2] - 2026-10-31
 
 ### Cambiado
