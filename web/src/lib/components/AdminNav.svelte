@@ -9,6 +9,7 @@
 		{ href: '/admin', label: 'Resumen' },
 		{ href: '/admin/libraries', label: 'Bibliotecas' },
 		{ href: '/admin/trash', label: 'Papelera' },
+		{ href: '/admin/activity', label: 'Actividad' },
 		{ href: '/admin/settings/scan', label: 'Escaneo' },
 		{ href: '/admin/settings/metadata', label: 'Metadatos' },
 		{ href: '/admin/settings/ui', label: 'Interfaz' },

@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.44.0] - 2026-10-31
+
+### Añadido
+
+- Administración: sección «Actividad» con las últimas reproducciones de todos los usuarios (usuario, título, posición, visto, fecha) y filtro por usuario. Nuevo `GET /api/v1/activity`, solo administradores.
+
 ## [0.43.2] - 2026-10-31
 
 ### Corregido

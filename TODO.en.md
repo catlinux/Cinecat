@@ -9,7 +9,6 @@ This file contains only work that is still open. Published work is in the [CHANG
 ## 🟠 Next phase
 
 - **User profile:** portal customisation and history (user management and open sessions already exist).
-- **Activity** (playback history) in administration.
 - **Copy backups outside the volume** (another disk or machine): today they live in `/data/backups`, next to the database.
 - **User-uploaded subtitles:** needs a design first; today only embedded text and `.srt`/`.vtt`/`.ass` files next to the video are read.
 - **Advanced playback:** per-device profiles, HDR/10-bit, deinterlacing, image subtitles and unsupported audio.

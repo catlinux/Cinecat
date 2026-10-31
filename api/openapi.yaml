@@ -4968,6 +4968,63 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/activity:
+    get:
+      summary: Últimas reproducciones de todos los usuarios (solo administradores)
+      description: |
+        Combina el progreso de reproducción y las marcas de visto en una entrada
+        por usuario e ítem, con la fecha más reciente. Requiere rol `admin`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          description: Número máximo de entradas. Los valores superiores a 200 se recortan a 200.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+        - name: user_id
+          in: query
+          required: false
+          description: Filtra la actividad de un usuario concreto.
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        '200':
+          description: Últimas reproducciones
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityResponse'
+        '400':
+          description: Parámetros no válidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: El usuario no tiene rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/users:
     get:
       summary: Lista las cuentas (solo administradores)
@@ -8475,6 +8532,68 @@ components:
         purged:
           type: integer
           description: Número de elementos eliminados definitivamente.
+      additionalProperties: false
+    ActivityEntry:
+      type: object
+      required:
+        - user_id
+        - username
+        - item_id
+        - title
+        - kind
+        - series_title
+        - season
+        - episode
+        - position_seconds
+        - duration_seconds
+        - watched
+        - updated_at
+      properties:
+        user_id:
+          type: integer
+          format: int64
+        username:
+          type: string
+        item_id:
+          type: integer
+          format: int64
+        title:
+          type: string
+          description: Título visible del elemento; en episodios, el del episodio.
+        kind:
+          type: string
+          description: Tipo de elemento, por ejemplo `movie` o `episode`.
+        series_title:
+          type: string
+          nullable: true
+          description: Título de la serie en los episodios.
+        season:
+          type: integer
+          nullable: true
+        episode:
+          type: integer
+          nullable: true
+        position_seconds:
+          type: number
+          format: double
+        duration_seconds:
+          type: number
+          format: double
+        watched:
+          type: boolean
+        updated_at:
+          type: string
+          format: date-time
+      additionalProperties: false
+    ActivityResponse:
+      type: object
+      required:
+        - entries
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActivityEntry'
       additionalProperties: false
     User:
       type: object

@@ -151,6 +151,7 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.Handle("POST /api/v1/trash/{id}/restore", a.requireAdmin(a.handleTrashRestore))
 	mux.Handle("DELETE /api/v1/trash/{id}", a.requireAdmin(a.handleTrashDelete))
 	mux.Handle("POST /api/v1/trash/purge", a.requireAdmin(a.handleTrashPurge))
+	mux.Handle("GET /api/v1/activity", a.requireAdmin(a.handleActivity))
 	mux.Handle("GET /api/v1/items/{id}", a.requireSession(a.handleItem))
 	mux.Handle("GET /api/v1/items/{id}/similar", a.requireSession(a.handleSimilarItems))
 	mux.Handle("GET /api/v1/items/{id}/thumbnail", a.requireSession(a.handleItemThumbnail))

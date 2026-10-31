@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.44.0] - 2026-10-31
+
+### Added
+
+- Administration: new "Activity" section listing the latest playbacks of all users (user, title, position, watched, date) with a per-user filter. New `GET /api/v1/activity`, admins only.
+
 ## [0.43.2] - 2026-10-31
 
 ### Fixed

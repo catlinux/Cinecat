@@ -838,6 +838,30 @@ export interface UsersResponse {
 	users: ManagedUser[];
 }
 
+export interface ActivityEntry {
+	user_id: number;
+	username: string;
+	item_id: number;
+	title: string;
+	kind: MediaItem['kind'];
+	series_title: string | null;
+	season: number | null;
+	episode: number | null;
+	position_seconds: number;
+	duration_seconds: number;
+	watched: boolean;
+	updated_at: string;
+}
+
+export interface ActivityResponse {
+	entries: ActivityEntry[];
+}
+
+export interface ActivityQuery {
+	limit?: number;
+	user_id?: number;
+}
+
 export interface CreateUserInput {
 	username: string;
 	password: string;
@@ -1011,6 +1035,18 @@ export class ApiClient {
 
 	async listUsers(token: string): Promise<UsersResponse> {
 		return this.get<UsersResponse>('/api/v1/users', token);
+	}
+
+	async getActivity(query: ActivityQuery, token: string): Promise<ActivityResponse> {
+		const params = new URLSearchParams();
+		if (query.limit !== undefined) {
+			params.set('limit', String(query.limit));
+		}
+		if (query.user_id !== undefined) {
+			params.set('user_id', String(query.user_id));
+		}
+		const suffix = params.toString() ? `?${params}` : '';
+		return this.get<ActivityResponse>(`/api/v1/activity${suffix}`, token);
 	}
 
 	async createUser(input: CreateUserInput, token: string): Promise<ManagedUser> {
