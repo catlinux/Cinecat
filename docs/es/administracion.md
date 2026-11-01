@@ -8,7 +8,7 @@ Solo los usuarios con rol `admin` pueden entrar en `/admin`. El servidor comprue
 
 | Ruta | Pantalla | Qué permite |
 |---|---|---|
-| `/admin` | Resumen | Versiones del servidor y de la web, último escaneo, recuentos de películas, series y colecciones, y enlaces a los títulos sin identificar. |
+| `/admin` | Resumen | Versiones del servidor y de la web, último escaneo, recuentos de películas, series y colecciones, enlaces a los títulos sin identificar y tarjeta de Seguridad con los bloqueos de inicio de sesión recientes. |
 | `/admin/libraries` | Bibliotecas | Crear bibliotecas con nombre, tipo y varias carpetas, elegir carpetas en el servidor, renombrar, añadir o quitar carpetas, escanear, borrar y subir archivos. |
 | `/admin/trash` | Papelera | Restaurar o eliminar definitivamente lo movido a la papelera y vaciar lo caducado. |
 | `/admin/activity` | Actividad | Últimas reproducciones de todos los usuarios, con filtro por usuario. |
@@ -64,6 +64,7 @@ Las carpetas se validan contra `CINECAT_MEDIA_ROOTS`: una lista de raíces separ
 - El escaneo recorre las bibliotecas, ignora archivos y carpetas ocultas y no sigue enlaces simbólicos.
 - Reconoce `S01E02`, `1x02`, «Temporada N», «Episodio N» y formatos como `ChicagoFire720p4x17` o `MR_Robot_305` dentro de una carpeta de temporada.
 - Las películas se identifican con TMDB; si no hay clave de TMDB se usa OMDb solo para sinopsis y cartel de películas. Sin clave, los archivos se indexan pero no se identifican.
+- El mantenimiento diario vuelve a pedir a TMDB las fichas con más de 90 días (hasta 40 películas y 20 series al día, con pausa entre peticiones) para no superar los 6 meses que permiten sus términos. Las fichas corregidas a mano no se tocan.
 - `match_status`: `auto` (identificada por el escaneo), `manual` (corregida por un administrador), `none` («no es ninguna») o vacío (sin identificar y se reintenta).
 - Las series se agrupan por la carpeta de primer nivel. Una serie corregida a mano no se vuelve a tocar en escaneos posteriores; si faltan temporadas o episodios, no se rellenan solos.
 - Los avisos del escaneo aparecen en un desplegable al terminar. Los errores de una temporada no abortan el resto.
@@ -160,7 +161,17 @@ Cada sesión guarda su dispositivo y su tipo. **Tu cuenta** lista tus sesiones a
 
 ## Actividad
 
-**Administración → Actividad** (`/admin/activity`) muestra las últimas reproducciones de todos los usuarios. Cada fila indica usuario, título (y serie, temporada y episodio cuando corresponde), posición y duración, si está visto y la fecha más reciente del progreso o de la marca de visto. Puedes filtrar por usuario y quitar el filtro; si no hay datos, la página lo explica. Solo los administradores pueden verla. La API es `GET /api/v1/activity` y admite `limit` y `user_id`.
+**Administración → Actividad** (`/admin/activity`) muestra las últimas reproducciones de todos los usuarios. Cada fila indica usuario, título (y serie, temporada y episodio cuando corresponde), posición y duración, si está visto y la fecha más reciente del progreso o de la marca de visto. Puedes filtrar por usuario y quitar el filtro; si no hay datos, la página lo explica. Solo los administradores pueden verla. La API es `GET /api/v1/activity`, admite `limit` y `user_id` y respeta el acceso por biblioteca del administrador.
+
+## Seguridad
+
+La tarjeta **Seguridad** del Resumen muestra cuántos bloqueos de inicio de sesión ha habido en los últimos 7 días y los 5 más recientes, con usuario, IP y fecha. Cada bloqueo queda también en el registro del servidor. Los intentos fallidos y sus bloqueos se guardan en SQLite desde la 0.51.0, así que sobreviven a un reinicio y se comparten entre instancias; los umbrales y la respuesta `429` con `Retry-After` no cambian. La API es `GET /api/v1/system/security-events` y requiere rol `admin`.
+
+## Subtítulos externos
+
+En la ficha de una película o episodio, el panel **Archivo** incluye el bloque **Subtítulos** con la gestión de subtítulos subidos, solo para administradores. Se admiten `.srt`, `.vtt` y `.ass` de hasta 2 MB; el contenido debe ser texto UTF-8 o Latin-1/Windows-1252 y los binarios se rechazan. El idioma es opcional (código de 2 o 3 letras) y la etiqueta se muestra en las opciones de reproducción.
+
+Los archivos se guardan fuera de las carpetas de vídeo, en `subtitles/<itemID>/` junto a la base de datos, y aparecen en la reproducción de la web y las apps con un identificador `u<N>`. **Eliminar** borra la fila y su archivo. Se usan `POST /api/v1/items/{id}/subtitles` y `DELETE /api/v1/items/{id}/subtitles/{subId}`; no hace falta activar la subida general ni montar `/media` en lectura y escritura, porque no se escribe en la biblioteca.
 
 ## Subir archivos y papelera
 
@@ -181,7 +192,7 @@ Desactivado por defecto. Para usarlo hacen falta dos cosas: montar la biblioteca
 
 ## Limitaciones de seguridad
 
-- El bloqueo de login cuenta por pareja usuario+IP y añade un límite por IP, pero sigue en memoria del proceso y depende de que Apache y la web reenvíen bien la IP real.
+- El bloqueo de login cuenta por pareja usuario+IP y añade un límite por IP; intentos y bloqueos se guardan en SQLite y dependen de que Apache y la web reenvíen bien la IP real.
 - Los permisos por biblioteca se aplican en el servidor; la gestión de cuentas está en Administración → Usuarios.
 - Las URLs de reproducción firmadas ya emitidas siguen siendo válidas hasta su caducidad aunque se retire el acceso o se cierren las sesiones.
 - El servidor no envía CORS; el despliegue con Apache funciona por compartir origen.

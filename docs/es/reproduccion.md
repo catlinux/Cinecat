@@ -50,7 +50,7 @@ Los dos modos comparten los segmentos MPEG-TS, los saltos y los límites de proc
 
 La copia solo se ofrece si el vídeo no hay que escalarlo. Elegir una calidad inferior a la resolución original obliga a recodificar; `original` conserva la altura original siempre que no supere `playback.max_height`.
 
-Al recodificar, si `ffprobe` marca el vídeo como entrelazado (`field_order` `tt`, `bb`, `tb` o `bt`) se antepone `yadif` a la cadena de filtros. Si `color_transfer` es `smpte2084` (HDR10) o `arib-std-b67` (HLG) se aplica un mapeo de tonos a SDR con `zscale` y `tonemap` antes del escalado, siempre que FFmpeg incluya ambos filtros; si faltan, se registra un aviso una sola vez y se recodifica sin el mapeo. La copia de vídeo nunca aplica filtros.
+Al recodificar, si `ffprobe` marca el vídeo como entrelazado (`field_order` `tt`, `bb`, `tb` o `bt`) se antepone `yadif` a la cadena de filtros. Si `color_transfer` es `smpte2084` (HDR10) o `arib-std-b67` (HLG) se aplica un mapeo de tonos a SDR con `zscale` y `tonemap` antes del escalado, siempre que FFmpeg incluya ambos filtros; si faltan, se registra un aviso una sola vez y se recodifica sin el mapeo. La copia de vídeo nunca aplica filtros. Los tests cubren los argumentos, pero 0.55.0 aún no se ha probado con archivos entrelazados o HDR reales; el AAC 5.1 de 0.56.0 aún no se ha probado en una TV real.
 
 El resto del flujo es común:
 
@@ -117,6 +117,7 @@ El reproductor ofrece `auto`, 480p, 720p, 1080p (sin superar la altura original 
 
 - **Audio directo:** se conserva el archivo original. Se sirve directo si la pista por defecto es AAC o MP3 (o no hay audio).
 - **Audio HLS:** se elige una pista por posición en la lista de `ffprobe` y se convierte a AAC estéreo de 160 kbps. Si la app es nativa, declara `mch` y la pista elegida tiene 6 o más canales, se conserva como AAC 5.1 de 384 kbps con `-channel_layout 5.1`. La preferencia del usuario y de la película se guarda en `item_preferences`.
+- **Otra pista en MP4:** si en la web eliges una pista distinta de la que el navegador reproduciría sola en un MP4 compatible, el servidor lo sirve por HLS con esa pista (desde 0.48.3).
 - **Subtítulos:** se leen pistas de texto incrustadas y archivos externos `.srt`, `.vtt` o `.ass` junto al vídeo, con sufijos de idioma y `forced`. Se convierten a WebVTT. Las pistas de imagen (PGS/VobSub) no se admiten y el HLS no lleva una representación separada de subtítulos.
 - **Preferencias:** audio, subtítulo y calidad por usuario y película; el reproductor las guarda y recarga en el segundo actual al cambiarlas.
 

@@ -67,7 +67,7 @@ Las respuestas de error usan `{error}` o `{message}` según el endpoint; los có
 ## Reproducción
 
 - **Directa:** `.mp4` y `.m4v` se sirven con `http.ServeContent`, con soporte de rangos.
-- **HLS:** el resto de extensiones se sirve por segmentos MPEG-TS de 6 s; el vídeo se copia cuando el contenedor, el códec y el equipo lo permiten, y si no se recodifica a H.264 + AAC estéreo. La playlist es VOD si se conoce la duración; si no, se usa la playlist `event` de FFmpeg.
+- **HLS:** el resto de extensiones se sirve por segmentos MPEG-TS de 6 s; el vídeo se copia cuando el contenedor, el códec y el equipo lo permiten, y si no se recodifica a H.264 + AAC estéreo o 5.1. Al recodificar desentrelaza y convierte HDR a SDR si FFmpeg tiene los filtros. La playlist es VOD si se conoce la duración; si no, se usa la playlist `event` de FFmpeg.
 - **Control:** máximo de transcodificaciones simultáneas, procesos con prioridad baja, parada por inactividad y límite de segmentos por delante. Ver [reproducción](reproduccion.md).
 
 ## Seguridad
@@ -84,7 +84,7 @@ Las respuestas de error usan `{error}` o `{message}` según el endpoint; los có
 
 ### Límites conocidos
 
-- El bloqueo de login vive en memoria del proceso y depende de que el proxy reenvíe bien la IP.
+- Los intentos fallidos y los bloqueos de login persisten en SQLite (migración 0024) y se comparten entre instancias; dependen de que el proxy reenvíe bien la IP.
 - No hay CORS: el despliegue depende de que Apache una el origen.
 - Las URLs de reproducción no están ligadas al usuario, aunque sobreviven a los reinicios porque la clave de firma se guarda junto a la base.
 - `/media` se monta en solo lectura por defecto; con `rw` se habilitan subidas y papelera para vídeo, no para música.

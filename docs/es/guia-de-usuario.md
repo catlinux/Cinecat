@@ -22,11 +22,11 @@ Debajo se muestran, solo si tienen contenido:
 - **Siguiente episodio**: el próximo capítulo de tus series.
 - **Añadido recientemente**: las películas más nuevas de la biblioteca.
 
-Las filas se pueden desplazar con las flechas `‹` y `›`; con el dedo o el trackpad también puedes deslizar.
+Las filas se pueden desplazar con las flechas `‹` y `›`; con el dedo o el trackpad también puedes deslizar. Desde **Mi cuenta → Portal de inicio** puedes ocultar las filas que no quieras ver; la elección es solo tuya y no cambia el portal de las demás cuentas.
 
 ## Navegar por la biblioteca
 
-El menú puede estar a la izquierda (**lateral**) o arriba (**superior**), según lo configure el administrador. Contiene **Inicio**, **Películas**, **Colecciones**, **Series**, **Vídeos** y **Música** cuando tu cuenta tiene acceso a una biblioteca de esos tipos, **Mi cuenta** y, si eres administrador, **Administración**.
+El menú puede estar a la izquierda (**lateral**) o arriba (**superior**), según lo configure el administrador. Contiene **Inicio**, **Películas**, **Colecciones**, **Series**, **Vídeos** y **Música** cuando tu cuenta tiene acceso a una biblioteca de esos tipos, **Historial**, **Mi cuenta** y, si eres administrador, **Administración**.
 
 ### Películas
 
@@ -77,6 +77,10 @@ Las dos listas están en el menú, debajo de las categorías. **Favoritos** reú
 
 Las listas no se comparten entre usuarios. Cuando marcas una película o un vídeo como visto, el servidor lo quita automáticamente de **Próximas a ver** (no de Favoritos); cuando terminas una serie completa, también desaparece de esa lista. Volver a marcarlo como no visto no lo añade de nuevo: tendrás que marcarlo manualmente si quieres recuperarlo.
 
+## Historial
+
+**Historial** reúne lo último que has reproducido o marcado como visto, con la fecha más reciente. Cada entrada muestra la carátula, el título (y la serie, temporada y episodio si es un episodio), el progreso o la marca **Visto**, y un enlace a su ficha. **Quitar del historial** borra tu progreso y tu marca de visto de ese elemento; no afecta a las demás cuentas. Solo aparecen contenidos de las bibliotecas a las que tienes acceso. Si todavía no has visto nada, la página lo indica.
+
 ## Personas, puntuaciones y tráileres
 
 En las carátulas de películas y series, una insignia en la esquina superior derecha muestra la puntuación de TMDB (por ejemplo, «7,4»). Un icono en la esquina inferior izquierda indica que la película está en una colección; en Películas puedes filtrar por **En una colección** o **Sin colección** para encontrar las que no se han agrupado solas.
@@ -85,7 +89,7 @@ En la ficha, el reparto y el equipo son enlaces: al pulsar a una persona se abre
 
 ## Subir contenido (administradores)
 
-Con la subida activada (ver [administración](administracion.md#subir-archivos-y-papelera)), los administradores ven botones discretos: **Crear nueva serie** en Series, **Nueva temporada** en la ficha de una serie, **Subir capítulo** en cada temporada y **Subir película** en Películas. No hay que elegir carpetas: Cinecat guarda cada cosa en su sitio y nombra los capítulos como `Serie S01E05`. La web detecta temporada y episodio en el nombre del archivo y puedes corregirlos antes de subir. Desde la ficha de una película, **Gestionar colecciones** permite añadirla a una colección, crear una nueva con ella o quitarla.
+Con la subida activada (ver [administración](administracion.md#subir-archivos-y-papelera)), los administradores ven botones discretos: **Crear nueva serie** en Series, **Nueva temporada** en la ficha de una serie, **Subir capítulo** en cada temporada y **Subir película** en Películas. No hay que elegir carpetas: Cinecat guarda cada cosa en su sitio y nombra los capítulos como `Serie S01E05`. La web detecta temporada y episodio en el nombre del archivo y puedes corregirlos antes de subir. Desde la ficha de una película, **Gestionar colecciones** permite añadirla a una colección, crear una nueva con ella o quitarla. En el panel **Archivo** de una película o episodio, los administradores pueden subir subtítulos externos `.srt`, `.vtt` o `.ass` de hasta 2 MB, indicar idioma y etiqueta, y eliminarlos; esto no requiere activar la subida general y aparecen en la reproducción con un identificador `u<N>`.
 
 ## La ficha de una película
 
@@ -93,13 +97,13 @@ La ficha muestra el cartel, el título (y el original si es distinto), año, dur
 
 - **Reproducir** empieza desde el principio; **Continuar** retoma donde lo dejaste. **Desde el principio** ignora el progreso guardado.
 - **Marcar como vista** / **Desmarcar** cambia el estado de visionado y borra el progreso.
-- El panel **Reproducción** permite elegir **Audio**, **Subtítulos** y **Calidad**. La elección se guarda para esa película y ese usuario.
+- El panel **Reproducción** permite elegir **Audio**, **Subtítulos** y **Calidad**. La elección se guarda para esa película y ese usuario. Si eliges una pista de audio distinta de la predeterminada en un MP4 que se reproduciría directo, Cinecat lo sirve por HLS para respetarla.
 - El panel **Archivo** muestra los datos técnicos y cómo se reproducirá.
 - Si eres administrador, al final aparecen **Cambiar imagen** y **Corregir ficha**.
 
 ## La ficha de un episodio
 
-La ficha del episodio muestra la miga de pan `Series › Serie › Temporada N › Episodio N`, el título, la sinopsis, la duración, el reparto y los datos del archivo. Puedes marcar el episodio como visto, continuar donde lo dejaste y pasar al **Episodio anterior** o **Siguiente episodio**.
+La ficha del episodio muestra la miga de pan `Series › Serie › Temporada N › Episodio N`, el título, la sinopsis, la duración, el reparto y los datos del archivo. Puedes marcar el episodio como visto, continuar donde lo dejaste o empezar desde el principio, y pasar al **Episodio anterior** o **Siguiente episodio**.
 
 ## La ficha de un vídeo
 
@@ -130,7 +134,7 @@ El progreso se guarda cada 15 s y al salir. Si quedan 15 s o menos, no se reanud
 
 El selector de tema tiene **Auto**, **Claro** y **Oscuro**. Auto sigue el tema del sistema. La preferencia se guarda en ese navegador; si no hay ninguna, se usa el tema por defecto del servidor.
 
-En **Mi cuenta → Cambiar mi contraseña** puedes cambiar tu contraseña: pide la actual, la nueva y la repetición; la nueva debe tener al menos 8 caracteres. La sesión abierta en ese dispositivo sigue funcionando. Como usuario solo ves las bibliotecas que el administrador te haya asignado.
+En **Mi cuenta → Cambiar mi contraseña** puedes cambiar tu contraseña: pide la actual, la nueva y la repetición; la nueva debe tener al menos 8 caracteres. La sesión abierta en ese dispositivo sigue funcionando. En **Mi cuenta → Portal de inicio** eliges qué filas ocultar en tu portal. Como usuario solo ves las bibliotecas que el administrador te haya asignado.
 
 ## Glosario
 

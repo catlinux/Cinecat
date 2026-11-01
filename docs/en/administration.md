@@ -8,7 +8,7 @@ Only users with the `admin` role can open `/admin`. The server checks the role o
 
 | Route | Screen | What it does |
 |---|---|---|
-| `/admin` | Summary | Server and web versions, last scan, movie/series/collection counts, and links to unidentified titles. |
+| `/admin` | Summary | Server and web versions, last scan, movie/series/collection counts, links to unidentified titles and a Security card with recent login lockouts. |
 | `/admin/libraries` | Libraries | Create libraries with a name, type and several folders, choose folders on the server, rename, add or remove folders, scan, delete and upload files. |
 | `/admin/trash` | Trash | Restore or permanently delete what was moved to the trash, and empty expired entries. |
 | `/admin/activity` | Activity | Latest playbacks from all users, with a per-user filter. |
@@ -64,6 +64,7 @@ Folders are validated against `CINECAT_MEDIA_ROOTS`: a list of roots separated b
 - The scan walks the libraries, ignores hidden files and folders and does not follow symlinks.
 - It recognises `S01E02`, `1x02`, "Temporada N", "Episodio N" and formats such as `ChicagoFire720p4x17` or `MR_Robot_305` inside a season folder.
 - Movies are identified with TMDB; without a TMDB key, OMDb is used only for movie synopsis and poster. With no key, files are indexed but not identified.
+- Daily maintenance fetches TMDB entries older than 90 days again (up to 40 movies and 20 series per day, with a pause between requests) so none exceeds the 6 months its terms allow. Manually corrected entries are left alone.
 - `match_status`: `auto` (identified by the scan), `manual` (corrected by an administrator), `none` ("not this one") or empty (unidentified and retried).
 - Series are grouped by their top-level folder. A manually corrected series is not touched by later scans; missing seasons or episodes are not filled automatically.
 - Scan warnings appear in a collapsible list when it ends. A season error does not abort the rest.
@@ -160,7 +161,17 @@ Every session records its device and type. **Your account** lists your open sess
 
 ## Activity
 
-**Administration → Activity** (`/admin/activity`) shows the latest playbacks from all users. Each row shows the user, title (and series, season and episode when applicable), position and duration, whether it is watched and the most recent progress or watched date. You can filter by user and clear the filter; when there is no data the page explains it. Only administrators can see it. The API is `GET /api/v1/activity` and accepts `limit` and `user_id`.
+**Administration → Activity** (`/admin/activity`) shows the latest playbacks from all users. Each row shows the user, title (and series, season and episode when applicable), position and duration, whether it is watched and the most recent progress or watched date. You can filter by user and clear the filter; when there is no data the page explains it. Only administrators can see it. The API is `GET /api/v1/activity`, accepts `limit` and `user_id` and honours the administrator's per-library access.
+
+## Security
+
+The **Security** card on the overview shows how many login lockouts occurred in the last 7 days and the 5 most recent ones, with user, IP and date. Each lockout is also written to the server log. Failed attempts and their lockouts have been stored in SQLite since 0.51.0, so they survive a restart and are shared between instances; thresholds and the `429` response with `Retry-After` are unchanged. The API is `GET /api/v1/system/security-events` and requires the `admin` role.
+
+## External subtitles
+
+On a movie or episode page, the **Archivo** panel includes the **Subtítulos** block for managing uploaded subtitles, administrators only. `.srt`, `.vtt` and `.ass` files up to 2 MB are accepted; the content must be UTF-8 or Latin-1/Windows-1252 text and binaries are rejected. The language is optional (2- or 3-letter code) and the label is shown in the playback options.
+
+Files are stored outside the video folders, in `subtitles/<itemID>/` next to the database, and appear in web and app playback with a `u<N>` identifier. **Eliminar** deletes the row and its file. The routes are `POST /api/v1/items/{id}/subtitles` and `DELETE /api/v1/items/{id}/subtitles/{subId}`; general uploads and a read-write `/media` mount are not required because nothing is written to the library.
 
 ## Uploading files and trash
 
@@ -181,7 +192,7 @@ Disabled by default. Two things are needed: mount the library read-write (`CINEC
 
 ## Security limitations
 
-- Login lockout counts failures per user+IP pair and adds a per-IP limit, but it still lives in process memory and depends on Apache and the web app forwarding the real IP correctly.
+- Login lockout counts failures per user+IP pair and adds a per-IP limit; attempts and lockouts are stored in SQLite and depend on Apache and the web app forwarding the real IP correctly.
 - Per-library permissions are enforced by the server; account management is available in Administration → Users.
 - Signed playback URLs that have already been issued remain valid until they expire, even if access is removed or sessions are closed.
 - The server sends no CORS headers; the Apache deployment works by sharing the origin.

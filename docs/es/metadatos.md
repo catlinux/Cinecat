@@ -43,6 +43,7 @@ TMDB devuelve reparto y equipo; se guardan hasta 30 créditos de reparto y hasta
 
 - **TMDB:** respuestas crudas e imágenes en `<directorio de la base>/cache/tmdb`; TTL de 7 días. Los 404 también se cachean para no repetir búsquedas fallidas. La clave de caché no incluye `api_key`.
 - **OMDb:** caché en disco de 30 días en el directorio de caché del usuario; las búsquedas no encontradas también se guardan.
+- El mantenimiento diario vuelve a pedir las fichas de TMDB con más de 90 días (hasta 40 películas y 20 series al día, con pausa entre peticiones) para no superar los 6 meses que permiten sus términos. No toca las fichas corregidas a mano. La migración 0023 añadió `metadata_refreshed_at`.
 - El TTL de 7 días de TMDB es un valor de partida y no se ha verificado contra los términos vigentes; conviene revisarlo antes de producción.
 
 ## Colecciones

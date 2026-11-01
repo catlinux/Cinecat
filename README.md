@@ -4,7 +4,7 @@
 
 **Idiomas / Languages:** Español · [English](README.en.md)
 
-**Estado:** servidor y cliente web implementados; la app Android y Android TV permite iniciar sesión, recorrer la biblioteca y reproducir en móvil, tableta y TV, con interfaz propia para el mando ([documentación](docs/es/android.md)). Versión `0.48.0`.
+**Estado:** servidor y cliente web implementados; la app Android y Android TV permite iniciar sesión, recorrer la biblioteca y reproducir en móvil, tableta y TV, con interfaz propia para el mando ([documentación](docs/es/android.md)). Versión `0.56.0`.
 
 Cinecat es para quien guarda su propia biblioteca de vídeo en casa y quiere una interfaz cuidada, control sobre la reproducción y metadatos en español sin depender de un servicio externo. No es un clon: reutiliza lo que es legal de otros proyectos, con créditos, y escribe lo demás desde cero.
 
@@ -14,7 +14,7 @@ Cinecat es para quien guarda su propia biblioteca de vídeo en casa y quiere una
 - **Identificación y fichas:** TMDB en castellano; OMDb como respaldo si no hay clave de TMDB; estados automático, manual y «no es ninguna»; búsqueda, filtros por letra, género, visionado y orden; reparto y equipo con fotos, sinopsis, carteles, fondos y enlaces a IMDb/TMDB.
 - **Series:** ficha por carpeta, temporadas y episodios con título, sinopsis e imagen, siguiente episodio, visionado por episodio, temporada o serie, y corrección manual.
 - **Colecciones:** sagas automáticas de TMDB y colecciones manuales, con edición, orden, cartel y fondo.
-- **Reproducción:** directa para MP4/M4V compatibles; HLS para el resto, copiando el vídeo cuando el contenedor, el códec, el navegador, la altura y el índice de claves lo permiten o recodificando a H.264 + AAC estéreo, con saltos, pistas de audio, subtítulos de texto como WebVTT, calidades y preferencias por usuario y película.
+- **Reproducción:** directa para MP4/M4V compatibles; HLS para el resto, copiando el vídeo cuando el contenedor, el códec, el navegador, la altura y el índice de claves lo permiten o recodificando a H.264 + AAC estéreo (5.1 en la TV), con desentrelazado y mapeo HDR a SDR pendientes de probar con archivos reales y el 5.1 pendiente de probar en la TV, saltos, pistas de audio, subtítulos de texto como WebVTT, calidades y preferencias por usuario y película.
 - **Interfaz web:** portal con «Continuar viendo», «Siguiente episodio» y «Añadido recientemente», cartelera, series y colecciones con búsqueda y filtros, fichas completas, reproductor propio con atajos, temas claro/oscuro/sistema y menú lateral o superior.
 - **Administración:** resumen, bibliotecas, escaneo con progreso, ajustes en caliente, corrección de fichas, imágenes, identificación de colecciones en TMDB, actividad de los usuarios y actualizaciones desde Sistema.
 - **Apps Android y Android TV:** una sola app para móvil, tableta y TV, con sesión o vinculación, biblioteca, reproductor Media3 que recuerda audio, subtítulos y calidad, imagen en imagen en el móvil, índice A–Z en la TV y actualización automática.

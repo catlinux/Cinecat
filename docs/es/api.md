@@ -102,6 +102,16 @@ Estados del sondeo:
 
 `GET /api/v1/activity` devuelve las últimas reproducciones de todos los usuarios. Combina el progreso y las marcas de visto en una entrada por usuario e ítem, con la fecha más reciente, e incluye usuario, título, serie, temporada, episodio, posición, duración y estado de visto. Acepta `limit` (máximo 200; por defecto 50) y `user_id` para filtrar. Requiere rol `admin`.
 
+## Seguridad (solo administradores)
+
+`GET /api/v1/system/security-events` devuelve los 50 bloqueos de inicio de sesión más recientes y el total de los últimos 7 días (`lockouts` y `total_7d`). No incluye contraseñas ni tokens. Requiere rol `admin`.
+
+## Historial y portal
+
+`GET /api/v1/history?limit=N` devuelve el historial del usuario de la sesión, de más reciente a más antiguo. `limit` vale 50 por defecto y se recorta a 200. Cada entrada incluye `item_id`, `title`, `kind`, datos de serie y episodio, `poster_url`, posición, duración, `watched` y `updated_at`, y solo aparece contenido de bibliotecas accesibles. `DELETE /api/v1/history/{itemId}` borra el progreso y la marca de visto de ese usuario para el ítem y responde `204`; si el ítem no existe o no es accesible, `404`.
+
+`GET /api/v1/home/preferences` devuelve todas las filas posibles del portal con `id`, `title` y `hidden`. `PUT /api/v1/home/preferences` recibe `{"hidden":["id",…]}` y sustituye el conjunto de filas ocultas del usuario; las ausentes vuelven a mostrarse y un identificador desconocido devuelve `400`. `GET /api/v1/home` aplica la preferencia.
+
 ## Reproducción
 
 `GET /api/v1/items/{id}/play` prepara la reproducción y acepta estos parámetros de consulta:
@@ -113,7 +123,7 @@ Estados del sondeo:
 | `quality` | `auto`, `original`, `480`, `720` o `1080`. |
 | `subtitle` | Identificador de subtítulo; vacío para desactivarlo. |
 
-Las apps declaran en `caps` lo que su equipo reproduce: contenedores `mkv` y `mp4`; vídeo `h264`, `h264hi10`, `hevc`, `hevc10`, `av1` y `vp9`; audio `aac`, `mp3`, `ac3`, `eac3`, `dts`, `truehd`, `opus` y `flac`; y `mch` si decodifica AAC multicanal. Cada token indica que el equipo puede decodificar ese contenedor, códec o formato; `hevc10` implica `hevc`, y `mch` solo hace falta para AAC de más de dos canales. Para que el servidor trate la petición como app nativa, `caps` debe incluir al menos `mkv` o `mp4`. La lista completa y su efecto están en [reproducción](reproduccion.md#apps-nativas-android-y-android-tv).
+Las apps declaran en `caps` lo que su equipo reproduce: contenedores `mkv` y `mp4`; vídeo `h264`, `h264hi10`, `hevc`, `hevc10`, `av1` y `vp9`; audio `aac`, `mp3`, `ac3`, `eac3`, `dts`, `truehd`, `opus` y `flac`; y `mch` si decodifica AAC multicanal. Cada token indica que el equipo puede decodificar ese contenedor, códec o formato; `hevc10` implica `hevc`, y `mch` solo hace falta para AAC de más de dos canales. Si una app nativa declara `mch` y la pista elegida tiene 6 o más canales, el HLS entrega AAC 5.1; en los demás casos entrega estéreo. Para que el servidor trate la petición como app nativa, `caps` debe incluir al menos `mkv` o `mp4`. La lista completa y su efecto están en [reproducción](reproduccion.md#apps-nativas-android-y-android-tv).
 
 La respuesta incluye `url`, `mode`, `expires_at`, `audio_tracks`, `selected_audio`, `qualities`, `selected_quality`, `subtitles` y `selected_subtitle`. `mode` es `direct` o `remux`; si no es directo, `reason` explica el motivo (`container`, `video` o `audio`).
 
@@ -122,6 +132,10 @@ La URL de `/stream` es relativa al servidor, está firmada y vale 8 horas. No ne
 El progreso se guarda con `PUT /api/v1/items/{id}/progress` y un cuerpo como `{"position_seconds": 300, "duration_seconds": 1800}`; `DELETE` sobre la misma ruta lo borra. Al llegar al 90 % de la duración, el servidor marca el ítem como visto y elimina el progreso. El visionado se controla con `PUT` y `DELETE /api/v1/items/{id}/watched`.
 
 Las preferencias de audio, subtítulos y calidad se leen con `GET /api/v1/items/{id}/preferences`, que devuelve `audio_index`, `subtitle_id` y `quality` (o `null` si no hay preferencia). Se guardan con `PUT` sobre la misma ruta y un cuerpo parcial: los campos ausentes no se tocan, `null` los borra y `subtitle_id` vacío significa «sin subtítulos». `DELETE` elimina todas las preferencias del usuario para ese ítem. Las apps las restauran al reabrir el elemento.
+
+## Subtítulos subidos (solo administradores)
+
+`POST /api/v1/items/{id}/subtitles` recibe `multipart/form-data` con `file` obligatorio y `language` y `label` opcionales. Admite `.srt`, `.vtt` y `.ass` de hasta 2 MB de texto UTF-8 o Latin-1/Windows-1252, y rechaza binarios. Responde `201` con `id` (`u<N>`), `language`, `label` y `codec`; el subtítulo aparece en `subtitles` de `/play` con `source: "uploaded"` y su URL WebVTT firmada. `DELETE /api/v1/items/{id}/subtitles/{subId}` acepta `u<N>` o el número de fila, borra la fila y su archivo y responde `204`. Los archivos viven en `subtitles/` junto a la base de datos.
 
 ## Imágenes
 

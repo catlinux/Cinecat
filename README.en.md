@@ -4,7 +4,7 @@
 
 **Languages / Idiomas:** [Español](README.md) · English
 
-**Status:** server and web client implemented; the Android and Android TV app signs in, browses the library and plays on phones, tablets and TVs, with a dedicated remote-friendly TV interface ([documentation](docs/en/android.md)). Version `0.48.0`.
+**Status:** server and web client implemented; the Android and Android TV app signs in, browses the library and plays on phones, tablets and TVs, with a dedicated remote-friendly TV interface ([documentation](docs/en/android.md)). Version `0.56.0`.
 
 Cinecat is for people who keep their own video library at home and want a carefully designed interface, control over playback and Spanish-language metadata without depending on an external service. It is not a clone: it reuses what is legal from other projects, with credits, and writes the rest from scratch.
 
@@ -14,7 +14,7 @@ Cinecat is for people who keep their own video library at home and want a carefu
 - **Identification and detail pages:** TMDB in Spanish; OMDb as a fallback when there is no TMDB key; automatic, manual and "not this one" states; search, filters by letter, genre and watched state, and sorting; cast and crew with photos, synopsis, posters, backdrops and IMDb/TMDB links.
 - **Series:** one detail page per folder, seasons and episodes with title, synopsis and image, next episode, watched state per episode, season or series, and manual correction.
 - **Collections:** automatic TMDB sagas and manual collections, with editing, ordering, poster and backdrop.
-- **Playback:** direct play for compatible MP4/M4V files; HLS for the rest, copying the video when the container, codec, browser, height and keyframe index allow it or re-encoding to H.264 + stereo AAC, with seeking, audio tracks, text subtitles as WebVTT, quality choices and per-user, per-movie preferences.
+- **Playback:** direct play for compatible MP4/M4V files; HLS for the rest, copying the video when the container, codec, browser, height and keyframe index allow it or re-encoding to H.264 + stereo AAC (5.1 on TV), with deinterlacing and HDR-to-SDR tone mapping still to be tried on real files and 5.1 still to be tried on a TV, plus seeking, audio tracks, text subtitles as WebVTT, quality choices and per-user, per-movie preferences.
 - **Web interface:** portal with "Continue watching", "Next episode" and "Recently added"; movie, series and collection lists with search and filters; full detail pages; custom player with keyboard shortcuts; light, dark or system theme; side or top navigation.
 - **Administration:** summary, libraries, scan progress, hot settings, metadata correction, images, TMDB collection identification, user activity and updates from System.
 - **Android and Android TV apps:** one app for phones, tablets and TV, with session or pairing, library, a Media3 player that remembers audio, subtitles and quality, picture-in-picture on phones, an A–Z index on TV and automatic updates.

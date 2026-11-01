@@ -124,6 +124,8 @@ The server itself also makes a daily copy (`VACUUM INTO`) in `/data/backups` ins
 
 The automatic updater already makes a copy before each update and keeps the last 10 in `~/cinecat-backups/`.
 
+The `cinecat_data` volume also contains `subtitles/`, with subtitles uploaded by administrators, and `cache/`. Database copies (automatic or with `VACUUM INTO`) do not include those files: to preserve subtitles, also copy `/data/subtitles` to another disk or machine. `cache/` can be regenerated.
+
 ## Changing domain or server
 
 1. Copy the repository and `.env`; keep the `cinecat_data` volume or restore a database copy.

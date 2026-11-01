@@ -67,7 +67,7 @@ Error responses use `{error}` or `{message}` depending on the endpoint; common c
 ## Playback
 
 - **Direct:** `.mp4` and `.m4v` are served with `http.ServeContent`, including range support.
-- **HLS:** other extensions are served in 6 s MPEG-TS segments; the video is copied when the container, codec and device allow it, and otherwise re-encoded to H.264 + stereo AAC. The playlist is VOD when the duration is known; otherwise FFmpeg's `event` playlist is used.
+- **HLS:** other extensions are served in 6 s MPEG-TS segments; the video is copied when the container, codec and device allow it, and otherwise re-encoded to H.264 + stereo or 5.1 AAC. While re-encoding it deinterlaces and converts HDR to SDR when FFmpeg has the filters. The playlist is VOD when the duration is known; otherwise FFmpeg's `event` playlist is used.
 - **Control:** maximum simultaneous transcodes, low-priority processes, idle stop and a limit on segments generated ahead. See [playback](playback.md).
 
 ## Security
@@ -84,7 +84,7 @@ Error responses use `{error}` or `{message}` depending on the endpoint; common c
 
 ### Known limits
 
-- Login lockout lives in process memory and is not shared across instances; if the proxy does not forward the IP or the trusted ranges are wrong, it falls back to the direct origin.
+- Failed attempts and login lockouts persist in SQLite (migration 0024) and are shared across instances; if the proxy does not forward the IP or the trusted ranges are wrong, it falls back to the direct origin.
 - There is no CORS: the deployment relies on Apache unifying the origin.
 - Playback URLs are not bound to the user, although they survive restarts because the signing key is stored next to the database.
 - `/media` is mounted read-only by default; with `rw`, uploads and the trash are enabled for video, not music.

@@ -22,11 +22,11 @@ Below, only when they have content:
 - **Siguiente episodio**: the next episode of your series.
 - **Añadido recientemente**: the newest movies in the library.
 
-Rows can be scrolled with the `‹` and `›` arrows; you can also swipe with a finger or trackpad.
+Rows can be scrolled with the `‹` and `›` arrows; you can also swipe with a finger or trackpad. Under **Mi cuenta → Portal de inicio** you can hide the rows you do not want to see; the choice is yours alone and does not change other accounts' portal.
 
 ## Browsing the library
 
-The menu can be on the left (**lateral**) or at the top (**superior**), depending on the administrator's setting. It contains **Inicio**, **Películas**, **Colecciones**, **Series**, **Vídeos** and **Música** when your account has access to a library of those types, **Mi cuenta** and, for administrators, **Administración**.
+The menu can be on the left (**lateral**) or at the top (**superior**), depending on the administrator's setting. It contains **Inicio**, **Películas**, **Colecciones**, **Series**, **Vídeos** and **Música** when your account has access to a library of those types, **Historial**, **Mi cuenta** and, for administrators, **Administración**.
 
 ### Movies
 
@@ -77,6 +77,10 @@ Both lists live in the menu, below the categories. **Favoritos** keeps what you 
 
 Lists are not shared between users. Marking a movie or video as watched removes it from **Próximas a ver** automatically (not from Favorites); finishing a whole series also removes it from that list. Marking it unwatched does not add it back: you have to add it again manually if you want it.
 
+## History
+
+**Historial** gathers what you last played or marked as watched, with the most recent date. Each entry shows the poster, title (and series, season and episode for an episode), progress or the **Visto** mark, and a link to its page. **Quitar del historial** removes your progress and watched mark for that item; other accounts are unaffected. Only content from libraries you can access appears. If you have not watched anything yet, the page says so.
+
 ## People, ratings and trailers
 
 On movie and series posters, a badge in the top right corner shows the TMDB rating (for example, "7,4"). An icon in the bottom left corner marks that the movie is in a collection; in Movies you can filter by **In a collection** or **No collection** to find the ones that were not grouped automatically.
@@ -85,7 +89,7 @@ On the detail page, cast and crew are links: clicking a person opens their page 
 
 ## Uploading content (administrators)
 
-With uploads enabled (see [administration](administration.md#uploading-files-and-trash)), administrators see discreet buttons: **Crear nueva serie** in Series, **Nueva temporada** on a series page, **Subir capítulo** on each season and **Subir película** in Movies. You do not choose folders: Cinecat stores everything in the right place and names episodes like `Series S01E05`. The web app detects season and episode in the file name and you can correct them before uploading. From a movie page, **Gestionar colecciones** lets you add it to a collection, create a new one with it or remove it.
+With uploads enabled (see [administration](administration.md#uploading-files-and-trash)), administrators see discreet buttons: **Crear nueva serie** in Series, **Nueva temporada** on a series page, **Subir capítulo** on each season and **Subir película** in Movies. You do not choose folders: Cinecat stores everything in the right place and names episodes like `Series S01E05`. The web app detects season and episode in the file name and you can correct them before uploading. From a movie page, **Gestionar colecciones** lets you add it to a collection, create a new one with it or remove it. In the **Archivo** panel of a movie or episode, administrators can upload external `.srt`, `.vtt` or `.ass` subtitles up to 2 MB, set a language and label, and delete them; this does not require enabling general uploads, and they appear in playback with a `u<N>` identifier.
 
 ## Movie detail page
 
@@ -93,13 +97,13 @@ The page shows the poster, title (and original title if different), year, runtim
 
 - **Reproducir** starts from the beginning; **Continuar** resumes where you left off. **Desde el principio** ignores saved progress.
 - **Marcar como vista** / **Desmarcar** changes the watched state and clears progress.
-- The **Reproducción** panel lets you choose **Audio**, **Subtítulos** and **Calidad**. The choice is saved for that movie and user.
+- The **Reproducción** panel lets you choose **Audio**, **Subtítulos** and **Calidad**. The choice is saved for that movie and user. If you choose a non-default audio track on an MP4 that would otherwise play directly, Cinecat serves it through HLS to honour it.
 - The **Archivo** panel shows technical details and how it will be played.
 - Administrators additionally see **Cambiar imagen** and **Corregir ficha** at the end.
 
 ## Episode detail page
 
-The episode page shows the breadcrumb `Series › Serie › Temporada N › Episodio N`, the title, synopsis, runtime, cast and file details. You can mark the episode as watched, continue where you left off and go to the **Episodio anterior** or **Siguiente episodio**.
+The episode page shows the breadcrumb `Series › Serie › Temporada N › Episodio N`, the title, synopsis, runtime, cast and file details. You can mark the episode as watched, continue where you left off or start from the beginning, and go to the **Episodio anterior** or **Siguiente episodio**.
 
 ## Video detail page
 
@@ -130,7 +134,7 @@ Progress is saved every 15 s and on exit. If 15 s or less remain, playback does 
 
 The theme selector offers **Auto**, **Claro** and **Oscuro**. Auto follows the system theme. The preference is stored in that browser; if there is none, the server default is used.
 
-In **Mi cuenta → Change my password** you can change your password: enter the current one, the new one and the confirmation; the new one must be at least 8 characters. The current session on that device stays active. As a user you only see the libraries assigned to you by the administrator.
+In **Mi cuenta → Change my password** you can change your password: enter the current one, the new one and the confirmation; the new one must be at least 8 characters. The current session on that device stays active. Under **Mi cuenta → Portal de inicio** you choose which rows to hide in your portal. As a user you only see the libraries assigned to you by the administrator.
 
 ## Glossary
 

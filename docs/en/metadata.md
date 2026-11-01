@@ -43,6 +43,7 @@ TMDB returns cast and crew; up to 30 cast credits and up to 12 crew credits are 
 
 - **TMDB:** raw responses and images in `<database directory>/cache/tmdb`; 7-day TTL. 404 responses are cached too so failed searches are not repeated. The cache key excludes `api_key`.
 - **OMDb:** 30-day disk cache in the user's cache directory; failed searches are also stored.
+- Daily maintenance fetches TMDB entries older than 90 days again (up to 40 movies and 20 series per day, with a pause between requests) so none exceeds the 6 months its terms allow. Manually corrected entries are left alone. Migration 0023 added `metadata_refreshed_at`.
 - The 7-day TMDB TTL is a starting value and has not been checked against current terms; review it before production.
 
 ## Collections

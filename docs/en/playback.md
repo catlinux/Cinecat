@@ -50,7 +50,7 @@ Both modes share MPEG-TS segments, seeking and process limits; the VOD playlist 
 
 Copying is only offered when the video does not need scaling. Choosing a quality below the original resolution forces a re-encode; `original` keeps the original height as long as it does not exceed `playback.max_height`.
 
-When re-encoding, if `ffprobe` reports the video as interlaced (`field_order` `tt`, `bb`, `tb` or `bt`), `yadif` is prepended to the filter chain. If `color_transfer` is `smpte2084` (HDR10) or `arib-std-b67` (HLG), tone mapping to SDR with `zscale` and `tonemap` is applied before scaling, provided FFmpeg includes both filters; if they are missing, a warning is logged once and the video is re-encoded without the mapping. Video copying never applies filters.
+When re-encoding, if `ffprobe` reports the video as interlaced (`field_order` `tt`, `bb`, `tb` or `bt`), `yadif` is prepended to the filter chain. If `color_transfer` is `smpte2084` (HDR10) or `arib-std-b67` (HLG), tone mapping to SDR with `zscale` and `tonemap` is applied before scaling, provided FFmpeg includes both filters; if they are missing, a warning is logged once and the video is re-encoded without the mapping. Video copying never applies filters. Tests cover the arguments, but 0.55.0 has not yet been tried on real interlaced or HDR files; the 0.56.0 5.1 AAC has not yet been tried on a real TV.
 
 The rest of the flow is shared:
 
@@ -117,6 +117,7 @@ The player offers `auto`, 480p, 720p, 1080p (never above the original height or 
 
 - **Direct audio:** the original file is kept. It is served directly if the default track is AAC or MP3 (or there is no audio).
 - **HLS audio:** one track is chosen by its position in the `ffprobe` list and converted to stereo AAC at 160 kbps. If the client is a native app that declares `mch` and the chosen track has 6 or more channels, it is kept as 5.1 AAC at 384 kbps with `-channel_layout 5.1`. The user's and movie's preference is stored in `item_preferences`.
+- **Another track on MP4:** if you choose a track in the web app that differs from the one the browser would play on its own in a compatible MP4, the server serves it through HLS with that track (since 0.48.3).
 - **Subtitles:** embedded text tracks and external `.srt`, `.vtt` or `.ass` files next to the video, with language and `forced` suffixes. They are converted to WebVTT. Image tracks (PGS/VobSub) are not supported and HLS has no separate subtitle rendition.
 - **Preferences:** audio, subtitle and quality per user and movie; the player saves them and reloads at the current second when changed.
 
