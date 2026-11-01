@@ -82,17 +82,40 @@ const (
 
 // DecideForAudio es DecideFor con la pista de audio elegida (posición en
 // info.Audio; negativa para la pista por defecto) y el motivo de la decisión.
-// La pista solo cuenta para las apps nativas: el navegador siempre recibe la
-// pista por defecto en directo.
+// El navegador reproduce en directo solo la pista por defecto del archivo: si
+// se pide otra, la decisión pasa a HLS para poder mapearla.
 func DecideForAudio(path string, info *FileInfo, caps Capabilities, audioIndex int) (Mode, Reason, error) {
 	if !caps.Native() {
 		mode, err := DecideFor(path, info, caps)
-		if err != nil || mode == ModeDirect {
+		if err != nil {
 			return mode, ReasonNone, err
+		}
+		if mode == ModeDirect {
+			if browserNeedsOtherAudio(info, audioIndex) {
+				return ModeRemux, ReasonAudio, nil
+			}
+			return mode, ReasonNone, nil
 		}
 		return mode, browserReason(path, info, caps), nil
 	}
 	return decideNative(path, info, caps, audioIndex)
+}
+
+// browserNeedsOtherAudio indica si la pista pedida existe y no es la que el
+// navegador reproduciría por sí solo (la marcada por defecto o, si ninguna lo
+// está, la primera).
+func browserNeedsOtherAudio(info *FileInfo, audioIndex int) bool {
+	if info == nil || audioIndex < 0 || audioIndex >= len(info.Audio) {
+		return false
+	}
+	defaultIndex := 0
+	for position, track := range info.Audio {
+		if track.Default {
+			defaultIndex = position
+			break
+		}
+	}
+	return audioIndex != defaultIndex
 }
 
 func browserReason(path string, info *FileInfo, caps Capabilities) Reason {

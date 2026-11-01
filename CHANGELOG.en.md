@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.48.3] - 2026-11-01
+
+### Fixed
+
+- Web: choosing another audio track on a browser-compatible MP4 had no effect, because the file was served directly and the default track always played (for example French instead of Spanish). Now, if the requested track is not the one the browser would play on its own, the server serves the video through HLS with that track.
+
 ## [0.48.2] - 2026-10-31
 
 ### Fixed

@@ -31,7 +31,8 @@ func TestCapacidadesDeNavegadorNoSonNativas(t *testing.T) {
 }
 
 // TestNavegadorSinCambios recorre la matriz de navegador: DecideForAudio debe
-// dar exactamente lo mismo que DecideFor para cualquier pista pedida.
+// dar lo mismo que DecideFor salvo cuando se pide una pista distinta de la
+// que el navegador reproduce en directo, que pasa a HLS por el audio.
 func TestNavegadorSinCambios(t *testing.T) {
 	h264 := VideoStream{Codec: "h264", Profile: "High", PixelFormat: "yuv420p", BitDepth: 8}
 	hevc := VideoStream{Codec: "hevc", CodecTag: "hev1", Profile: "Main", PixelFormat: "yuv420p", BitDepth: 8}
@@ -57,6 +58,36 @@ func TestNavegadorSinCambios(t *testing.T) {
 					}
 				}
 			}
+		}
+	}
+}
+
+// TestNavegadorPideOtraPistaDeAudio cubre un MP4 con dos pistas compatibles:
+// la pista por defecto va en directo y cualquier otra obliga a pasar por HLS,
+// porque el navegador no puede cambiar de pista en un archivo servido tal cual.
+func TestNavegadorPideOtraPistaDeAudio(t *testing.T) {
+	h264 := VideoStream{Codec: "h264", Profile: "High", PixelFormat: "yuv420p", BitDepth: 8}
+	info := &FileInfo{
+		Video: []VideoStream{h264},
+		Audio: []AudioStream{
+			{Codec: "aac", Channels: 2, Language: "fr", Default: true},
+			{Codec: "aac", Channels: 2, Language: "es"},
+		},
+	}
+	tests := []struct {
+		audio  int
+		mode   Mode
+		reason Reason
+	}{
+		{-1, ModeDirect, ReasonNone},
+		{0, ModeDirect, ReasonNone},
+		{1, ModeRemux, ReasonAudio},
+		{7, ModeDirect, ReasonNone},
+	}
+	for _, test := range tests {
+		mode, reason, err := DecideForAudio("/media/pelicula.mp4", info, Capabilities{}, test.audio)
+		if err != nil || mode != test.mode || reason != test.reason {
+			t.Fatalf("audio %d: %q/%q (%v), se esperaba %q/%q", test.audio, mode, reason, err, test.mode, test.reason)
 		}
 	}
 }

@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.48.3] - 2026-11-01
+
+### Corregido
+
+- Web: elegir otra pista de audio en un MP4 compatible con el navegador no tenía efecto, porque se servía el archivo directo y sonaba siempre la pista por defecto (por ejemplo, el francés en lugar del español). Ahora, si la pista pedida no es la que el navegador reproduciría por sí solo, el servidor sirve el vídeo por HLS con esa pista.
+
 ## [0.48.2] - 2026-10-31
 
 ### Corregido

@@ -679,10 +679,7 @@ func (a *API) resolveMediaReason(w http.ResponseWriter, r *http.Request, id int6
 		infoPointer = &fileInfo
 	}
 	caps := playback.ParseCapabilities(r.URL.Query().Get("caps"))
-	audioIndex := -1
-	if caps.Native() {
-		audioIndex = a.nativeAudioIndex(r, id)
-	}
+	audioIndex := a.nativeAudioIndex(r, id)
 	mode, reason, err := playback.DecideForAudio(media.path, infoPointer, caps, audioIndex)
 	if err != nil {
 		log.Printf("library: decidir reproducción del ítem %d: %v", id, err)
@@ -692,7 +689,7 @@ func (a *API) resolveMediaReason(w http.ResponseWriter, r *http.Request, id int6
 	return mode, reason, safePath, true
 }
 
-// nativeAudioIndex devuelve la pista de audio que pide la app: la del
+// nativeAudioIndex devuelve la pista de audio que pide el cliente: la del
 // parámetro audio o, si falta, la de las preferencias; -1 si no hay ninguna.
 // Un valor no válido cuenta como ausente: playOptions ya lo rechaza con 400.
 func (a *API) nativeAudioIndex(r *http.Request, id int64) int {
