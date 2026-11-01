@@ -89,6 +89,24 @@ fun shouldShowUpdatedNotice(savedVersion: String?, installedVersion: String?): B
     return saved == installed
 }
 
+/**
+ * Decide qué aviso de actualización mostrar al arrancar. La última versión
+ * vista manda; si no existe, se acepta el pending de instalaciones antiguas.
+ */
+fun decideUpdatedNotice(
+    lastSeenVersion: String?,
+    pendingInstallVersion: String?,
+    installedVersion: String?
+): String? {
+    val installed = normalizeAppVersion(installedVersion) ?: return null
+    val lastSeen = normalizeAppVersion(lastSeenVersion)
+    if (lastSeen != null) {
+        return installed.takeIf { it != lastSeen }
+    }
+    val pending = normalizeAppVersion(pendingInstallVersion) ?: return null
+    return installed.takeIf { it == pending }
+}
+
 fun copyWithSha256(
     input: InputStream,
     target: File,
@@ -229,6 +247,17 @@ class AppUpdater(
     suspend fun clearPendingInstallVersion() {
         runCatching {
             preferences.edit { it.remove(PENDING_INSTALL_VERSION) }
+        }
+    }
+
+    suspend fun lastSeenVersion(): String? {
+        return runCatching { preferences.data.first()[LAST_SEEN_VERSION] }.getOrNull()
+    }
+
+    suspend fun setLastSeenVersion(versionName: String?) {
+        val normalized = normalizeAppVersion(versionName) ?: return
+        runCatching {
+            preferences.edit { it[LAST_SEEN_VERSION] = normalized }
         }
     }
 
@@ -432,6 +461,7 @@ class AppUpdater(
         val LAST_CHECK = longPreferencesKey("app_update_last_check")
         val AUTO_ENABLED = booleanPreferencesKey("app_update_auto")
         val PENDING_INSTALL_VERSION = stringPreferencesKey("app_update_pending_version")
+        val LAST_SEEN_VERSION = stringPreferencesKey("app_last_seen_version")
     }
 }
 

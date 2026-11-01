@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.50.1] - 2026-11-01
+
+### Corregido
+
+- Android y TV: el aviso «Cinecat actualizado» no salía en una prueba real. Ahora se decide comparando la versión instalada con la última que la app recuerda haber visto, sin depender de lo guardado justo antes de instalar.
+
 ## [0.50.0] - 2026-11-01
 
 ### Añadido

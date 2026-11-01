@@ -26,10 +26,9 @@ import io.github.catlinux.cinecat.app.update.UpdateReadyDialog
 import io.github.catlinux.cinecat.app.update.UpdateInstallPermissionDialog
 import io.github.catlinux.cinecat.app.update.UpdateState
 import io.github.catlinux.cinecat.app.update.canInstallPackages
+import io.github.catlinux.cinecat.app.update.decideUpdatedNotice
 import io.github.catlinux.cinecat.app.update.installDownloadedUpdate
-import io.github.catlinux.cinecat.app.update.normalizeAppVersion
 import io.github.catlinux.cinecat.app.update.openUnknownSourcesSettings
-import io.github.catlinux.cinecat.app.update.shouldShowUpdatedNotice
 import io.github.catlinux.cinecat.ui.common.theme.CinecatTheme
 
 class MainActivity : ComponentActivity() {
@@ -143,13 +142,16 @@ private fun UpdateCoordinator(container: AppContainer) {
 
     LaunchedEffect(container, context) {
         val pending = container.appUpdater.pendingInstallVersion()
+        val lastSeen = container.appUpdater.lastSeenVersion()
         val installed = runCatching {
             context.packageManager.getPackageInfo(context.packageName, 0).versionName
         }.getOrNull()
-        if (shouldShowUpdatedNotice(pending, installed)) {
-            completedVersion = normalizeAppVersion(pending)
-        }
+        val notice = decideUpdatedNotice(lastSeen, pending, installed)
+        container.appUpdater.setLastSeenVersion(installed)
         container.appUpdater.clearPendingInstallVersion()
+        if (notice != null) {
+            completedVersion = notice
+        }
     }
 
     LaunchedEffect(autoEnabled, state) {

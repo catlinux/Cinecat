@@ -54,6 +54,24 @@ class AppUpdaterTest {
     }
 
     @Test
+    fun decidesTheUpdatedNoticeFromLastSeenAndPending() {
+        assertEquals("0.49.0", decideUpdatedNotice("0.48.1", null, "0.49.0"))
+        assertNull(decideUpdatedNotice("0.49.0", null, "0.49.0"))
+        assertNull(decideUpdatedNotice(null, null, "0.49.0"))
+        assertEquals("0.49.0", decideUpdatedNotice(null, "0.49.0", "0.49.0"))
+        assertNull(decideUpdatedNotice(null, "0.48.1", "0.49.0"))
+        assertNull(decideUpdatedNotice("0.49.0", "0.49.0", "0.49.0"))
+        assertNull(decideUpdatedNotice("0.48.1", null, null))
+    }
+
+    @Test
+    fun ignoresTheDebugSuffixWhenDecidingTheUpdatedNotice() {
+        assertNull(decideUpdatedNotice("0.49.0", null, "0.49.0-debug"))
+        assertEquals("0.49.0", decideUpdatedNotice("0.48.1-debug", null, "0.49.0-debug"))
+        assertEquals("0.49.0", decideUpdatedNotice(null, "0.49.0-debug", "0.49.0"))
+    }
+
+    @Test
     fun copiesAndVerifiesTheChecksum() {
         val content = "contenido del apk".toByteArray()
         val target = File.createTempFile("cinecat-update", ".apk").apply { delete() }
