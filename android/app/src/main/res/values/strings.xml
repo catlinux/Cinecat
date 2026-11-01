@@ -93,8 +93,10 @@
     <string name="collection_detail_error">No se pudo cargar la colección</string>
     <string name="detail_action_error">No se pudo actualizar. Inténtalo de nuevo.</string>
     <string name="play">Reproducir</string>
-    <string name="resume">Reanudar</string>
+    <string name="resume">Continuar</string>
     <string name="resume_from">Reanudar desde %1$s</string>
+    <string name="resume_episode">Continuar %1$s</string>
+    <string name="play_from_start">Desde el principio</string>
     <string name="play_episode">Reproducir %1$s</string>
     <string name="favorite">Favorito</string>
     <string name="watchlist">Por ver</string>

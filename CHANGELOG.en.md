@@ -7,6 +7,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.49.0] - 2026-11-01
+
+### Added
+
+- Android and TV: "From the start" button next to "Continue" on movie pages and on the next episode of a series when partly watched, as the web already did.
+
+### Changed
+
+- Android and TV: the main button for the next episode reads "Continue S01E01" instead of "Play S01E01" when there is progress.
+
 ## [0.48.3] - 2026-11-01
 
 ### Fixed

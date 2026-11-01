@@ -31,6 +31,7 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -166,9 +167,14 @@ fun TvDetailHeader(
     onPrimary: (() -> Unit)?,
     onToggleFavorite: () -> Unit,
     onToggleWatchlist: () -> Unit,
-    onToggleWatched: () -> Unit
+    onToggleWatched: () -> Unit,
+    secondaryLabel: String? = null,
+    onSecondary: (() -> Unit)? = null
 ) {
     val showPrimary = primaryLabel != null && onPrimary != null
+    val secondary = secondaryLabel
+    val secondaryAction = onSecondary
+    val showSecondary = showPrimary && secondary != null && secondaryAction != null
     Box(modifier = Modifier.fillMaxWidth()) {
         DetailBackdrop(title = title, url = backdropUrl, height = 380.dp)
         // Velo crema opaco a la izquierda: los datos y la sinopsis van encima y,
@@ -240,6 +246,16 @@ fun TvDetailHeader(
                                 .focusRing(RoundedCornerShape(50))
                         ) {
                             Text(primaryLabel)
+                        }
+                    }
+                    if (showSecondary) {
+                        OutlinedButton(
+                            onClick = secondaryAction,
+                            modifier = Modifier
+                                .tvActionFocus(backFocusRequester, nextFocusRequester)
+                                .focusRing(RoundedCornerShape(50))
+                        ) {
+                            Text(secondary)
                         }
                     }
                     val firstActionModifier = if (!showPrimary) {

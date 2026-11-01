@@ -31,6 +31,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -198,22 +199,39 @@ private fun SeriesDetailContent(
         }
         state.series.nextEpisode?.let { next ->
             item(key = "play-next") {
-                Button(
-                    onClick = {
-                        onPlayEpisode(
-                            next.id,
-                            next.progress?.positionSeconds ?: 0.0
-                        )
-                    },
+                val code = formatEpisodeCode(next.season, next.episode)
+                    .ifBlank { next.episodeTitle ?: next.title }
+                val position = next.progress?.positionSeconds?.takeIf { it > 0.0 }
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = horizontalPadding, end = horizontalPadding, top = 20.dp)
-                        .focusRequester(initialFocusRequester)
-                        .focusRing(RoundedCornerShape(50))
+                        .padding(start = horizontalPadding, end = horizontalPadding, top = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    val code = formatEpisodeCode(next.season, next.episode)
-                        .ifBlank { next.episodeTitle ?: next.title }
-                    Text(stringResource(R.string.play_episode, code))
+                    Button(
+                        onClick = { onPlayEpisode(next.id, position ?: 0.0) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(initialFocusRequester)
+                            .focusRing(RoundedCornerShape(50))
+                    ) {
+                        Text(
+                            stringResource(
+                                if (position != null) R.string.resume_episode else R.string.play_episode,
+                                code
+                            )
+                        )
+                    }
+                    if (shouldOfferPlayFromStart(next.progress)) {
+                        OutlinedButton(
+                            onClick = { onPlayEpisode(next.id, 0.0) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .focusRing(RoundedCornerShape(50))
+                        ) {
+                            Text(stringResource(R.string.play_from_start))
+                        }
+                    }
                 }
             }
         }

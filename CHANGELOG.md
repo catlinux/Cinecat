@@ -7,6 +7,16 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.49.0] - 2026-11-01
+
+### Añadido
+
+- Android y TV: botón «Desde el principio» junto a «Continuar» en las fichas de película y en el siguiente episodio de una serie cuando están a medias, como ya hacía la web.
+
+### Cambiado
+
+- Android y TV: el botón principal del siguiente episodio dice «Continuar S01E01» en lugar de «Reproducir S01E01» cuando hay progreso.
+
 ## [0.48.3] - 2026-11-01
 
 ### Corregido

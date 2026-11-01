@@ -393,6 +393,16 @@ private fun MovieActions(
                 )
             )
         }
+        if (shouldOfferPlayFromStart(progress)) {
+            OutlinedButton(
+                onClick = { onPlay(item.id, 0.0) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRing(RoundedCornerShape(50))
+            ) {
+                Text(stringResource(R.string.play_from_start))
+            }
+        }
         if (position != null) {
             Text(
                 text = stringResource(

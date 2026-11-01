@@ -92,6 +92,16 @@ fun TvMovieDetailContent(
                 watched = item.watched,
                 watchedLabel = stringResource(R.string.watched),
                 onPrimary = { onPlay(item.id, position ?: 0.0) },
+                secondaryLabel = if (shouldOfferPlayFromStart(item.progress)) {
+                    stringResource(R.string.play_from_start)
+                } else {
+                    null
+                },
+                onSecondary = if (shouldOfferPlayFromStart(item.progress)) {
+                    { onPlay(item.id, 0.0) }
+                } else {
+                    null
+                },
                 onToggleFavorite = onToggleFavorite,
                 onToggleWatchlist = onToggleWatchlist,
                 onToggleWatched = onToggleWatched
@@ -234,8 +244,12 @@ fun TvSeriesDetailContent(
             next.episodeTitle ?: next.title
         }
     }
+    val nextPosition = nextEpisode?.progress?.positionSeconds?.takeIf { it > 0.0 }
     val primaryLabel = nextCode?.let { code ->
-        stringResource(R.string.play_episode, code)
+        stringResource(
+            if (nextPosition != null) R.string.resume_episode else R.string.play_episode,
+            code
+        )
     }
 
     LaunchedEffect(series.id) {
@@ -266,7 +280,17 @@ fun TvSeriesDetailContent(
                 watched = state.seriesWatched,
                 watchedLabel = stringResource(R.string.series_watched),
                 onPrimary = nextEpisode?.let { next ->
-                    { onPlayEpisode(next.id, next.progress?.positionSeconds ?: 0.0) }
+                    { onPlayEpisode(next.id, nextPosition ?: 0.0) }
+                },
+                secondaryLabel = if (nextEpisode != null && shouldOfferPlayFromStart(nextEpisode.progress)) {
+                    stringResource(R.string.play_from_start)
+                } else {
+                    null
+                },
+                onSecondary = if (nextEpisode != null && shouldOfferPlayFromStart(nextEpisode.progress)) {
+                    { onPlayEpisode(nextEpisode.id, 0.0) }
+                } else {
+                    null
                 },
                 onToggleFavorite = onToggleFavorite,
                 onToggleWatchlist = onToggleWatchlist,
