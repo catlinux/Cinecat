@@ -12,7 +12,7 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 - **Subtítulos subidos por el usuario:** requiere diseño previo; hoy solo se leen incrustados de texto o archivos `.srt`/`.vtt`/`.ass` junto al vídeo.
 - **Reproducción avanzada:** perfiles por dispositivo, HDR/10 bits, desentrelazado, subtítulos de imagen y audio no soportado.
 - **Verificar el flujo «Servidor y web» de GitHub Actions** (`.github/workflows/server-web.yml`, ejecuta los tests de Go con FFmpeg y los de la web): comprobar su primera ejecución en verde.
-- **Revisar el TTL de 7 días de TMDB** contra los términos vigentes antes de dar por buena la caché de producción.
+- **TMDB, plazo de conservación:** los términos oficiales (§1.C) prohíben conservar datos de TMDB más de 6 meses; la caché en disco (7 días) cumple. Comprobar que los metadatos ya guardados en la base de datos se vuelven a descargar dentro de ese plazo (hoy no consta que ocurra de forma periódica).
 - **App Android y Android TV, comprobar en dispositivo:** que el recuerdo de pista de audio, subtítulos y calidad (0.46.0) guarda y restaura con un elemento que tenga subtítulos externos del servidor o varias pistas de audio; con un episodio de «The Bear» (subtítulo incrustado en el TS, sin id de servidor) no hay nada que guardar. Las pistas sin idioma ni título salen todas como «Pistas»; convendría «Pista 1», «Pista 2» o «Incrustado».
 - **App Android y Android TV** (plan en `.agents/plans/apps-android/apps-android.PLAN.md`): HLS con AAC 5.1 cuando el equipo lo admita (hoy el AC-3 se convierte a AAC estéreo).
 

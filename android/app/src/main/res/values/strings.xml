@@ -127,7 +127,9 @@
     <string name="player_error">No se pudo preparar la reproducción</string>
     <string name="player_tracks">Pistas</string>
     <string name="player_audio">Audio</string>
+    <string name="player_audio_track">Audio %1$d</string>
     <string name="player_subtitles">Subtítulos</string>
+    <string name="player_subtitle_track">Subtítulo %1$d</string>
     <string name="player_disable_subtitles">Desactivar subtítulos</string>
     <string name="player_no_tracks">Sin pistas disponibles</string>
     <string name="player_track_selected">✓ %1$s</string>

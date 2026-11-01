@@ -66,6 +66,7 @@ import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
+import java.util.Locale
 import kotlin.math.roundToLong
 import kotlinx.coroutines.delay
 import okhttp3.OkHttpClient
@@ -405,6 +406,7 @@ private fun TrackDialog(
                     )
                     nextAudioIndex += group.mediaTrackGroup.length
                 }
+                var nextSubtitleIndex = 0
                 groups.filter { it.type == C.TRACK_TYPE_TEXT }.forEach { group ->
                     Text(
                         text = stringResource(R.string.player_subtitles),
@@ -413,12 +415,14 @@ private fun TrackDialog(
                     TrackGroupRows(
                         player = player,
                         group = group,
-                        type = C.TRACK_TYPE_TEXT
+                        type = C.TRACK_TYPE_TEXT,
+                        firstIndex = nextSubtitleIndex
                     ) { format, _ ->
                         format.id
                             ?.takeIf { id -> subtitles.any { it.id == id } }
                             ?.let(onSubtitleSelected)
                     }
+                    nextSubtitleIndex += group.mediaTrackGroup.length
                 }
                 if (groups.any { it.type == C.TRACK_TYPE_TEXT }) {
                     TextButton(
@@ -447,11 +451,23 @@ private fun TrackGroupRows(
     firstIndex: Int = 0,
     onSelected: (Format, Int) -> Unit = { _, _ -> }
 ) {
+    val audioFormat = stringResource(R.string.player_audio_track)
+    val subtitleFormat = stringResource(R.string.player_subtitle_track)
     for (index in 0 until group.mediaTrackGroup.length) {
         val format = group.mediaTrackGroup.getFormat(index)
-        val label = format.label?.takeIf { it.isNotBlank() }
-            ?: format.language?.takeIf { it.isNotBlank() }
-            ?: stringResource(R.string.player_tracks)
+        val label = formatPlayerTrackLabel(
+            label = format.label,
+            language = format.language,
+            kind = if (type == C.TRACK_TYPE_AUDIO) {
+                PlayerTrackKind.Audio
+            } else {
+                PlayerTrackKind.Subtitle
+            },
+            position = firstIndex + index + 1,
+            audioFormat = audioFormat,
+            subtitleFormat = subtitleFormat,
+            locale = Locale.forLanguageTag("es")
+        )
         val selected = group.isTrackSelected(index)
         TextButton(
             onClick = {
