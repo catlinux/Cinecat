@@ -184,6 +184,32 @@ describe('ApiClient', () => {
 		expect(init.headers.Authorization).toBe('Bearer token-abc');
 	});
 
+	it('consulta los bloqueos de seguridad', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(
+			jsonResponse({
+				total_7d: 2,
+				lockouts: [
+					{
+						kind: 'user',
+						username: 'ana',
+						ip: '198.51.100.10',
+						locked_at: '2026-10-31T10:00:00Z',
+						locked_until: '2026-10-31T10:15:00Z'
+					}
+				]
+			})
+		);
+		const client = new ApiClient({ baseUrl: 'http://api.test', fetch: fetchMock });
+
+		const events = await client.getSecurityEvents('token-abc');
+
+		expect(events.total_7d).toBe(2);
+		expect(events.lockouts[0]?.username).toBe('ana');
+		const [url, init] = fetchMock.mock.calls[0];
+		expect(url).toBe('http://api.test/api/v1/system/security-events');
+		expect(init.headers.Authorization).toBe('Bearer token-abc');
+	});
+
 	it('convierte un fallo de red en ApiError con estado 0', async () => {
 		const fetchMock = vi.fn().mockRejectedValue(new Error('sin conexión'));
 		const client = new ApiClient({ baseUrl: 'http://api.test', fetch: fetchMock });

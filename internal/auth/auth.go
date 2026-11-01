@@ -46,8 +46,8 @@ const (
 	DefaultMaxAttemptsPerIP = 20
 	// DefaultLockDuration es lo que dura el bloqueo temporal.
 	DefaultLockDuration = 15 * time.Minute
-	// maxAttemptEntries acota el mapa en memoria aunque lleguen nombres e IPs
-	// inventados.
+	// maxAttemptEntries acota las entradas de intentos aunque lleguen nombres
+	// e IPs inventados.
 	maxAttemptEntries = 10000
 	// tokenBytes es la entropía del token de sesión (256 bits).
 	tokenBytes = 32
@@ -170,8 +170,8 @@ func WithTrustedProxies(prefixes []netip.Prefix) Option {
 // su vida se renuevan en cada uso (caducidad deslizante). Tras 5 intentos
 // fallidos seguidos para una misma pareja usuario+IP, el login de esa pareja se
 // bloquea 15 minutos; además, 20 fallos desde una IP bloquean todas las
-// peticiones de esa IP. El bloqueo vive en memoria del proceso y se pierde al
-// reiniciar, algo asumible en un servidor personal.
+// peticiones de esa IP. Los contadores se guardan en SQLite; sin base de datos
+// se conserva el comportamiento en memoria para las pruebas.
 func New(db *sql.DB, opts ...Option) *Service {
 	s := &Service{
 		db:            db,
@@ -319,13 +319,19 @@ func (s *Service) LoginWithDevice(
 	user, passwordHash, err := s.findUser(ctx, username)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
-		if s.isLockedFor(key, ipKey, now) {
+		locked, lockErr := s.isLockedFor(ctx, key, ipKey, now)
+		if lockErr != nil {
+			return LoginResult{}, lockErr
+		}
+		if locked {
 			return LoginResult{}, ErrAccountLocked
 		}
 		// Mismo coste que una verificación real, para no delatar por tiempo si
 		// el usuario existe.
 		_, _ = VerifyPassword(dummyHash(), password)
-		s.registerFailureFor(key, ipKey, now)
+		if err := s.registerFailureFor(ctx, username, key, ipKey, now); err != nil {
+			return LoginResult{}, err
+		}
 		return LoginResult{}, ErrInvalidCredentials
 	case err != nil:
 		return LoginResult{}, err
@@ -338,7 +344,11 @@ func (s *Service) LoginWithDevice(
 		_, _ = VerifyPassword(passwordHash, password)
 		return LoginResult{}, ErrInvalidCredentials
 	}
-	if s.isLockedFor(key, ipKey, now) {
+	locked, err := s.isLockedFor(ctx, key, ipKey, now)
+	if err != nil {
+		return LoginResult{}, err
+	}
+	if locked {
 		return LoginResult{}, ErrAccountLocked
 	}
 
@@ -347,10 +357,14 @@ func (s *Service) LoginWithDevice(
 		return LoginResult{}, err
 	}
 	if !valid {
-		s.registerFailureFor(key, ipKey, now)
+		if err := s.registerFailureFor(ctx, username, key, ipKey, now); err != nil {
+			return LoginResult{}, err
+		}
 		return LoginResult{}, ErrInvalidCredentials
 	}
-	s.resetFailures(key)
+	if err := s.resetFailures(ctx, key); err != nil {
+		return LoginResult{}, err
+	}
 
 	return s.createSession(ctx, s.db, user.ID, client, deviceName, now)
 }
@@ -548,26 +562,32 @@ func (s *Service) findUser(ctx context.Context, username string) (User, string, 
 	return user, passwordHash, nil
 }
 
-func (s *Service) isLocked(key string, now time.Time) bool {
-	return s.isLockedFor(key, "", now)
-}
-
-func (s *Service) isLockedFor(key, ipKey string, now time.Time) bool {
+func (s *Service) isLockedFor(
+	ctx context.Context,
+	key, ipKey string,
+	now time.Time,
+) (bool, error) {
+	if s.db != nil {
+		return s.isLockedInDB(ctx, key, ipKey, now)
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	s.pruneLocked(now)
 	if entryLocked(s.attempts[key], now) {
-		return true
+		return true, nil
 	}
-	return ipKey != "" && entryLocked(s.ipAttempts[ipKey], now)
+	return ipKey != "" && entryLocked(s.ipAttempts[ipKey], now), nil
 }
 
-func (s *Service) registerFailure(key string, now time.Time) {
-	s.registerFailureFor(key, "", now)
-}
-
-func (s *Service) registerFailureFor(key, ipKey string, now time.Time) {
+func (s *Service) registerFailureFor(
+	ctx context.Context,
+	username, key, ipKey string,
+	now time.Time,
+) error {
+	if s.db != nil {
+		return s.registerFailureInDB(ctx, username, key, ipKey, now)
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -577,12 +597,17 @@ func (s *Service) registerFailureFor(key, ipKey string, now time.Time) {
 		registerAttempt(s.ipAttempts, ipKey, now, s.maxIPAttempts, s.lockDuration)
 	}
 	s.trimLocked()
+	return nil
 }
 
-func (s *Service) resetFailures(key string) {
+func (s *Service) resetFailures(ctx context.Context, key string) error {
+	if s.db != nil {
+		return s.resetFailuresInDB(ctx, key)
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.attempts, key)
+	return nil
 }
 
 func registerAttempt(entries map[string]*attempt, key string, now time.Time, limit int, duration time.Duration) {

@@ -7,6 +7,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.51.0] - 2026-11-01
+
+### Added
+
+- Administration: the "Security" card on the overview shows login lockouts from the last 7 days and the latest 5. New `GET /api/v1/system/security-events`, administrators only. Each lockout is also written to the server log.
+
+### Changed
+
+- Server: failed login attempts and their lockouts are stored in SQLite (migration 0024) instead of memory: they survive a restart and are shared between instances. Thresholds and responses (429 with `Retry-After`) are unchanged.
+
 ## [0.50.1] - 2026-11-01
 
 ### Fixed

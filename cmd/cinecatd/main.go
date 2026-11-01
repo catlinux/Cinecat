@@ -514,6 +514,7 @@ func newHandlerWithBackup(
 		authSvc.RegisterUserRoutes(mux)
 		authSvc.RegisterSessionRoutes(mux)
 		authSvc.RegisterPairingRoutes(mux)
+		authSvc.RegisterSecurityRoutes(mux)
 	}
 	if api != nil {
 		api.Register(mux)

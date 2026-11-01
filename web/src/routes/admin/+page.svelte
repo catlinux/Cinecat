@@ -32,6 +32,8 @@
 	}
 
 	const counts = $derived(data.counts);
+	const security = $derived(data.security ?? null);
+	const lockouts = $derived(security?.lockouts?.slice(0, 5) ?? []);
 	const mismatch = $derived(
 		versionMismatch(data.serverInfo?.server ?? null, data.webVersion)
 	);
@@ -138,5 +140,64 @@
 				</p>
 			{/if}
 		</article>
+
+		{#if security}
+			<article class="admin-card admin-stat-card">
+				<p class="kicker">Seguridad</p>
+				<h2>Inicios de sesión</h2>
+				<p class="admin-note">
+					{security.total_7d}
+					{security.total_7d === 1 ? 'bloqueo' : 'bloqueos'} de inicio de sesión en los
+					últimos 7 días.
+				</p>
+				{#if lockouts.length > 0}
+					<div class="security-table-wrap">
+						<table class="security-table">
+							<thead>
+								<tr>
+									<th scope="col">Usuario</th>
+									<th scope="col">IP</th>
+									<th scope="col">Fecha</th>
+								</tr>
+							</thead>
+							<tbody>
+								{#each lockouts as lockout, index (index)}
+									<tr>
+										<td>{lockout.username ?? '—'}</td>
+										<td>{lockout.ip ?? '—'}</td>
+										<td title={lockout.locked_at}>{relativeTime(lockout.locked_at)}</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				{/if}
+			</article>
+		{/if}
 	</div>
 </section>
+
+<style>
+	.security-table-wrap {
+		overflow-x: auto;
+	}
+	.security-table {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 0.78rem;
+	}
+	.security-table th,
+	.security-table td {
+		padding: 0.4rem 0.3rem;
+		border-bottom: 1px solid var(--borde-suave);
+		text-align: left;
+		white-space: nowrap;
+	}
+	.security-table th {
+		color: var(--texto-apagado);
+		font-size: 0.66rem;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+	}
+</style>

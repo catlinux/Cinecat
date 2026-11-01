@@ -7,6 +7,16 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.51.0] - 2026-11-01
+
+### Añadido
+
+- Administración: la tarjeta «Seguridad» del Resumen muestra los bloqueos de inicio de sesión de los últimos 7 días y los 5 últimos. Nuevo `GET /api/v1/system/security-events`, solo administradores. Cada bloqueo queda también en el registro del servidor.
+
+### Cambiado
+
+- Servidor: los intentos fallidos de inicio de sesión y sus bloqueos se guardan en SQLite (migración 0024) en lugar de en memoria: sobreviven a un reinicio y se comparten entre instancias. Umbrales y respuestas (429 con `Retry-After`) no cambian.
+
 ## [0.50.1] - 2026-11-01
 
 ### Corregido

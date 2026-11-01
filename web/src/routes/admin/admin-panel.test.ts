@@ -5,6 +5,7 @@ import type {
 	Backup,
 	BackupsResponse,
 	ScanStatus,
+	SecurityEventsResponse,
 	ServerVersion,
 	Setting,
 	SettingsResponse,
@@ -290,6 +291,19 @@ const serverInfo: ServerVersion = {
 	built_at: '2026-10-26T09:00:00Z'
 };
 
+function securityEvents(): SecurityEventsResponse {
+	return {
+		total_7d: 6,
+		lockouts: Array.from({ length: 6 }, (_, index) => ({
+			kind: index === 0 ? ('ip' as const) : ('user' as const),
+			username: index === 0 ? null : `persona-${index}`,
+			ip: `198.51.100.${index + 10}`,
+			locked_at: `2026-10-2${index}T10:00:00Z`,
+			locked_until: `2026-10-2${index}T10:15:00Z`
+		}))
+	};
+}
+
 function updateStatus(overrides: Partial<UpdateStatus> = {}): UpdateStatus {
 	return {
 		phase: '',
@@ -419,6 +433,8 @@ describe('resumen de administración', () => {
 					return jsonResponse(scanStatus);
 				case '/api/v1/system/version':
 					return jsonResponse(serverInfo);
+				case '/api/v1/system/security-events':
+					return jsonResponse(securityEvents());
 				default:
 					throw new Error(`URL inesperada: ${url}`);
 			}
@@ -436,6 +452,7 @@ describe('resumen de administración', () => {
 			};
 			scan: ScanStatus;
 			serverInfo: ServerVersion;
+			security: SecurityEventsResponse | null;
 		};
 		expect(result.counts).toEqual({
 			movies: 10,
@@ -446,6 +463,8 @@ describe('resumen de administración', () => {
 		});
 		expect(result.scan.files).toBe(12);
 		expect(result.serverInfo.commit).toBe('abc1234');
+		expect(result.security?.total_7d).toBe(6);
+		expect(result.security?.lockouts[0]?.ip).toBe('198.51.100.10');
 	});
 
 	it('no rompe el resumen si falla una petición', async () => {
@@ -457,6 +476,20 @@ describe('resumen de administración', () => {
 		};
 		expect(result.counts.collections).toBeNull();
 		expect(result.counts.movies).toBe(10);
+	});
+
+	it('no muestra la tarjeta de seguridad si falla la consulta', async () => {
+		const fetchMock = summaryFetch({
+			'/api/v1/system/security-events': () => jsonResponse({ error: 'fallo' }, 500)
+		});
+		const result = await loadSummary(loadEvent(fetchMock, '/admin') as never);
+		expect((result as { security: SecurityEventsResponse | null }).security).toBeNull();
+
+		const body = render(AdminSummary, {
+			props: { data: result as never }
+		}).body;
+		expect(body).toContain('Biblioteca');
+		expect(body).not.toContain('Inicios de sesión');
 	});
 
 	it('redirige al login si el recuento devuelve 401', async () => {
@@ -491,6 +524,35 @@ describe('resumen de administración', () => {
 		expect(body).toContain('Sin datos del último escaneo');
 		expect(body).not.toContain('/movies?unmatched=1');
 		expect(body).not.toContain('/series?unmatched=1');
+	});
+
+	it('muestra el total de bloqueos y solo las cinco últimas entradas', () => {
+		const body = render(AdminSummary, {
+			props: {
+				data: {
+					counts: {
+						movies: 10,
+						unmatchedMovies: 2,
+						series: 4,
+						unmatchedSeries: 1,
+						collections: 3
+					},
+					scan: scanStatus,
+					serverInfo,
+					security: securityEvents(),
+					webVersion
+				} as never
+			}
+		}).body;
+
+		expect(body).toContain('Seguridad');
+		expect(body).toContain('Inicios de sesión');
+		expect(body).toMatch(/6\s+bloqueos de inicio de sesión en los\s+últimos 7 días/);
+		expect(body).toContain('198.51.100.10');
+		expect(body).toContain('persona-1');
+		expect(body).toContain('persona-4');
+		expect(body).not.toContain('persona-5');
+		expect((body.match(/admin-stat-card/g) ?? []).length).toBe(4);
 	});
 
 	it('muestra tarjetas, enlaces sin identificar y aviso de versiones', () => {

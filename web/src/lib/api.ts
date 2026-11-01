@@ -915,6 +915,19 @@ export interface BackupsResponse {
 	last_error: string;
 }
 
+export interface SecurityLockout {
+	kind: 'user' | 'ip';
+	username: string | null;
+	ip: string | null;
+	locked_at: string;
+	locked_until: string;
+}
+
+export interface SecurityEventsResponse {
+	lockouts: SecurityLockout[];
+	total_7d: number;
+}
+
 export interface TrashItem {
 	id: number;
 	library_id: number;
@@ -1172,6 +1185,10 @@ export class ApiClient {
 
 	async getBackups(token: string): Promise<BackupsResponse> {
 		return this.get<BackupsResponse>('/api/v1/system/backups', token);
+	}
+
+	async getSecurityEvents(token: string): Promise<SecurityEventsResponse> {
+		return this.get<SecurityEventsResponse>('/api/v1/system/security-events', token);
 	}
 
 	async createBackup(token: string): Promise<Backup> {
