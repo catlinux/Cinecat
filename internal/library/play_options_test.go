@@ -17,7 +17,8 @@ import (
 
 type playTestServer struct {
 	*libraryTestServer
-	playback *playback.Service
+	playback    *playback.Service
+	subtitleDir string
 }
 
 func TestLibraryPlaybackHelperProcess(t *testing.T) {
@@ -53,8 +54,10 @@ func newPlayTestServer(t *testing.T, info *playback.FileInfo, inspectErr error) 
 			t.Errorf("playback.Close: %v", err)
 		}
 	})
+	subtitleDir := t.TempDir()
 	api := NewAPI(base.db, base.auth, playSvc, base.job, nil).
 		WithSettings(base.api.settingsStore).
+		WithSubtitles(subtitleDir).
 		WithFileInspector(&fakeFileInspector{info: info, err: inspectErr})
 	mux := http.NewServeMux()
 	api.Register(mux)
@@ -62,7 +65,7 @@ func newPlayTestServer(t *testing.T, info *playback.FileInfo, inspectErr error) 
 	t.Cleanup(server.Close)
 	base.Server = server
 	base.api = api
-	return &playTestServer{libraryTestServer: base, playback: playSvc}
+	return &playTestServer{libraryTestServer: base, playback: playSvc, subtitleDir: subtitleDir}
 }
 
 func playURL(ts *playTestServer, id int64, query string) string {

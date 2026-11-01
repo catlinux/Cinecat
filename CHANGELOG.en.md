@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.54.0] - 2026-11-01
+
+### Added
+
+- Administrators can upload `.srt`, `.vtt` or `.ass` subtitles (up to 2 MB) to a movie or episode from its page, and delete them. They are stored in `subtitles/` next to the database (migration 0026), appear in the playback options of the web and the apps with an id `u<N>` and are served as WebVTT. New `POST /api/v1/items/{id}/subtitles` and `DELETE /api/v1/items/{id}/subtitles/{subId}`, administrators only.
+
 ## [0.53.0] - 2026-11-01
 
 ### Added

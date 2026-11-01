@@ -1,6 +1,7 @@
 package library
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -105,6 +106,7 @@ func (a *API) maxPlaybackHeight() int {
 }
 
 func (a *API) playOptions(
+	ctx context.Context,
 	itemID int64,
 	mode playback.Mode,
 	path string,
@@ -197,6 +199,11 @@ func (a *API) playOptions(
 	result.MaxHeight = effectiveHeight(result.SelectedQuality, maxHeight, originalHeight)
 
 	subtitleTracks := playback.DiscoverSubtitles(path, info)
+	uploadedTracks, err := a.uploadedSubtitleTracks(ctx, itemID)
+	if err != nil {
+		return result, &playOptionsError{http.StatusInternalServerError, "error interno"}
+	}
+	subtitleTracks = append(subtitleTracks, uploadedTracks...)
 	for _, track := range subtitleTracks {
 		result.Subtitles = append(result.Subtitles, subtitleDTO{
 			ID:           track.ID,

@@ -134,13 +134,13 @@ describe('opciones de reproducción en la carga', () => {
 			return jsonResponse(play);
 		});
 		const result = (await load(
-			loadEvent(fetchMock, '/items/7/play?audio=1&quality=720&subtitle=e0&t=30') as never
+			loadEvent(fetchMock, '/items/7/play?audio=1&quality=720&subtitle=u2&t=30') as never
 		)) as { startAt: number; options: PlayResponse };
 		expect(result.startAt).toBe(30);
 		const parsed = new URL(playURL);
 		expect(parsed.searchParams.get('audio')).toBe('1');
 		expect(parsed.searchParams.get('quality')).toBe('720');
-		expect(parsed.searchParams.get('subtitle')).toBe('e0');
+		expect(parsed.searchParams.get('subtitle')).toBe('u2');
 		expect(result.options).toEqual(play);
 	});
 

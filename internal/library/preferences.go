@@ -17,7 +17,7 @@ type itemPreferencesDTO struct {
 	Quality    *string `json:"quality"`
 }
 
-var subtitlePreferencePattern = regexp.MustCompile(`^[ex][0-9]+$`)
+var subtitlePreferencePattern = regexp.MustCompile(`^[exu][0-9]+$`)
 
 func validQuality(value string) bool {
 	switch value {

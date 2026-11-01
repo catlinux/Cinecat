@@ -2,6 +2,7 @@ package playback
 
 import (
 	"context"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -81,6 +82,30 @@ func TestDiscoverSubtitlesIncrustadosYExternos(t *testing.T) {
 	}
 	if tracks[3].Language != "es" || tracks[4].Language != "spa" {
 		t.Fatalf("idiomas externos inesperados: %+v", tracks[3:])
+	}
+}
+
+func TestValidSubtitleIDYNormalizacion(t *testing.T) {
+	for _, id := range []string{"e0", "x12", "u3"} {
+		if !ValidSubtitleID(id) {
+			t.Errorf("%q debería ser válido", id)
+		}
+	}
+	for _, id := range []string{"", "e", "u", "s1", "u-1", "u1x"} {
+		if ValidSubtitleID(id) {
+			t.Errorf("%q no debería ser válido", id)
+		}
+	}
+
+	text, err := NormalizeSubtitleText([]byte("Caf\xe9\n"))
+	if err != nil || string(text) != "Café\n" {
+		t.Fatalf("Latin-1: %q, %v", text, err)
+	}
+	if _, err := NormalizeSubtitleText([]byte{'P', 'K', 0, 1}); !errors.Is(err, ErrSubtitleBinary) {
+		t.Fatalf("binario: %v", err)
+	}
+	if _, err := NormalizeSubtitleText(nil); !errors.Is(err, ErrSubtitleEmpty) {
+		t.Fatalf("vacío: %v", err)
 	}
 }
 

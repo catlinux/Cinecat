@@ -160,7 +160,7 @@ describe('selector de reproducción de la ficha', () => {
 		const result = (await actions.preferences!(
 			actionEvent(fetchMock, {
 				audio_index: '1',
-				subtitle_id: 'e0',
+				subtitle_id: 'u9',
 				quality: '720'
 			}) as never
 		)) as { success?: boolean };
@@ -170,7 +170,7 @@ describe('selector de reproducción de la ficha', () => {
 		expect(init.method).toBe('PUT');
 		expect(JSON.parse(init.body)).toEqual({
 			audio_index: 1,
-			subtitle_id: 'e0',
+			subtitle_id: 'u9',
 			quality: '720'
 		});
 	});

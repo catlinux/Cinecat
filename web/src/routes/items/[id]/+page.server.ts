@@ -8,6 +8,7 @@ import type {
 	ImageKind,
 	ImageOptions,
 	MediaItem,
+	PlaybackSubtitle,
 	PlayResponse,
 	TrashItem
 } from '$lib/api';
@@ -44,6 +45,15 @@ export const load: PageServerLoad = async ({ params, locals, fetch, url, parent,
 		const playbackOptions: Promise<PlayResponse | null> = api
 			.getPlay(id, { caps }, token)
 			.catch(() => null);
+		let uploadedSubtitles: PlaybackSubtitle[] | Promise<PlaybackSubtitle[]> =
+			playbackOptions.then((play) =>
+				(play?.subtitles ?? []).filter((track) => track.source === 'uploaded')
+			);
+		if (isAdmin) {
+			// La lista y el formulario del panel de archivo deben ir en el HTML
+			// inicial del administrador, no dentro de una promesa sin resolver.
+			uploadedSubtitles = await uploadedSubtitles;
+		}
 		const similarItems: Promise<MediaItem[] | null> | null =
 			item.kind === 'movie' && !isClip
 				? api.getSimilarItems(id, 12, token).then((response) => response.items).catch(() => null)
@@ -69,6 +79,7 @@ export const load: PageServerLoad = async ({ params, locals, fetch, url, parent,
 			collectionOptions,
 			fileInfo,
 			playbackOptions,
+			uploadedSubtitles,
 			similarItems,
 			episodeNavigation
 		};
@@ -238,7 +249,105 @@ function collectionIDFromForm(form: FormData): number | null {
 	return Number.isInteger(value) && value > 0 ? value : null;
 }
 
+function subtitleFailure(cause: unknown) {
+	if (cause instanceof ApiError) {
+		if (cause.status === 401) {
+			redirect(303, '/login');
+		}
+		if (cause.status === 400) {
+			return fail(400, {
+				subtitlePanel: true,
+				message: cause.message || 'El subtítulo no es válido.'
+			});
+		}
+		if (cause.status === 403) {
+			return fail(403, {
+				subtitlePanel: true,
+				message: 'Solo los administradores pueden gestionar los subtítulos.'
+			});
+		}
+		if (cause.status === 404) {
+			return fail(404, {
+				subtitlePanel: true,
+				message: 'No se encontró el ítem o el subtítulo.'
+			});
+		}
+		if (cause.status === 413) {
+			return fail(413, {
+				subtitlePanel: true,
+				message: 'El subtítulo supera los 2 MB.'
+			});
+		}
+	}
+	return fail(502, {
+		subtitlePanel: true,
+		message: 'No se pudo guardar el subtítulo. Inténtalo de nuevo.'
+	});
+}
+
+function subtitleFile(value: FormDataEntryValue | null): File | null {
+	if (!value || typeof value === 'string') {
+		return null;
+	}
+	return value as File;
+}
+
 export const actions: Actions = {
+	subtitleUpload: async ({ request, locals, fetch, params }) => {
+		const token = requireSessionToken(locals);
+		const id = itemID(params);
+		if (id === null) {
+			return fail(404, { subtitlePanel: true, message: 'Ítem no encontrado.' });
+		}
+		const form = await request.formData();
+		const file = subtitleFile(form.get('file'));
+		if (!file) {
+			return fail(400, { subtitlePanel: true, message: 'Elige un archivo de subtítulos.' });
+		}
+		if (!/\.(srt|vtt|ass)$/i.test(file.name)) {
+			return fail(400, {
+				subtitlePanel: true,
+				message: 'Solo se admiten archivos .srt, .vtt y .ass.'
+			});
+		}
+		if (file.size > 2 * 1024 * 1024) {
+			return fail(413, { subtitlePanel: true, message: 'El subtítulo supera los 2 MB.' });
+		}
+		const language = String(form.get('language') ?? '').trim();
+		if (language && !/^[A-Za-z]{2,3}$/.test(language)) {
+			return fail(400, {
+				subtitlePanel: true,
+				message: 'El idioma debe ser un código de 2 o 3 letras.'
+			});
+		}
+		const label = String(form.get('label') ?? '').trim();
+		try {
+			await createApiClient(fetch).uploadItemSubtitle(id, file, language, label, token);
+		} catch (err) {
+			return subtitleFailure(err);
+		}
+		return { success: true, subtitlePanel: true, message: 'Subtítulo subido.' };
+	},
+
+	subtitleDelete: async ({ request, locals, fetch, params }) => {
+		const token = requireSessionToken(locals);
+		const id = itemID(params);
+		if (id === null) {
+			return fail(404, { subtitlePanel: true, message: 'Ítem no encontrado.' });
+		}
+		const form = await request.formData();
+		const subtitleId = String(form.get('subtitle_id') ?? '').trim();
+		if (!/^[uU]?\d+$/.test(subtitleId)) {
+			return fail(400, { subtitlePanel: true, message: 'Subtítulo no válido.' });
+		}
+		try {
+			await createApiClient(fetch).deleteItemSubtitle(id, subtitleId, token);
+		} catch (err) {
+			return subtitleFailure(err);
+		}
+		return { success: true, subtitlePanel: true, message: 'Subtítulo eliminado.' };
+	},
+
 	preferences: async ({ request, locals, fetch, params }) => {
 		const token = requireSessionToken(locals);
 		const id = itemID(params);
@@ -268,7 +377,7 @@ export const actions: Actions = {
 			const subtitle = form.get('subtitle_id');
 			if (subtitle !== null) {
 				const value = String(subtitle);
-				if (value !== '' && !/^[ex]\d+$/.test(value)) {
+				if (value !== '' && !/^[exu]\d+$/.test(value)) {
 					return fail(400, { preferencesPanel: true, message: 'Subtítulo no válido.' });
 				}
 				changes.subtitle_id = value;

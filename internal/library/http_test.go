@@ -71,7 +71,9 @@ func newLibraryHTTPTestServer(t *testing.T, tmdb ...TMDBClient) *libraryTestServ
 	if err := settingsStore.Load(ctx); err != nil {
 		t.Fatalf("settings.Load: %v", err)
 	}
-	api := NewAPI(db, authSvc, nil, job, client).WithSettings(settingsStore)
+	api := NewAPI(db, authSvc, nil, job, client).
+		WithSettings(settingsStore).
+		WithSubtitles(filepath.Join(t.TempDir(), "subtitles"))
 	mux := http.NewServeMux()
 	api.Register(mux)
 	server := httptest.NewServer(mux)

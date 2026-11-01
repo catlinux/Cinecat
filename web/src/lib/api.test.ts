@@ -212,6 +212,37 @@ describe('ApiClient', () => {
 		});
 	});
 
+	it('sube y borra subtítulos de un ítem', async () => {
+		const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+			if (init?.method === 'DELETE') {
+				return new Response(null, { status: 204 });
+			}
+			return jsonResponse(
+				{ id: 'u1', language: 'es', label: 'Castellano', codec: 'subrip' },
+				201
+			);
+		});
+		const client = new ApiClient({ baseUrl: 'http://api.test', fetch: fetchMock });
+		const file = new File(['Hola'], 'Pelicula.srt', { type: 'text/plain' });
+
+		const uploaded = await client.uploadItemSubtitle(7, file, 'es', 'Castellano', 'token-abc');
+		await client.deleteItemSubtitle(7, 'u1', 'token-abc');
+
+		expect(uploaded.id).toBe('u1');
+		expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
+			'http://api.test/api/v1/items/7/subtitles',
+			'http://api.test/api/v1/items/7/subtitles/u1'
+		]);
+		expect(fetchMock.mock.calls.map(([, init]) => init?.method)).toEqual(['POST', 'DELETE']);
+		const [, post] = fetchMock.mock.calls[0];
+		expect(post?.headers).toMatchObject({ Authorization: 'Bearer token-abc' });
+		expect((post?.headers as Record<string, string>)['Content-Type']).toBeUndefined();
+		const form = post?.body as FormData;
+		expect(form.get('language')).toBe('es');
+		expect(form.get('label')).toBe('Castellano');
+		expect((form.get('file') as File).name).toBe('Pelicula.srt');
+	});
+
 	it('consulta los bloqueos de seguridad', async () => {
 		const fetchMock = vi.fn().mockResolvedValue(
 			jsonResponse({

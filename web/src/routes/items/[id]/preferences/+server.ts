@@ -5,7 +5,7 @@ import { createApiClient } from '$lib/api-factory';
 import type { RequestHandler } from './$types';
 
 const QUALITY_VALUES = new Set(['auto', 'original', '480', '720', '1080']);
-const SUBTITLE_PATTERN = /^([ex]\d+)?$/;
+const SUBTITLE_PATTERN = /^([exu]\d+)?$/;
 
 function invalid(message: string) {
 	return json({ error: message }, { status: 400 });

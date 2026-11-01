@@ -2780,6 +2780,131 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/items/{id}/subtitles:
+    post:
+      summary: Sube un subtítulo externo a un ítem (solo administradores)
+      description: |
+        Acepta un archivo `.srt`, `.vtt` o `.ass` de hasta 2 MB. El contenido
+        debe ser texto UTF-8 o Latin-1/Windows-1252; los binarios se rechazan.
+        El archivo se guarda fuera de la biblioteca de vídeo y se ofrece en las
+        opciones de reproducción con el identificador `u<N>`.
+        Requiere una sesión con rol `admin`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ItemId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                language:
+                  type: string
+                  description: Código de idioma de 2 o 3 letras, opcional.
+                  pattern: '^[A-Za-z]{2,3}$'
+                label:
+                  type: string
+                  description: Etiqueta visible en las opciones de reproducción.
+      responses:
+        '201':
+          description: Subtítulo subido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadedSubtitle'
+        '400':
+          description: Archivo, formato, idioma o contenido no válidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: El usuario no tiene rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No existe el ítem o no es visible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: El subtítulo supera los 2 MB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: La subida de subtítulos no está configurada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/items/{id}/subtitles/{subId}:
+    delete:
+      summary: Borra un subtítulo subido (solo administradores)
+      description: |
+        Acepta el identificador público `u<N>` o el número de fila. Elimina la
+        fila y su archivo del disco. Requiere una sesión con rol `admin`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ItemId'
+        - name: subId
+          in: path
+          required: true
+          description: Identificador `u<N>` o número de fila del subtítulo.
+          schema:
+            type: string
+            pattern: '^[uU]?[0-9]+$'
+      responses:
+        '204':
+          description: Subtítulo borrado
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: El usuario no tiene rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No existe el ítem o el subtítulo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/items/{id}/preferences:
     get:
       summary: Preferencias de reproducción del usuario para un ítem
@@ -8260,9 +8385,12 @@ components:
       properties:
         id:
           type: string
+          description: |
+            `e<N>` incrustado, `x<N>` en un archivo junto al vídeo y `u<N>`
+            subido por un administrador.
         source:
           type: string
-          enum: [embedded, external]
+          enum: [embedded, external, uploaded]
         language:
           type: string
         language_name:
@@ -8278,6 +8406,24 @@ components:
         url:
           type: string
           description: URL relativa firmada del WebVTT.
+      additionalProperties: false
+    UploadedSubtitle:
+      type: object
+      required:
+        - id
+        - language
+        - label
+        - codec
+      properties:
+        id:
+          type: string
+          description: Identificador público `u<N>`.
+        language:
+          type: string
+        label:
+          type: string
+        codec:
+          type: string
       additionalProperties: false
     PlayResponse:
       type: object

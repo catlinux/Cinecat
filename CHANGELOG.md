@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.54.0] - 2026-11-01
+
+### Añadido
+
+- Los administradores pueden subir subtítulos `.srt`, `.vtt` o `.ass` (hasta 2 MB) a una película o episodio desde la ficha, y eliminarlos. Se guardan en `subtitles/` junto a la base de datos (migración 0026), aparecen en las opciones de reproducción de la web y de las apps con identificador `u<N>` y se sirven como WebVTT. Nuevos `POST /api/v1/items/{id}/subtitles` y `DELETE /api/v1/items/{id}/subtitles/{subId}`, solo administradores.
+
 ## [0.53.0] - 2026-11-01
 
 ### Añadido

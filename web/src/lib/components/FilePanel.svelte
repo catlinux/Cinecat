@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { FileInfoResult } from '$lib/api';
+	import type { FileInfoResult, PlaybackSubtitle } from '$lib/api';
 	import {
 		formatAudioChannels,
 		formatBitrate,
@@ -12,7 +12,29 @@
 		formatSampleRate
 	} from '$lib/media';
 
-	let { result }: { result: FileInfoResult | Promise<FileInfoResult> } = $props();
+	let {
+		result,
+		itemId = null,
+		isAdmin = false,
+		uploadedSubtitles = [],
+		subtitleMessage = null,
+		subtitleSuccess = false
+	}: {
+		result: FileInfoResult | Promise<FileInfoResult>;
+		itemId?: number | null;
+		isAdmin?: boolean;
+		uploadedSubtitles?: PlaybackSubtitle[] | Promise<PlaybackSubtitle[]> | null;
+		subtitleMessage?: string | null;
+		subtitleSuccess?: boolean;
+	} = $props();
+
+	function subtitleLabel(track: PlaybackSubtitle): string {
+		const parts = [formatLanguage(track.language) || 'Sin idioma'];
+		if (track.title.trim()) {
+			parts.push(track.title);
+		}
+		return parts.join(' · ');
+	}
 
 	const errorMessages = {
 		not_found: 'No se encuentra el archivo en el servidor',
@@ -20,6 +42,53 @@
 		failed: 'No se pudo analizar el archivo'
 	} as const;
 </script>
+
+{#snippet uploadedList(list: PlaybackSubtitle[])}
+	<div class="file-uploaded-subtitles">
+		<h4>Subidos</h4>
+		{#if subtitleMessage}
+			<p class={subtitleSuccess ? 'success' : 'error'} role={subtitleSuccess ? 'status' : 'alert'}>
+				{subtitleMessage}
+			</p>
+		{/if}
+		{#if list.length === 0}
+			<p class="admin-note">No hay subtítulos subidos.</p>
+		{:else}
+			<ul class="file-uploaded-list">
+				{#each list as track (track.id)}
+					<li>
+						<span>{subtitleLabel(track)}</span>
+						<code>{track.id}</code>
+						<form method="POST" action="?/subtitleDelete">
+							<input type="hidden" name="subtitle_id" value={track.id} />
+							<button type="submit" class="text-link">Eliminar</button>
+						</form>
+					</li>
+				{/each}
+			</ul>
+		{/if}
+		<form
+			method="POST"
+			action="?/subtitleUpload"
+			enctype="multipart/form-data"
+			class="subtitle-upload-form"
+		>
+			<label>
+				<span>Archivo</span>
+				<input type="file" name="file" accept=".srt,.vtt,.ass" required />
+			</label>
+			<label>
+				<span>Idioma</span>
+				<input name="language" maxlength="3" placeholder="es" />
+			</label>
+			<label>
+				<span>Etiqueta</span>
+				<input name="label" placeholder="Castellano" />
+			</label>
+			<button type="submit" class="button button-secondary">Subir subtítulo</button>
+		</form>
+	</div>
+{/snippet}
 
 {#snippet content(value: FileInfoResult)}
 	{#if value.data}
@@ -174,6 +243,20 @@
 			{:else}
 				<p class="admin-note">Sin subtítulos incrustados</p>
 			{/if}
+
+			{#if isAdmin && itemId !== null}
+				{#if uploadedSubtitles instanceof Promise}
+					{#await uploadedSubtitles}
+						<p class="admin-note" role="status">Cargando subtítulos subidos…</p>
+					{:then list}
+						{@render uploadedList(list)}
+					{:catch}
+						<p class="error" role="alert">No se pudieron cargar los subtítulos subidos.</p>
+					{/await}
+				{:else}
+					{@render uploadedList(uploadedSubtitles ?? [])}
+				{/if}
+			{/if}
 		</section>
 
 		<p
@@ -210,3 +293,66 @@
 		{@render content(result)}
 	{/if}
 </details>
+
+<style>
+	.file-uploaded-subtitles {
+		margin-top: 1rem;
+		padding-top: 0.8rem;
+		border-top: 1px dashed rgba(123, 30, 36, 0.25);
+	}
+
+	.file-uploaded-subtitles h4 {
+		margin: 0 0 0.5rem;
+		font-size: 0.92rem;
+	}
+
+	.file-uploaded-list {
+		display: grid;
+		gap: 0.35rem;
+		margin: 0 0 0.8rem;
+		padding: 0;
+		list-style: none;
+	}
+
+	.file-uploaded-list li {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.35rem 0.5rem;
+		border: 1px solid rgba(123, 30, 36, 0.18);
+		border-radius: 4px;
+	}
+
+	.file-uploaded-list code {
+		color: var(--texto-suave, #6b5a4e);
+		font-size: 0.78rem;
+	}
+
+	.subtitle-upload-form {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: end;
+		gap: 0.6rem;
+	}
+
+	.subtitle-upload-form label {
+		display: grid;
+		gap: 0.2rem;
+		font-size: 0.78rem;
+	}
+
+	.subtitle-upload-form input {
+		min-height: 36px;
+		padding: 0.3rem 0.4rem;
+		border: 1px solid rgba(80, 53, 38, 0.35);
+		border-radius: 4px;
+		background: #fffaf0;
+		color: inherit;
+		font: inherit;
+	}
+
+	.subtitle-upload-form input[type='file'] {
+		max-width: 15rem;
+	}
+</style>

@@ -40,6 +40,7 @@ type API struct {
 	settingsStore        *settings.Store
 	mediaRoots           []string
 	thumbnails           *Thumbnailer
+	subtitlesDir         string
 	musicCovers          *MusicCoverer
 	tmdbImages           *TMDBImageCache
 	now                  func() time.Time
@@ -61,6 +62,7 @@ func NewAPI(db *sql.DB, authSvc *auth.Service, playSvc *playback.Service, scanJo
 		fileInspector:        inspector,
 		fileInfoCache:        newFileInfoCache(),
 		mediaRoots:           defaultMediaRoots(),
+		subtitlesDir:         subtitlesDirForDatabase(db),
 		now:                  time.Now,
 	}
 }
@@ -165,6 +167,8 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.Handle("PUT /api/v1/items/{id}/lists/{list}", a.requireSession(a.handleItemListPut))
 	mux.Handle("DELETE /api/v1/items/{id}/lists/{list}", a.requireSession(a.handleItemListDelete))
 	mux.Handle("GET /api/v1/items/{id}/file-info", a.requireSession(a.handleItemFileInfo))
+	mux.Handle("POST /api/v1/items/{id}/subtitles", a.requireAdmin(a.handleItemSubtitleUpload))
+	mux.Handle("DELETE /api/v1/items/{id}/subtitles/{subId}", a.requireAdmin(a.handleItemSubtitleDelete))
 	mux.Handle("GET /api/v1/items/{id}/preferences", a.requireSession(a.handleItemPreferencesGet))
 	mux.Handle("PUT /api/v1/items/{id}/preferences", a.requireSession(a.handleItemPreferencesPut))
 	mux.Handle("DELETE /api/v1/items/{id}/preferences", a.requireSession(a.handleItemPreferencesDelete))
@@ -457,7 +461,7 @@ func (a *API) handlePlay(w http.ResponseWriter, r *http.Request) {
 	signature, expiresAt := a.playback.Sign(id)
 	expires := strconv.FormatInt(expiresAt.Unix(), 10)
 	options, optionsErr := a.playOptions(
-		id, mode, safePath, infoPointer, preferences, r.URL.Query(), expires, signature,
+		r.Context(), id, mode, safePath, infoPointer, preferences, r.URL.Query(), expires, signature,
 	)
 	if optionsErr != nil {
 		writeJSONError(w, optionsErr.status, optionsErr.message)
@@ -597,11 +601,21 @@ func (a *API) handleStreamSubtitle(w http.ResponseWriter, r *http.Request) {
 		infoPointer = &info
 	}
 	var found *playback.SubtitleTrack
-	for _, track := range playback.DiscoverSubtitles(safePath, infoPointer) {
-		if track.ID == subtitleID {
-			copy := track
-			found = &copy
-			break
+	if strings.HasPrefix(subtitleID, "u") {
+		track, err := a.uploadedSubtitleTrack(r.Context(), id, subtitleID)
+		if err != nil {
+			log.Printf("library: leer subtítulo %s del ítem %d: %v", subtitleID, id, err)
+			writeJSONError(w, http.StatusInternalServerError, "error interno")
+			return
+		}
+		found = track
+	} else {
+		for _, track := range playback.DiscoverSubtitles(safePath, infoPointer) {
+			if track.ID == subtitleID {
+				copy := track
+				found = &copy
+				break
+			}
 		}
 	}
 	if found == nil {

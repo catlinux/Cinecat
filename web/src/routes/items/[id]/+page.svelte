@@ -6,6 +6,7 @@
 		ImageKind,
 		ImageOptions,
 		MediaItem,
+		PlaybackSubtitle,
 		PlayResponse
 	} from '$lib/api';
 	import CastRow from '$lib/components/CastRow.svelte';
@@ -49,6 +50,7 @@
 		collectionPanel?: boolean;
 		collectionName?: string;
 		collectionOverview?: string;
+		subtitlePanel?: boolean;
 	}
 
 	let { data, form }: { data: PageData; form?: ActionForm | null } = $props();
@@ -98,6 +100,13 @@
 		data.playbackOptions as
 			| Promise<PlayResponse | null>
 			| PlayResponse
+			| null
+			| undefined
+	);
+	const uploadedSubtitles = $derived(
+		data.uploadedSubtitles as
+			| Promise<PlaybackSubtitle[]>
+			| PlaybackSubtitle[]
 			| null
 			| undefined
 	);
@@ -245,7 +254,7 @@
 				</div>
 			{/if}
 
-			{#if actionForm?.message}
+			{#if actionForm?.message && !actionForm.subtitlePanel}
 				<p
 					class={actionForm.success ? 'success' : 'error'}
 					role={actionForm.success ? 'status' : 'alert'}
@@ -256,7 +265,14 @@
 
 			<CastRow credits={item.credits} cast={item.cast} directors={item.directors} />
 
-			<FilePanel result={fileInfo} />
+			<FilePanel
+				result={fileInfo}
+				itemId={item.id}
+				isAdmin={data.isAdmin}
+				uploadedSubtitles={uploadedSubtitles}
+				subtitleMessage={actionForm?.subtitlePanel ? actionForm.message : null}
+				subtitleSuccess={Boolean(actionForm?.success)}
+			/>
 
 			<EpisodeNav
 				previous={episodeNavigation?.previous ?? null}
@@ -342,7 +358,7 @@
 				</div>
 			{/if}
 
-			{#if actionForm?.message}
+			{#if actionForm?.message && !actionForm.subtitlePanel}
 				<p
 					class={actionForm.success ? 'success' : 'error'}
 					role={actionForm.success ? 'status' : 'alert'}
@@ -351,7 +367,14 @@
 				</p>
 			{/if}
 
-			<FilePanel result={fileInfo} />
+			<FilePanel
+				result={fileInfo}
+				itemId={item.id}
+				isAdmin={data.isAdmin}
+				uploadedSubtitles={uploadedSubtitles}
+				subtitleMessage={actionForm?.subtitlePanel ? actionForm.message : null}
+				subtitleSuccess={Boolean(actionForm?.success)}
+			/>
 
 			{#if data.isAdmin}
 				<div class="item-admin-actions">
@@ -479,7 +502,7 @@
 				</div>
 			{/if}
 
-			{#if actionForm?.message}
+			{#if actionForm?.message && !actionForm.subtitlePanel}
 				<p
 					class={actionForm.success ? 'success' : 'error'}
 					role={actionForm.success ? 'status' : 'alert'}
@@ -519,7 +542,14 @@
 				</section>
 			{/if}
 
-			<FilePanel result={fileInfo} />
+			<FilePanel
+				result={fileInfo}
+				itemId={item.id}
+				isAdmin={data.isAdmin}
+				uploadedSubtitles={uploadedSubtitles}
+				subtitleMessage={actionForm?.subtitlePanel ? actionForm.message : null}
+				subtitleSuccess={Boolean(actionForm?.success)}
+			/>
 
 			{#if isMovie && similarItems}
 				{#if Array.isArray(similarItems)}

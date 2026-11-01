@@ -175,6 +175,32 @@ function actionEvent(
 	};
 }
 
+function subtitleUploadEvent(
+	fetchImpl: typeof fetch,
+	file: File,
+	language = '',
+	label = ''
+) {
+	const form = new FormData();
+	form.append('file', file);
+	if (language) {
+		form.append('language', language);
+	}
+	if (label) {
+		form.append('label', label);
+	}
+	return {
+		request: new Request('http://localhost/items/7?/subtitleUpload', {
+			method: 'POST',
+			body: form
+		}),
+		locals: { sessionToken: 'token-123' },
+		fetch: fetchImpl,
+		params: { id: '7' },
+		url: new URL('http://localhost/items/7')
+	};
+}
+
 describe('carga del panel de archivo', () => {
 	it('pasa las capacidades saneadas al file-info y a las opciones', async () => {
 		const calls: string[] = [];
@@ -205,6 +231,55 @@ describe('carga del panel de archivo', () => {
 		for (const call of calls) {
 			expect(new URL(call).searchParams.get('caps')).toBe('hevc,hevc10');
 		}
+	});
+
+	it('separa los subtítulos subidos de las opciones de reproducción', async () => {
+		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+			const url = new URL(String(input));
+			if (url.pathname === '/api/v1/items/7') {
+				return jsonResponse(makeItem());
+			}
+			if (url.pathname === '/api/v1/items/7/file-info') {
+				return jsonResponse(makeFileInfo());
+			}
+			if (url.pathname === '/api/v1/items/7/play') {
+				return jsonResponse({
+					url: '',
+					mode: 'direct',
+					subtitles: [
+						{
+							id: 'u1',
+							source: 'uploaded',
+							language: 'es',
+							language_name: 'Español',
+							title: 'Castellano',
+							codec: 'subrip',
+							forced: false,
+							default: false,
+							url: '/sub/1'
+						},
+						{
+							id: 'x0',
+							source: 'external',
+							language: 'en',
+							language_name: 'Inglés',
+							title: '',
+							codec: 'subrip',
+							forced: false,
+							default: false,
+							url: '/sub/2'
+						}
+					]
+				});
+			}
+			throw new Error(`URL inesperada: ${url}`);
+		});
+
+		const result = (await load(loadEvent(fetchMock, true) as never)) as {
+			uploadedSubtitles: { id: string }[];
+		};
+		expect(Array.isArray(result.uploadedSubtitles)).toBe(true);
+		expect(result.uploadedSubtitles.map((item) => item.id)).toEqual(['u1']);
 	});
 
 	it('devuelve la ficha y el file-info como promesa', async () => {
@@ -263,6 +338,52 @@ function renderFilePanel(result: FileInfoResult): string {
 }
 
 describe('FilePanel', () => {
+	it('muestra la gestión de subtítulos subidos solo a administradores', () => {
+		const uploaded = [
+			{
+				id: 'u1',
+				source: 'uploaded' as const,
+				language: 'es',
+				language_name: 'Español',
+				title: 'Castellano',
+				codec: 'subrip',
+				forced: false,
+				default: false,
+				url: '/api/v1/stream/7/subtitles/u1.vtt?exp=1&sig=abc'
+			}
+		];
+		const admin = render(FilePanel, {
+			props: {
+				result: fileInfoResult(),
+				itemId: 7,
+				isAdmin: true,
+				uploadedSubtitles: uploaded,
+				subtitleMessage: 'Subtítulo subido.',
+				subtitleSuccess: true
+			} as never
+		}).body;
+		expect(admin).toContain('Subidos');
+		expect(admin).toContain('Español · Castellano');
+		expect(admin).toContain('u1');
+		expect(admin).toContain('Eliminar');
+		expect(admin).toContain('Subir subtítulo');
+		expect(admin).toContain('name="file"');
+		expect(admin).toContain('accept=".srt,.vtt,.ass"');
+		expect(admin).toContain('action="?/subtitleUpload"');
+		expect(admin).toContain('action="?/subtitleDelete"');
+		expect(admin).toContain('Subtítulo subido.');
+
+		const user = render(FilePanel, {
+			props: {
+				result: fileInfoResult(),
+				itemId: 7,
+				isAdmin: false,
+				uploadedSubtitles: uploaded
+			} as never
+		}).body;
+		expect(user).not.toContain('Subir subtítulo');
+	});
+
 	it('muestra la información de un MKV con varias pistas', () => {
 		const body = renderFilePanel(fileInfoResult());
 
@@ -615,5 +736,73 @@ describe('acciones del panel de imagen', () => {
 			expect(result.status).toBe(status);
 			expect(result.data.message).toBe(message);
 		}
+	});
+});
+
+describe('acciones de subtítulos', () => {
+	it('sube un archivo como multipart', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(
+			jsonResponse({ id: 'u1', language: 'es', label: 'Castellano', codec: 'subrip' }, 201)
+		);
+		const file = new File(['1\n00:00:01,000 --> 00:00:02,000\nHola\n'], 'Pelicula.srt', {
+			type: 'text/plain'
+		});
+
+		const result = (await actions.subtitleUpload!(
+			subtitleUploadEvent(fetchMock, file, 'es', 'Castellano') as never
+		)) as { success?: boolean; subtitlePanel?: boolean; message?: string };
+
+		expect(result.success).toBe(true);
+		expect(result.subtitlePanel).toBe(true);
+		expect(result.message).toContain('Subtítulo subido');
+		const [url, init] = fetchMock.mock.calls[0];
+		expect(url).toBe('http://api.test/api/v1/items/7/subtitles');
+		expect(init.method).toBe('POST');
+		expect(init.headers['Content-Type']).toBeUndefined();
+		expect(init.body).toBeInstanceOf(FormData);
+		const form = init.body as FormData;
+		expect(form.get('language')).toBe('es');
+		expect(form.get('label')).toBe('Castellano');
+		expect((form.get('file') as File).name).toBe('Pelicula.srt');
+	});
+
+	it('rechaza archivos no admitidos sin llamar a la API', async () => {
+		const fetchMock = vi.fn();
+		for (const [file, status, message] of [
+			[new File(['x'], 'Pelicula.txt'), 400, 'Solo se admiten'],
+			[new File(['x'], 'Pelicula.srt'), 400, 'idioma'],
+			[
+				new File([new Uint8Array(2 * 1024 * 1024 + 1)], 'Pelicula.srt'),
+				413,
+				'2 MB'
+			]
+		] as const) {
+			const language = message === 'idioma' ? 'español' : '';
+			const result = (await actions.subtitleUpload!(
+				subtitleUploadEvent(fetchMock, file, language) as never
+			)) as { status: number; data: { message: string } };
+			expect(result.status).toBe(status);
+			expect(result.data.message).toContain(message);
+		}
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	it('elimina un subtítulo y traduce el 403', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+		const result = (await actions.subtitleDelete!(
+			actionEvent(fetchMock, 'subtitleDelete', { subtitle_id: 'u1' }) as never
+		)) as { success?: boolean; message?: string };
+		expect(result.success).toBe(true);
+		expect(result.message).toContain('Subtítulo eliminado');
+		const [url, init] = fetchMock.mock.calls[0];
+		expect(url).toBe('http://api.test/api/v1/items/7/subtitles/u1');
+		expect(init.method).toBe('DELETE');
+
+		const forbidden = vi.fn().mockResolvedValue(jsonResponse({ error: 'nope' }, 403));
+		const denied = (await actions.subtitleDelete!(
+			actionEvent(forbidden, 'subtitleDelete', { subtitle_id: 'u1' }) as never
+		)) as { status: number; data: { message: string } };
+		expect(denied.status).toBe(403);
+		expect(denied.data.message).toContain('Solo los administradores');
 	});
 });

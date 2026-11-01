@@ -218,6 +218,7 @@ func main() {
 	api = api.WithSettings(settingsStore)
 	api = api.WithFileInspector(playSvc)
 	api = api.WithThumbnails(thumbnailCacheDir(cfg.DatabasePath))
+	api = api.WithSubtitles(subtitlesDir(cfg.DatabasePath))
 	api = api.WithMusicCovers(musicCoverCacheDir(cfg.DatabasePath))
 	api = api.WithTMDBImages(tmdbImageCacheDir(cfg.DatabasePath))
 	api = api.WithMediaRoots(cfg.MediaRoots)
@@ -455,6 +456,16 @@ func tmdbImageCacheDir(databasePath string) string {
 		return ""
 	}
 	return filepath.Join(filepath.Dir(path), "cache", "images")
+}
+
+// subtitlesDir guarda los subtítulos subidos en el volumen de la base, fuera
+// de las carpetas de vídeo.
+func subtitlesDir(databasePath string) string {
+	path := strings.TrimSpace(databasePath)
+	if path == "" || path == ":memory:" {
+		return ""
+	}
+	return filepath.Join(filepath.Dir(path), "subtitles")
 }
 
 // thumbnailCacheDir guarda los fotogramas en el volumen de la base, para que

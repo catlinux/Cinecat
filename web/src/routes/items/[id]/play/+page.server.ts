@@ -22,7 +22,7 @@ function queryOptions(url: URL, caps: string): PlayQuery {
 		query.quality = quality;
 	}
 	const subtitle = url.searchParams.get('subtitle');
-	if (subtitle !== null && (subtitle === '' || /^[ex]\d+$/.test(subtitle))) {
+	if (subtitle !== null && (subtitle === '' || /^[exu]\d+$/.test(subtitle))) {
 		query.subtitle = subtitle;
 	}
 	return query;

@@ -19,10 +19,12 @@ const subtitleConvertTimeout = 30 * time.Second
 var (
 	ErrSubtitleNotFound   = errors.New("playback: subtítulo no encontrado")
 	ErrSubtitleConversion = errors.New("playback: no se pudo convertir el subtítulo")
+	ErrSubtitleBinary     = errors.New("playback: el subtítulo no es texto")
+	ErrSubtitleEmpty      = errors.New("playback: el subtítulo está vacío")
 )
 
-// SubtitleTrack describe una pista de subtítulos incrustada o un archivo
-// externo junto al vídeo.
+// SubtitleTrack describe una pista de subtítulos incrustada, un archivo
+// externo junto al vídeo o uno subido por un administrador.
 type SubtitleTrack struct {
 	ID          string
 	Source      string
@@ -127,6 +129,11 @@ func subtitleCodec(extension string) string {
 	}
 }
 
+// SubtitleCodec devuelve el códec de un subtítulo a partir de su extensión.
+func SubtitleCodec(extension string) string {
+	return subtitleCodec(strings.ToLower(extension))
+}
+
 func parseSubtitleSuffix(suffix string) (language string, forced bool, ok bool) {
 	if suffix == "" {
 		return "", false, true
@@ -160,9 +167,9 @@ func validLanguageCode(value string) bool {
 	return true
 }
 
-// ValidSubtitleID acepta los identificadores e<N> y x<N>.
+// ValidSubtitleID acepta los identificadores e<N>, x<N> y u<N>.
 func ValidSubtitleID(id string) bool {
-	if len(id) < 2 || (id[0] != 'e' && id[0] != 'x') {
+	if len(id) < 2 || (id[0] != 'e' && id[0] != 'x' && id[0] != 'u') {
 		return false
 	}
 	for _, char := range id[1:] {
@@ -180,7 +187,7 @@ func (s *Service) SubtitleWebVTT(ctx context.Context, itemID int64, videoPath st
 		return nil, ErrSubtitleNotFound
 	}
 	sourcePath := videoPath
-	if track.Source == "external" {
+	if track.Source == "external" || track.Source == "uploaded" {
 		sourcePath = track.Path
 	}
 	stat, err := os.Stat(sourcePath)
@@ -198,7 +205,8 @@ func (s *Service) SubtitleWebVTT(ctx context.Context, itemID int64, videoPath st
 		return data, nil
 	}
 
-	if track.Source == "external" && strings.EqualFold(filepath.Ext(sourcePath), ".vtt") {
+	if (track.Source == "external" || track.Source == "uploaded") &&
+		strings.EqualFold(filepath.Ext(sourcePath), ".vtt") {
 		raw, err := os.ReadFile(sourcePath)
 		if err != nil {
 			return nil, ErrSubtitleNotFound
@@ -210,7 +218,7 @@ func (s *Service) SubtitleWebVTT(ctx context.Context, itemID int64, videoPath st
 		return data, nil
 	}
 
-	if track.Source != "embedded" && track.Source != "external" {
+	if track.Source != "embedded" && track.Source != "external" && track.Source != "uploaded" {
 		return nil, ErrSubtitleNotFound
 	}
 
@@ -285,6 +293,28 @@ func (s *Service) runSubtitleFFmpeg(ctx context.Context, args ...string) error {
 		return fmt.Errorf("%w: %v: %s", ErrSubtitleConversion, err, tailString(stderr.String(), 300))
 	}
 	return nil
+}
+
+// NormalizeSubtitleText valida que el contenido sea texto y lo devuelve en
+// UTF-8, convirtiendo Latin-1/Windows-1252 cuando haga falta. Los binarios se
+// rechazan por contener NUL o caracteres de control.
+func NormalizeSubtitleText(data []byte) ([]byte, error) {
+	if len(data) == 0 {
+		return nil, ErrSubtitleEmpty
+	}
+	if bytes.IndexByte(data, 0) >= 0 {
+		return nil, ErrSubtitleBinary
+	}
+	normalized := decodeSubtitleBytes(data)
+	for _, char := range string(normalized) {
+		if char == '\t' || char == '\n' || char == '\r' || char == '\f' {
+			continue
+		}
+		if char < 0x20 || char == 0x7f {
+			return nil, ErrSubtitleBinary
+		}
+	}
+	return normalized, nil
 }
 
 // decodeSubtitleBytes convierte Latin-1/Windows-1252 a UTF-8 si el archivo no

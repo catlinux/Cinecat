@@ -8,7 +8,6 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 
 ## 🟠 Próxima fase
 
-- **Subtítulos subidos por el usuario:** requiere diseño previo; hoy solo se leen incrustados de texto o archivos `.srt`/`.vtt`/`.ass` junto al vídeo.
 - **Reproducción avanzada:** perfiles por dispositivo, HDR/10 bits, desentrelazado, subtítulos de imagen y audio no soportado.
 - **Verificar el flujo «Servidor y web» de GitHub Actions** (`.github/workflows/server-web.yml`, ejecuta los tests de Go con FFmpeg y los de la web): comprobar su primera ejecución en verde.
 - **App Android y Android TV** (plan en `.agents/plans/apps-android/apps-android.PLAN.md`): HLS con AAC 5.1 cuando el equipo lo admita (hoy el AC-3 se convierte a AAC estéreo).

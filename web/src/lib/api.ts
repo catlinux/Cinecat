@@ -737,9 +737,16 @@ export interface PlaybackQuality {
 	label: string;
 }
 
+export interface UploadedSubtitle {
+	id: string;
+	language: string;
+	label: string;
+	codec: string;
+}
+
 export interface PlaybackSubtitle {
 	id: string;
-	source: 'embedded' | 'external';
+	source: 'embedded' | 'external' | 'uploaded';
 	language: string;
 	language_name: string;
 	title: string;
@@ -1003,6 +1010,7 @@ export interface ApiClientOptions {
 interface RequestOptions {
 	method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 	body?: unknown;
+	multipart?: FormData;
 	token?: string;
 	empty?: boolean;
 	headers?: Record<string, string>;
@@ -1641,6 +1649,35 @@ export class ApiClient {
 		return this.get<FileInfo>(`/api/v1/items/${id}/file-info${suffix}`, token);
 	}
 
+	async uploadItemSubtitle(
+		id: number,
+		file: File,
+		language: string,
+		label: string,
+		token: string
+	): Promise<UploadedSubtitle> {
+		const form = new FormData();
+		form.append('file', file, file.name || 'subtitle.srt');
+		if (language) {
+			form.append('language', language);
+		}
+		if (label) {
+			form.append('label', label);
+		}
+		return this.request<UploadedSubtitle>(`/api/v1/items/${id}/subtitles`, {
+			method: 'POST',
+			multipart: form,
+			token
+		});
+	}
+
+	async deleteItemSubtitle(id: number, subtitleId: string, token: string): Promise<void> {
+		await this.delete(
+			`/api/v1/items/${id}/subtitles/${encodeURIComponent(subtitleId)}`,
+			token
+		);
+	}
+
 	async getImageOptions(id: number, token: string): Promise<ImageOptions> {
 		return this.get<ImageOptions>(`/api/v1/items/${id}/images`, token);
 	}
@@ -1782,7 +1819,7 @@ export class ApiClient {
 			Accept: 'application/json',
 			...(options.headers ?? {})
 		};
-		if (options.body !== undefined) {
+		if (options.body !== undefined && !options.multipart) {
 			headers['Content-Type'] = 'application/json';
 		}
 		if (options.token) {
@@ -1794,7 +1831,9 @@ export class ApiClient {
 			response = await this.fetchImpl(this.url(path), {
 				method: options.method ?? 'GET',
 				headers,
-				body: options.body === undefined ? undefined : JSON.stringify(options.body)
+				body:
+					options.multipart ??
+					(options.body === undefined ? undefined : JSON.stringify(options.body))
 			});
 		} catch {
 			throw new ApiError('No se pudo conectar con el servidor de Cinecat.', 0);

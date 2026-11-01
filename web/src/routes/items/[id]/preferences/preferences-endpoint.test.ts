@@ -32,7 +32,7 @@ describe('endpoint web de preferencias', () => {
 		const response = await POST(
 			endpointEvent(
 				fetchMock,
-				JSON.stringify({ audio_index: 1, subtitle_id: 'e0', quality: '720' })
+				JSON.stringify({ audio_index: 1, subtitle_id: 'u1', quality: '720' })
 			) as never
 		);
 
@@ -41,7 +41,7 @@ describe('endpoint web de preferencias', () => {
 		expect(url).toBe('http://api.test/api/v1/items/7/preferences');
 		expect(init.method).toBe('PUT');
 		expect(init.headers.Authorization).toBe('Bearer token-123');
-		expect(JSON.parse(init.body)).toEqual({ audio_index: 1, subtitle_id: 'e0', quality: '720' });
+		expect(JSON.parse(init.body)).toEqual({ audio_index: 1, subtitle_id: 'u1', quality: '720' });
 	});
 
 	it('acepta el cuerpo text/plain de sendBeacon', async () => {
