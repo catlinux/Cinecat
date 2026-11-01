@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.55.0] - 2026-11-01
+
+### Añadido
+
+- Servidor: al recodificar el vídeo por HLS se desentrelaza (`yadif`, solo los fotogramas marcados) el vídeo entrelazado y se convierte a SDR (mapeo de tonos con `zscale` y `tonemap`) el vídeo HDR, si FFmpeg tiene esos filtros; si no, se recodifica como antes y se avisa una vez en el registro. La copia de vídeo y las decisiones de modo no cambian. Los argumentos de FFmpeg están cubiertos por tests, pero este cambio aún no se ha ejecutado con archivos entrelazados o HDR reales.
+
 ## [0.54.0] - 2026-11-01
 
 ### Añadido

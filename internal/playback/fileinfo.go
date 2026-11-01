@@ -44,6 +44,8 @@ type VideoStream struct {
 	BitDepth           int     `json:"bit_depth"`
 	HDR                string  `json:"hdr"`
 	FieldOrder         string  `json:"field_order"`
+	ColorTransfer      string  `json:"color_transfer"`
+	ColorPrimaries     string  `json:"color_primaries"`
 	Language           string  `json:"language"`
 	Title              string  `json:"title"`
 	Default            bool    `json:"default"`
@@ -146,6 +148,7 @@ type ffprobeStream struct {
 	Channels           ffInt             `json:"channels"`
 	ChannelLayout      string            `json:"channel_layout"`
 	ColorTransfer      string            `json:"color_transfer"`
+	ColorPrimaries     string            `json:"color_primaries"`
 	FieldOrder         string            `json:"field_order"`
 	Tags               map[string]string `json:"tags"`
 	Disposition        struct {
@@ -247,6 +250,8 @@ func parseFFprobeJSON(data []byte) (*FileInfo, error) {
 				BitDepth:           bitDepth(stream),
 				HDR:                hdrLabel(stream),
 				FieldOrder:         cleanFFString(stream.FieldOrder),
+				ColorTransfer:      cleanFFString(stream.ColorTransfer),
+				ColorPrimaries:     cleanFFString(stream.ColorPrimaries),
 				Language:           tagValue(stream.Tags, "language"),
 				Title:              tagValue(stream.Tags, "title"),
 				Default:            stream.Disposition.Default != 0,

@@ -44,6 +44,7 @@ func TestParseFFprobeJSONMKV(t *testing.T) {
 	      "r_frame_rate": "24000/1001",
 	      "bit_rate": "5000000",
 	      "color_transfer": "bt709",
+	      "color_primaries": "bt709",
 	      "tags": {"language": "eng", "title": "Principal"},
 	      "disposition": {"default": 1, "forced": 0}
 	    },
@@ -116,6 +117,7 @@ func TestParseFFprobeJSONMKV(t *testing.T) {
 		video.Height != 1080 || video.DisplayAspectRatio != "16:9" ||
 		video.BitRate != 5000000 || video.PixelFormat != "yuv420p" ||
 		video.CodecTag != "avc1" || video.BitDepth != 8 || video.HDR != "" || video.FieldOrder != "progressive" ||
+		video.ColorTransfer != "bt709" || video.ColorPrimaries != "bt709" ||
 		video.Language != "eng" ||
 		video.Title != "Principal" || !video.Default {
 		t.Fatalf("vídeo inesperado: %+v", video)
@@ -211,7 +213,8 @@ func TestParseFFprobeJSONHDR(t *testing.T) {
 	      "height": 2160,
 	      "pix_fmt": "yuv420p10le",
 	      "avg_frame_rate": "24000/1001",
-	      "color_transfer": "smpte2084"
+	      "color_transfer": "smpte2084",
+	      "color_primaries": "bt2020"
 	    }
 	  ],
 	  "format": {
@@ -224,7 +227,8 @@ func TestParseFFprobeJSONHDR(t *testing.T) {
 	}`)
 
 	video := info.Video[0]
-	if video.BitDepth != 10 || video.HDR != "HDR10" || info.Quality != "4K" {
+	if video.BitDepth != 10 || video.HDR != "HDR10" || info.Quality != "4K" ||
+		video.ColorTransfer != "smpte2084" || video.ColorPrimaries != "bt2020" {
 		t.Fatalf("vídeo HDR inesperado: %+v (calidad %q)", video, info.Quality)
 	}
 	if len(info.Audio) != 0 || info.Audio == nil {
@@ -232,6 +236,27 @@ func TestParseFFprobeJSONHDR(t *testing.T) {
 	}
 	if len(info.Subtitles) != 0 || info.Subtitles == nil {
 		t.Fatalf("subtítulos vacíos deben ser []: %#v", info.Subtitles)
+	}
+}
+
+func TestParseFFprobeJSONEntrelazado(t *testing.T) {
+	info := mustParseFileInfo(t, `{
+	  "streams": [{
+	    "index": 0,
+	    "codec_name": "mpeg2video",
+	    "codec_type": "video",
+	    "width": 720,
+	    "height": 576,
+	    "field_order": "tt",
+	    "color_transfer": "bt709",
+	    "color_primaries": "bt709"
+	  }],
+	  "format": {"filename": "entrelazado.ts", "format_name": "mpegts"}
+	}`)
+	video := info.Video[0]
+	if video.FieldOrder != "tt" || video.ColorTransfer != "bt709" ||
+		video.ColorPrimaries != "bt709" {
+		t.Fatalf("vídeo entrelazado inesperado: %+v", video)
 	}
 }
 
@@ -265,7 +290,8 @@ func TestParseFFprobeJSONDolbyVisionYHLG(t *testing.T) {
 	  }],
 	  "format": {"filename": "hlg.mkv", "format_name": "matroska"}
 	}`)
-	if hlg.Video[0].HDR != "HLG" || hlg.Quality != "HD" {
+	if hlg.Video[0].HDR != "HLG" || hlg.Video[0].ColorTransfer != "arib-std-b67" ||
+		hlg.Quality != "HD" {
 		t.Fatalf("HLG inesperado: %+v (calidad %q)", hlg.Video[0], hlg.Quality)
 	}
 }

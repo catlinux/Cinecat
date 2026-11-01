@@ -50,6 +50,8 @@ Both modes share MPEG-TS segments, seeking and process limits; the VOD playlist 
 
 Copying is only offered when the video does not need scaling. Choosing a quality below the original resolution forces a re-encode; `original` keeps the original height as long as it does not exceed `playback.max_height`.
 
+When re-encoding, if `ffprobe` reports the video as interlaced (`field_order` `tt`, `bb`, `tb` or `bt`), `yadif` is prepended to the filter chain. If `color_transfer` is `smpte2084` (HDR10) or `arib-std-b67` (HLG), tone mapping to SDR with `zscale` and `tonemap` is applied before scaling, provided FFmpeg includes both filters; if they are missing, a warning is logged once and the video is re-encoded without the mapping. Video copying never applies filters.
+
 The rest of the flow is shared:
 
 - With its own VOD playlist, FFmpeg does not start when the playlist is requested: it starts on the first segment request, at the requested point. If there is no duration (only possible when re-encoding), it starts while preparing the `event` playlist.
@@ -76,7 +78,7 @@ The first time it is needed, the server checks VA-API with a one-second syntheti
 There are two routes:
 
 - **CPU+GPU:** the CPU decodes and scales; the GPU encodes with `h264_vaapi`. This is the general route, including DivX/Xvid, 10-bit H.264, interlaced video, 10-bit H.265 or when the height must be reduced.
-- **Full GPU:** the GPU decodes and encodes, with no scaling filter. It is only used for 8-bit H.264 (`yuv420p`/`yuvj420p`, not High 10/4:2:2/4:4:4) or 8-bit H.265 Main, progressive or with unknown field order, and when the source height does not exceed the output height.
+- **Full GPU:** the GPU decodes and encodes, with no scaling filter. It is only used for 8-bit H.264 (`yuv420p`/`yuvj420p`, not High 10/4:2:2/4:4:4) or 8-bit H.265 Main, progressive or with unknown field order, with no pending HDR-to-SDR conversion, and when the source height does not exceed the output height.
 
 The GPU's scaling unit is not used: `scale_vaapi` and `scale_qsv` are unavailable on this GPU and are never invoked. Encoding uses `qp = CRF + 2`, `-g 250` and the same forced cuts every 6 s; audio and the rest of the HLS flow are unchanged.
 
@@ -154,8 +156,7 @@ Re-encoding uses VA-API when available and libx264 when not. Copying uses almost
 ## What advanced playback still needs
 
 - Per-device profiles and automatic quality selection.
-- HDR with tone mapping and 10-bit handling beyond the H.265 that the browser already supports through MSE.
-- Deinterlacing.
+- 10-bit handling beyond the H.265 that the browser already supports through MSE.
 - Image subtitles and unsupported, multichannel or passthrough audio.
 - ABR and a master playlist with several qualities.
 - An explicit `transcode` API mode separate from `remux`.

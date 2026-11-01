@@ -148,6 +148,9 @@ type Options struct {
 	MonitorInterval time.Duration
 	// Command sustituye la creación del proceso FFmpeg en las pruebas.
 	Command func(ctx context.Context, name string, args ...string) *exec.Cmd
+	// HDRFilterProbe comprueba si FFmpeg incluye zscale y tonemap. Si es nil
+	// se ejecuta `ffmpeg -filters`; existe para sustituirlo en las pruebas.
+	HDRFilterProbe func(ctx context.Context) (bool, error)
 	// command es el alias que usan algunas pruebas internas.
 	command func(ctx context.Context, name string, args ...string) *exec.Cmd
 }
@@ -189,9 +192,14 @@ type Service struct {
 	hardwareAvailable bool
 	hardwareMu        sync.Mutex
 	hardwareDisabled  map[string]bool
-	stop              chan struct{}
-	done              chan struct{}
-	closeOnce         sync.Once
+	// hdrFiltersOnce comprueba una sola vez si FFmpeg puede convertir HDR a
+	// SDR con zscale y tonemap.
+	hdrFiltersOnce sync.Once
+	hdrFiltersOK   bool
+	hdrFilterProbe func(ctx context.Context) (bool, error)
+	stop           chan struct{}
+	done           chan struct{}
+	closeOnce      sync.Once
 }
 
 type hlsEntryKey struct {
@@ -218,6 +226,10 @@ type hlsEntry struct {
 	lastRequest  time.Time
 	playlistFile string
 	transcode    TranscodeSettings
+	// video es la primera pista de vídeo de ffprobe; decide el desentrelazado
+	// y la conversión HDR a SDR de la recodificación.
+	video      *VideoStream
+	hdrFilters bool
 	// mode indica si el vídeo se copia o se recodifica y forma parte de la
 	// clave y del directorio.
 	mode hlsMode
@@ -340,6 +352,10 @@ func New(opts Options) (*Service, error) {
 	if command == nil {
 		command = opts.command
 	}
+	hdrFilterProbe := opts.HDRFilterProbe
+	if hdrFilterProbe == nil {
+		hdrFilterProbe = probeHDRFilters
+	}
 
 	procCtx, procCancel := context.WithCancel(context.Background())
 	keyframes := NewKeyframeIndexWithContext(procCtx, opts.KeyframeCacheDir)
@@ -358,6 +374,7 @@ func New(opts Options) (*Service, error) {
 		maxAheadSegments:  maxAheadSegments,
 		monitorInterval:   monitorInterval,
 		command:           command,
+		hdrFilterProbe:    hdrFilterProbe,
 		procCtx:           procCtx,
 		procCancel:        procCancel,
 		entries:           make(map[hlsEntryKey]*hlsEntry),

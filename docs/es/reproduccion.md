@@ -50,6 +50,8 @@ Los dos modos comparten los segmentos MPEG-TS, los saltos y los límites de proc
 
 La copia solo se ofrece si el vídeo no hay que escalarlo. Elegir una calidad inferior a la resolución original obliga a recodificar; `original` conserva la altura original siempre que no supere `playback.max_height`.
 
+Al recodificar, si `ffprobe` marca el vídeo como entrelazado (`field_order` `tt`, `bb`, `tb` o `bt`) se antepone `yadif` a la cadena de filtros. Si `color_transfer` es `smpte2084` (HDR10) o `arib-std-b67` (HLG) se aplica un mapeo de tonos a SDR con `zscale` y `tonemap` antes del escalado, siempre que FFmpeg incluya ambos filtros; si faltan, se registra un aviso una sola vez y se recodifica sin el mapeo. La copia de vídeo nunca aplica filtros.
+
 El resto del flujo es común:
 
 - Con playlist VOD propia, FFmpeg no arranca al pedir la playlist: arranca con la primera petición de segmento, en el punto pedido. Si no hay duración (solo puede pasar al recodificar), arranca al preparar la playlist `event`.
@@ -76,7 +78,7 @@ La primera vez que hace falta, el servidor comprueba VA-API con un vídeo sinté
 Hay dos rutas:
 
 - **CPU+GPU:** la CPU decodifica y escala; la gráfica codifica con `h264_vaapi`. Es la ruta general, también para DivX/Xvid, H.264 de 10 bits, entrelazados, H.265 de 10 bits o cuando hay que reducir la altura.
-- **GPU completa:** la gráfica decodifica y codifica, sin filtro de escala. Solo se usa con H.264 de 8 bits (`yuv420p`/`yuvj420p`, perfiles no High 10/4:2:2/4:4:4) o H.265 Main de 8 bits, progresivo o con orden de campo desconocido, y cuando la altura de origen no supera la de salida.
+- **GPU completa:** la gráfica decodifica y codifica, sin filtro de escala. Solo se usa con H.264 de 8 bits (`yuv420p`/`yuvj420p`, perfiles no High 10/4:2:2/4:4:4) o H.265 Main de 8 bits, progresivo o con orden de campo desconocido, sin conversión HDR a SDR pendiente, y cuando la altura de origen no supera la de salida.
 
 No se usa la unidad de escalado de la gráfica: `scale_vaapi` y `scale_qsv` no están disponibles en esta gráfica y nunca se invocan. La codificación usa `qp = CRF + 2`, `-g 250` y los mismos cortes forzados cada 6 s; el audio y el resto del flujo HLS no cambian.
 
@@ -154,8 +156,7 @@ La recodificación usa VA-API cuando está disponible y libx264 cuando no. La co
 ## Qué falta para la reproducción avanzada
 
 - Perfiles por dispositivo y elección automática entre calidades.
-- HDR con tone mapping y tratamiento de 10 bits más allá del H.265 que el navegador ya admita por MSE.
-- Desentrelazado.
+- Tratamiento de 10 bits más allá del H.265 que el navegador ya admita por MSE.
 - Subtítulos de imagen y audio no soportado o multicanal/passthrough.
 - ABR y playlist maestra con varias calidades.
 - Un modo de API `transcode` explícito, separado de `remux`.

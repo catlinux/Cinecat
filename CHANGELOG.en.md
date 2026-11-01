@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.55.0] - 2026-11-01
+
+### Added
+
+- Server: when video is re-encoded for HLS, interlaced video is deinterlaced (`yadif`, only the frames flagged as interlaced) and HDR video is converted to SDR (tone mapping with `zscale` and `tonemap`), if FFmpeg has those filters; otherwise it is re-encoded as before and a one-time warning is logged. Video copy and the mode decisions do not change. The FFmpeg arguments are covered by tests, but this change has not yet been run on real interlaced or HDR files.
+
 ## [0.54.0] - 2026-11-01
 
 ### Added

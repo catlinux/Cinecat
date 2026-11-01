@@ -75,6 +75,101 @@ var (
 	ErrHLSSegmentTimeout = errors.New("playback: el segmento HLS no apareció a tiempo")
 )
 
+const (
+	deinterlaceVideoFilter = `yadif=mode=0:parity=-1:deint=1`
+	hdrToSDRVideoFilter    = `zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p`
+	hdrFilterProbeTimeout  = 10 * time.Second
+)
+
+// probeHDRFilters comprueba con `ffmpeg -filters` que estén zscale y tonemap.
+func probeHDRFilters(ctx context.Context) (bool, error) {
+	ffmpeg, err := exec.LookPath("ffmpeg")
+	if err != nil {
+		return false, err
+	}
+	ctx, cancel := context.WithTimeout(ctx, hdrFilterProbeTimeout)
+	defer cancel()
+	output, err := exec.CommandContext(ctx, ffmpeg, "-hide_banner", "-filters").Output()
+	if err != nil {
+		if ctx.Err() != nil {
+			return false, ctx.Err()
+		}
+		return false, err
+	}
+	return filterListHas(output, "zscale") && filterListHas(output, "tonemap"), nil
+}
+
+func filterListHas(output []byte, name string) bool {
+	for _, line := range strings.Split(string(output), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) >= 2 && fields[1] == name {
+			return true
+		}
+	}
+	return false
+}
+
+// hdrFiltersAvailable cachea la comprobación una sola vez por proceso. Si
+// faltan los filtros se avisa también una sola vez.
+func (s *Service) hdrFiltersAvailable(ctx context.Context) bool {
+	if s == nil {
+		return false
+	}
+	s.hdrFiltersOnce.Do(func() {
+		probe := s.hdrFilterProbe
+		if probe == nil {
+			probe = probeHDRFilters
+		}
+		ok, err := probe(ctx)
+		if err != nil {
+			log.Printf("playback: no se pudieron comprobar los filtros HDR de FFmpeg: %v; se recodifica sin mapeo a SDR", err)
+			return
+		}
+		if !ok {
+			log.Printf("playback: FFmpeg no tiene zscale y tonemap; se recodifica el HDR sin mapeo a SDR")
+			return
+		}
+		s.hdrFiltersOK = true
+	})
+	return s.hdrFiltersOK
+}
+
+func videoNeedsDeinterlace(video *VideoStream) bool {
+	if video == nil {
+		return false
+	}
+	switch strings.ToLower(strings.TrimSpace(video.FieldOrder)) {
+	case "tt", "bb", "tb", "bt":
+		return true
+	default:
+		return false
+	}
+}
+
+func videoIsHDR(video *VideoStream) bool {
+	if video == nil {
+		return false
+	}
+	switch strings.ToLower(strings.TrimSpace(video.ColorTransfer)) {
+	case "smpte2084", "arib-std-b67":
+		return true
+	default:
+		return false
+	}
+}
+
+func transcodeVideoFilter(settings TranscodeSettings, video *VideoStream, hdrFilters bool) string {
+	filters := make([]string, 0, 3)
+	if videoNeedsDeinterlace(video) {
+		filters = append(filters, deinterlaceVideoFilter)
+	}
+	if hdrFilters && videoIsHDR(video) {
+		filters = append(filters, hdrToSDRVideoFilter)
+	}
+	filters = append(filters, fmt.Sprintf(`scale=-2:trunc(min(%d\,ih)/2)*2`, settings.MaxHeight))
+	return strings.Join(filters, ",")
+}
+
 // hlsTranscodeArgs construye los argumentos de FFmpeg para generar HLS desde
 // el segmento startSegment. Cada argumento va en su propio elemento de la
 // lista: el nombre del archivo nunca se interpola en una cadena de comando.
@@ -91,6 +186,18 @@ func hlsTranscodeArgs(inputPath string, startSegment int, transcode ...Transcode
 	if len(transcode) > 0 {
 		settings = transcode[0]
 	}
+	return hlsTranscodeArgsWithVideo(inputPath, startSegment, settings, nil, false)
+}
+
+// hlsTranscodeArgsWithVideo añade, solo al recodificar, el desentrelazado y
+// el mapeo HDR a SDR antes del escalado final.
+func hlsTranscodeArgsWithVideo(
+	inputPath string,
+	startSegment int,
+	settings TranscodeSettings,
+	video *VideoStream,
+	hdrFilters bool,
+) []string {
 	settings = normalizeTranscodeSettings(settings)
 	startSeconds := startSegment * hlsSegmentSeconds
 	args := []string{
@@ -109,7 +216,8 @@ func hlsTranscodeArgs(inputPath string, startSegment int, transcode ...Transcode
 		"-map", fmt.Sprintf("0:a:%d?", settings.Audio),
 		// libx264 con yuv420p exige dimensiones pares; la altura se limita al
 		// máximo configurado y el ancho se calcula manteniendo la proporción.
-		"-vf", fmt.Sprintf(`scale=-2:trunc(min(%d\,ih)/2)*2`, settings.MaxHeight),
+		// Entrelazado y HDR se corrigen antes del escalado final.
+		"-vf", transcodeVideoFilter(settings, video, hdrFilters),
 		"-c:v", "libx264",
 		"-preset", settings.Preset,
 		"-crf", strconv.Itoa(settings.CRF),
@@ -138,6 +246,20 @@ func hlsTranscodeArgs(inputPath string, startSegment int, transcode ...Transcode
 // decodifica y se escala en la CPU y solo se codifica en la gráfica; en la
 // ruta completa la gráfica decodifica y codifica, sin filtro de escala.
 func hlsHardwareArgs(inputPath string, startSegment int, settings TranscodeSettings, fullGPU bool, device string) []string {
+	return hlsHardwareArgsWithVideo(inputPath, startSegment, settings, fullGPU, device, nil, false)
+}
+
+// hlsHardwareArgsWithVideo aplica los mismos filtros de CPU antes de subir el
+// fotograma a la gráfica en la ruta CPU+GPU. La ruta GPU completa no filtra.
+func hlsHardwareArgsWithVideo(
+	inputPath string,
+	startSegment int,
+	settings TranscodeSettings,
+	fullGPU bool,
+	device string,
+	video *VideoStream,
+	hdrFilters bool,
+) []string {
 	settings = normalizeTranscodeSettings(settings)
 	startSeconds := startSegment * hlsSegmentSeconds
 	args := []string{
@@ -165,7 +287,7 @@ func hlsHardwareArgs(inputPath string, startSegment int, settings TranscodeSetti
 	)
 	if !fullGPU {
 		args = append(args,
-			"-vf", fmt.Sprintf(`scale=-2:trunc(min(%d\,ih)/2)*2,format=nv12,hwupload`, settings.MaxHeight),
+			"-vf", transcodeVideoFilter(settings, video, hdrFilters)+",format=nv12,hwupload",
 		)
 	}
 	return append(args,
@@ -401,6 +523,16 @@ func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string, s
 		}
 	}
 
+	var video *VideoStream
+	if selection.Info != nil && len(selection.Info.Video) > 0 {
+		first := selection.Info.Video[0]
+		video = &first
+	}
+	hdrFilters := false
+	if mode != hlsModeCopy && videoIsHDR(video) {
+		hdrFilters = s.hdrFiltersAvailable(s.procCtx)
+	}
+
 	hardware := false
 	hardwareFull := false
 	hardwareDevice := ""
@@ -408,7 +540,20 @@ func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string, s
 		hardware = true
 		hardwareDevice = hardwareDevicePath()
 		hardwareFull = hardwareFullRoute(selection.Info, transcode.MaxHeight)
+		if hardwareFull && (videoNeedsDeinterlace(video) || (videoIsHDR(video) && hdrFilters)) {
+			// La ruta GPU completa no tiene filtros de CPU; para desentrelazar o
+			// convertir HDR se usa CPU+GPU, que sí puede aplicarlos.
+			hardwareFull = false
+		}
 		stream = baseStream + "-hw"
+	}
+	if mode != hlsModeCopy {
+		if videoNeedsDeinterlace(video) {
+			stream += "-di"
+		}
+		if videoIsHDR(video) && hdrFilters {
+			stream += "-hdr"
+		}
 	}
 
 	key := hlsEntryKey{itemID: itemID, transcode: stream}
@@ -436,6 +581,8 @@ func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string, s
 		lastRequest:      now,
 		playlistFile:     ffmpegPlaylistFile,
 		transcode:        transcode,
+		video:            video,
+		hdrFilters:       hdrFilters,
 		mode:             mode,
 		copyBounds:       copyBounds,
 		hardware:         hardware,
@@ -622,11 +769,16 @@ func (s *Service) startRunLocked(entry *hlsEntry, start int) error {
 	// El proceso vive ligado al contexto del servicio, no al de la petición
 	// HTTP que lo arranca, para que no se cancele al terminar esa petición.
 	procCtx, cancel := context.WithTimeout(s.procCtx, hlsProcessTimeout)
-	args := hlsTranscodeArgs(entry.inputPath, start, entry.transcode)
+	args := hlsTranscodeArgsWithVideo(
+		entry.inputPath, start, entry.transcode, entry.video, entry.hdrFilters,
+	)
 	if entry.mode == hlsModeCopy {
 		args = hlsCopyArgs(entry.inputPath, start, entry.copyBounds, entry.transcode)
 	} else if entry.hardware {
-		args = hlsHardwareArgs(entry.inputPath, start, entry.transcode, entry.hardwareFull, entry.hardwareDevice)
+		args = hlsHardwareArgsWithVideo(
+			entry.inputPath, start, entry.transcode, entry.hardwareFull,
+			entry.hardwareDevice, entry.video, entry.hdrFilters,
+		)
 	}
 	var cmd *exec.Cmd
 	if s.command != nil {

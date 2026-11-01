@@ -1,6 +1,7 @@
 package playback
 
 import (
+	"context"
 	"net/url"
 	"strconv"
 	"strings"
@@ -54,6 +55,112 @@ func TestHLSTranscodeArgsConAjustes(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func videoFilterArg(t *testing.T, args []string) string {
+	t.Helper()
+	for index := 0; index+1 < len(args); index++ {
+		if args[index] == "-vf" {
+			return args[index+1]
+		}
+	}
+	t.Fatalf("los argumentos no llevan -vf: %v", args)
+	return ""
+}
+
+func TestHLSTranscodeArgsDesentrelazadoYHDR(t *testing.T) {
+	settings := TranscodeSettings{MaxHeight: 720, CRF: 20, Preset: "veryfast", Threads: 4}
+	scale := `scale=-2:trunc(min(720\,ih)/2)*2`
+	interlaced := &VideoStream{FieldOrder: "tt"}
+	hdr := &VideoStream{ColorTransfer: "smpte2084"}
+	both := &VideoStream{FieldOrder: "bb", ColorTransfer: "arib-std-b67"}
+
+	tests := []struct {
+		name       string
+		video      *VideoStream
+		hdrFilters bool
+		want       string
+	}{
+		{name: "progresivo SDR", video: &VideoStream{FieldOrder: "progressive"}, want: scale},
+		{name: "entrelazado", video: interlaced, want: deinterlaceVideoFilter + "," + scale},
+		{name: "HDR con filtros", video: hdr, hdrFilters: true, want: hdrToSDRVideoFilter + "," + scale},
+		{name: "HDR sin filtros", video: hdr, want: scale},
+		{name: "entrelazado HDR con filtros", video: both, hdrFilters: true,
+			want: deinterlaceVideoFilter + "," + hdrToSDRVideoFilter + "," + scale},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			args := hlsTranscodeArgsWithVideo("/tmp/peli.mkv", 0, settings, test.video, test.hdrFilters)
+			if got := videoFilterArg(t, args); got != test.want {
+				t.Fatalf("filtro = %q, se esperaba %q", got, test.want)
+			}
+		})
+	}
+
+	// Sin ficha de vídeo, la salida debe ser exactamente la de siempre.
+	if got, want := hlsTranscodeArgsWithVideo("/tmp/peli.mkv", 0, settings, nil, false),
+		hlsTranscodeArgs("/tmp/peli.mkv", 0, settings); strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Fatalf("los argumentos SDR cambiaron:\n%q\n%q", got, want)
+	}
+}
+
+func TestHardwareCPUFiltraAntesDeSubirALaGPU(t *testing.T) {
+	settings := TranscodeSettings{MaxHeight: 720, CRF: 20, Preset: "veryfast", Threads: 4}
+	args := hlsHardwareArgsWithVideo("/tmp/peli.mkv", 0, settings, false, "/dev/dri/renderD128",
+		&VideoStream{FieldOrder: "tt"}, false)
+	want := deinterlaceVideoFilter + `,scale=-2:trunc(min(720\,ih)/2)*2,format=nv12,hwupload`
+	if got := videoFilterArg(t, args); got != want {
+		t.Fatalf("filtro hardware = %q, se esperaba %q", got, want)
+	}
+}
+
+func TestHLSCopyArgsNoLlevaFiltros(t *testing.T) {
+	args := hlsCopyArgs("/tmp/peli.mkv", 0, []float64{0, 6, 12}, defaultTranscodeSettings())
+	for _, arg := range args {
+		if arg == "-vf" {
+			t.Fatalf("la copia no debe llevar filtros: %v", args)
+		}
+	}
+}
+
+func TestFilterListHasZscaleYTonemap(t *testing.T) {
+	list := []byte(`Filters:
+ ... zscale            V->V       Apply zscale filter.
+ ... tonemap           V->V       Apply tonemap filter.
+`)
+	if !filterListHas(list, "zscale") || !filterListHas(list, "tonemap") {
+		t.Fatal("no se detectaron los filtros HDR")
+	}
+	if filterListHas(list, "yadif") {
+		t.Fatal("se detectó un filtro que no está en la lista")
+	}
+}
+
+func TestHDRFiltersSeCompruebanUnaSolaVez(t *testing.T) {
+	for _, available := range []bool{true, false} {
+		calls := 0
+		svc, err := New(Options{
+			WorkDir: t.TempDir(),
+			HDRFilterProbe: func(context.Context) (bool, error) {
+				calls++
+				return available, nil
+			},
+		})
+		if err != nil {
+			t.Fatalf("New: %v", err)
+		}
+		for i := 0; i < 3; i++ {
+			if got := svc.hdrFiltersAvailable(context.Background()); got != available {
+				t.Fatalf("disponibles = %v, se esperaba %v", got, available)
+			}
+		}
+		if calls != 1 {
+			t.Fatalf("comprobaciones = %d, se esperaba 1", calls)
+		}
+		if err := svc.Close(); err != nil {
+			t.Errorf("Close: %v", err)
+		}
 	}
 }
 
