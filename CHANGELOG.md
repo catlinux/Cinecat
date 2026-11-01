@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.49.1] - 2026-11-01
+
+### Corregido
+
+- Android y TV: en el menú de pistas del reproductor, las pistas sin título se nombran por su idioma y, si no lo tienen, «Audio 1», «Audio 2», «Subtítulo 1»…, en lugar de «Pistas» para todas.
+
 ## [0.49.0] - 2026-11-01
 
 ### Añadido

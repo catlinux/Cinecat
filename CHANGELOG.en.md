@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.49.1] - 2026-11-01
+
+### Fixed
+
+- Android and TV: in the player track menu, untitled tracks are named by language and, without one, "Audio 1", "Audio 2", "Subtitle 1"…, instead of "Pistas" for all of them.
+
 ## [0.49.0] - 2026-11-01
 
 ### Added
