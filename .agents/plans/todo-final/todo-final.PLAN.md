@@ -12,7 +12,7 @@ Decisiones de diseño tomadas (no reabrir sin motivo):
 
 ## Pasos
 
-1. [ ] **TMDB: refresco periódico** de metadatos guardados (< 6 meses). Servidor. 0.50.0.
+1. [x] **TMDB: refresco periódico** de metadatos guardados (< 6 meses). Servidor. 0.50.0.
 2. [ ] **Login: persistencia y aviso al administrador.** Servidor + web (Resumen). 0.51.0.
 3. [ ] **Historial del usuario** (`GET/DELETE /api/v1/history`) + página web. 0.52.0.
 4. [ ] **Filas del portal personalizables** por usuario. Servidor + web. 0.53.0.

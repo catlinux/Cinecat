@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.50.0] - 2026-11-01
+
+### Añadido
+
+- Servidor: las fichas descargadas de TMDB se vuelven a descargar en el mantenimiento diario cuando superan los 90 días (hasta 40 películas y 20 series por día, con pausa entre peticiones), de modo que ninguna supera los 6 meses que permiten los términos de TMDB. No se tocan las fichas corregidas a mano. Migración 0023: nueva columna `metadata_refreshed_at`, que para las fichas existentes empieza a contar desde la migración.
+
 ## [0.49.1] - 2026-11-01
 
 ### Corregido

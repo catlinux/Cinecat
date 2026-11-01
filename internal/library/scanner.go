@@ -642,7 +642,9 @@ func ApplyMovieDetails(ctx context.Context, db *sql.DB, itemID int64, d *metadat
 			backdrop_url = CASE WHEN backdrop_locked = 1 AND tmdb_id = ? THEN backdrop_url ELSE ? END,
 			poster_locked = CASE WHEN tmdb_id = ? THEN poster_locked ELSE 0 END,
 			backdrop_locked = CASE WHEN tmdb_id = ? THEN backdrop_locked ELSE 0 END,
-			metadata_source = 'tmdb', match_status = ?, match_score = ?
+			metadata_source = 'tmdb',
+			metadata_refreshed_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+			match_status = ?, match_score = ?
 		WHERE id = ?`,
 		nullableInt(d.TMDBID), nullableText(d.OriginalTitle), nullableText(d.IMDbID), nullableText(d.Tagline),
 		nullableText(d.Overview), nullableText(d.OverviewLanguage), nullableInt(d.Year), nullableText(d.Title),

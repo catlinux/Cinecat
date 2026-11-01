@@ -40,6 +40,7 @@ func TestMigracionSesionesConservaLasExistentes(t *testing.T) {
 		"0010_series", "0011_settings", "0012_credits", "0013_refill_tmdb_metadata",
 		"0014_item_preferences", "0015_library_paths", "0016_music",
 		"0017_user_lists", "0018_trash", "0019_people_trailers", "0020_user_access",
+		"0023_metadata_refreshed_at",
 	} {
 		if _, err := st.DB().ExecContext(ctx,
 			`INSERT INTO schema_migrations (version) VALUES (?)`, version); err != nil {

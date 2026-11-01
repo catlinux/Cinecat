@@ -893,7 +893,7 @@ func (a *API) purgeExpiredTrash(ctx context.Context, actor string) (int, error) 
 }
 
 // StartTrashPurger ejecuta el mantenimiento diario al arrancar y después cada
-// 24 horas: purga la papelera caducada y las miniaturas huérfanas.
+// 24 horas: papelera caducada, miniaturas huérfanas y metadatos TMDB antiguos.
 func (a *API) StartTrashPurger(ctx context.Context) {
 	runMaintenance := func() {
 		if _, err := a.purgeExpiredTrash(ctx, "sistema"); err != nil && ctx.Err() == nil {
@@ -901,6 +901,9 @@ func (a *API) StartTrashPurger(ctx context.Context) {
 		}
 		if _, err := a.purgeOrphanThumbnails(ctx, time.Now()); err != nil && ctx.Err() == nil {
 			log.Printf("library: miniaturas: purga: %v", err)
+		}
+		if _, err := a.refreshStaleTMDBMetadata(ctx); err != nil && ctx.Err() == nil {
+			log.Printf("library: metadatos TMDB: refresco: %v", err)
 		}
 	}
 

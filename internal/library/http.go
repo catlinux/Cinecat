@@ -29,19 +29,20 @@ const (
 
 // API expone por HTTP las bibliotecas y los ítems de la base de datos.
 type API struct {
-	db            *sql.DB
-	auth          *auth.Service
-	playback      *playback.Service
-	scanJob       *ScanJob
-	tmdb          TMDBClient
-	fileInspector FileInspector
-	fileInfoCache *fileInfoCache
-	settingsStore *settings.Store
-	mediaRoots    []string
-	thumbnails    *Thumbnailer
-	musicCovers   *MusicCoverer
-	tmdbImages    *TMDBImageCache
-	now           func() time.Time
+	db                   *sql.DB
+	auth                 *auth.Service
+	playback             *playback.Service
+	scanJob              *ScanJob
+	tmdb                 TMDBClient
+	metadataRefreshDelay time.Duration
+	fileInspector        FileInspector
+	fileInfoCache        *fileInfoCache
+	settingsStore        *settings.Store
+	mediaRoots           []string
+	thumbnails           *Thumbnailer
+	musicCovers          *MusicCoverer
+	tmdbImages           *TMDBImageCache
+	now                  func() time.Time
 }
 
 // NewAPI crea los handlers de la API de biblioteca.
@@ -51,15 +52,16 @@ func NewAPI(db *sql.DB, authSvc *auth.Service, playSvc *playback.Service, scanJo
 		inspector = playSvc
 	}
 	return &API{
-		db:            db,
-		auth:          authSvc,
-		playback:      playSvc,
-		scanJob:       scanJob,
-		tmdb:          tmdb,
-		fileInspector: inspector,
-		fileInfoCache: newFileInfoCache(),
-		mediaRoots:    defaultMediaRoots(),
-		now:           time.Now,
+		db:                   db,
+		auth:                 authSvc,
+		playback:             playSvc,
+		scanJob:              scanJob,
+		tmdb:                 tmdb,
+		metadataRefreshDelay: 300 * time.Millisecond,
+		fileInspector:        inspector,
+		fileInfoCache:        newFileInfoCache(),
+		mediaRoots:           defaultMediaRoots(),
+		now:                  time.Now,
 	}
 }
 

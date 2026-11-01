@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.50.0] - 2026-11-01
+
+### Added
+
+- Server: details downloaded from TMDB are fetched again in the daily maintenance once they are older than 90 days (up to 40 movies and 20 series per day, with a pause between requests), so none exceeds the 6 months TMDB's terms allow. Manually corrected entries are left alone. Migration 0023: new `metadata_refreshed_at` column, which for existing entries starts counting from the migration.
+
 ## [0.49.1] - 2026-11-01
 
 ### Fixed

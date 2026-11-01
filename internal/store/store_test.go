@@ -119,6 +119,60 @@ func TestMigracionLibraryPathsConDatosPrevios(t *testing.T) {
 	}
 }
 
+func TestMigracionMetadataRefreshedAt(t *testing.T) {
+	ctx := context.Background()
+	s, err := Open(ctx, filepath.Join(t.TempDir(), "cinecat.db"))
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := s.Close(); err != nil {
+			t.Errorf("Close: %v", err)
+		}
+	})
+	if _, err := s.DB().ExecContext(ctx, `
+		CREATE TABLE media_items (id INTEGER PRIMARY KEY, metadata_source TEXT);
+		CREATE TABLE series (id INTEGER PRIMARY KEY, metadata_source TEXT);
+		INSERT INTO media_items (metadata_source) VALUES ('tmdb'), ('omdb'), (NULL);
+		INSERT INTO series (metadata_source) VALUES ('tmdb'), (NULL);`); err != nil {
+		t.Fatalf("crear esquema mínimo: %v", err)
+	}
+	script, err := migrations.ReadFile("migrations/0023_metadata_refreshed_at.sql")
+	if err != nil {
+		t.Fatalf("leer migración 0023: %v", err)
+	}
+	if _, err := s.DB().ExecContext(ctx, string(script)); err != nil {
+		t.Fatalf("aplicar migración 0023: %v", err)
+	}
+
+	for _, table := range []string{"media_items", "series"} {
+		if !columns(t, ctx, s, table)["metadata_refreshed_at"] {
+			t.Errorf("%s: falta metadata_refreshed_at", table)
+		}
+	}
+	var tmdbMovie, omdbMovie, nullMovie, tmdbSeries, nullSeries sql.NullString
+	if err := s.DB().QueryRowContext(ctx,
+		`SELECT
+		   (SELECT metadata_refreshed_at FROM media_items WHERE metadata_source = 'tmdb'),
+		   (SELECT metadata_refreshed_at FROM media_items WHERE metadata_source = 'omdb'),
+		   (SELECT metadata_refreshed_at FROM media_items WHERE metadata_source IS NULL),
+		   (SELECT metadata_refreshed_at FROM series WHERE metadata_source = 'tmdb'),
+		   (SELECT metadata_refreshed_at FROM series WHERE metadata_source IS NULL)`).
+		Scan(&tmdbMovie, &omdbMovie, &nullMovie, &tmdbSeries, &nullSeries); err != nil {
+		t.Fatalf("leer fechas migradas: %v", err)
+	}
+	if !tmdbMovie.Valid || strings.TrimSpace(tmdbMovie.String) == "" {
+		t.Errorf("la película de TMDB debería tener fecha: %+v", tmdbMovie)
+	}
+	if !tmdbSeries.Valid || strings.TrimSpace(tmdbSeries.String) == "" {
+		t.Errorf("la serie de TMDB debería tener fecha: %+v", tmdbSeries)
+	}
+	if omdbMovie.Valid || nullMovie.Valid || nullSeries.Valid {
+		t.Errorf("solo las filas de TMDB deben recibir fecha: %+v %+v %+v",
+			omdbMovie, nullMovie, nullSeries)
+	}
+}
+
 func TestMigrateEnMemoria(t *testing.T) {
 	s, ctx := openTestStore(t, ":memory:")
 

@@ -12,7 +12,6 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 - **Subtítulos subidos por el usuario:** requiere diseño previo; hoy solo se leen incrustados de texto o archivos `.srt`/`.vtt`/`.ass` junto al vídeo.
 - **Reproducción avanzada:** perfiles por dispositivo, HDR/10 bits, desentrelazado, subtítulos de imagen y audio no soportado.
 - **Verificar el flujo «Servidor y web» de GitHub Actions** (`.github/workflows/server-web.yml`, ejecuta los tests de Go con FFmpeg y los de la web): comprobar su primera ejecución en verde.
-- **TMDB, plazo de conservación:** los términos oficiales (§1.C) prohíben conservar datos de TMDB más de 6 meses; la caché en disco (7 días) cumple. Comprobar que los metadatos ya guardados en la base de datos se vuelven a descargar dentro de ese plazo (hoy no consta que ocurra de forma periódica).
 - **App Android y Android TV** (plan en `.agents/plans/apps-android/apps-android.PLAN.md`): HLS con AAC 5.1 cuando el equipo lo admita (hoy el AC-3 se convierte a AAC estéreo).
 
 ## 🟢 Más adelante

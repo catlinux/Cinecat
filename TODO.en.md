@@ -12,7 +12,6 @@ This file contains only work that is still open. Published work is in the [CHANG
 - **User-uploaded subtitles:** needs a design first; today only embedded text and `.srt`/`.vtt`/`.ass` files next to the video are read.
 - **Advanced playback:** per-device profiles, HDR/10-bit, deinterlacing, image subtitles and unsupported audio.
 - **Verify the "Servidor y web" GitHub Actions workflow** (`.github/workflows/server-web.yml`, runs the Go tests with FFmpeg and the web tests): check its first run is green.
-- **TMDB retention period:** the official terms (§1.C) forbid keeping TMDB data longer than 6 months; the disk cache (7 days) complies. Check that metadata already stored in the database is re-downloaded within that period (it is not documented to happen periodically today).
 - **Android and Android TV app** (plan in `.agents/plans/apps-android/apps-android.PLAN.md`): HLS with AAC 5.1 when the device supports it (today AC-3 is converted to stereo AAC).
 
 ## 🟢 Later
