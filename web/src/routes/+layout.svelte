@@ -153,6 +153,12 @@
 								aria-current={data.activeCategory === 'watchlist' ? 'page' : undefined}
 								>Próximas a ver</a
 							>
+							<a
+								href="/history"
+								class:category-active={data.activeCategory === 'history'}
+								aria-current={data.activeCategory === 'history' ? 'page' : undefined}
+								>Historial</a
+							>
 						</nav>
 					{/if}
 					{#if data.isAdmin}

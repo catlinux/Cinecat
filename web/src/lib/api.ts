@@ -853,6 +853,7 @@ export interface ActivityEntry {
 	series_title: string | null;
 	season: number | null;
 	episode: number | null;
+	poster_url: string | null;
 	position_seconds: number;
 	duration_seconds: number;
 	watched: boolean;
@@ -861,6 +862,24 @@ export interface ActivityEntry {
 
 export interface ActivityResponse {
 	entries: ActivityEntry[];
+}
+
+export interface HistoryEntry {
+	item_id: number;
+	title: string;
+	kind: MediaItem['kind'];
+	series_title: string | null;
+	season: number | null;
+	episode: number | null;
+	poster_url: string | null;
+	position_seconds: number;
+	duration_seconds: number;
+	watched: boolean;
+	updated_at: string;
+}
+
+export interface HistoryResponse {
+	entries: HistoryEntry[];
 }
 
 export interface ActivityQuery {
@@ -1066,6 +1085,15 @@ export class ApiClient {
 		}
 		const suffix = params.toString() ? `?${params}` : '';
 		return this.get<ActivityResponse>(`/api/v1/activity${suffix}`, token);
+	}
+
+	async getHistory(token: string, limit = 50): Promise<HistoryResponse> {
+		const suffix = limit !== 50 ? `?limit=${limit}` : '';
+		return this.get<HistoryResponse>(`/api/v1/history${suffix}`, token);
+	}
+
+	async deleteHistoryItem(itemId: number, token: string): Promise<void> {
+		await this.delete(`/api/v1/history/${itemId}`, token);
 	}
 
 	async createUser(input: CreateUserInput, token: string): Promise<ManagedUser> {

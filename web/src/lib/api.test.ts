@@ -210,6 +210,45 @@ describe('ApiClient', () => {
 		expect(init.headers.Authorization).toBe('Bearer token-abc');
 	});
 
+	it('consulta y borra entradas del historial', async () => {
+		const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+			if (init?.method === 'DELETE') {
+				return new Response(null, { status: 204 });
+			}
+			return jsonResponse({
+				entries: [
+					{
+						item_id: 7,
+						title: 'El Padrino',
+						kind: 'movie',
+						series_title: null,
+						season: null,
+						episode: null,
+						poster_url: null,
+						position_seconds: 60,
+						duration_seconds: 600,
+						watched: false,
+						updated_at: '2026-10-31T10:00:00Z'
+					}
+				]
+			});
+		});
+		const client = new ApiClient({ baseUrl: 'http://api.test', fetch: fetchMock });
+
+		const history = await client.getHistory('token-abc');
+		await client.deleteHistoryItem(7, 'token-abc');
+
+		expect(history.entries[0]?.item_id).toBe(7);
+		expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
+			'http://api.test/api/v1/history',
+			'http://api.test/api/v1/history/7'
+		]);
+		expect(fetchMock.mock.calls.map(([, init]) => init?.method)).toEqual(['GET', 'DELETE']);
+		for (const [, init] of fetchMock.mock.calls) {
+			expect((init?.headers as Record<string, string>).Authorization).toBe('Bearer token-abc');
+		}
+	});
+
 	it('convierte un fallo de red en ApiError con estado 0', async () => {
 		const fetchMock = vi.fn().mockRejectedValue(new Error('sin conexión'));
 		const client = new ApiClient({ baseUrl: 'http://api.test', fetch: fetchMock });

@@ -7,6 +7,16 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.52.0] - 2026-11-01
+
+### Añadido
+
+- Historial de reproducciones de cada usuario: nuevos `GET /api/v1/history` y `DELETE /api/v1/history/{itemId}` (quita el progreso y la marca de visto de ese usuario) y página `/history` en la web, enlazada desde el menú. Solo muestra contenido de las bibliotecas a las que el usuario tiene acceso.
+
+### Corregido
+
+- Administración: la lista de Actividad también respeta ahora el acceso por biblioteca.
+
 ## [0.51.0] - 2026-11-01
 
 ### Añadido

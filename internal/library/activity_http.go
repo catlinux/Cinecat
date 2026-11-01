@@ -23,6 +23,7 @@ type activityEntry struct {
 	SeriesTitle     *string `json:"series_title"`
 	Season          *int    `json:"season"`
 	Episode         *int    `json:"episode"`
+	PosterURL       *string `json:"poster_url"`
 	PositionSeconds float64 `json:"position_seconds"`
 	DurationSeconds float64 `json:"duration_seconds"`
 	Watched         bool    `json:"watched"`
@@ -45,7 +46,7 @@ func (a *API) handleActivity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	entries, err := a.queryActivity(r, limit, userID)
+	entries, err := a.queryActivity(r, limit, userID, accessFromRequest(r))
 	if err != nil {
 		log.Printf("library: listar actividad: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
@@ -84,14 +85,23 @@ func activityUserFilter(r *http.Request) (*int64, error) {
 	return &value, nil
 }
 
-func (a *API) queryActivity(r *http.Request, limit int, userID *int64) ([]activityEntry, error) {
-	where := ""
-	args := make([]any, 0, 2)
+func (a *API) queryActivity(
+	r *http.Request,
+	limit int,
+	userID *int64,
+	access libraryAccess,
+) ([]activityEntry, error) {
+	clauses := []string{
+		"(" + access.Clause("media_items") + ")",
+		"(media_items.series_id IS NULL OR (" + access.Clause("series") + "))",
+	}
+	args := make([]any, 0, 3)
 	if userID != nil {
-		where = " WHERE combined.user_id = ?"
+		clauses = append(clauses, "combined.user_id = ?")
 		args = append(args, *userID)
 	}
 	args = append(args, limit)
+	where := " WHERE " + strings.Join(clauses, " AND ")
 
 	rows, err := a.db.QueryContext(r.Context(), `
 		WITH activity AS (
@@ -117,6 +127,7 @@ func (a *API) queryActivity(r *http.Request, limit int, userID *int64) ([]activi
 		       media_items.kind,
 		       COALESCE(NULLIF(series.display_title, ''), series.title),
 		       media_items.season, media_items.episode,
+		       COALESCE(NULLIF(media_items.poster_url, ''), series.poster_url),
 		       combined.position_seconds, combined.duration_seconds,
 		       combined.watched, combined.activity_at
 		  FROM combined
@@ -133,12 +144,12 @@ func (a *API) queryActivity(r *http.Request, limit int, userID *int64) ([]activi
 	entries := make([]activityEntry, 0)
 	for rows.Next() {
 		var entry activityEntry
-		var seriesTitle sql.NullString
+		var seriesTitle, posterURL sql.NullString
 		var season, episode sql.NullInt64
 		var watched int
 		if err := rows.Scan(
 			&entry.UserID, &entry.Username, &entry.ItemID, &entry.Title,
-			&entry.Kind, &seriesTitle, &season, &episode,
+			&entry.Kind, &seriesTitle, &season, &episode, &posterURL,
 			&entry.PositionSeconds, &entry.DurationSeconds, &watched, &entry.UpdatedAt,
 		); err != nil {
 			return nil, err
@@ -154,6 +165,10 @@ func (a *API) queryActivity(r *http.Request, limit int, userID *int64) ([]activi
 		if episode.Valid {
 			value := int(episode.Int64)
 			entry.Episode = &value
+		}
+		if posterURL.Valid {
+			value := posterURL.String
+			entry.PosterURL = &value
 		}
 		entry.Watched = watched != 0
 		entries = append(entries, entry)

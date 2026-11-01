@@ -7,6 +7,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.52.0] - 2026-11-01
+
+### Added
+
+- Per-user playback history: new `GET /api/v1/history` and `DELETE /api/v1/history/{itemId}` (removes that user's progress and watched mark) and a `/history` page on the web, linked from the menu. It only shows content from libraries the user can access.
+
+### Fixed
+
+- Administration: the Activity list now also honours per-library access.
+
 ## [0.51.0] - 2026-11-01
 
 ### Added

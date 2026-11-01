@@ -358,6 +358,8 @@ func leakRoutes() []leakCase {
 		{name: "géneros", pattern: "/api/v1/genres", path: "/api/v1/genres", adminMarca: true},
 		{name: "portal", pattern: "/api/v1/home", path: "/api/v1/home", adminMarca: true},
 		{name: "secciones", pattern: "/api/v1/sections", path: "/api/v1/sections"},
+		{name: "historial", pattern: "/api/v1/history", path: "/api/v1/history"},
+		{name: "historial eliminar oculto", pattern: "/api/v1/history/{itemId}", path: "/api/v1/history/", method: http.MethodDelete, notFound: true},
 		{name: "favoritos", pattern: "/api/v1/lists/{list}", path: "/api/v1/lists/favorite?kind=items"},
 		{name: "próximas", pattern: "/api/v1/lists/{list}", path: "/api/v1/lists/watchlist?kind=items"},
 		{name: "series favoritas", pattern: "/api/v1/lists/{list}", path: "/api/v1/lists/favorite?kind=series"},
@@ -450,6 +452,9 @@ func TestPruebaDeFugas(t *testing.T) {
 		},
 		"items reproducción visible": func() string {
 			return "/api/v1/items/" + strconv.FormatInt(fixture.visibleMovie, 10) + "/play"
+		},
+		"historial eliminar oculto": func() string {
+			return "/api/v1/history/" + strconv.FormatInt(fixture.hiddenMovie, 10)
 		},
 		"progreso oculto PUT": func() string {
 			return "/api/v1/items/" + strconv.FormatInt(fixture.hiddenEpisode2, 10) + "/progress"

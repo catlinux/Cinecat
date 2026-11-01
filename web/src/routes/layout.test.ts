@@ -152,6 +152,23 @@ describe('load del layout', () => {
 });
 
 describe('menú de listas personales', () => {
+	it('muestra Historial solo con sesión', () => {
+		const withSession = render(Layout, {
+			props: {
+				data: layoutData({ activeCategory: 'history' }),
+				children
+			}
+		}).body;
+		expect(withSession).toContain('href="/history"');
+		expect(withSession).toContain('Historial');
+		expect(withSession).toContain('aria-current="page"');
+
+		const withoutSession = render(Layout, {
+			props: { data: layoutData({ hasSession: false }), children }
+		}).body;
+		expect(withoutSession).not.toContain('href="/history"');
+	});
+
 	it('muestra Favoritos y Próximas a ver solo con sesión', () => {
 		const withSession = render(Layout, {
 			props: { data: layoutData({ activeCategory: 'favorites' }), children }

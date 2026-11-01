@@ -14,7 +14,7 @@ Decisiones de diseño tomadas (no reabrir sin motivo):
 
 1. [x] **TMDB: refresco periódico** de metadatos guardados (< 6 meses). Servidor. 0.50.0.
 2. [x] **Login: persistencia y aviso al administrador.** Servidor + web (Resumen). 0.51.0.
-3. [ ] **Historial del usuario** (`GET/DELETE /api/v1/history`) + página web. 0.52.0.
+3. [x] **Historial del usuario** (`GET/DELETE /api/v1/history`) + página web. 0.52.0.
 4. [ ] **Filas del portal personalizables** por usuario. Servidor + web. 0.53.0.
 5. [ ] **Subtítulos subidos** (admin): servidor + web. 0.54.0.
 6. [ ] **Desentrelazado y HDR→SDR** al recodificar. Servidor. 0.55.0.

@@ -25,11 +25,14 @@ export const load: LayoutServerLoad = async ({ locals, fetch, url }) => {
 		| 'music'
 		| 'favorites'
 		| 'watchlist'
+		| 'history'
 		| null =
 		pathname === '/favorites'
 			? 'favorites'
 			: pathname === '/watchlist'
 				? 'watchlist'
+				: pathname === '/history'
+					? 'history'
 				: pathname === '/music' || pathname.startsWith('/music/')
 					? 'music'
 					: pathname === '/videos' || pathname.startsWith('/videos/')

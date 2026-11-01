@@ -24,6 +24,7 @@
 			| 'music'
 			| 'favorites'
 			| 'watchlist'
+			| 'history'
 			| null;
 		isHome?: boolean;
 		isAdmin?: boolean;
@@ -103,6 +104,10 @@
 					href="/watchlist"
 					aria-current={activeCategory === 'watchlist' ? 'page' : undefined}
 					>Próximas a ver</a
+				>
+				<a
+					href="/history"
+					aria-current={activeCategory === 'history' ? 'page' : undefined}>Historial</a
 				>
 			</div>
 		{/if}
