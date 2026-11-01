@@ -40,6 +40,12 @@ func (a *API) handleHome(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	access := accessFromRequest(r)
+	hiddenRows, err := a.hiddenPortalRows(r.Context(), user.ID)
+	if err != nil {
+		log.Printf("library: leer filas ocultas del portal: %v", err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
 
 	continueItems, err := queryHomeItems(r.Context(), a.db, `
 		SELECT `+mediaItemColumns+watchedColumn+progressColumn+itemListColumns+`
@@ -171,7 +177,7 @@ func (a *API) handleHome(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	writeJSON(w, http.StatusOK, homeResponse{
+	response := homeResponse{
 		Continue:        continueItems,
 		NextUp:          nextUp,
 		RecentMovies:    recentMovies,
@@ -182,7 +188,9 @@ func (a *API) handleHome(w http.ResponseWriter, r *http.Request) {
 		HasClips:        hasClips != 0,
 		HasMusic:        hasMusic != 0,
 		Counts:          counts,
-	})
+	}
+	filterHomeRows(&response, hiddenRows)
+	writeJSON(w, http.StatusOK, response)
 }
 
 func queryHomeNextUp(

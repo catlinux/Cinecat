@@ -1,19 +1,27 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { ApiError, type Session } from '$lib/api';
+import { ApiError, type HomePreferenceRow, type Session } from '$lib/api';
 import { createApiClient } from '$lib/api-factory';
 import { clearSessionCookie, requireSessionToken } from '$lib/session';
 
 export const load: PageServerLoad = async ({ locals, fetch }) => {
 	const token = requireSessionToken(locals);
+	const api = createApiClient(fetch);
 	let sessions: Session[] | null = null;
 	try {
-		sessions = (await createApiClient(fetch).getSessions(token)).sessions ?? [];
+		sessions = (await api.getSessions(token)).sessions ?? [];
 	} catch {
 		// La gestión de la contraseña sigue disponible aunque falle la lista.
 		sessions = null;
 	}
-	return { sessions };
+	let portalRows: HomePreferenceRow[] | null = null;
+	try {
+		portalRows = (await api.getHomePreferences(token)).rows ?? [];
+	} catch {
+		// El resto de la cuenta sigue funcionando si fallan las preferencias.
+		portalRows = null;
+	}
+	return { sessions, portalRows };
 };
 
 export const actions: Actions = {
@@ -59,6 +67,36 @@ export const actions: Actions = {
 		return {
 			success: true,
 			message: 'Contraseña actualizada. Se han cerrado tus sesiones en otros dispositivos; la de este sigue abierta.'
+		};
+	},
+
+	portal: async ({ request, locals, fetch }) => {
+		const token = requireSessionToken(locals);
+		const form = await request.formData();
+		const hidden = form.getAll('hidden').map((value) => String(value));
+		try {
+			await createApiClient(fetch).setHomePreferences(hidden, token);
+		} catch (reason) {
+			if (reason instanceof ApiError) {
+				if (reason.status === 401) {
+					redirect(303, '/login');
+				}
+				if (reason.status === 400) {
+					return fail(400, {
+						message: reason.message || 'Alguna fila del portal no es válida.',
+						portalRows: true
+					});
+				}
+			}
+			return fail(502, {
+				message: 'No se pudieron guardar las filas del portal. Inténtalo de nuevo.',
+				portalRows: true
+			});
+		}
+		return {
+			success: true,
+			message: 'Filas del portal actualizadas.',
+			portalRows: true
 		};
 	},
 

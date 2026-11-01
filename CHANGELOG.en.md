@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.53.0] - 2026-11-01
+
+### Added
+
+- Each user can hide home portal rows from their account. New `GET` and `PUT /api/v1/home/preferences` (migration 0025); `GET /api/v1/home` applies the preference, so the web and the apps honour it.
+
 ## [0.52.0] - 2026-11-01
 
 ### Added

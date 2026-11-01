@@ -357,6 +357,7 @@ func leakRoutes() []leakCase {
 		{name: "preferencias ocultas DELETE", pattern: "/api/v1/items/{id}/preferences", path: "/api/v1/items/", method: http.MethodDelete, notFound: true},
 		{name: "géneros", pattern: "/api/v1/genres", path: "/api/v1/genres", adminMarca: true},
 		{name: "portal", pattern: "/api/v1/home", path: "/api/v1/home", adminMarca: true},
+		{name: "preferencias del portal", pattern: "/api/v1/home/preferences", path: "/api/v1/home/preferences"},
 		{name: "secciones", pattern: "/api/v1/sections", path: "/api/v1/sections"},
 		{name: "historial", pattern: "/api/v1/history", path: "/api/v1/history"},
 		{name: "historial eliminar oculto", pattern: "/api/v1/history/{itemId}", path: "/api/v1/history/", method: http.MethodDelete, notFound: true},

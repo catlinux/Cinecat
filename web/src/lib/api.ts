@@ -301,6 +301,16 @@ export interface HomeResponse {
 	counts: HomeCounts;
 }
 
+export interface HomePreferenceRow {
+	id: string;
+	title: string;
+	hidden: boolean;
+}
+
+export interface HomePreferencesResponse {
+	rows: HomePreferenceRow[];
+}
+
 export interface VideoRoot {
 	id: number;
 	name: string;
@@ -1338,6 +1348,14 @@ export class ApiClient {
 
 	async getHome(token: string): Promise<HomeResponse> {
 		return this.get<HomeResponse>('/api/v1/home', token);
+	}
+
+	async getHomePreferences(token: string): Promise<HomePreferencesResponse> {
+		return this.get<HomePreferencesResponse>('/api/v1/home/preferences', token);
+	}
+
+	async setHomePreferences(hidden: string[], token: string): Promise<void> {
+		await this.put<void>('/api/v1/home/preferences', { hidden }, token);
 	}
 
 	async getLists(list: UserListName, query: ListsQuery, token: string): Promise<ListsResponse> {

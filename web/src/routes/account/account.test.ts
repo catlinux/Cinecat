@@ -5,6 +5,7 @@ import { actions, load } from './+page.server';
 
 const changePassword = actions.default!;
 const closeSession = actions.closeSession!;
+const updatePortalRows = actions.portal!;
 
 function formRequest(fields: Record<string, string>): Request {
 	return new Request('http://localhost/account', {
@@ -28,6 +29,21 @@ function fakeEvent(fetchImpl: typeof fetch, fields: Record<string, string>, toke
 		isDataRequest: false,
 		isSubRequest: false,
 		platform: undefined
+	};
+}
+
+function portalEvent(fetchImpl: typeof fetch, hidden: string[], token = 'token-123') {
+	const body = new URLSearchParams();
+	for (const id of hidden) {
+		body.append('hidden', id);
+	}
+	return {
+		...fakeEvent(fetchImpl, {}, token),
+		request: new Request('http://localhost/account?/portal', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+			body
+		})
 	};
 }
 
@@ -245,6 +261,50 @@ describe('acción de cerrar sesión', () => {
 			path: '/',
 			secure: false
 		});
+	});
+});
+
+describe('filas del portal', () => {
+	it('guarda las filas ocultas seleccionadas', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+		const event = portalEvent(fetchMock, ['recent_movies', 'favorites']);
+
+		const result = (await updatePortalRows(event as never)) as {
+			success?: boolean;
+			message?: string;
+			portalRows?: boolean;
+		};
+		expect(result.success).toBe(true);
+		expect(result.portalRows).toBe(true);
+		expect(result.message).toContain('Filas del portal');
+		expect(fetchMock.mock.calls[0][0]).toBe('http://api.test/api/v1/home/preferences');
+		expect(fetchMock.mock.calls[0][1].method).toBe('PUT');
+		expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+			hidden: ['recent_movies', 'favorites']
+		});
+	});
+
+	it('muestra una casilla por fila y el botón de guardar', () => {
+		const { body } = render(AccountPage, {
+			props: {
+				data: {
+					ui: { server_name: 'Cinecat' },
+					sessions: [],
+					portalRows: [
+						{ id: 'recent_movies', title: 'Películas recién añadidas', hidden: false },
+						{ id: 'favorites', title: 'Tus favoritos', hidden: true }
+					]
+				}
+			}
+		});
+		expect(body).toContain('Portal de inicio');
+		expect(body).toContain('Películas recién añadidas');
+		expect(body).toContain('Tus favoritos');
+		expect(body).toContain('name="hidden"');
+		expect(body).toContain('value="recent_movies"');
+		expect(body).toContain('value="favorites"');
+		expect(body).toContain('action="?/portal"');
+		expect(body).toContain('Guardar filas del portal');
 	});
 });
 

@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.53.0] - 2026-11-01
+
+### Añadido
+
+- Cada usuario puede ocultar filas del portal de inicio desde su cuenta. Nuevos `GET` y `PUT /api/v1/home/preferences` (migración 0025); `GET /api/v1/home` aplica la preferencia, así que la web y las apps la respetan.
+
 ## [0.52.0] - 2026-11-01
 
 ### Añadido

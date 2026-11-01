@@ -184,6 +184,34 @@ describe('ApiClient', () => {
 		expect(init.headers.Authorization).toBe('Bearer token-abc');
 	});
 
+	it('consulta y guarda las filas del portal', async () => {
+		const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+			if (init?.method === 'PUT') {
+				return new Response(null, { status: 204 });
+			}
+			return jsonResponse({
+				rows: [
+					{ id: 'recent_movies', title: 'Películas recién añadidas', hidden: false },
+					{ id: 'favorites', title: 'Tus favoritos', hidden: true }
+				]
+			});
+		});
+		const client = new ApiClient({ baseUrl: 'http://api.test', fetch: fetchMock });
+
+		const preferences = await client.getHomePreferences('token-abc');
+		await client.setHomePreferences(['recent_movies'], 'token-abc');
+
+		expect(preferences.rows[1]?.hidden).toBe(true);
+		expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
+			'http://api.test/api/v1/home/preferences',
+			'http://api.test/api/v1/home/preferences'
+		]);
+		expect(fetchMock.mock.calls.map(([, init]) => init?.method)).toEqual(['GET', 'PUT']);
+		expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({
+			hidden: ['recent_movies']
+		});
+	});
+
 	it('consulta los bloqueos de seguridad', async () => {
 		const fetchMock = vi.fn().mockResolvedValue(
 			jsonResponse({
