@@ -14,8 +14,8 @@ Cinecat elige entre tres caminos para cada archivo: **directa**, **copia** y **r
 | MKV o MOV con H.264 de 8 bits, altura dentro del máximo e índice de claves listo | Copia por HLS. |
 | MKV, MOV, MP4 o M4V con H.265 de 8 bits (`hevcmse`) o 10 bits (`hevc10mse`), altura dentro del máximo e índice de claves listo | Copia por HLS. |
 | MP4 o M4V con H.264 de 8 bits pero audio no compatible (AC-3, DTS, etc.), altura dentro del máximo e índice de claves listo | Copia por HLS. |
-| AVI, TS o M2TS | Recodificación a H.264 + AAC estéreo. |
-| MPEG-4 parte 2 (DivX/Xvid), AV1, H.264 de 10 bits o con perfil High 10/4:2:2/4:4:4 | Recodificación a H.264 + AAC estéreo. |
+| AVI, TS o M2TS | Recodificación a H.264 + AAC: estéreo, o 5.1 para apps de TV que declaran `mch`. |
+| MPEG-4 parte 2 (DivX/Xvid), AV1, H.264 de 10 bits o con perfil High 10/4:2:2/4:4:4 | Recodificación a H.264 + AAC: estéreo, o 5.1 para apps de TV que declaran `mch`. |
 | Candidato a copia por encima de la altura máxima, o con el índice de claves pendiente o fallido | Recodificación mientras no se pueda copiar; el índice queda encolado para la próxima vez. |
 | Cualquier otra extensión | 415; el contenedor no se admite. |
 
@@ -44,7 +44,7 @@ Los dos modos comparten los segmentos MPEG-TS, los saltos y los límites de proc
 | | Copia | Recodificación |
 |---|---|---|
 | Vídeo | `-c:v copy`, sin escalar ni perder calidad. | `libx264` o VA-API, con preset/CRF o `qp` y altura máxima configurables. |
-| Audio | Una pista a AAC estéreo de 160 kbps. | Una pista a AAC estéreo de 160 kbps. |
+| Audio | Una pista a AAC estéreo de 160 kbps, o AAC 5.1 de 384 kbps para apps de TV con `mch` y una pista de 6 o más canales. | Una pista a AAC estéreo de 160 kbps, o AAC 5.1 de 384 kbps para apps de TV con `mch` y una pista de 6 o más canales. |
 | Cortes | Fotogramas clave reales, con `-copyts`, `-output_ts_offset` de 10 s y `-segment_times`; la playlist usa duraciones reales. | Keyframes forzados cada 6 s y segmentos de 6 s. |
 | Cuándo | Códec admitido, altura dentro del máximo e índice listo. | En el resto de casos. |
 
@@ -107,7 +107,7 @@ La ficha del archivo indica el método previsto en `playback.method`:
 
 - `direct`: reproducción directa.
 - `copy`: «Copia (sin recodificar)».
-- `transcode`: recodificación a H.264 + AAC estéreo.
+- `transcode`: recodificación a H.264 + AAC (estéreo, o 5.1 para apps de TV con `mch`).
 
 La ficha se calcula con los datos cacheados de `ffprobe`, las capacidades del navegador y la altura máxima del ajuste. El índice de claves se comprueba al preparar la reproducción: por eso la primera vez que se ve un MP4 puede indicar copia y aun así recodificar mientras el índice se calcula en segundo plano.
 
@@ -116,13 +116,13 @@ El reproductor ofrece `auto`, 480p, 720p, 1080p (sin superar la altura original 
 ## Audio, subtítulos y calidad
 
 - **Audio directo:** se conserva el archivo original. Se sirve directo si la pista por defecto es AAC o MP3 (o no hay audio).
-- **Audio HLS:** se elige una pista por posición en la lista de `ffprobe` y se convierte a AAC estéreo de 160 kbps. La preferencia del usuario y de la película se guarda en `item_preferences`.
+- **Audio HLS:** se elige una pista por posición en la lista de `ffprobe` y se convierte a AAC estéreo de 160 kbps. Si la app es nativa, declara `mch` y la pista elegida tiene 6 o más canales, se conserva como AAC 5.1 de 384 kbps con `-channel_layout 5.1`. La preferencia del usuario y de la película se guarda en `item_preferences`.
 - **Subtítulos:** se leen pistas de texto incrustadas y archivos externos `.srt`, `.vtt` o `.ass` junto al vídeo, con sufijos de idioma y `forced`. Se convierten a WebVTT. Las pistas de imagen (PGS/VobSub) no se admiten y el HLS no lleva una representación separada de subtítulos.
 - **Preferencias:** audio, subtítulo y calidad por usuario y película; el reproductor las guarda y recarga en el segundo actual al cambiarlas.
 
 ## Apps nativas (Android y Android TV)
 
-Las apps declaran en `caps` lo que su equipo reproduce: contenedores (`mkv`, `mp4`), vídeo (`h264`, `h264hi10`, `hevc`, `hevc10`, `av1`, `vp9`), audio (`aac`, `mp3`, `ac3`, `eac3`, `dts`, `truehd`, `opus`, `flac`) y `mch` si decodifica AAC multicanal. Con eso, un MKV o MP4 cuyo vídeo y pista de audio elegida estén declarados se sirve **en directo**, sin tocar el archivo (AC-3, E-AC-3 o DTS llegan tal cual para pasarlos por HDMI). Si no, va por HLS: el HEVC se copia sin recodificar y el audio se convierte a AAC estéreo. `/play` devuelve `reason` (`container`, `video` o `audio`) para saber por qué no fue en directo. La web no envía esos tokens, así que su comportamiento no cambia. Pendiente: HLS con AAC 5.1 para las apps.
+Las apps declaran en `caps` lo que su equipo reproduce: contenedores (`mkv`, `mp4`), vídeo (`h264`, `h264hi10`, `hevc`, `hevc10`, `av1`, `vp9`), audio (`aac`, `mp3`, `ac3`, `eac3`, `dts`, `truehd`, `opus`, `flac`) y `mch` si decodifica AAC multicanal. Con eso, un MKV o MP4 cuyo vídeo y pista de audio elegida estén declarados se sirve **en directo**, sin tocar el archivo (AC-3, E-AC-3 o DTS llegan tal cual para pasarlos por HDMI). Si no, va por HLS: el HEVC se copia sin recodificar y el audio se convierte a AAC estéreo, salvo que la app sea de TV y declare `mch` con una pista de 6 o más canales, en cuyo caso recibe AAC 5.1. El móvil no declara `mch`; la web tampoco envía esos tokens, así que sigue en estéreo. `/play` devuelve `reason` (`container`, `video` o `audio`) para saber por qué no fue en directo.
 
 ## Reproductor web
 
@@ -146,7 +146,7 @@ Las apps declaran en `caps` lo que su equipo reproduce: contenedores (`mkv`, `mp
 | **H.265 de 8 bits**, en MKV o MP4 | Es el mejor equilibrio: se copia si el navegador lo admite por MSE y ocupa menos que H.264. Ahorro orientativo del 30–50 % frente a H.264 con calidad parecida, sin cifras garantizadas. |
 | **H.264 de 8 bits**, en MP4 o MKV | Sigue siendo muy compatible: MP4 con AAC/MP3 se sirve directo y MKV/MOV se copia sin recodificar. |
 | Evitar **H.265 de 10 bits** salvo que todos los dispositivos lo necesiten | Muchos navegadores y equipos no lo reproducen; la gráfica del servidor no decodifica HEVC de 10 bits entero. Solo se copia si el navegador declara `hevc10mse`. |
-| **Audio original** (AAC, MP3, AC-3…) | En directa se conserva; en HLS solo se recodifica el audio a AAC estéreo, un coste pequeño. |
+| **Audio original** (AAC, MP3, AC-3…) | En directa se conserva; en HLS solo se recodifica el audio a AAC estéreo o 5.1 según el cliente, un coste pequeño. |
 | **Subtítulos de texto** incrustados en el MKV o en `.srt` junto al vídeo | Se convierten a WebVTT; los de imagen (PGS/VobSub) no se pueden mostrar. |
 | **Fotogramas clave cada 2–10 s** | Es lo habitual y permite segmentos y saltos razonables en la copia. Intervalos muy largos hacen segmentos más largos y saltos menos precisos. |
 | Evitar **AVI y TS/M2TS** para la biblioteca | Se recodifican siempre; convertir a MKV/MP4 conserva mejor el códec y evita trabajo al servidor. |
@@ -157,7 +157,7 @@ La recodificación usa VA-API cuando está disponible y libx264 cuando no. La co
 
 - Perfiles por dispositivo y elección automática entre calidades.
 - Tratamiento de 10 bits más allá del H.265 que el navegador ya admita por MSE.
-- Subtítulos de imagen y audio no soportado o multicanal/passthrough.
+- Subtítulos de imagen y audio no soportado o passthrough sin recodificar.
 - ABR y playlist maestra con varias calidades.
 - Un modo de API `transcode` explícito, separado de `remux`.
 

@@ -14,8 +14,8 @@ Cinecat chooses between three paths for each file: **direct**, **copy** and **re
 | MKV or MOV with 8-bit H.264, height within the maximum and keyframe index ready | HLS copy. |
 | MKV, MOV, MP4 or M4V with 8-bit H.265 (`hevcmse`) or 10-bit H.265 (`hevc10mse`), height within the maximum and keyframe index ready | HLS copy. |
 | MP4 or M4V with 8-bit H.264 but unsupported audio (AC-3, DTS, etc.), height within the maximum and keyframe index ready | HLS copy. |
-| AVI, TS or M2TS | Re-encode to H.264 + stereo AAC. |
-| MPEG-4 Part 2 (DivX/Xvid), AV1, 10-bit H.264 or High 10/4:2:2/4:4:4 profiles | Re-encode to H.264 + stereo AAC. |
+| AVI, TS or M2TS | Re-encode to H.264 + AAC: stereo, or 5.1 for TV apps that declare `mch`. |
+| MPEG-4 Part 2 (DivX/Xvid), AV1, 10-bit H.264 or High 10/4:2:2/4:4:4 profiles | Re-encode to H.264 + AAC: stereo, or 5.1 for TV apps that declare `mch`. |
 | Copy candidate above the maximum height, or with a pending or failed keyframe index | Re-encode while copying is not possible; the index stays queued for next time. |
 | Any other extension | 415; the container is not supported. |
 
@@ -44,7 +44,7 @@ Both modes share MPEG-TS segments, seeking and process limits; the VOD playlist 
 | | Copy | Re-encode |
 |---|---|---|
 | Video | `-c:v copy`, without scaling or quality loss. | `libx264` or VA-API, with configurable preset/CRF or `qp` and maximum height. |
-| Audio | One track to stereo AAC at 160 kbps. | One track to stereo AAC at 160 kbps. |
+| Audio | One track to stereo AAC at 160 kbps, or 5.1 AAC at 384 kbps for TV apps with `mch` and a track of 6 or more channels. | One track to stereo AAC at 160 kbps, or 5.1 AAC at 384 kbps for TV apps with `mch` and a track of 6 or more channels. |
 | Cuts | Real keyframes, with `-copyts`, a 10 s `-output_ts_offset` and `-segment_times`; the playlist uses real durations. | Keyframes forced every 6 s and 6 s segments. |
 | When | Supported codec, height within the maximum and ready index. | Every other case. |
 
@@ -107,7 +107,7 @@ The file details show the planned method in `playback.method`:
 
 - `direct`: direct playback.
 - `copy`: "Copia (sin recodificar)".
-- `transcode`: re-encode to H.264 + stereo AAC.
+- `transcode`: re-encode to H.264 + AAC (stereo, or 5.1 for TV apps with `mch`).
 
 The details are calculated from the cached `ffprobe` record, the browser capabilities and the maximum height setting. The keyframe index is checked when preparing playback: that is why the first time an MP4 is watched it may show copy and still re-encode while the index is calculated in the background.
 
@@ -116,13 +116,13 @@ The player offers `auto`, 480p, 720p, 1080p (never above the original height or 
 ## Audio, subtitles and quality
 
 - **Direct audio:** the original file is kept. It is served directly if the default track is AAC or MP3 (or there is no audio).
-- **HLS audio:** one track is chosen by its position in the `ffprobe` list and converted to stereo AAC at 160 kbps. The user's and movie's preference is stored in `item_preferences`.
+- **HLS audio:** one track is chosen by its position in the `ffprobe` list and converted to stereo AAC at 160 kbps. If the client is a native app that declares `mch` and the chosen track has 6 or more channels, it is kept as 5.1 AAC at 384 kbps with `-channel_layout 5.1`. The user's and movie's preference is stored in `item_preferences`.
 - **Subtitles:** embedded text tracks and external `.srt`, `.vtt` or `.ass` files next to the video, with language and `forced` suffixes. They are converted to WebVTT. Image tracks (PGS/VobSub) are not supported and HLS has no separate subtitle rendition.
 - **Preferences:** audio, subtitle and quality per user and movie; the player saves them and reloads at the current second when changed.
 
 ## Native apps (Android and Android TV)
 
-The apps declare in `caps` what their device plays: containers (`mkv`, `mp4`), video (`h264`, `h264hi10`, `hevc`, `hevc10`, `av1`, `vp9`), audio (`aac`, `mp3`, `ac3`, `eac3`, `dts`, `truehd`, `opus`, `flac`) and `mch` if it decodes multichannel AAC. With that, an MKV or MP4 whose video and chosen audio track are declared is served **directly**, untouched (AC-3, E-AC-3 or DTS arrive as they are for HDMI passthrough). Otherwise it goes through HLS: HEVC is copied without re-encoding and audio is converted to stereo AAC. `/play` returns `reason` (`container`, `video` or `audio`) to explain why it was not direct. The web does not send these tokens, so its behaviour does not change. Pending: HLS with 5.1 AAC for the apps.
+The apps declare in `caps` what their device plays: containers (`mkv`, `mp4`), video (`h264`, `h264hi10`, `hevc`, `hevc10`, `av1`, `vp9`), audio (`aac`, `mp3`, `ac3`, `eac3`, `dts`, `truehd`, `opus`, `flac`) and `mch` if it decodes multichannel AAC. With that, an MKV or MP4 whose video and chosen audio track are declared is served **directly**, untouched (AC-3, E-AC-3 or DTS arrive as they are for HDMI passthrough). Otherwise it goes through HLS: HEVC is copied without re-encoding and audio is converted to stereo AAC, unless the app runs on a TV and declares `mch` with a track of 6 or more channels, in which case it receives 5.1 AAC. The mobile app does not declare `mch`; the web does not send these tokens either, so both stay in stereo. `/play` returns `reason` (`container`, `video` or `audio`) to explain why it was not direct.
 
 ## Web player
 
@@ -146,7 +146,7 @@ The apps declare in `caps` what their device plays: containers (`mkv`, `mp4`), v
 | **8-bit H.265**, in MKV or MP4 | Best balance: it is copied when the browser supports it through MSE and takes less space than H.264. Roughly 30–50 % smaller than H.264 at similar quality, with no guaranteed figures. |
 | **8-bit H.264**, in MP4 or MKV | Still very compatible: MP4 with AAC/MP3 is served directly and MKV/MOV is copied without re-encoding. |
 | Avoid **10-bit H.265** unless every device needs it | Many browsers and devices cannot play it; the server GPU does not fully decode 10-bit HEVC. It is only copied if the browser declares `hevc10mse`. |
-| **Original audio** (AAC, MP3, AC-3…) | Direct playback keeps it; in HLS only the audio is re-encoded to stereo AAC, at a small cost. |
+| **Original audio** (AAC, MP3, AC-3…) | Direct playback keeps it; in HLS only the audio is re-encoded to stereo or 5.1 AAC depending on the client, at a small cost. |
 | **Text subtitles** embedded in the MKV or in `.srt` next to the video | They are converted to WebVTT; image subtitles (PGS/VobSub) cannot be shown. |
 | **Keyframes every 2–10 s** | This is common and allows reasonable segments and seeks when copying. Very long intervals make segments longer and seeks less precise. |
 | Avoid **AVI and TS/M2TS** in the library | They are always re-encoded; converting to MKV/MP4 preserves the codec better and saves server work. |
@@ -157,7 +157,7 @@ Re-encoding uses VA-API when available and libx264 when not. Copying uses almost
 
 - Per-device profiles and automatic quality selection.
 - 10-bit handling beyond the H.265 that the browser already supports through MSE.
-- Image subtitles and unsupported, multichannel or passthrough audio.
+- Image subtitles and unsupported or passthrough audio without re-encoding.
 - ABR and a master playlist with several qualities.
 - An explicit `transcode` API mode separate from `remux`.
 

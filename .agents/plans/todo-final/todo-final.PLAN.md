@@ -18,7 +18,7 @@ Decisiones de diseño tomadas (no reabrir sin motivo):
 4. [x] **Filas del portal personalizables** por usuario. Servidor + web. 0.53.0.
 5. [x] **Subtítulos subidos** (admin): servidor + web. 0.54.0.
 6. [x] **Desentrelazado y HDR→SDR** al recodificar. Servidor. 0.55.0.
-7. [ ] **AAC 5.1 por HLS** para apps. Servidor (+ app si hace falta declarar `mch`). 0.56.0.
+7. [x] **AAC 5.1 por HLS** para apps. Servidor (+ app si hace falta declarar `mch`). 0.56.0.
 8. [ ] Docs es/en al día y TODO final.
 
 Imprevistos de diseño: parar y anotarlos aquí.

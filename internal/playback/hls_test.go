@@ -164,6 +164,35 @@ func TestHDRFiltersSeCompruebanUnaSolaVez(t *testing.T) {
 	}
 }
 
+func TestHLSArgsAudio51ParaNativoMch(t *testing.T) {
+	settings := defaultTranscodeSettings()
+	settings.AudioChannels = 6
+	cases := map[string][]string{
+		"software": hlsTranscodeArgs("/tmp/peli.mkv", 0, settings),
+		"hw cpu":   hlsHardwareArgs("/tmp/peli.mkv", 0, settings, false, "/dev/dri/renderD128"),
+		"hw full":  hlsHardwareArgs("/tmp/peli.mkv", 0, settings, true, "/dev/dri/renderD128"),
+		"copy":     hlsCopyArgs("/tmp/peli.mkv", 0, []float64{0, 6, 12}, settings),
+	}
+	for name, args := range cases {
+		t.Run(name, func(t *testing.T) {
+			joined := strings.Join(args, "\n")
+			for _, expected := range []string{"-ac\n6", "-b:a\n384k", "-channel_layout\n5.1"} {
+				if !strings.Contains(joined, expected) {
+					t.Fatalf("falta %q: %v", expected, args)
+				}
+			}
+			if strings.Contains(joined, "-ac\n2") {
+				t.Fatalf("no debe pedir estéreo: %v", args)
+			}
+		})
+	}
+
+	stereo := strings.Join(hlsTranscodeArgs("/tmp/peli.mkv", 0, defaultTranscodeSettings()), "\n")
+	if !strings.Contains(stereo, "-ac\n2") || strings.Contains(stereo, "-channel_layout") {
+		t.Fatalf("el caso por defecto debe seguir en estéreo: %s", stereo)
+	}
+}
+
 func TestTranscodeSettingsInvalidosUsanLosDefectos(t *testing.T) {
 	settings := normalizeTranscodeSettings(TranscodeSettings{
 		MaxHeight: 999,
@@ -242,7 +271,7 @@ func TestHLSTranscodeArgsLimitaHilos(t *testing.T) {
 
 func TestServiceLeeAjustesEnCaliente(t *testing.T) {
 	var mu sync.Mutex
-	settings := TranscodeSettings{MaxHeight: 480, CRF: 18, Preset: "fast"}
+	settings := TranscodeSettings{MaxHeight: 480, CRF: 18, Preset: "fast", AudioChannels: 2}
 	svc, err := New(Options{
 		WorkDir: t.TempDir(),
 		Settings: func() TranscodeSettings {
@@ -264,7 +293,7 @@ func TestServiceLeeAjustesEnCaliente(t *testing.T) {
 	}
 
 	mu.Lock()
-	settings = TranscodeSettings{MaxHeight: 720, CRF: 28, Preset: "veryfast"}
+	settings = TranscodeSettings{MaxHeight: 720, CRF: 28, Preset: "veryfast", AudioChannels: 2}
 	mu.Unlock()
 	if got := svc.currentTranscodeSettings(); got != settings {
 		t.Fatalf("ajustes tras el cambio = %+v", got)
@@ -316,5 +345,13 @@ func TestTranscodeKeySeparaCalidades(t *testing.T) {
 	changed.Threads++
 	if transcodeKey(base) == transcodeKey(changed) {
 		t.Fatal("cambiar los hilos debe cambiar la clave de caché")
+	}
+	changed = base
+	changed.AudioChannels = 6
+	if transcodeKey(base) == transcodeKey(changed) {
+		t.Fatal("cambiar los canales de audio debe cambiar la clave de caché")
+	}
+	if streamKey(base, "auto") == streamKey(changed, "auto") {
+		t.Fatal("la variante 5.1 debe separar también la clave del stream")
 	}
 }

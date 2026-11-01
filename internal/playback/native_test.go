@@ -92,6 +92,41 @@ func TestNavegadorPideOtraPistaDeAudio(t *testing.T) {
 	}
 }
 
+func TestAudioChannelsFor(t *testing.T) {
+	info := &FileInfo{Audio: []AudioStream{
+		{Codec: "aac", Channels: 2},
+		{Codec: "ac3", Channels: 6},
+		{Codec: "eac3", Channels: 8},
+	}}
+	nativeMCH := ParseCapabilities("mkv,h264,aac,ac3,mch")
+	native := ParseCapabilities("mkv,h264,aac,ac3")
+	browserMCH := ParseCapabilities("h264,aac,mch")
+	tests := []struct {
+		name  string
+		caps  Capabilities
+		info  *FileInfo
+		audio int
+		want  int
+	}{
+		{name: "nativo mch 6 canales", caps: nativeMCH, info: info, audio: 1, want: 6},
+		{name: "nativo mch 8 canales", caps: nativeMCH, info: info, audio: 2, want: 6},
+		{name: "nativo mch estéreo", caps: nativeMCH, info: info, audio: 0, want: 2},
+		{name: "nativo sin mch", caps: native, info: info, audio: 1, want: 2},
+		{name: "navegador con mch", caps: browserMCH, info: info, audio: 1, want: 2},
+		{name: "sin ficha", caps: nativeMCH, info: nil, audio: 1, want: 2},
+		{name: "índice negativo usa la primera", caps: nativeMCH,
+			info: &FileInfo{Audio: []AudioStream{{Codec: "ac3", Channels: 6}}}, audio: -1, want: 6},
+		{name: "índice fuera de rango", caps: nativeMCH, info: info, audio: 9, want: 2},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := AudioChannelsFor(test.caps, test.info, test.audio); got != test.want {
+				t.Fatalf("canales = %d, se esperaban %d", got, test.want)
+			}
+		})
+	}
+}
+
 func TestDecisionNativa(t *testing.T) {
 	h264 := VideoStream{Codec: "h264", Profile: "High", PixelFormat: "yuv420p", BitDepth: 8}
 	h264Hi10 := VideoStream{Codec: "h264", Profile: "High 10", PixelFormat: "yuv420p10le", BitDepth: 10}

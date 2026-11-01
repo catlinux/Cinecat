@@ -70,6 +70,30 @@ func (c Capabilities) Native() bool {
 	return c.native.has(nativeMKV) || c.native.has(nativeMP4)
 }
 
+// Multichannel indica que el cliente nativo puede recibir AAC 5.1.
+func (c Capabilities) Multichannel() bool {
+	return c.native.has(nativeMultichannel)
+}
+
+// AudioChannelsFor decide si el HLS conserva el audio 5.1: solo para una app
+// nativa con mch y una pista elegida de 6 o más canales. En el resto de casos
+// se mantiene el AAC estéreo.
+func AudioChannelsFor(caps Capabilities, info *FileInfo, audioIndex int) int {
+	if !caps.Native() || !caps.Multichannel() || info == nil {
+		return 2
+	}
+	if audioIndex < 0 {
+		audioIndex = 0
+	}
+	if audioIndex >= len(info.Audio) {
+		return 2
+	}
+	if info.Audio[audioIndex].Channels >= 6 {
+		return 6
+	}
+	return 2
+}
+
 // Reason explica por qué no se reproduce en directo. Vacío en directo.
 type Reason string
 

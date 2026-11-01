@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.56.0] - 2026-11-01
+
+### Añadido
+
+- Android TV y servidor: el audio de 6 o más canales llega como AAC 5.1 por HLS cuando la app declara `mch` (solo la TV lo declara); el navegador y el móvil siguen recibiendo AAC estéreo. La clave del HLS distingue ambas variantes. Aún no se ha probado con una TV y un archivo 5.1 reales.
+
 ## [0.55.0] - 2026-11-01
 
 ### Añadido

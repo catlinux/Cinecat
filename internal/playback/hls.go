@@ -170,6 +170,24 @@ func transcodeVideoFilter(settings TranscodeSettings, video *VideoStream, hdrFil
 	return strings.Join(filters, ",")
 }
 
+func transcodeAudioArgs(settings TranscodeSettings) []string {
+	if settings.AudioChannels == 6 {
+		// Las apps con mch reciben AAC 5.1; el layout explícito evita que un
+		// origen 5.1(side) haga fallar al codificador.
+		return []string{
+			"-c:a", "aac",
+			"-ac", "6",
+			"-b:a", "384k",
+			"-channel_layout", "5.1",
+		}
+	}
+	return []string{
+		"-c:a", "aac",
+		"-ac", "2",
+		"-b:a", "160k",
+	}
+}
+
 // hlsTranscodeArgs construye los argumentos de FFmpeg para generar HLS desde
 // el segmento startSegment. Cada argumento va en su propio elemento de la
 // lista: el nombre del archivo nunca se interpola en una cadena de comando.
@@ -209,7 +227,7 @@ func hlsTranscodeArgsWithVideo(
 	if startSeconds > 0 {
 		args = append(args, "-ss", strconv.Itoa(startSeconds))
 	}
-	return append(args,
+	args = append(args,
 		"-i", inputPath,
 		// V mayúscula excluye las carátulas incrustadas como flujo de vídeo.
 		"-map", "0:V:0",
@@ -224,9 +242,9 @@ func hlsTranscodeArgsWithVideo(
 		"-threads", strconv.Itoa(settings.Threads),
 		"-pix_fmt", "yuv420p",
 		"-force_key_frames", "expr:gte(t,n_forced*"+strconv.Itoa(hlsSegmentSeconds)+")",
-		"-c:a", "aac",
-		"-ac", "2",
-		"-b:a", "160k",
+	)
+	args = append(args, transcodeAudioArgs(settings)...)
+	return append(args,
 		"-output_ts_offset", strconv.Itoa(startSeconds+hlsTimestampOffsetSeconds),
 		"-f", "hls",
 		"-hls_time", strconv.Itoa(hlsSegmentSeconds),
@@ -290,14 +308,14 @@ func hlsHardwareArgsWithVideo(
 			"-vf", transcodeVideoFilter(settings, video, hdrFilters)+",format=nv12,hwupload",
 		)
 	}
-	return append(args,
+	args = append(args,
 		"-c:v", "h264_vaapi",
 		"-qp", strconv.Itoa(settings.CRF+2),
 		"-g", "250",
 		"-force_key_frames", "expr:gte(t,n_forced*"+strconv.Itoa(hlsSegmentSeconds)+")",
-		"-c:a", "aac",
-		"-ac", "2",
-		"-b:a", "160k",
+	)
+	args = append(args, transcodeAudioArgs(settings)...)
+	return append(args,
 		"-output_ts_offset", strconv.Itoa(startSeconds+hlsTimestampOffsetSeconds),
 		"-f", "hls",
 		"-hls_time", strconv.Itoa(hlsSegmentSeconds),
@@ -332,9 +350,9 @@ func hlsCopyArgs(inputPath string, startSegment int, bounds []float64, settings 
 		"-map", "0:V:0",
 		"-map", fmt.Sprintf("0:a:%d?", settings.Audio),
 		"-c:v", "copy",
-		"-c:a", "aac",
-		"-ac", "2",
-		"-b:a", "160k",
+	)
+	args = append(args, transcodeAudioArgs(settings)...)
+	args = append(args,
 		"-output_ts_offset", strconv.Itoa(hlsTimestampOffsetSeconds),
 		"-f", "segment",
 		"-segment_format", "mpegts",
@@ -483,6 +501,9 @@ func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string, s
 		transcode.MaxHeight = selection.MaxHeight
 	}
 	transcode.Audio = selection.Audio
+	transcode.AudioChannels = AudioChannelsFor(
+		ParseCapabilities(selection.Caps), selection.Info, selection.Audio,
+	)
 
 	absInput, err := filepath.Abs(inputPath)
 	if err != nil {
@@ -727,8 +748,9 @@ func copyFileKey(path string) string {
 // calidad.
 func transcodeKey(settings TranscodeSettings) string {
 	settings = normalizeTranscodeSettings(settings)
-	return fmt.Sprintf("%d-%d-%s-%d-a%d",
-		settings.MaxHeight, settings.CRF, settings.Preset, settings.Threads, settings.Audio)
+	return fmt.Sprintf("%d-%d-%s-%d-a%d-c%d",
+		settings.MaxHeight, settings.CRF, settings.Preset, settings.Threads,
+		settings.Audio, settings.AudioChannels)
 }
 
 // streamKey añade la calidad textual a la clave de transcodificación para que

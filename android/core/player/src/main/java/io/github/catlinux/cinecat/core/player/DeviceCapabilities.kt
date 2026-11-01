@@ -47,7 +47,7 @@ fun capsString(
 }
 
 @UnstableApi
-fun detectCapabilities(context: Context): String {
+fun detectCapabilities(context: Context, multichannel: Boolean): String {
     val video = mutableSetOf<VideoCodec>()
     val audio = mutableSetOf<AudioCodec>()
     val codecList = MediaCodecList(MediaCodecList.REGULAR_CODECS)
@@ -106,7 +106,7 @@ fun detectCapabilities(context: Context): String {
         audio += AudioCodec.TRUEHD
     }
 
-    return capsString(video, audio, multichannel = true)
+    return capsString(video, audio, multichannel)
 }
 
 private fun MediaCodecInfo.supportsProfile(mime: String, profile: Int): Boolean =

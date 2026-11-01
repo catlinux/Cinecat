@@ -144,4 +144,10 @@ class AppContainer(context: Context) {
 }
 
 @SuppressLint("UnsafeOptInUsageError")
-private fun calculateCaps(context: Context): String = detectCapabilities(context)
+internal fun calculateCaps(context: Context): String {
+    val uiModeType = context.resources.configuration.uiMode and Configuration.UI_MODE_TYPE_MASK
+    return calculateCaps(uiModeType) { multichannel -> detectCapabilities(context, multichannel) }
+}
+
+internal fun calculateCaps(uiModeType: Int, detect: (Boolean) -> String): String =
+    detect(isTelevision(uiModeType))

@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.56.0] - 2026-11-01
+
+### Added
+
+- Android TV and server: audio with 6 or more channels is delivered as 5.1 AAC over HLS when the app declares `mch` (only the TV does); the browser and the phone keep getting stereo AAC. The HLS key tells both variants apart. Not yet tested with a real TV and a real 5.1 file.
+
 ## [0.55.0] - 2026-11-01
 
 ### Added

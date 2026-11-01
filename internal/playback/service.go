@@ -39,6 +39,9 @@ type TranscodeSettings struct {
 	Threads int
 	// Audio es la posición de la pista de audio que se mapea.
 	Audio int
+	// AudioChannels es 2 para AAC estéreo o 6 para AAC 5.1 en las apps que
+	// declaran mch y una pista de 6 o más canales.
+	AudioChannels int
 	// Hardware permite usar la codificación VA-API cuando esté disponible.
 	Hardware bool
 }
@@ -69,10 +72,11 @@ type StreamSelection struct {
 
 func defaultTranscodeSettings() TranscodeSettings {
 	return TranscodeSettings{
-		MaxHeight: 1080,
-		CRF:       20,
-		Preset:    "veryfast",
-		Threads:   defaultTranscodeThreads(),
+		MaxHeight:     1080,
+		CRF:           20,
+		Preset:        "veryfast",
+		Threads:       defaultTranscodeThreads(),
+		AudioChannels: 2,
 	}
 }
 
@@ -106,6 +110,9 @@ func normalizeTranscodeSettings(settings TranscodeSettings) TranscodeSettings {
 	}
 	if settings.Audio < 0 {
 		settings.Audio = 0
+	}
+	if settings.AudioChannels != 6 {
+		settings.AudioChannels = 2
 	}
 	return settings
 }

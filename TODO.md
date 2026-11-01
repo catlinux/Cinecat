@@ -9,8 +9,8 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 ## 🟠 Próxima fase
 
 - **Reproducción avanzada:** perfiles por dispositivo, subtítulos de imagen y audio no soportado. Probar con archivos reales entrelazados y HDR el desentrelazado y el mapeo a SDR de 0.55.0.
+- **Probar en la TV el audio 5.1 de 0.56.0** con un archivo 5.1 real (AAC 5.1 por HLS) y comprobar que se oye bien.
 - **Verificar el flujo «Servidor y web» de GitHub Actions** (`.github/workflows/server-web.yml`, ejecuta los tests de Go con FFmpeg y los de la web): comprobar su primera ejecución en verde.
-- **App Android y Android TV** (plan en `.agents/plans/apps-android/apps-android.PLAN.md`): HLS con AAC 5.1 cuando el equipo lo admita (hoy el AC-3 se convierte a AAC estéreo).
 
 ## 🟢 Más adelante
 
