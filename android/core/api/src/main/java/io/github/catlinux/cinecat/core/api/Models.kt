@@ -37,6 +37,13 @@ data class CurrentUserResponse(
 )
 
 @Serializable
+data class SessionProfile(
+    @SerialName("max_quality") val maxQuality: String = "",
+    @SerialName("audio_language") val audioLanguage: String = "",
+    @SerialName("subtitle_language") val subtitleLanguage: String = ""
+)
+
+@Serializable
 data class PairCreateRequest(
     @SerialName("device_name") val deviceName: String,
     val client: String

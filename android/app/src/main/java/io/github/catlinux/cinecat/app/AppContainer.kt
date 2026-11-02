@@ -14,6 +14,7 @@ import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import io.github.catlinux.cinecat.core.api.LocalAddressDns
 import io.github.catlinux.cinecat.core.api.createApi
 import io.github.catlinux.cinecat.core.api.createOkHttpClient
+import io.github.catlinux.cinecat.core.data.DeviceProfileRepository
 import io.github.catlinux.cinecat.core.data.KeystoreTokenCipher
 import io.github.catlinux.cinecat.core.data.LibraryRepository
 import io.github.catlinux.cinecat.core.data.LocalNetworkMonitor
@@ -49,6 +50,7 @@ class AppContainer(context: Context) {
     val sessionRepository: SessionRepository
     val libraryRepository: LibraryRepository
     val playbackRepository: PlaybackRepository
+    val deviceProfileRepository: DeviceProfileRepository
     val imageLoader: ImageLoader
 
     val caps: String by lazy { calculateCaps(appContext) }
@@ -111,6 +113,11 @@ class AppContainer(context: Context) {
             }
         )
         playbackRepository = PlaybackRepository(
+            apiProvider = {
+                sessionRepository.currentServer()?.let { origin -> createApi(origin, client) }
+            }
+        )
+        deviceProfileRepository = DeviceProfileRepository(
             apiProvider = {
                 sessionRepository.currentServer()?.let { origin -> createApi(origin, client) }
             }

@@ -26,6 +26,12 @@ interface CinecatService {
     @GET("api/v1/auth/me")
     suspend fun me(): CurrentUserResponse
 
+    @GET("api/v1/auth/sessions/current/profile")
+    suspend fun currentSessionProfile(): SessionProfile
+
+    @PUT("api/v1/auth/sessions/current/profile")
+    suspend fun saveCurrentSessionProfile(@Body request: SessionProfile): SessionProfile
+
     @POST("api/v1/auth/pair")
     suspend fun pairCreate(@Body request: PairCreateRequest): PairCreateResponse
 

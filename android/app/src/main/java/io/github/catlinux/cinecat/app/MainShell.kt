@@ -277,10 +277,17 @@ fun MainShell(
                         )
                     }
                     composable<Account> {
+                        val deviceProfileViewModel: DeviceProfileViewModel = viewModel {
+                            DeviceProfileViewModel(
+                                repository = container.deviceProfileRepository,
+                                scope = container.appScope
+                            )
+                        }
                         AccountScreen(
                             repository = container.sessionRepository,
                             session = session,
                             updater = container.appUpdater,
+                            deviceProfileViewModel = deviceProfileViewModel,
                             isTelevision = isTelevision,
                             onBack = { navController.popBackStack() },
                             onChangeServer = onChangeServer

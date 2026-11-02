@@ -49,6 +49,13 @@ class CinecatApi(
 
     suspend fun me(): ApiResult<CurrentUserResponse> = call { service.me() }
 
+    suspend fun currentSessionProfile(): ApiResult<SessionProfile> = call {
+        service.currentSessionProfile()
+    }
+
+    suspend fun saveCurrentSessionProfile(profile: SessionProfile): ApiResult<SessionProfile> =
+        call { service.saveCurrentSessionProfile(profile) }
+
     suspend fun pairCreate(request: PairCreateRequest): ApiResult<PairCreateResponse> = call {
         service.pairCreate(request)
     }

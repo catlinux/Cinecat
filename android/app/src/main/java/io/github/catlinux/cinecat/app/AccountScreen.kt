@@ -37,6 +37,7 @@ fun AccountScreen(
     repository: SessionRepository,
     session: SessionState.SignedIn,
     updater: AppUpdater,
+    deviceProfileViewModel: DeviceProfileViewModel,
     isTelevision: Boolean,
     onBack: () -> Unit,
     onChangeServer: () -> Unit
@@ -110,11 +111,18 @@ fun AccountScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                Column(modifier = Modifier.weight(1f)) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(24.dp)
+                ) {
                     AccountUpdateSection(
                         updater = updater,
                         isTelevision = true,
                         initialFocusRequester = updateFocusRequester
+                    )
+                    DeviceProfileSection(
+                        viewModel = deviceProfileViewModel,
+                        isTelevision = true
                     )
                 }
             }
@@ -159,6 +167,10 @@ fun AccountScreen(
                 )
                 Spacer(Modifier.height(8.dp))
                 AccountUpdateSection(updater = updater, isTelevision = false)
+                DeviceProfileSection(
+                    viewModel = deviceProfileViewModel,
+                    isTelevision = false
+                )
                 Spacer(Modifier.height(8.dp))
                 PrimaryActionButton(
                     isTelevision = false,
