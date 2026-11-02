@@ -4,10 +4,13 @@ import {
 	controlsShouldHide,
 	countdownLabel,
 	cycleSpeed,
+	firstSubtitleForToggle,
 	formatPlayerTime,
 	formatSpeed,
+	playbackReloadURL,
 	pointerPosition,
-	shortcutAction
+	shortcutAction,
+	subtitleNeedsReload
 } from './player';
 
 describe('utilidades del reproductor', () => {
@@ -67,5 +70,40 @@ describe('utilidades del reproductor', () => {
 
 	it('muestra la cuenta atrás del siguiente episodio', () => {
 		expect(countdownLabel(8)).toBe('Siguiente episodio en 8…');
+	});
+
+	it('sabe cuándo hay que recargar por un subtítulo de imagen', () => {
+		const subtitles = [
+			{ id: 'e0', burn_in: false },
+			{ id: 'e1', burn_in: true }
+		];
+		expect(subtitleNeedsReload('e0', 'e1', subtitles)).toBe(true);
+		expect(subtitleNeedsReload('e1', 'e0', subtitles)).toBe(true);
+		expect(subtitleNeedsReload('e1', null, subtitles)).toBe(true);
+		expect(subtitleNeedsReload('e0', null, subtitles)).toBe(false);
+		expect(subtitleNeedsReload('e1', 'e1', subtitles)).toBe(false);
+	});
+
+	it('elige la primera pista de texto y recurre a la imagen si no hay otra', () => {
+		expect(
+			firstSubtitleForToggle([
+				{ id: 'e0', burn_in: true },
+				{ id: 'e1', burn_in: false }
+			])
+		).toBe('e1');
+		expect(firstSubtitleForToggle([{ id: 'e0', burn_in: true }])).toBe('e0');
+		expect(firstSubtitleForToggle([])).toBeNull();
+	});
+
+	it('construye la URL de recarga conservando audio, calidad y tiempo', () => {
+		expect(
+			playbackReloadURL(7, { audio: 1, quality: '720', subtitle: 'e1', time: 42.9 })
+		).toBe('/items/7/play?audio=1&quality=720&subtitle=e1&t=42');
+		expect(playbackReloadURL(7, { subtitle: null, time: 0 })).toBe(
+			'/items/7/play?subtitle=&t=0'
+		);
+		expect(playbackReloadURL(7, { subtitle: 'e0', time: 3.8 })).toBe(
+			'/items/7/play?subtitle=e0&t=3'
+		);
 	});
 });

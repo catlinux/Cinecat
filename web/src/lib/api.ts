@@ -754,6 +754,7 @@ export interface PlaybackSubtitle {
 	forced: boolean;
 	default: boolean;
 	url: string;
+	burn_in?: boolean;
 }
 
 export interface PlayResponse {

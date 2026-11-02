@@ -66,6 +66,18 @@ describe('Player', () => {
 							forced: false,
 							default: false,
 							url: '/api/v1/stream/7/subtitles/e0.vtt?exp=1&sig=abc'
+						},
+						{
+							id: 'e1',
+							source: 'embedded',
+							language: 'spa',
+							language_name: 'Español',
+							title: 'PGS',
+							codec: 'hdmv_pgs_subtitle',
+							forced: false,
+							default: false,
+							url: '',
+							burn_in: true
 						}
 					],
 					selected_subtitle: 'e0'
@@ -82,6 +94,8 @@ describe('Player', () => {
 		expect(body).toContain('kind="subtitles"');
 		expect(body).toContain('src="http://api.test/api/v1/stream/7/subtitles/e0.vtt');
 		expect(body).toContain('data-subtitle-id="e0"');
+		expect(body).toContain(' · imagen');
+		expect(body).not.toContain('data-subtitle-id="e1"');
 		expect(body).toContain('role="menuitemradio"');
 		expect(body).toContain('aria-checked="true"');
 		expect(body).toContain('Recodificado');

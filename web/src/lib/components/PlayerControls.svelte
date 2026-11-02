@@ -141,6 +141,9 @@
 		if (track.forced) {
 			parts.push('Forzados');
 		}
+		if (track.burn_in) {
+			parts.push('imagen');
+		}
 		return parts.join(' · ');
 	}
 

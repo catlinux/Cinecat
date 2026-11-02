@@ -136,6 +136,53 @@ export function absoluteSubtitleURL(base: string, path: string): string {
 	}
 }
 
+export interface SubtitleChoice {
+	id: string;
+	burn_in?: boolean;
+}
+
+export interface PlaybackReloadOptions {
+	audio?: number;
+	quality?: string;
+	subtitle?: string | null;
+	time: number;
+}
+
+export function isBurnInSubtitle(id: string | null, subtitles: SubtitleChoice[]): boolean {
+	return id !== null && subtitles.some((subtitle) => subtitle.id === id && subtitle.burn_in === true);
+}
+
+export function subtitleNeedsReload(
+	current: string | null,
+	next: string | null,
+	subtitles: SubtitleChoice[]
+): boolean {
+	return (
+		current !== next &&
+		(isBurnInSubtitle(current, subtitles) || isBurnInSubtitle(next, subtitles))
+	);
+}
+
+export function firstSubtitleForToggle(subtitles: SubtitleChoice[]): string | null {
+	return subtitles.find((subtitle) => !subtitle.burn_in)?.id ?? subtitles[0]?.id ?? null;
+}
+
+export function playbackReloadURL(itemId: number, options: PlaybackReloadOptions): string {
+	const params = new URLSearchParams();
+	if (options.audio !== undefined) {
+		params.set('audio', String(options.audio));
+	}
+	if (options.quality) {
+		params.set('quality', options.quality);
+	}
+	if (options.subtitle !== undefined) {
+		params.set('subtitle', options.subtitle ?? '');
+	}
+	const seconds = Number.isFinite(options.time) ? Math.max(0, Math.floor(options.time)) : 0;
+	params.set('t', String(seconds));
+	return `/items/${itemId}/play?${params.toString()}`;
+}
+
 export function countdownLabel(seconds: number): string {
 	return `Siguiente episodio en ${Math.max(0, Math.ceil(seconds))}…`;
 }

@@ -8,9 +8,12 @@
 		clampSeekTime,
 		countdownLabel,
 		controlsShouldHide,
+		firstSubtitleForToggle,
 		formatSpeed,
+		playbackReloadURL,
 		PLAYER_SPEEDS,
-		shortcutAction
+		shortcutAction,
+		subtitleNeedsReload
 	} from '$lib/player';
 	import {
 		decideProgress,
@@ -475,6 +478,22 @@
 		}
 	}
 
+	function reloadWithSubtitle(id: string | null) {
+		const targetItemId = itemId;
+		if (!targetItemId) {
+			return;
+		}
+		selectedSubtitle = id;
+		void savePreference({ subtitle_id: id ?? '' }).then(() => {
+			window.location.href = playbackReloadURL(targetItemId, {
+				audio: audioTracks.length > 0 ? selectedAudio : undefined,
+				quality: qualities.length > 0 ? selectedQuality : undefined,
+				subtitle: id,
+				time: video?.currentTime ?? currentTime
+			});
+		});
+	}
+
 	function chooseAudio(index: number) {
 		if (!itemId || index === selectedAudio) {
 			return;
@@ -517,7 +536,12 @@
 	}
 
 	function chooseSubtitle(value: string) {
-		applySubtitle(value === '' ? null : value);
+		const next = value === '' ? null : value;
+		if (itemId && subtitleNeedsReload(selectedSubtitle, next, subtitles)) {
+			reloadWithSubtitle(next);
+			return;
+		}
+		applySubtitle(next);
 	}
 
 	function toggleSubtitles() {
@@ -526,8 +550,11 @@
 		}
 		if (selectedSubtitle !== null) {
 			chooseSubtitle('');
-		} else {
-			chooseSubtitle(subtitles[0].id);
+			return;
+		}
+		const next = firstSubtitleForToggle(subtitles);
+		if (next !== null) {
+			chooseSubtitle(next);
 		}
 	}
 
@@ -737,8 +764,11 @@
 	const subtitleTracks = $derived(
 		subtitles.map((subtitle) => ({
 			...subtitle,
-			absoluteURL: absoluteSubtitleURL(src, subtitle.url)
+			absoluteURL: subtitle.burn_in ? '' : absoluteSubtitleURL(src, subtitle.url)
 		}))
+	);
+	const renderableSubtitleTracks = $derived(
+		subtitleTracks.filter((subtitle) => !subtitle.burn_in)
 	);
 </script>
 
@@ -803,7 +833,7 @@
 		onvolumechange={handleVolumeChange}
 		onratechange={handleRateChange}
 	>
-		{#each subtitleTracks as subtitle (subtitle.id)}
+		{#each renderableSubtitleTracks as subtitle (subtitle.id)}
 			<track
 				kind="subtitles"
 				srclang={subtitle.language || 'und'}
