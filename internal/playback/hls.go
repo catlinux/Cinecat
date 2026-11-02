@@ -158,16 +158,35 @@ func videoIsHDR(video *VideoStream) bool {
 	}
 }
 
-func transcodeVideoFilter(settings TranscodeSettings, video *VideoStream, hdrFilters bool) string {
-	filters := make([]string, 0, 3)
+func videoPreFilters(video *VideoStream, hdrFilters bool) []string {
+	filters := make([]string, 0, 2)
 	if videoNeedsDeinterlace(video) {
 		filters = append(filters, deinterlaceVideoFilter)
 	}
 	if hdrFilters && videoIsHDR(video) {
 		filters = append(filters, hdrToSDRVideoFilter)
 	}
-	filters = append(filters, fmt.Sprintf(`scale=-2:trunc(min(%d\,ih)/2)*2`, settings.MaxHeight))
+	return filters
+}
+
+func scaleVideoFilter(settings TranscodeSettings) string {
+	return fmt.Sprintf(`scale=-2:trunc(min(%d\,ih)/2)*2`, settings.MaxHeight)
+}
+
+func transcodeVideoFilter(settings TranscodeSettings, video *VideoStream, hdrFilters bool) string {
+	filters := videoPreFilters(video, hdrFilters)
+	filters = append(filters, scaleVideoFilter(settings))
 	return strings.Join(filters, ",")
+}
+
+func burnInVideoFilter(settings TranscodeSettings, video *VideoStream, hdrFilters bool) string {
+	index := settings.BurnSubtitle - 1
+	pre := strings.Join(videoPreFilters(video, hdrFilters), ",")
+	scale := scaleVideoFilter(settings)
+	if pre == "" {
+		return fmt.Sprintf("[0:V:0][0:s:%d]overlay[v];[v]%s[vout]", index, scale)
+	}
+	return fmt.Sprintf("[0:V:0]%s[b];[b][0:s:%d]overlay[v];[v]%s[vout]", pre, index, scale)
 }
 
 func transcodeAudioArgs(settings TranscodeSettings) []string {
@@ -208,7 +227,8 @@ func hlsTranscodeArgs(inputPath string, startSegment int, transcode ...Transcode
 }
 
 // hlsTranscodeArgsWithVideo añade, solo al recodificar, el desentrelazado y
-// el mapeo HDR a SDR antes del escalado final.
+// el mapeo HDR a SDR antes del escalado final. Si hay que quemar un subtítulo
+// de imagen, el overlay va entre esos filtros y el escalado.
 func hlsTranscodeArgsWithVideo(
 	inputPath string,
 	startSegment int,
@@ -227,15 +247,24 @@ func hlsTranscodeArgsWithVideo(
 	if startSeconds > 0 {
 		args = append(args, "-ss", strconv.Itoa(startSeconds))
 	}
-	args = append(args,
-		"-i", inputPath,
+	args = append(args, "-i", inputPath)
+	if settings.BurnSubtitle > 0 {
+		args = append(args,
+			"-filter_complex", burnInVideoFilter(settings, video, hdrFilters),
+			"-map", "[vout]",
+		)
+	} else {
 		// V mayúscula excluye las carátulas incrustadas como flujo de vídeo.
-		"-map", "0:V:0",
-		"-map", fmt.Sprintf("0:a:%d?", settings.Audio),
+		args = append(args, "-map", "0:V:0")
+	}
+	args = append(args, "-map", fmt.Sprintf("0:a:%d?", settings.Audio))
+	if settings.BurnSubtitle == 0 {
 		// libx264 con yuv420p exige dimensiones pares; la altura se limita al
 		// máximo configurado y el ancho se calcula manteniendo la proporción.
 		// Entrelazado y HDR se corrigen antes del escalado final.
-		"-vf", transcodeVideoFilter(settings, video, hdrFilters),
+		args = append(args, "-vf", transcodeVideoFilter(settings, video, hdrFilters))
+	}
+	args = append(args,
 		"-c:v", "libx264",
 		"-preset", settings.Preset,
 		"-crf", strconv.Itoa(settings.CRF),
@@ -435,6 +464,9 @@ func (s *Service) ServeHLSFile(w http.ResponseWriter, r *http.Request, itemID in
 		if selections[0].Caps != "" {
 			extra = append(extra, "caps", selections[0].Caps)
 		}
+		if selections[0].BurnSubtitle > 0 {
+			extra = append(extra, "burnsub", strconv.Itoa(selections[0].BurnSubtitle-1))
+		}
 		query = signedQuery(exp, sig, extra...)
 	}
 
@@ -504,6 +536,7 @@ func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string, s
 	transcode.AudioChannels = AudioChannelsFor(
 		ParseCapabilities(selection.Caps), selection.Info, selection.Audio,
 	)
+	transcode.BurnSubtitle = selection.BurnSubtitle
 
 	absInput, err := filepath.Abs(inputPath)
 	if err != nil {
@@ -516,7 +549,7 @@ func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string, s
 	var copyBounds []float64
 	var copyDurations []time.Duration
 
-	if (selection.Copy || selection.ForceCopy) && !selection.ForceTranscode {
+	if selection.BurnSubtitle == 0 && (selection.Copy || selection.ForceCopy) && !selection.ForceTranscode {
 		if copyExtensionBlocked(absInput) {
 			if selection.ForceCopy {
 				return nil, ErrFileNotFound
@@ -557,7 +590,8 @@ func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string, s
 	hardware := false
 	hardwareFull := false
 	hardwareDevice := ""
-	if mode != hlsModeCopy && transcode.Hardware && !s.hardwareDisabledLocked(absInput) && s.hardwareReady() {
+	if mode != hlsModeCopy && selection.BurnSubtitle == 0 &&
+		transcode.Hardware && !s.hardwareDisabledLocked(absInput) && s.hardwareReady() {
 		hardware = true
 		hardwareDevice = hardwareDevicePath()
 		hardwareFull = hardwareFullRoute(selection.Info, transcode.MaxHeight)
@@ -748,9 +782,13 @@ func copyFileKey(path string) string {
 // calidad.
 func transcodeKey(settings TranscodeSettings) string {
 	settings = normalizeTranscodeSettings(settings)
-	return fmt.Sprintf("%d-%d-%s-%d-a%d-c%d",
+	key := fmt.Sprintf("%d-%d-%s-%d-a%d-c%d",
 		settings.MaxHeight, settings.CRF, settings.Preset, settings.Threads,
 		settings.Audio, settings.AudioChannels)
+	if settings.BurnSubtitle > 0 {
+		key += fmt.Sprintf("-b%d", settings.BurnSubtitle)
+	}
+	return key
 }
 
 // streamKey añade la calidad textual a la clave de transcodificación para que

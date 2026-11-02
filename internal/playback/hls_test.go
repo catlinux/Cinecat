@@ -193,6 +193,42 @@ func TestHLSArgsAudio51ParaNativoMch(t *testing.T) {
 	}
 }
 
+func TestHLSArgsQuemaSubtituloImagen(t *testing.T) {
+	settings := TranscodeSettings{MaxHeight: 720, CRF: 20, Preset: "veryfast", Threads: 4, BurnSubtitle: 2}
+	args := hlsTranscodeArgsWithVideo("/tmp/peli.mkv", 0, settings,
+		&VideoStream{FieldOrder: "progressive"}, false)
+	joined := strings.Join(args, "\n")
+	want := `-filter_complex` + "\n" +
+		`[0:V:0][0:s:1]overlay[v];[v]scale=-2:trunc(min(720\,ih)/2)*2[vout]`
+	if !strings.Contains(joined, want) {
+		t.Fatalf("falta el filtro de subtítulo: %v", args)
+	}
+	if !strings.Contains(joined, "-map\n[vout]") || strings.Contains(joined, "-vf\n") {
+		t.Fatalf("mapeo o filtro de vídeo inesperado: %v", args)
+	}
+
+	settings.BurnSubtitle = 1
+	args = hlsTranscodeArgsWithVideo("/tmp/peli.mkv", 0, settings,
+		&VideoStream{FieldOrder: "tt"}, false)
+	joined = strings.Join(args, "\n")
+	want = `[0:V:0]yadif=mode=0:parity=-1:deint=1[b];[b][0:s:0]overlay[v];[v]scale=-2:trunc(min(720\,ih)/2)*2[vout]`
+	if !strings.Contains(joined, want) {
+		t.Fatalf("faltan los filtros previos antes del overlay: %v", args)
+	}
+}
+
+func TestTranscodeKeyDistingueSubtituloQuemado(t *testing.T) {
+	base := defaultTranscodeSettings()
+	burned := base
+	burned.BurnSubtitle = 1
+	if transcodeKey(base) == transcodeKey(burned) {
+		t.Fatal("quemar un subtítulo debe cambiar la clave de caché")
+	}
+	if streamKey(base, "auto") == streamKey(burned, "auto") {
+		t.Fatal("quemar un subtítulo debe cambiar la clave del stream")
+	}
+}
+
 func TestTranscodeSettingsInvalidosUsanLosDefectos(t *testing.T) {
 	settings := normalizeTranscodeSettings(TranscodeSettings{
 		MaxHeight: 999,

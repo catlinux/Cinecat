@@ -70,18 +70,21 @@ func TestDiscoverSubtitlesIncrustadosYExternos(t *testing.T) {
 		{Codec: "ass", Language: "fr", Text: true},
 	}}
 	tracks := DiscoverSubtitles(video, info)
-	if len(tracks) != 5 {
-		t.Fatalf("pistas = %d, se esperaban 5: %+v", len(tracks), tracks)
+	if len(tracks) != 6 {
+		t.Fatalf("pistas = %d, se esperaban 6: %+v", len(tracks), tracks)
 	}
-	if tracks[0].ID != "e0" || tracks[1].ID != "e2" || tracks[2].ID != "x0" ||
-		tracks[3].ID != "x1" || tracks[4].ID != "x2" {
+	if tracks[0].ID != "e0" || tracks[1].ID != "e1" || tracks[2].ID != "e2" ||
+		tracks[3].ID != "x0" || tracks[4].ID != "x1" || tracks[5].ID != "x2" {
 		t.Fatalf("ids inesperados: %+v", tracks)
 	}
-	if tracks[2].Source != "external" || !tracks[2].Forced || tracks[2].Language != "en" {
-		t.Fatalf("subtítulo externo inesperado: %+v", tracks[2])
+	if !tracks[1].Image || tracks[1].Codec != "hdmv_pgs_subtitle" || tracks[1].Language != "en" {
+		t.Fatalf("subtítulo de imagen inesperado: %+v", tracks[1])
 	}
-	if tracks[3].Language != "es" || tracks[4].Language != "spa" {
-		t.Fatalf("idiomas externos inesperados: %+v", tracks[3:])
+	if tracks[3].Source != "external" || !tracks[3].Forced || tracks[3].Language != "en" {
+		t.Fatalf("subtítulo externo inesperado: %+v", tracks[3])
+	}
+	if tracks[4].Language != "es" || tracks[5].Language != "spa" {
+		t.Fatalf("idiomas externos inesperados: %+v", tracks[4:])
 	}
 }
 

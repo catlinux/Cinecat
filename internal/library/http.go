@@ -408,7 +408,7 @@ func pagination(r *http.Request) (limit, offset int, err error) {
 type playResponse struct {
 	URL  string        `json:"url"`
 	Mode playback.Mode `json:"mode"`
-	// Reason explica por qué no va en directo: container, video o audio.
+	// Reason explica por qué no va en directo: container, video, audio o subtitle.
 	Reason           playback.Reason `json:"reason,omitempty"`
 	ExpiresAt        time.Time       `json:"expires_at"`
 	AudioTracks      []audioTrackDTO `json:"audio_tracks"`
@@ -439,13 +439,6 @@ func (a *API) handlePlay(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if mode == playback.ModeRemux {
-		if err := a.playback.CheckFFmpeg(); err != nil {
-			writeJSONError(w, http.StatusServiceUnavailable, "ffmpeg no está disponible en el servidor")
-			return
-		}
-	}
-
 	preferences, err := loadItemPreferences(r.Context(), a.db, sessionUserID(r), id)
 	if err != nil {
 		log.Printf("library: leer preferencias del ítem %d: %v", id, err)
@@ -458,10 +451,28 @@ func (a *API) handlePlay(w http.ResponseWriter, r *http.Request) {
 		infoPointer = &info
 	}
 
+	subtitles, subtitleErr := a.selectSubtitles(
+		r.Context(), id, safePath, infoPointer, preferences, r.URL.Query(),
+	)
+	if subtitleErr != nil {
+		writeJSONError(w, subtitleErr.status, subtitleErr.message)
+		return
+	}
+	if subtitles.BurnSubtitle > 0 {
+		mode = playback.ModeRemux
+		reason = playback.ReasonSubtitle
+	}
+	if mode == playback.ModeRemux {
+		if err := a.playback.CheckFFmpeg(); err != nil {
+			writeJSONError(w, http.StatusServiceUnavailable, "ffmpeg no está disponible en el servidor")
+			return
+		}
+	}
+
 	signature, expiresAt := a.playback.Sign(id)
 	expires := strconv.FormatInt(expiresAt.Unix(), 10)
 	options, optionsErr := a.playOptions(
-		r.Context(), id, mode, safePath, infoPointer, preferences, r.URL.Query(), expires, signature,
+		id, mode, infoPointer, preferences, r.URL.Query(), subtitles, expires, signature,
 	)
 	if optionsErr != nil {
 		writeJSONError(w, optionsErr.status, optionsErr.message)
@@ -481,6 +492,9 @@ func (a *API) handlePlay(w http.ResponseWriter, r *http.Request) {
 	if mode == playback.ModeRemux {
 		query.Set("audio", strconv.Itoa(options.Audio))
 		query.Set("q", options.Quality)
+		if subtitles.BurnSubtitle > 0 {
+			query.Set("burnsub", strconv.Itoa(subtitles.BurnSubtitle-1))
+		}
 	} else if caps.Native() {
 		// /stream vuelve a decidir: con la misma pista sale el mismo modo.
 		query.Set("audio", strconv.Itoa(options.SelectedAudio))
@@ -542,6 +556,9 @@ func (a *API) serveSigned(w http.ResponseWriter, r *http.Request, name string) {
 	if selectionErr != nil {
 		writeJSONError(w, selectionErr.status, selectionErr.message)
 		return
+	}
+	if selection.BurnSubtitle > 0 {
+		mode = playback.ModeRemux
 	}
 
 	switch mode {
@@ -618,7 +635,7 @@ func (a *API) handleStreamSubtitle(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	if found == nil {
+	if found == nil || found.Image {
 		writeJSONError(w, http.StatusNotFound, "subtítulo no encontrado")
 		return
 	}

@@ -36,6 +36,7 @@ type subtitleDTO struct {
 	Codec        string `json:"codec"`
 	Forced       bool   `json:"forced"`
 	Default      bool   `json:"default"`
+	BurnIn       bool   `json:"burn_in"`
 	URL          string `json:"url"`
 }
 
@@ -95,6 +96,75 @@ func languageName(value string) string {
 	}
 }
 
+type subtitleSelection struct {
+	Tracks       []playback.SubtitleTrack
+	Selected     *string
+	BurnSubtitle int
+}
+
+// selectSubtitles reúne las pistas disponibles y resuelve la elegida por la
+// consulta o las preferencias. BurnSubtitle guarda la posición más uno de una
+// pista de imagen; cero significa que no se quema ninguna.
+func (a *API) selectSubtitles(
+	ctx context.Context,
+	itemID int64,
+	path string,
+	info *playback.FileInfo,
+	preferences *itemPreferencesDTO,
+	query map[string][]string,
+) (subtitleSelection, *playOptionsError) {
+	tracks := playback.DiscoverSubtitles(path, info)
+	uploaded, err := a.uploadedSubtitleTracks(ctx, itemID)
+	if err != nil {
+		return subtitleSelection{}, &playOptionsError{http.StatusInternalServerError, "error interno"}
+	}
+	tracks = append(tracks, uploaded...)
+	result := subtitleSelection{Tracks: tracks}
+	findTrack := func(id string) *playback.SubtitleTrack {
+		for index := range tracks {
+			if tracks[index].ID == id {
+				return &tracks[index]
+			}
+		}
+		return nil
+	}
+	selectID := func(id string) *playOptionsError {
+		if !playback.ValidSubtitleID(id) {
+			return &playOptionsError{http.StatusBadRequest, "subtítulo no válido"}
+		}
+		track := findTrack(id)
+		if track == nil {
+			return &playOptionsError{http.StatusBadRequest, "subtítulo no válido"}
+		}
+		value := id
+		result.Selected = &value
+		if track.Image {
+			result.BurnSubtitle = track.StreamIndex + 1
+		}
+		return nil
+	}
+
+	if values, ok := query["subtitle"]; ok {
+		value := ""
+		if len(values) > 0 {
+			value = values[0]
+		}
+		if value != "" {
+			if err := selectID(value); err != nil {
+				return result, err
+			}
+		}
+	} else if preferences != nil && preferences.SubtitleID != nil && *preferences.SubtitleID != "" {
+		value := *preferences.SubtitleID
+		if playback.ValidSubtitleID(value) && findTrack(value) != nil {
+			if err := selectID(value); err != nil {
+				return result, err
+			}
+		}
+	}
+	return result, nil
+}
+
 func (a *API) maxPlaybackHeight() int {
 	if a.settingsStore != nil {
 		switch value := a.settingsStore.Int("playback.max_height"); value {
@@ -106,13 +176,12 @@ func (a *API) maxPlaybackHeight() int {
 }
 
 func (a *API) playOptions(
-	ctx context.Context,
 	itemID int64,
 	mode playback.Mode,
-	path string,
 	info *playback.FileInfo,
 	preferences *itemPreferencesDTO,
 	query map[string][]string,
+	subtitles subtitleSelection,
 	exp, sig string,
 ) (playOptions, *playOptionsError) {
 	result := playOptions{
@@ -198,13 +267,11 @@ func (a *API) playOptions(
 	result.Quality = result.SelectedQuality
 	result.MaxHeight = effectiveHeight(result.SelectedQuality, maxHeight, originalHeight)
 
-	subtitleTracks := playback.DiscoverSubtitles(path, info)
-	uploadedTracks, err := a.uploadedSubtitleTracks(ctx, itemID)
-	if err != nil {
-		return result, &playOptionsError{http.StatusInternalServerError, "error interno"}
-	}
-	subtitleTracks = append(subtitleTracks, uploadedTracks...)
-	for _, track := range subtitleTracks {
+	for _, track := range subtitles.Tracks {
+		url := subtitleURL(itemID, track.ID, exp, sig)
+		if track.Image {
+			url = ""
+		}
 		result.Subtitles = append(result.Subtitles, subtitleDTO{
 			ID:           track.ID,
 			Source:       track.Source,
@@ -214,37 +281,11 @@ func (a *API) playOptions(
 			Codec:        track.Codec,
 			Forced:       track.Forced,
 			Default:      track.Default,
-			URL:          subtitleURL(itemID, track.ID, exp, sig),
+			BurnIn:       track.Image,
+			URL:          url,
 		})
 	}
-	findSubtitle := func(id string) bool {
-		for _, track := range result.Subtitles {
-			if track.ID == id {
-				return true
-			}
-		}
-		return false
-	}
-	if values, ok := query["subtitle"]; ok {
-		value := ""
-		if len(values) > 0 {
-			value = values[0]
-		}
-		if value == "" {
-			result.SelectedSubtitle = nil
-		} else if !playback.ValidSubtitleID(value) || !findSubtitle(value) {
-			return result, &playOptionsError{http.StatusBadRequest, "subtítulo no válido"}
-		} else {
-			result.SelectedSubtitle = &value
-		}
-	} else if preferences != nil && preferences.SubtitleID != nil {
-		value := *preferences.SubtitleID
-		if value == "" {
-			result.SelectedSubtitle = nil
-		} else if playback.ValidSubtitleID(value) && findSubtitle(value) {
-			result.SelectedSubtitle = &value
-		}
-	}
+	result.SelectedSubtitle = subtitles.Selected
 
 	return result, nil
 }
@@ -354,6 +395,19 @@ func (a *API) streamSelection(
 	}
 	result.MaxHeight = effectiveHeight(result.Quality, a.maxPlaybackHeight(), originalHeight)
 
+	if values, ok := query["burnsub"]; ok {
+		raw := ""
+		if len(values) > 0 {
+			raw = values[0]
+		}
+		index, err := strconv.Atoi(raw)
+		if err != nil || index < 0 || info == nil || index >= len(info.Subtitles) ||
+			!playback.ImageSubtitleCodec(info.Subtitles[index].Codec) {
+			return result, &playOptionsError{http.StatusBadRequest, "subtítulo no válido"}
+		}
+		result.BurnSubtitle = index + 1
+	}
+
 	// La playlist decide una sola vez si copia o recodifica. El parámetro m de
 	// las URLs firmadas mantiene esa decisión en todos los segmentos aunque el
 	// índice de claves pase de pendiente a listo entre peticiones.
@@ -372,6 +426,11 @@ func (a *API) streamSelection(
 			caps := playback.ParseCapabilities(result.Caps)
 			result.Copy = playback.CanCopy(info, caps, result.MaxHeight)
 		}
+	}
+	if result.BurnSubtitle > 0 {
+		result.Copy = false
+		result.ForceCopy = false
+		result.ForceTranscode = true
 	}
 	return result, nil
 }

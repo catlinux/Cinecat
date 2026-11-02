@@ -3437,7 +3437,10 @@ paths:
         - name: subtitle
           in: query
           required: false
-          description: Identificador del subtítulo, o vacío para desactivarlo.
+          description: |
+            Identificador del subtítulo, o vacío para desactivarlo. Si es una
+            pista de imagen incrustada, la reproducción pasa a HLS y se quema
+            en el vídeo.
           schema:
             type: string
       responses:
@@ -3507,6 +3510,15 @@ paths:
           schema:
             type: string
             enum: [auto, original, "480", "720", "1080"]
+        - name: burnsub
+          in: query
+          required: false
+          description: |
+            Posición de una pista de subtítulo de imagen incrustada que se
+            quema en el vídeo. Fuerza HLS y la recodificación por CPU.
+          schema:
+            type: integer
+            minimum: 0
         - $ref: '#/components/parameters/SignatureExp'
         - $ref: '#/components/parameters/Signature'
       responses:
@@ -3523,7 +3535,7 @@ paths:
         '206':
           description: Parte del archivo directo (petición con Range)
         '400':
-          description: Pista de audio o calidad no válidas
+          description: Pista de audio, calidad o subtítulo no válidos
           content:
             application/json:
               schema:
@@ -3583,6 +3595,15 @@ paths:
           schema:
             type: string
             enum: [auto, original, "480", "720", "1080"]
+        - name: burnsub
+          in: query
+          required: false
+          description: |
+            Posición de una pista de subtítulo de imagen incrustada que se
+            quema en el vídeo. Fuerza HLS.
+          schema:
+            type: integer
+            minimum: 0
         - $ref: '#/components/parameters/SignatureExp'
         - $ref: '#/components/parameters/Signature'
       responses:
@@ -3597,7 +3618,7 @@ paths:
                 type: string
                 format: binary
         '400':
-          description: Pista de audio o calidad no válidas
+          description: Pista de audio, calidad o subtítulo no válidos
           content:
             application/json:
               schema:
@@ -3631,7 +3652,8 @@ paths:
       summary: Sirve un subtítulo convertido a WebVTT
       description: |
         Misma firma por ítem que el vídeo. `file` es `<sid>.vtt`, donde `sid`
-        es `e<N>` para pistas incrustadas o `x<N>` para archivos externos.
+        es `e<N>` para pistas incrustadas o `x<N>` para archivos externos. Las
+        pistas de imagen incrustadas no se convierten y responden 404.
       security: []
       parameters:
         - $ref: '#/components/parameters/StreamId'
@@ -8381,6 +8403,7 @@ components:
         - codec
         - forced
         - default
+        - burn_in
         - url
       properties:
         id:
@@ -8403,9 +8426,14 @@ components:
           type: boolean
         default:
           type: boolean
+        burn_in:
+          type: boolean
+          description: |
+            La pista es una imagen incrustada (PGS, VobSub o DVB) que se quema
+            en el vídeo al recodificar; en ese caso `url` va vacía.
         url:
           type: string
-          description: URL relativa firmada del WebVTT.
+          description: URL relativa firmada del WebVTT; vacía en pistas de imagen.
       additionalProperties: false
     UploadedSubtitle:
       type: object
@@ -8455,6 +8483,7 @@ components:
             - container
             - video
             - audio
+            - subtitle
         expires_at:
           type: string
           format: date-time

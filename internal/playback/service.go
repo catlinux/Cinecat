@@ -42,6 +42,9 @@ type TranscodeSettings struct {
 	// AudioChannels es 2 para AAC estéreo o 6 para AAC 5.1 en las apps que
 	// declaran mch y una pista de 6 o más canales.
 	AudioChannels int
+	// BurnSubtitle es la posición de la pista de imagen más uno; cero
+	// significa que no se quema ninguna.
+	BurnSubtitle int
 	// Hardware permite usar la codificación VA-API cuando esté disponible.
 	Hardware bool
 }
@@ -68,6 +71,9 @@ type StreamSelection struct {
 	// Info es la ficha de ffprobe; decide si la ruta de hardware puede
 	// decodificar y escalar sin pasar por la CPU.
 	Info *FileInfo
+	// BurnSubtitle es la posición de la pista de imagen más uno; cero
+	// significa que no se quema ninguna.
+	BurnSubtitle int
 }
 
 func defaultTranscodeSettings() TranscodeSettings {
@@ -113,6 +119,9 @@ func normalizeTranscodeSettings(settings TranscodeSettings) TranscodeSettings {
 	}
 	if settings.AudioChannels != 6 {
 		settings.AudioChannels = 2
+	}
+	if settings.BurnSubtitle < 0 {
+		settings.BurnSubtitle = 0
 	}
 	return settings
 }

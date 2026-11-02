@@ -33,17 +33,30 @@ type SubtitleTrack struct {
 	Codec       string
 	Forced      bool
 	Default     bool
+	Image       bool
 	StreamIndex int
 	Path        string
 }
 
-// DiscoverSubtitles reúne las pistas de texto incrustadas y los archivos
-// externos con el mismo nombre base que el vídeo.
+// ImageSubtitleCodec indica si el códec es un subtítulo de imagen incrustado
+// que puede quemarse en el vídeo.
+func ImageSubtitleCodec(codec string) bool {
+	switch strings.ToLower(strings.TrimSpace(codec)) {
+	case "hdmv_pgs_subtitle", "dvd_subtitle", "dvb_subtitle":
+		return true
+	default:
+		return false
+	}
+}
+
+// DiscoverSubtitles reúne las pistas incrustadas, de texto o imagen, y los
+// archivos externos con el mismo nombre base que el vídeo.
 func DiscoverSubtitles(videoPath string, info *FileInfo) []SubtitleTrack {
 	tracks := make([]SubtitleTrack, 0)
 	if info != nil {
 		for position, stream := range info.Subtitles {
-			if !stream.Text {
+			image := ImageSubtitleCodec(stream.Codec)
+			if !stream.Text && !image {
 				continue
 			}
 			tracks = append(tracks, SubtitleTrack{
@@ -54,6 +67,7 @@ func DiscoverSubtitles(videoPath string, info *FileInfo) []SubtitleTrack {
 				Codec:       stream.Codec,
 				Forced:      stream.Forced,
 				Default:     stream.Default,
+				Image:       image,
 				StreamIndex: position,
 			})
 		}
@@ -183,7 +197,7 @@ func ValidSubtitleID(id string) bool {
 // SubtitleWebVTT devuelve el WebVTT de una pista. Las conversiones se cachean
 // por ítem, identificador y fecha de modificación del origen.
 func (s *Service) SubtitleWebVTT(ctx context.Context, itemID int64, videoPath string, track SubtitleTrack) ([]byte, error) {
-	if s == nil || !ValidSubtitleID(track.ID) {
+	if s == nil || track.Image || !ValidSubtitleID(track.ID) {
 		return nil, ErrSubtitleNotFound
 	}
 	sourcePath := videoPath

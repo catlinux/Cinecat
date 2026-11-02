@@ -99,7 +99,7 @@ func TestPlayConOpcionesYPreferencias(t *testing.T) {
 	}
 	if response.Mode != playback.ModeRemux || len(response.AudioTracks) != 2 ||
 		response.SelectedAudio != 1 || response.SelectedQuality != "auto" ||
-		len(response.Qualities) == 0 || len(response.Subtitles) != 1 ||
+		len(response.Qualities) == 0 || len(response.Subtitles) != 2 ||
 		response.SelectedSubtitle != nil {
 		t.Fatalf("respuesta de play inesperada: %+v", response)
 	}
@@ -110,8 +110,13 @@ func TestPlayConOpcionesYPreferencias(t *testing.T) {
 	if !strings.Contains(response.URL, "audio=1") || !strings.Contains(response.URL, "q=auto") {
 		t.Fatalf("URL sin selección: %s", response.URL)
 	}
-	if response.Subtitles[0].ID != "e0" || !strings.Contains(response.Subtitles[0].URL, "sig=") {
+	if response.Subtitles[0].ID != "e0" || response.Subtitles[0].BurnIn ||
+		!strings.Contains(response.Subtitles[0].URL, "sig=") {
 		t.Fatalf("subtítulo inesperado: %+v", response.Subtitles[0])
+	}
+	if response.Subtitles[1].ID != "e1" || !response.Subtitles[1].BurnIn ||
+		response.Subtitles[1].URL != "" {
+		t.Fatalf("subtítulo de imagen inesperado: %+v", response.Subtitles[1])
 	}
 
 	status, body = libraryHTTPGet(t, playURL(ts, id, "audio=0&quality=720"), ts.token)
@@ -216,6 +221,75 @@ func TestPlayAppNativa(t *testing.T) {
 
 	if web := play(""); web.Mode != playback.ModeRemux || web.Reason != playback.ReasonContainer {
 		t.Fatalf("la web sigue recibiendo HLS para MKV: %+v", web)
+	}
+}
+
+func TestPlaySubtituloImagenFuerzaHLS(t *testing.T) {
+	info := fileInfoFixture()
+	info.Subtitles = []playback.SubtitleStream{
+		{Index: 2, Codec: "subrip", Language: "spa", Text: true},
+		{Index: 3, Codec: "hdmv_pgs_subtitle", Language: "eng", Text: false},
+	}
+	ts := newPlayTestServer(t, info, nil)
+	id, _ := insertFileInfoItem(t, ts.libraryTestServer, "Pelicula.mp4", true)
+
+	plain, body := libraryHTTPGet(t, playURL(ts, id, ""), ts.token)
+	var response playResponse
+	if err := json.Unmarshal(body, &response); err != nil || plain != http.StatusOK {
+		t.Fatalf("play directo: %d %s (%v)", plain, body, err)
+	}
+	if response.Mode != playback.ModeDirect {
+		t.Fatalf("sin subtítulo debía seguir en directo: %+v", response)
+	}
+
+	status, body := libraryHTTPGet(t, playURL(ts, id, "subtitle=e1"), ts.token)
+	if err := json.Unmarshal(body, &response); err != nil || status != http.StatusOK {
+		t.Fatalf("play con imagen: %d %s (%v)", status, body, err)
+	}
+	if response.Mode != playback.ModeRemux || response.Reason != playback.ReasonSubtitle ||
+		response.SelectedSubtitle == nil || *response.SelectedSubtitle != "e1" {
+		t.Fatalf("el subtítulo de imagen debía forzar HLS: %+v", response)
+	}
+	if !strings.Contains(response.URL, "burnsub=1") {
+		t.Fatalf("falta burnsub en la URL: %s", response.URL)
+	}
+	if len(response.Subtitles) != 2 || !response.Subtitles[1].BurnIn ||
+		response.Subtitles[1].URL != "" || response.Subtitles[0].BurnIn {
+		t.Fatalf("subtítulos inesperados: %+v", response.Subtitles)
+	}
+
+	status, body = libraryHTTPDo(t, http.MethodPut, itemPreferencesURL(ts.libraryTestServer, id), ts.token,
+		map[string]any{"subtitle_id": "e1"})
+	if status != http.StatusNoContent {
+		t.Fatalf("preferencia de imagen: %d %s", status, body)
+	}
+	status, body = libraryHTTPGet(t, playURL(ts, id, ""), ts.token)
+	if err := json.Unmarshal(body, &response); err != nil || status != http.StatusOK {
+		t.Fatalf("play con preferencia de imagen: %d %s (%v)", status, body, err)
+	}
+	if response.Mode != playback.ModeRemux || response.Reason != playback.ReasonSubtitle {
+		t.Fatalf("la preferencia de imagen debía forzar HLS: %+v", response)
+	}
+
+	selection, selectionErr := ts.api.streamSelection(playback.ModeDirect, info, map[string][]string{
+		"burnsub": {"1"},
+	})
+	if selectionErr != nil || selection.BurnSubtitle != 2 ||
+		!selection.ForceTranscode || selection.Copy || selection.ForceCopy {
+		t.Fatalf("selección de stream con burnsub inesperada: %+v (%v)", selection, selectionErr)
+	}
+	for _, raw := range []string{"0", "2", "x"} {
+		if _, err := ts.api.streamSelection(playback.ModeDirect, info,
+			map[string][]string{"burnsub": {raw}}); err == nil || err.status != http.StatusBadRequest {
+			t.Fatalf("burnsub %q debería dar 400: %+v", raw, err)
+		}
+	}
+
+	signature, expiresAt := ts.playback.Sign(id)
+	imageURL := ts.URL + "/api/v1/stream/" + strconv.FormatInt(id, 10) +
+		"/subtitles/e1.vtt?exp=" + strconv.FormatInt(expiresAt.Unix(), 10) + "&sig=" + signature
+	if status, body := libraryHTTPGet(t, imageURL, ""); status != http.StatusNotFound {
+		t.Fatalf("el subtítulo de imagen no debe convertirse: %d %s", status, body)
 	}
 }
 

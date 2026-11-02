@@ -102,6 +102,7 @@ const (
 	ReasonContainer Reason = "container"
 	ReasonVideo     Reason = "video"
 	ReasonAudio     Reason = "audio"
+	ReasonSubtitle  Reason = "subtitle"
 )
 
 // DecideForAudio es DecideFor con la pista de audio elegida (posición en
