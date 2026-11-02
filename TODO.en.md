@@ -9,7 +9,7 @@ This file contains only work that is still open. Published work is in the [CHANG
 ## 🟠 Next phase
 
 - **Advanced playback:** device profiles, image subtitles and unsupported audio. The 0.55.0 deinterlacing and SDR tone mapping are already tested with real FFmpeg in `hls_real_test.go`; still to see on an HDR/interlaced file from the library.
-- **Check on the TV that the 0.56.0 5.1 audio sounds right:** the server is already tested with real FFmpeg (AC-3, E-AC-3 and AAC 5.1, also 5.1(side)); what remains is listening on the sound system.
+- **Hear the 0.56.0 5.1 audio on a 5.1 system:** tested on 2026-11-02 on the TV (Xiaomi MiTV-MSSP3) with a test AC-3 5.1 file: the HLS arrives as 6-channel AAC, ExoPlayer opens a 6-channel track (0x3f) and the TV downmixes it to stereo on its speakers. Still to hear on a real 5.1 system.
 - **Verify the "Servidor y web" GitHub Actions workflow** (`.github/workflows/server-web.yml`, runs the Go tests with FFmpeg and the web tests): check its first run is green.
 
 ## 🟢 Later
