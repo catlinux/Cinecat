@@ -8,7 +8,7 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 
 ## 🟠 Próxima fase
 
-- **Reproducción avanzada:** perfiles por dispositivo y audio no soportado. Probar en un dispositivo los subtítulos de imagen de 0.58.0. El desentrelazado y el mapeo a SDR de 0.55.0 ya están probados con FFmpeg real en `hls_real_test.go`; falta verlos en un archivo HDR/entrelazado de la biblioteca.
+- **Reproducción avanzada:** perfiles por dispositivo y audio no soportado. Los subtítulos de imagen de 0.58.0 se probaron el 2026-11-02 en la TV con un VobSub de prueba (elegirlos recarga por HLS con el subtítulo quemado); falta verlos con un PGS real y en el móvil. En la TV, con reproducción directa, ExoPlayer ya muestra el VobSub como pista nativa y aparece además la entrada «· imagen»: valorar ocultar la duplicada. El desentrelazado y el mapeo a SDR de 0.55.0 ya están probados con FFmpeg real en `hls_real_test.go`; falta verlos en un archivo HDR/entrelazado de la biblioteca.
 - **Oír el audio 5.1 de 0.56.0 en un equipo 5.1:** probado el 2026-11-02 en la TV (Xiaomi MiTV-MSSP3) con un AC-3 5.1 de prueba: el HLS llega como AAC de 6 canales, ExoPlayer abre una pista de 6 canales (0x3f) y la TV la mezcla a estéreo por sus altavoces. Falta oírlo con un sistema 5.1 real.
 - **Verificar el flujo «Servidor y web» de GitHub Actions** (`.github/workflows/server-web.yml`, ejecuta los tests de Go con FFmpeg y los de la web): comprobar su primera ejecución en verde.
 
