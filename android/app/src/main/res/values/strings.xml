@@ -130,6 +130,7 @@
     <string name="player_audio">Audio</string>
     <string name="player_audio_track">Audio %1$d</string>
     <string name="player_subtitles">Subtítulos</string>
+    <string name="player_image_subtitles">Subtítulos de imagen</string>
     <string name="player_subtitle_track">Subtítulo %1$d</string>
     <string name="player_disable_subtitles">Desactivar subtítulos</string>
     <string name="player_no_tracks">Sin pistas disponibles</string>

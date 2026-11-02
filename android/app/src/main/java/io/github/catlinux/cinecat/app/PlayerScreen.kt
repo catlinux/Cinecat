@@ -198,7 +198,13 @@ fun PlayerScreen(
                 exoPlayer.pause()
                 exoPlayer.clearMediaItems()
             }
-            PlayerUiState.Loading -> exoPlayer.pause()
+            PlayerUiState.Loading -> {
+                exoPlayer.pause()
+                // Al recargar, las pistas anteriores ya no pertenecen al medio
+                // nuevo; se esperan las de onTracksChanged para aplicar el audio.
+                tracks = null
+                appliedAudioStream = null
+            }
         }
     }
 
@@ -323,6 +329,7 @@ fun PlayerScreen(
                             player = exoPlayer,
                             tracks = tracks,
                             subtitles = current.subtitles,
+                            burnSubtitles = current.burnSubtitles,
                             onDismiss = { showTracks = false },
                             onAudioSelected = { index ->
                                 viewModel.savePlaybackPreferences(
@@ -331,9 +338,19 @@ fun PlayerScreen(
                                 )
                             },
                             onSubtitleSelected = { subtitleId ->
-                                viewModel.savePlaybackPreferences(
-                                    subtitleId = subtitleId,
-                                    quality = current.selectedQuality.takeIf { it.isNotBlank() }
+                                if (current.burnSubtitles.any { it.selected }) {
+                                    showTracks = false
+                                }
+                                viewModel.selectSubtitle(
+                                    subtitleId.ifBlank { null },
+                                    exoPlayer.currentPosition / 1000.0
+                                )
+                            },
+                            onBurnSubtitleSelected = { subtitleId ->
+                                showTracks = false
+                                viewModel.selectSubtitle(
+                                    subtitleId,
+                                    exoPlayer.currentPosition / 1000.0
                                 )
                             }
                         )
@@ -380,9 +397,11 @@ private fun TrackDialog(
     player: Player,
     tracks: Tracks?,
     subtitles: List<PlayerSubtitle>,
+    burnSubtitles: List<PlayerBurnSubtitle>,
     onDismiss: () -> Unit,
     onAudioSelected: (Int) -> Unit,
-    onSubtitleSelected: (String) -> Unit
+    onSubtitleSelected: (String) -> Unit,
+    onBurnSubtitleSelected: (String) -> Unit
 ) {
     val groups = tracks?.groups.orEmpty()
         .filter { it.type == C.TRACK_TYPE_AUDIO || it.type == C.TRACK_TYPE_TEXT }
@@ -399,7 +418,7 @@ private fun TrackDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                if (groups.isEmpty()) {
+                if (groups.isEmpty() && burnSubtitles.isEmpty()) {
                     Text(stringResource(R.string.player_no_tracks))
                 }
                 var nextAudioIndex = 0
@@ -435,7 +454,24 @@ private fun TrackDialog(
                     }
                     nextSubtitleIndex += group.mediaTrackGroup.length
                 }
-                if (groups.any { it.type == C.TRACK_TYPE_TEXT }) {
+                if (burnSubtitles.isNotEmpty()) {
+                    Text(
+                        text = stringResource(R.string.player_image_subtitles),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    burnSubtitles.forEach { subtitle ->
+                        TextButton(onClick = { onBurnSubtitleSelected(subtitle.id) }) {
+                            Text(
+                                if (subtitle.selected) {
+                                    stringResource(R.string.player_track_selected, subtitle.label)
+                                } else {
+                                    subtitle.label
+                                }
+                            )
+                        }
+                    }
+                }
+                if (groups.any { it.type == C.TRACK_TYPE_TEXT } || burnSubtitles.isNotEmpty()) {
                     TextButton(
                         onClick = {
                             player.trackSelectionParameters =

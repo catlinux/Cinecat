@@ -14,6 +14,8 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -59,6 +61,7 @@ class PlayerViewModelTest {
         assertEquals("es", ready.subtitles.single().language)
         assertEquals("Español", ready.subtitles.single().label)
         assertTrue(ready.subtitles.single().selected)
+        assertTrue(ready.burnSubtitles.isEmpty())
     }
 
     @Test
@@ -67,9 +70,9 @@ class PlayerViewModelTest {
         val calls = mutableListOf<String?>()
         val viewModel = viewModel(
             origin = origin,
-            play = { caps ->
-                calls += caps
-                if (caps == null) {
+            play = { request ->
+                calls += request.caps
+                if (request.caps == null) {
                     ApiResult.Success(
                         PlayResponse(
                             url = "/api/v1/stream/7/playlist.m3u8",
@@ -217,9 +220,176 @@ class PlayerViewModelTest {
         assertTrue(viewModel.state.value is PlayerUiState.Ready)
     }
 
+    @Test
+    fun separatesBurnInSubtitlesFromTextTracks() = runTest {
+        val viewModel = viewModel(
+            play = { ApiResult.Success(playbackWithBurnSubtitles(selected = "e1")) }
+        )
+        advanceUntilIdle()
+
+        val ready = viewModel.state.value as PlayerUiState.Ready
+        assertEquals(listOf("e0", "e2"), ready.subtitles.map { it.id })
+        assertEquals(listOf(false, false), ready.subtitles.map { it.selected })
+        assertEquals(
+            listOf(PlayerBurnSubtitle(id = "e1", label = "PGS · imagen", selected = true)),
+            ready.burnSubtitles
+        )
+        assertEquals("e1", ready.selectedSubtitle)
+    }
+
+    @Test
+    fun decidesWhenASubtitleChangeNeedsAReload() {
+        val burnSubtitles = listOf(
+            PlayerBurnSubtitle(id = "e1", label = "PGS · imagen", selected = true),
+            PlayerBurnSubtitle(id = "e3", label = "VobSub · imagen", selected = false)
+        )
+        assertTrue(shouldReloadSubtitle("e0", "e1", burnSubtitles))
+        assertTrue(shouldReloadSubtitle("e1", "e0", burnSubtitles))
+        assertTrue(shouldReloadSubtitle("e1", null, burnSubtitles))
+        assertTrue(shouldReloadSubtitle(null, "e3", burnSubtitles))
+        assertFalse(shouldReloadSubtitle("e0", "e2", burnSubtitles))
+        assertFalse(shouldReloadSubtitle("e0", null, burnSubtitles))
+        assertFalse(shouldReloadSubtitle("e1", "e1", burnSubtitles))
+    }
+
+    @Test
+    fun selectingTextFromBurnedImageReloadsWithoutBurnAndKeepsPosition() = runTest {
+        val requests = mutableListOf<PlaybackRequest>()
+        val saved = mutableListOf<PreferencesPatch>()
+        val viewModel = viewModel(
+            play = { request ->
+                requests += request
+                val selected = if (requests.size == 1) "e1" else null
+                ApiResult.Success(playbackWithBurnSubtitles(selected))
+            },
+            savePreferences = {
+                saved += it
+                ApiResult.Success(Unit)
+            }
+        )
+        advanceUntilIdle()
+
+        viewModel.selectSubtitle("e0", 42.5)
+        advanceUntilIdle()
+
+        assertEquals(2, requests.size)
+        assertEquals("caps", requests[1].caps)
+        assertEquals(1, requests[1].audio)
+        assertEquals("720", requests[1].quality)
+        assertEquals("", requests[1].subtitle)
+
+        val ready = viewModel.state.value as PlayerUiState.Ready
+        assertEquals("e0", ready.selectedSubtitle)
+        assertEquals(42.5, ready.initialPositionSeconds, 0.0)
+        assertTrue(ready.subtitles.single { it.id == "e0" }.selected)
+        assertTrue(ready.burnSubtitles.none { it.selected })
+        assertTrue(saved.contains(PreferencesPatch(subtitleId = "e0", quality = "720")))
+    }
+
+    @Test
+    fun removingBurnedImageReloadsWithEmptySubtitle() = runTest {
+        val requests = mutableListOf<PlaybackRequest>()
+        val viewModel = viewModel(
+            play = { request ->
+                requests += request
+                val selected = if (requests.size == 1) "e1" else null
+                ApiResult.Success(playbackWithBurnSubtitles(selected))
+            }
+        )
+        advanceUntilIdle()
+
+        viewModel.selectSubtitle(null, 10.0)
+        advanceUntilIdle()
+
+        assertEquals("", requests[1].subtitle)
+        val ready = viewModel.state.value as PlayerUiState.Ready
+        assertNull(ready.selectedSubtitle)
+        assertTrue(ready.burnSubtitles.none { it.selected })
+        assertEquals(10.0, ready.initialPositionSeconds, 0.0)
+    }
+
+    @Test
+    fun selectingBurnedImageReloadsWithItsId() = runTest {
+        val requests = mutableListOf<PlaybackRequest>()
+        val saved = mutableListOf<PreferencesPatch>()
+        val viewModel = viewModel(
+            play = { request ->
+                requests += request
+                val selected = if (requests.size == 1) "e0" else "e1"
+                ApiResult.Success(playbackWithBurnSubtitles(selected))
+            },
+            savePreferences = {
+                saved += it
+                ApiResult.Success(Unit)
+            }
+        )
+        advanceUntilIdle()
+
+        viewModel.selectSubtitle("e1", 12.0)
+        advanceUntilIdle()
+
+        assertEquals("e1", requests[1].subtitle)
+        val ready = viewModel.state.value as PlayerUiState.Ready
+        assertEquals("e1", ready.selectedSubtitle)
+        assertTrue(ready.burnSubtitles.single { it.id == "e1" }.selected)
+        assertEquals(12.0, ready.initialPositionSeconds, 0.0)
+        assertTrue(saved.contains(PreferencesPatch(subtitleId = "e1", quality = "720")))
+    }
+
+    @Test
+    fun selectingTextWithoutBurnedImageDoesNotReload() = runTest {
+        val requests = mutableListOf<PlaybackRequest>()
+        val saved = mutableListOf<PreferencesPatch>()
+        val viewModel = viewModel(
+            play = { request ->
+                requests += request
+                ApiResult.Success(playbackWithBurnSubtitles(selected = "e0"))
+            },
+            savePreferences = {
+                saved += it
+                ApiResult.Success(Unit)
+            }
+        )
+        advanceUntilIdle()
+
+        viewModel.selectSubtitle("e2", 13.0)
+        advanceUntilIdle()
+
+        assertEquals(1, requests.size)
+        assertTrue(saved.contains(PreferencesPatch(subtitleId = "e2", quality = "720")))
+    }
+
+    private fun playbackWithBurnSubtitles(selected: String?): PlayResponse = PlayResponse(
+        url = "/stream",
+        mode = "remux",
+        audioTracks = listOf(
+            AudioTrack(index = 0, language = "es"),
+            AudioTrack(index = 1, language = "en")
+        ),
+        selectedAudio = 1,
+        qualities = listOf(
+            QualityOption("auto", "Auto"),
+            QualityOption("720", "720p")
+        ),
+        selectedQuality = "720",
+        subtitles = listOf(
+            SubtitleOption(id = "e0", language = "es", languageName = "Español", url = "/e0.vtt"),
+            SubtitleOption(
+                id = "e1",
+                language = "es",
+                languageName = "Español",
+                title = "PGS",
+                url = "",
+                burnIn = true
+            ),
+            SubtitleOption(id = "e2", language = "es", languageName = "Español", url = "/e2.vtt")
+        ),
+        selectedSubtitle = selected
+    )
+
     private fun TestScope.viewModel(
         origin: okhttp3.HttpUrl? = "http://servidor.local".toHttpUrl(),
-        play: suspend (String?) -> ApiResult<PlayResponse> = {
+        play: suspend (PlaybackRequest) -> ApiResult<PlayResponse> = {
             ApiResult.Success(PlayResponse(url = "/stream", mode = "direct"))
         },
         saveProgress: suspend (Double, Double) -> ApiResult<Unit> = { _, _ ->

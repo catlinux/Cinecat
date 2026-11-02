@@ -47,7 +47,8 @@ data class SubtitleOption(
     val codec: String = "",
     val forced: Boolean = false,
     val default: Boolean = false,
-    val url: String = ""
+    val url: String = "",
+    @SerialName("burn_in") val burnIn: Boolean = false
 ) {
     val isDefault: Boolean get() = default
 }

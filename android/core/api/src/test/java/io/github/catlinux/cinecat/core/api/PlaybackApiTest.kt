@@ -46,6 +46,25 @@ class PlaybackApiTest {
     }
 
     @Test
+    fun parsesBurnInSubtitles() = runTest {
+        server.enqueue(
+            jsonResponse(
+                """{
+                  "url":"/stream",
+                  "mode":"remux",
+                  "subtitles":[{"id":"e1","burn_in":true,"url":""}],
+                  "selected_subtitle":"e1"
+                }"""
+            )
+        )
+        val result = api().play(7)
+        assertTrue(result is ApiResult.Success)
+        val subtitle = (result as ApiResult.Success).value.subtitles.single()
+        assertEquals("e1", subtitle.id)
+        assertTrue(subtitle.burnIn)
+    }
+
+    @Test
     fun playBuildsQueryWithOnlyNonNullParameters() = runTest {
         server.enqueue(jsonResponse(directJson()))
         api().play(
