@@ -450,9 +450,15 @@ func (a *API) handlePlay(w http.ResponseWriter, r *http.Request) {
 	if info.FileName != "" || len(info.Video) > 0 || len(info.Audio) > 0 || len(info.Subtitles) > 0 {
 		infoPointer = &info
 	}
+	profile, profileErr := a.loadDeviceProfile(r.Context(), r)
+	if profileErr != nil {
+		log.Printf("library: leer perfil de la sesión: %v", profileErr)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
 
 	subtitles, subtitleErr := a.selectSubtitles(
-		r.Context(), id, safePath, infoPointer, preferences, r.URL.Query(),
+		r.Context(), id, safePath, infoPointer, preferences, profile, r.URL.Query(),
 	)
 	if subtitleErr != nil {
 		writeJSONError(w, subtitleErr.status, subtitleErr.message)
@@ -472,7 +478,7 @@ func (a *API) handlePlay(w http.ResponseWriter, r *http.Request) {
 	signature, expiresAt := a.playback.Sign(id)
 	expires := strconv.FormatInt(expiresAt.Unix(), 10)
 	options, optionsErr := a.playOptions(
-		id, mode, infoPointer, preferences, r.URL.Query(), subtitles, expires, signature,
+		id, mode, infoPointer, preferences, profile, r.URL.Query(), subtitles, expires, signature,
 	)
 	if optionsErr != nil {
 		writeJSONError(w, optionsErr.status, optionsErr.message)

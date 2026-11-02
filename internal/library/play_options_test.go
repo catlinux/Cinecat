@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/catlinux/cinecat/internal/auth"
 	"github.com/catlinux/cinecat/internal/playback"
 )
 
@@ -74,6 +75,29 @@ func playURL(ts *playTestServer, id int64, query string) string {
 		url += "?" + query
 	}
 	return url
+}
+
+func setDeviceProfile(t *testing.T, ts *playTestServer, profile auth.SessionProfile) {
+	t.Helper()
+	user, err := ts.auth.Authenticate(context.Background(), ts.token)
+	if err != nil {
+		t.Fatalf("autenticar sesión de prueba: %v", err)
+	}
+	if err := ts.auth.PutSessionProfile(
+		context.Background(), user.ID, user.SessionID, profile,
+	); err != nil {
+		t.Fatalf("guardar perfil de sesión: %v", err)
+	}
+}
+
+func playJSON(t *testing.T, ts *playTestServer, id int64, query string) playResponse {
+	t.Helper()
+	status, body := libraryHTTPGet(t, playURL(ts, id, query), ts.token)
+	var response playResponse
+	if err := json.Unmarshal(body, &response); err != nil || status != http.StatusOK {
+		t.Fatalf("play %q: %d %s (%v)", query, status, body, err)
+	}
+	return response
 }
 
 func TestPlayConOpcionesYPreferencias(t *testing.T) {
@@ -166,6 +190,142 @@ func TestPlayConOpcionesYPreferencias(t *testing.T) {
 	}
 	if response.SelectedAudio != 1 || response.SelectedSubtitle != nil {
 		t.Fatalf("las preferencias obsoletas no se ignoraron: %+v", response)
+	}
+}
+
+func TestPlayAplicaIdiomasDelPerfilSinPisarPrecedencias(t *testing.T) {
+	info := fileInfoFixture()
+	info.Audio = []playback.AudioStream{
+		{Index: 1, Codec: "aac", Channels: 2, Language: "eng", Default: true},
+		{Index: 2, Codec: "ac3", Channels: 6, Language: "spa"},
+	}
+	info.Subtitles = []playback.SubtitleStream{
+		{Index: 3, Codec: "subrip", Language: "spa", Text: true},
+		{Index: 4, Codec: "subrip", Language: "eng", Text: true, Forced: true},
+		{Index: 5, Codec: "subrip", Language: "eng", Text: true},
+		{Index: 6, Codec: "hdmv_pgs_subtitle", Language: "eng", Text: false},
+	}
+	ts := newPlayTestServer(t, info, nil)
+	id, _ := insertFileInfoItem(t, ts.libraryTestServer, "Pelicula.mp4", true)
+
+	setDeviceProfile(t, ts, auth.SessionProfile{
+		AudioLanguage:    "es",
+		SubtitleLanguage: "eng",
+	})
+	response := playJSON(t, ts, id, "")
+	if response.SelectedAudio != 1 || response.SelectedSubtitle == nil ||
+		*response.SelectedSubtitle != "e2" {
+		t.Fatalf("perfil no aplicado: %+v", response)
+	}
+
+	response = playJSON(t, ts, id, "audio=0&subtitle=e0")
+	if response.SelectedAudio != 0 || response.SelectedSubtitle == nil ||
+		*response.SelectedSubtitle != "e0" {
+		t.Fatalf("el parámetro explícito debe ganar: %+v", response)
+	}
+	response = playJSON(t, ts, id, "subtitle=")
+	if response.SelectedAudio != 1 || response.SelectedSubtitle != nil {
+		t.Fatalf("el subtítulo vacío debe desactivar el perfil: %+v", response)
+	}
+
+	status, body := libraryHTTPDo(t, http.MethodPut, itemPreferencesURL(ts.libraryTestServer, id),
+		ts.token, map[string]any{"audio_index": 0, "subtitle_id": "e0"})
+	if status != http.StatusNoContent {
+		t.Fatalf("preferencias: %d %s", status, body)
+	}
+	response = playJSON(t, ts, id, "")
+	if response.SelectedAudio != 0 || response.SelectedSubtitle == nil ||
+		*response.SelectedSubtitle != "e0" {
+		t.Fatalf("la preferencia del ítem debe ganar al perfil: %+v", response)
+	}
+
+	status, body = libraryHTTPDo(t, http.MethodPut, itemPreferencesURL(ts.libraryTestServer, id),
+		ts.token, map[string]any{"audio_index": 0, "subtitle_id": ""})
+	if status != http.StatusNoContent {
+		t.Fatalf("preferencia de subtítulo vacía: %d %s", status, body)
+	}
+	response = playJSON(t, ts, id, "")
+	if response.SelectedAudio != 0 || response.SelectedSubtitle != nil {
+		t.Fatalf("la preferencia vacía debe desactivar el perfil: %+v", response)
+	}
+
+	status, body = libraryHTTPDo(t, http.MethodDelete, itemPreferencesURL(ts.libraryTestServer, id),
+		ts.token, nil)
+	if status != http.StatusNoContent {
+		t.Fatalf("borrar preferencias: %d %s", status, body)
+	}
+	setDeviceProfile(t, ts, auth.SessionProfile{
+		AudioLanguage:    "eng",
+		SubtitleLanguage: "off",
+	})
+	response = playJSON(t, ts, id, "")
+	if response.SelectedAudio != 0 || response.SelectedSubtitle != nil {
+		t.Fatalf("perfil off/audio inglés inesperado: %+v", response)
+	}
+}
+
+func TestPlayNoEligeUnaPistaDeImagenPorPerfil(t *testing.T) {
+	info := fileInfoFixture()
+	info.Subtitles = []playback.SubtitleStream{
+		{Index: 2, Codec: "hdmv_pgs_subtitle", Language: "eng", Text: false},
+	}
+	ts := newPlayTestServer(t, info, nil)
+	id, _ := insertFileInfoItem(t, ts.libraryTestServer, "Pelicula.mp4", true)
+	setDeviceProfile(t, ts, auth.SessionProfile{SubtitleLanguage: "eng"})
+
+	response := playJSON(t, ts, id, "")
+	if response.SelectedSubtitle != nil || response.Mode != playback.ModeDirect {
+		t.Fatalf("no debe elegir una imagen por defecto: %+v", response)
+	}
+}
+
+func TestPlayPerfilLimitaLaCalidadSoloEnHLS(t *testing.T) {
+	info := fileInfoFixture()
+	info.Container = "matroska,webm"
+	info.FileName = "Pelicula.mkv"
+	info.Video[0].Height = 1080
+	ts := newPlayTestServer(t, info, nil)
+	id, _ := insertFileInfoItem(t, ts.libraryTestServer, "Pelicula.mkv", true)
+	setDeviceProfile(t, ts, auth.SessionProfile{MaxQuality: "480"})
+
+	response := playJSON(t, ts, id, "")
+	if response.Mode != playback.ModeRemux || response.SelectedQuality != "480" ||
+		!strings.Contains(response.URL, "q=480") {
+		t.Fatalf("tope de calidad no aplicado: %+v", response)
+	}
+	for _, quality := range response.Qualities {
+		if quality.Value == "720" || quality.Value == "1080" || quality.Value == "original" {
+			t.Fatalf("calidad por encima del tope: %+v", response.Qualities)
+		}
+	}
+
+	for _, query := range []string{"quality=720", "quality=1080", "quality=original"} {
+		response = playJSON(t, ts, id, query)
+		if response.SelectedQuality != "480" || !strings.Contains(response.URL, "q=480") {
+			t.Fatalf("%s debía bajar al tope: %+v", query, response)
+		}
+	}
+
+	status, body := libraryHTTPDo(t, http.MethodPut, itemPreferencesURL(ts.libraryTestServer, id),
+		ts.token, map[string]any{"quality": "720"})
+	if status != http.StatusNoContent {
+		t.Fatalf("preferencia de calidad: %d %s", status, body)
+	}
+	response = playJSON(t, ts, id, "")
+	if response.SelectedQuality != "480" {
+		t.Fatalf("la preferencia no debe superar el perfil: %+v", response)
+	}
+
+	directInfo := fileInfoFixture()
+	direct := newPlayTestServer(t, directInfo, nil)
+	directID, _ := insertFileInfoItem(t, direct.libraryTestServer, "Pelicula.mp4", true)
+	setDeviceProfile(t, direct, auth.SessionProfile{MaxQuality: "480"})
+	directResponse := playJSON(t, direct, directID, "")
+	if directResponse.Mode != playback.ModeDirect ||
+		directResponse.SelectedQuality != "original" ||
+		len(directResponse.Qualities) != 1 ||
+		directResponse.Qualities[0].Value != "original" {
+		t.Fatalf("el tope no debe afectar al directo: %+v", directResponse)
 	}
 }
 

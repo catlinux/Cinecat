@@ -111,6 +111,7 @@ func (a *API) selectSubtitles(
 	path string,
 	info *playback.FileInfo,
 	preferences *itemPreferencesDTO,
+	profile deviceProfile,
 	query map[string][]string,
 ) (subtitleSelection, *playOptionsError) {
 	tracks := playback.DiscoverSubtitles(path, info)
@@ -154,12 +155,26 @@ func (a *API) selectSubtitles(
 				return result, err
 			}
 		}
-	} else if preferences != nil && preferences.SubtitleID != nil && *preferences.SubtitleID != "" {
+		return result, nil
+	}
+	if preferences != nil && preferences.SubtitleID != nil {
 		value := *preferences.SubtitleID
+		if value == "" {
+			return result, nil
+		}
 		if playback.ValidSubtitleID(value) && findTrack(value) != nil {
 			if err := selectID(value); err != nil {
 				return result, err
 			}
+			return result, nil
+		}
+	}
+	if profile.SubtitleLanguage == "off" {
+		return result, nil
+	}
+	if id := profile.subtitleID(tracks); id != "" {
+		if err := selectID(id); err != nil {
+			return result, err
 		}
 	}
 	return result, nil
@@ -180,6 +195,7 @@ func (a *API) playOptions(
 	mode playback.Mode,
 	info *playback.FileInfo,
 	preferences *itemPreferencesDTO,
+	profile deviceProfile,
 	query map[string][]string,
 	subtitles subtitleSelection,
 	exp, sig string,
@@ -237,6 +253,11 @@ func (a *API) playOptions(
 		result.SelectedAudio = *preferences.AudioIndex
 	} else {
 		result.SelectedAudio = audioDefault
+		if info != nil {
+			if index := profile.audioIndex(info.Audio); index >= 0 {
+				result.SelectedAudio = index
+			}
+		}
 	}
 	result.Audio = result.SelectedAudio
 
@@ -244,6 +265,19 @@ func (a *API) playOptions(
 	originalHeight := 0
 	if info != nil && len(info.Video) > 0 {
 		originalHeight = info.Video[0].Height
+	}
+	qualityCapApplied := false
+	if mode == playback.ModeRemux {
+		if cap := profile.qualityHeight(); cap > 0 {
+			limit := maxHeight
+			if originalHeight > 0 && originalHeight < limit {
+				limit = originalHeight
+			}
+			if cap < limit {
+				maxHeight = cap
+				qualityCapApplied = true
+			}
+		}
 	}
 	result.Qualities = buildQualities(mode, maxHeight, originalHeight)
 	requestedQuality := "auto"
@@ -262,6 +296,10 @@ func (a *API) playOptions(
 	} else if preferences != nil && preferences.Quality != nil &&
 		validQualityValue(*preferences.Quality) {
 		requestedQuality = *preferences.Quality
+	}
+	if qualityCapApplied {
+		requestedQuality = cappedQuality(requestedQuality, maxHeight)
+		result.Qualities = withoutOriginalQuality(result.Qualities)
 	}
 	result.SelectedQuality = selectQuality(mode, requestedQuality, result.Qualities)
 	result.Quality = result.SelectedQuality
@@ -322,6 +360,33 @@ func selectQuality(mode playback.Mode, requested string, qualities []qualityDTO)
 		}
 	}
 	return "auto"
+}
+
+// cappedQuality baja auto, original y las alturas superiores al tope. El tope
+// solo se usa en HLS; en directo nunca se llama.
+func cappedQuality(requested string, cap int) string {
+	if cap <= 0 {
+		return requested
+	}
+	switch requested {
+	case "auto", "original":
+		return strconv.Itoa(cap)
+	}
+	height, err := strconv.Atoi(requested)
+	if err == nil && height > cap {
+		return strconv.Itoa(cap)
+	}
+	return requested
+}
+
+func withoutOriginalQuality(qualities []qualityDTO) []qualityDTO {
+	filtered := make([]qualityDTO, 0, len(qualities))
+	for _, quality := range qualities {
+		if quality.Value != "original" {
+			filtered = append(filtered, quality)
+		}
+	}
+	return filtered
 }
 
 func effectiveHeight(quality string, maxHeight, originalHeight int) int {

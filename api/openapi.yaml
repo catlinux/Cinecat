@@ -320,7 +320,8 @@ paths:
       summary: Lista las sesiones del usuario autenticado
       description: |
         Devuelve las sesiones activas del usuario, de la última actividad a la
-        más antigua. La sesión usada en esta petición se marca con `current`.
+        más antigua. La sesión usada en esta petición se marca con `current` y
+        cada elemento incluye su `profile`.
       security:
         - bearerAuth: []
       responses:
@@ -379,12 +380,117 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/auth/sessions/{id}/profile:
+    get:
+      summary: Lee el perfil de una sesión propia
+      description: |
+        Devuelve el perfil de la sesión indicada, que debe pertenecer al usuario
+        autenticado. `{id}` admite un identificador numérico o `current` para la
+        sesión que hace la petición. Una sesión ajena, caducada o inexistente
+        responde con el mismo 404. Sin fila de perfil devuelve los tres campos
+        vacíos.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identificador de la sesión o `current`.
+          schema:
+            type: string
+            pattern: '^(current|[1-9][0-9]*)$'
+      responses:
+        '200':
+          description: Perfil de la sesión
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionProfile'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Sesión inexistente, caducada o de otra cuenta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      summary: Sustituye el perfil de una sesión propia
+      description: |
+        Sustituye el perfil entero de la sesión indicada. `{id}` admite un
+        identificador numérico o `current`. Los valores vacíos quitan el límite
+        o la preferencia correspondiente. Una sesión ajena, caducada o
+        inexistente responde con el mismo 404.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identificador de la sesión o `current`.
+          schema:
+            type: string
+            pattern: '^(current|[1-9][0-9]*)$'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionProfile'
+      responses:
+        '200':
+          description: Perfil guardado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionProfile'
+        '400':
+          description: Valores de perfil no válidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Sesión inexistente, caducada o de otra cuenta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: El cuerpo de la petición supera el límite
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/users/{id}/sessions:
     get:
       summary: Lista las sesiones de un usuario
       description: |
         Solo administradores. Devuelve las sesiones activas del usuario
-        indicado; `current` siempre es falso en este listado.
+        indicado; `current` siempre es falso en este listado y cada elemento
+        incluye su `profile`.
       security:
         - bearerAuth: []
       parameters:
@@ -6563,6 +6669,31 @@ components:
             - admin
             - user
       additionalProperties: false
+    SessionProfile:
+      type: object
+      description: |
+        Ajustes propios de la sesión. Los valores vacíos desactivan el límite o
+        la preferencia correspondiente.
+      required:
+        - max_quality
+        - audio_language
+        - subtitle_language
+      properties:
+        max_quality:
+          type: string
+          description: Tope de calidad para HLS; vacío para no limitar.
+          enum: ["", "480", "720", "1080"]
+        audio_language:
+          type: string
+          description: Idioma de audio preferido, vacío para no preferir ninguno.
+          pattern: '^([a-z]{2,3})?$'
+        subtitle_language:
+          type: string
+          description: |
+            Idioma de subtítulo preferido, `off` para no mostrar subtítulos por
+            defecto o vacío para no preferir ninguno.
+          pattern: '^([a-z]{2,3}|off)?$'
+      additionalProperties: false
     Session:
       type: object
       required:
@@ -6573,6 +6704,7 @@ components:
         - last_seen_at
         - expires_at
         - current
+        - profile
       properties:
         id:
           type: integer
@@ -6597,6 +6729,8 @@ components:
           format: date-time
         current:
           type: boolean
+        profile:
+          $ref: '#/components/schemas/SessionProfile'
       additionalProperties: false
     SessionsResponse:
       type: object
