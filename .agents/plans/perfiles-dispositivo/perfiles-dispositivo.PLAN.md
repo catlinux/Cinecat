@@ -19,7 +19,7 @@ Ejecución secuencial (árbol único). Tras cada paso: revisar diff, tests (`go 
 
 1. [x] **Servidor** (migración 0027, `internal/auth` o `internal/library` según encaje, `api/openapi.yaml`, tests). AgentRelay, esfuerzo alto. Terminado: tests de Go pasan; `apicontract` verde; pruebas que cubren precedencia, tope de calidad, idiomas, sesión ajena (404), `current`.
 2. [x] **Web**. AgentRelay, esfuerzo medio. `web/src/lib/api.ts`, `SessionList.svelte` y la página de cuenta; vitest.
-3. [ ] **Android y Android TV**. AgentRelay, esfuerzo medio. Modelos de `core/api`, repositorio, `AccountScreen.kt` y viewmodel; tests unitarios.
+3. [x] **Android y Android TV**. AgentRelay, esfuerzo medio. Modelos de `core/api`, repositorio, `AccountScreen.kt` y viewmodel; tests unitarios.
 4. [ ] **Versión 0.59.0**, CHANGELOG es/en, TODO es/en, docs es/en (api, administración/guía de usuario, android, estado, hoja de ruta). AgentRelay bajo los docs; versión y changelog los hace la sesión.
 
 Imprevistos de diseño: parar y anotarlos aquí.
