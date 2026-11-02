@@ -1,8 +1,17 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { ApiError, type HomePreferenceRow, type Session } from '$lib/api';
+import {
+	ApiError,
+	type HomePreferenceRow,
+	type Session,
+	type SessionMaxQuality,
+	type SessionProfile
+} from '$lib/api';
 import { createApiClient } from '$lib/api-factory';
 import { clearSessionCookie, requireSessionToken } from '$lib/session';
+
+const MAX_QUALITY_VALUES = new Set<SessionMaxQuality>(['', '480', '720', '1080']);
+const LANGUAGE_PATTERN = /^[a-z]{2,3}$/;
 
 export const load: PageServerLoad = async ({ locals, fetch }) => {
 	const token = requireSessionToken(locals);
@@ -97,6 +106,69 @@ export const actions: Actions = {
 			success: true,
 			message: 'Filas del portal actualizadas.',
 			portalRows: true
+		};
+	},
+
+	saveDeviceProfile: async ({ request, locals, fetch, cookies, url }) => {
+		const token = requireSessionToken(locals);
+		const form = await request.formData();
+		const id = Number(form.get('id'));
+		if (!Number.isInteger(id) || id <= 0) {
+			return fail(400, { message: 'Sesión no válida.', deviceProfile: true });
+		}
+
+		const maxQuality = String(form.get('max_quality') ?? '');
+		if (!MAX_QUALITY_VALUES.has(maxQuality as SessionMaxQuality)) {
+			return fail(400, { message: 'Calidad máxima no válida.', deviceProfile: true });
+		}
+		const audioLanguage = String(form.get('audio_language') ?? '');
+		if (audioLanguage !== '' && !LANGUAGE_PATTERN.test(audioLanguage)) {
+			return fail(400, { message: 'Idioma de audio no válido.', deviceProfile: true });
+		}
+		const subtitleLanguage = String(form.get('subtitle_language') ?? '');
+		if (
+			subtitleLanguage !== '' &&
+			subtitleLanguage !== 'off' &&
+			!LANGUAGE_PATTERN.test(subtitleLanguage)
+		) {
+			return fail(400, { message: 'Idioma de subtítulo no válido.', deviceProfile: true });
+		}
+
+		const profile: SessionProfile = {
+			max_quality: maxQuality as SessionMaxQuality,
+			audio_language: audioLanguage,
+			subtitle_language: subtitleLanguage
+		};
+		try {
+			await createApiClient(fetch).setSessionProfile(token, id, profile);
+		} catch (reason) {
+			if (reason instanceof ApiError) {
+				if (reason.status === 401) {
+					clearSessionCookie(cookies, url.protocol === 'https:');
+					redirect(303, '/login');
+				}
+				if (reason.status === 400) {
+					return fail(400, {
+						message: reason.message || 'Los ajustes del dispositivo no son válidos.',
+						deviceProfile: true
+					});
+				}
+				if (reason.status === 404) {
+					return fail(404, {
+						message: reason.message || 'Sesión no encontrada.',
+						deviceProfile: true
+					});
+				}
+			}
+			return fail(502, {
+				message: 'No se pudieron guardar los ajustes del dispositivo. Inténtalo de nuevo.',
+				deviceProfile: true
+			});
+		}
+		return {
+			success: true,
+			message: 'Ajustes del dispositivo guardados.',
+			deviceProfile: true
 		};
 	},
 

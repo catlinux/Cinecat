@@ -1,21 +1,53 @@
 <script lang="ts">
-	import type { Session, SessionClient } from '$lib/api';
+	import type { Session, SessionClient, SessionProfile } from '$lib/api';
 	import { formatDateTime } from '$lib/media';
 
 	type HiddenFields =
 		| Record<string, string | number>
 		| ((session: Session) => Record<string, string | number>);
 
+	type ProfileOption = {
+		value: string;
+		label: string;
+	};
+
+	const MAX_QUALITY_OPTIONS: ProfileOption[] = [
+		{ value: '', label: 'Sin límite' },
+		{ value: '480', label: '480p' },
+		{ value: '720', label: '720p' },
+		{ value: '1080', label: '1080p' }
+	];
+
+	const LANGUAGE_OPTIONS: ProfileOption[] = [
+		{ value: '', label: 'Sin preferencia' },
+		{ value: 'es', label: 'Español' },
+		{ value: 'ca', label: 'Catalán' },
+		{ value: 'en', label: 'Inglés' },
+		{ value: 'fr', label: 'Francés' },
+		{ value: 'de', label: 'Alemán' },
+		{ value: 'it', label: 'Italiano' },
+		{ value: 'pt', label: 'Portugués' },
+		{ value: 'ja', label: 'Japonés' }
+	];
+
+	const SUBTITLE_LANGUAGE_OPTIONS: ProfileOption[] = [
+		{ value: '', label: 'Sin preferencia' },
+		{ value: 'off', label: 'Desactivados' },
+		...LANGUAGE_OPTIONS.slice(1)
+	];
+
 	let {
 		sessions = [],
 		formAction = '?/closeSession',
 		hiddenFields = {},
-		currentLabel = 'Este dispositivo'
+		currentLabel = 'Este dispositivo',
+		profileAction = null
 	}: {
 		sessions?: Session[] | null;
 		formAction?: string;
 		hiddenFields?: HiddenFields;
 		currentLabel?: string;
+		profileAction?: string | null;
 	} = $props();
 
 	function clientLabel(client: SessionClient): string {
@@ -31,6 +63,22 @@
 
 	function fieldsFor(session: Session): Record<string, string | number> {
 		return typeof hiddenFields === 'function' ? hiddenFields(session) : hiddenFields;
+	}
+
+	function profileFor(session: Session): SessionProfile {
+		return {
+			max_quality: session.profile?.max_quality ?? '',
+			audio_language: session.profile?.audio_language ?? '',
+			subtitle_language: session.profile?.subtitle_language ?? ''
+		};
+	}
+
+	function languageOptions(selected: string, subtitle: boolean): ProfileOption[] {
+		const options = subtitle ? SUBTITLE_LANGUAGE_OPTIONS : LANGUAGE_OPTIONS;
+		if (selected && !options.some((option) => option.value === selected)) {
+			return [...options, { value: selected, label: selected }];
+		}
+		return options;
 	}
 </script>
 
@@ -64,6 +112,47 @@
 							{session.current ? 'Cerrar esta sesión' : 'Cerrar'}
 						</button>
 					</form>
+					{#if profileAction}
+						{@const profile = profileFor(session)}
+						<details class="session-profile">
+							<summary class="button button-secondary session-settings">Ajustes</summary>
+							<form method="POST" action={profileAction} class="session-profile-form">
+								<input type="hidden" name="id" value={session.id} />
+								<label class="session-profile-field">
+									<span>Calidad máxima</span>
+									<select name="max_quality">
+										{#each MAX_QUALITY_OPTIONS as option (option.value)}
+											<option value={option.value} selected={option.value === profile.max_quality}>
+												{option.label}
+											</option>
+										{/each}
+									</select>
+								</label>
+								<label class="session-profile-field">
+									<span>Idioma de audio preferido</span>
+									<select name="audio_language">
+										{#each languageOptions(profile.audio_language, false) as option (option.value)}
+											<option value={option.value} selected={option.value === profile.audio_language}>
+												{option.label}
+											</option>
+										{/each}
+									</select>
+								</label>
+								<label class="session-profile-field">
+									<span>Subtítulos por defecto</span>
+									<select name="subtitle_language">
+										{#each languageOptions(profile.subtitle_language, true) as option (option.value)}
+											<option value={option.value} selected={option.value === profile.subtitle_language}>
+												{option.label}
+											</option>
+										{/each}
+									</select>
+								</label>
+								<button class="button session-profile-save" type="submit">Guardar</button>
+								<p class="session-profile-help">Se aplican al reproducir en este dispositivo cuando no hayas elegido otra cosa en la película.</p>
+							</form>
+						</details>
+					{/if}
 				</li>
 			{/each}
 		</ul>
@@ -141,6 +230,70 @@
 		margin: 0;
 		padding: 0.5rem 0.8rem;
 		font-size: 0.68rem;
+	}
+
+	.session-profile {
+		flex-basis: 100%;
+		margin: 0;
+	}
+
+	.session-profile > summary {
+		display: inline-flex;
+		align-items: center;
+		margin: 0;
+		padding: 0.5rem 0.8rem;
+		font-size: 0.68rem;
+		list-style: none;
+		cursor: pointer;
+	}
+
+	.session-profile > summary::-webkit-details-marker {
+		display: none;
+	}
+
+	.session-profile[open] > summary {
+		margin-bottom: 0.7rem;
+	}
+
+	.session-profile-form {
+		display: grid;
+		gap: 0.7rem;
+		padding: 0.8rem;
+		border: 1px solid var(--borde-suave);
+		border-radius: 4px;
+		background: var(--superficie);
+	}
+
+	.session-profile-field {
+		display: grid;
+		gap: 0.3rem;
+		color: var(--texto-apagado);
+		font-size: 0.76rem;
+	}
+
+	.session-profile-field select {
+		width: 100%;
+		padding: 0.5rem 0.6rem;
+		border: 1px solid var(--borde-medio);
+		border-radius: 3px;
+		background: var(--superficie);
+		color: var(--texto-suave);
+		font: inherit;
+		font-size: 0.88rem;
+	}
+
+	.session-profile-save {
+		justify-self: start;
+		margin: 0;
+		padding: 0.5rem 0.8rem;
+		font-size: 0.68rem;
+	}
+
+	.session-profile-help {
+		margin: 0;
+		color: var(--texto-apagado);
+		font-size: 0.74rem;
+		line-height: 1.45;
 	}
 
 	@media (max-width: 520px) {

@@ -98,6 +98,24 @@ describe('ApiClient', () => {
 		}
 	});
 
+	it('guarda el perfil de una sesión', async () => {
+		const profile = {
+			max_quality: '720' as const,
+			audio_language: 'spa',
+			subtitle_language: 'off'
+		};
+		const fetchMock = vi.fn().mockResolvedValue(jsonResponse(profile));
+		const client = new ApiClient({ baseUrl: 'http://api.test', fetch: fetchMock });
+
+		await expect(client.setSessionProfile('token-123', 9, profile)).resolves.toEqual(profile);
+
+		const [url, init] = fetchMock.mock.calls[0];
+		expect(String(url)).toBe('http://api.test/api/v1/auth/sessions/9/profile');
+		expect(init.method).toBe('PUT');
+		expect(init.headers.Authorization).toBe('Bearer token-123');
+		expect(JSON.parse(init.body)).toEqual(profile);
+	});
+
 	it('previsualiza y aprueba una vinculación', async () => {
 		const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
 			jsonResponse({

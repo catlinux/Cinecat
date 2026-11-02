@@ -53,6 +53,49 @@ describe('lista de sesiones', () => {
 		expect(html).toContain('value="7"');
 	});
 
+	it('muestra los ajustes del perfil solo cuando se activan', () => {
+		const html = body({
+			sessions: [
+				session({
+					profile: {
+						max_quality: '720',
+						audio_language: 'spa',
+						subtitle_language: 'off'
+					}
+				})
+			],
+			profileAction: '?/saveDeviceProfile'
+		});
+
+		expect(html).toContain('Ajustes');
+		expect(html).toContain('Calidad máxima');
+		expect(html).toContain('Idioma de audio preferido');
+		expect(html).toContain('Subtítulos por defecto');
+		expect(html).toContain('action="?/saveDeviceProfile"');
+		expect(html).toMatch(/value="720"[^>]*selected/);
+		expect(html).toMatch(/value="spa"[^>]*selected/);
+		expect(html).toContain('>spa<');
+		expect(html).toMatch(/value="off"[^>]*selected/);
+		expect(html).toContain(
+			'Se aplican al reproducir en este dispositivo cuando no hayas elegido otra cosa en la película.'
+		);
+	});
+
+	it('usa un perfil vacío si el servidor antiguo no lo envía', () => {
+		const html = body({
+			sessions: [session()],
+			profileAction: '?/saveDeviceProfile'
+		});
+		expect(html).toContain('Calidad máxima');
+		expect(html).toMatch(/value=""[^>]*selected/);
+	});
+
+	it('no muestra ajustes fuera de Mi cuenta', () => {
+		const html = body({ sessions: [session()] });
+		expect(html).not.toContain('Calidad máxima');
+		expect(html).not.toContain('Ajustes');
+	});
+
 	it('usa un nombre alternativo y el tipo de cliente', () => {
 		const html = body({
 			sessions: [

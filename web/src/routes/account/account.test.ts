@@ -5,6 +5,7 @@ import { actions, load } from './+page.server';
 
 const changePassword = actions.default!;
 const closeSession = actions.closeSession!;
+const saveDeviceProfile = actions.saveDeviceProfile!;
 const updatePortalRows = actions.portal!;
 
 function formRequest(fields: Record<string, string>): Request {
@@ -261,6 +262,124 @@ describe('acción de cerrar sesión', () => {
 			path: '/',
 			secure: false
 		});
+	});
+});
+
+describe('ajustes del dispositivo', () => {
+	it('guarda el perfil de la sesión indicada', async () => {
+		const profile = {
+			max_quality: '720',
+			audio_language: 'spa',
+			subtitle_language: 'off'
+		};
+		const fetchMock = vi.fn().mockResolvedValue(
+			new Response(JSON.stringify(profile), {
+				status: 200,
+				headers: { 'Content-Type': 'application/json' }
+			})
+		);
+		const event = fakeEvent(fetchMock, {
+			id: '9',
+			max_quality: '720',
+			audio_language: 'spa',
+			subtitle_language: 'off'
+		});
+
+		const result = (await saveDeviceProfile(event as never)) as {
+			success?: boolean;
+			message?: string;
+			deviceProfile?: boolean;
+		};
+
+		expect(result.success).toBe(true);
+		expect(result.message).toBe('Ajustes del dispositivo guardados.');
+		expect(result.deviceProfile).toBe(true);
+		expect(fetchMock.mock.calls[0][0]).toBe(
+			'http://api.test/api/v1/auth/sessions/9/profile'
+		);
+		expect(fetchMock.mock.calls[0][1].method).toBe('PUT');
+		expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual(profile);
+	});
+
+	it('traduce el error de la API y marca el formulario', async () => {
+		const fetchMock = vi.fn().mockResolvedValue(
+			new Response(JSON.stringify({ error: 'max_quality no válida' }), {
+				status: 400,
+				headers: { 'Content-Type': 'application/json' }
+			})
+		);
+		const event = fakeEvent(fetchMock, {
+			id: '9',
+			max_quality: '720',
+			audio_language: '',
+			subtitle_language: ''
+		});
+
+		const result = (await saveDeviceProfile(event as never)) as {
+			status: number;
+			data: { message: string; deviceProfile: boolean };
+		};
+
+		expect(result.status).toBe(400);
+		expect(result.data.deviceProfile).toBe(true);
+		expect(result.data.message).toContain('max_quality');
+	});
+
+	it('valida los valores antes de llamar a la API', async () => {
+		const fetchMock = vi.fn();
+		const event = fakeEvent(fetchMock, {
+			id: '9',
+			max_quality: '4k',
+			audio_language: '',
+			subtitle_language: ''
+		});
+
+		const result = (await saveDeviceProfile(event as never)) as {
+			status: number;
+			data: { message: string };
+		};
+
+		expect(result.status).toBe(400);
+		expect(result.data.message).toContain('Calidad máxima');
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	it('precarga los selectores del perfil', () => {
+		const { body } = render(AccountPage, {
+			props: {
+				data: {
+					ui: { server_name: 'Cinecat' },
+					sessions: [
+						{
+							id: 7,
+							device_name: 'Portátil',
+							client: 'web',
+							created_at: '2026-10-27T09:00:00Z',
+							last_seen_at: '2026-10-27T10:00:00Z',
+							expires_at: '2026-10-28T10:00:00Z',
+							current: true,
+							profile: {
+								max_quality: '720',
+								audio_language: 'spa',
+								subtitle_language: 'off'
+							}
+						}
+					]
+				}
+			}
+		});
+
+		expect(body).toContain('Ajustes');
+		expect(body).toContain('Calidad máxima');
+		expect(body).toContain('Idioma de audio preferido');
+		expect(body).toContain('Subtítulos por defecto');
+		expect(body).toContain('action="?/saveDeviceProfile"');
+		expect(body).toContain('value="720"');
+		expect(body).toContain('value="spa"');
+		expect(body).toContain('value="off"');
+		expect(body).toContain(
+			'Se aplican al reproducir en este dispositivo cuando no hayas elegido otra cosa en la película.'
+		);
 	});
 });
 

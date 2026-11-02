@@ -6,6 +6,7 @@
 		message?: string;
 		success?: boolean;
 		closeSession?: boolean;
+		deviceProfile?: boolean;
 		portalRows?: boolean;
 	} | null;
 
@@ -40,7 +41,7 @@
 			dispositivo seguirá abierta.
 		</p>
 
-		{#if form?.message && !form.closeSession && !form.portalRows}
+		{#if form?.message && !form.closeSession && !form.deviceProfile && !form.portalRows}
 			<p class={form.success ? 'success' : 'error'} role={form.success ? 'status' : 'alert'}>
 				{form.message}
 			</p>
@@ -99,6 +100,11 @@
 				{form.message}
 			</p>
 		{/if}
+		{#if form?.deviceProfile && form.message}
+			<p class={form.success ? 'success' : 'error'} role={form.success ? 'status' : 'alert'}>
+				{form.message}
+			</p>
+		{/if}
 		<SessionList
 			sessions={data.sessions}
 			formAction="?/closeSession"
@@ -107,6 +113,7 @@
 				_current: session.current ? '1' : '0'
 			})}
 			currentLabel="Este dispositivo"
+			profileAction="?/saveDeviceProfile"
 		/>
 		<p class="account-vincular">
 			<a class="text-link" href="/vincular">Vincular un dispositivo</a>

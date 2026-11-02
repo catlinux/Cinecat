@@ -10,6 +10,13 @@ export interface LoginResponse {
 }
 
 export type SessionClient = 'web' | 'android' | 'androidtv';
+export type SessionMaxQuality = '' | '480' | '720' | '1080';
+
+export interface SessionProfile {
+	max_quality: SessionMaxQuality;
+	audio_language: string;
+	subtitle_language: string;
+}
 
 export interface Session {
 	id: number;
@@ -19,6 +26,7 @@ export interface Session {
 	last_seen_at: string;
 	expires_at: string;
 	current: boolean;
+	profile?: SessionProfile;
 }
 
 export interface SessionsResponse {
@@ -1072,6 +1080,14 @@ export class ApiClient {
 
 	async getSessions(token: string): Promise<SessionsResponse> {
 		return this.get<SessionsResponse>('/api/v1/auth/sessions', token);
+	}
+
+	async setSessionProfile(
+		token: string,
+		id: number | 'current',
+		profile: SessionProfile
+	): Promise<SessionProfile> {
+		return this.put<SessionProfile>(`/api/v1/auth/sessions/${id}/profile`, profile, token);
 	}
 
 	async closeSession(id: number, token: string): Promise<void> {
