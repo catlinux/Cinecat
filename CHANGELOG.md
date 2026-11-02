@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.56.1] - 2026-11-02
+
+### Corregido
+
+- Android y Android TV: el reproductor ya no mantiene la pantalla encendida al pausar ni al terminar el vídeo; solo lo hace mientras reproduce o carga. Así, si te duermes viendo algo, la pantalla se apaga con el tiempo de espera normal del sistema.
+
 ## [0.56.0] - 2026-11-01
 
 ### Añadido

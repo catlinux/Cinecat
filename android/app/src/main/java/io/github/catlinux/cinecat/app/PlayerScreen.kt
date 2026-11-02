@@ -98,6 +98,9 @@ fun PlayerScreen(
             .build()
     }
     var isPlaying by remember(exoPlayer) { mutableStateOf(false) }
+    // Pantalla encendida solo mientras se reproduce o se carga; en pausa o al
+    // terminar rige el apagado normal del sistema.
+    var keepAwake by remember(exoPlayer) { mutableStateOf(false) }
     var tracks by remember(exoPlayer) { mutableStateOf<Tracks?>(null) }
     var appliedAudioStream by remember(exoPlayer) { mutableStateOf<String?>(null) }
     var showTracks by remember { mutableStateOf(false) }
@@ -147,6 +150,12 @@ fun PlayerScreen(
                     saveCurrentProgress()
                 }
                 isPlaying = playing
+            }
+
+            override fun onEvents(player: Player, events: Player.Events) {
+                keepAwake = player.playWhenReady &&
+                    (player.playbackState == Player.STATE_READY ||
+                        player.playbackState == Player.STATE_BUFFERING)
             }
 
             override fun onTracksChanged(currentTracks: Tracks) {
@@ -292,6 +301,7 @@ fun PlayerScreen(
                 PlayerViewSurface(
                     exoPlayer = exoPlayer,
                     showControls = !inPip,
+                    keepAwake = keepAwake,
                     onCreated = { playerView = it }
                 )
                 if (!inPip) {
@@ -339,6 +349,7 @@ fun PlayerScreen(
 private fun PlayerViewSurface(
     exoPlayer: ExoPlayer,
     showControls: Boolean,
+    keepAwake: Boolean,
     onCreated: (PlayerView) -> Unit
 ) {
     AndroidView(
@@ -346,14 +357,14 @@ private fun PlayerViewSurface(
             PlayerView(context).apply {
                 player = exoPlayer
                 useController = showControls
-                keepScreenOn = true
+                keepScreenOn = keepAwake
                 setShutterBackgroundColor(android.graphics.Color.BLACK)
                 onCreated(this)
             }
         },
         update = { view ->
             view.player = exoPlayer
-            view.keepScreenOn = true
+            view.keepScreenOn = keepAwake
             view.useController = showControls
             if (!showControls) {
                 view.hideController()

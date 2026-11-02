@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.56.1] - 2026-11-02
+
+### Fixed
+
+- Android and Android TV: the player no longer keeps the screen on when paused or when the video ends; it does so only while playing or buffering. If you fall asleep watching, the screen turns off after the normal system timeout.
+
 ## [0.56.0] - 2026-11-01
 
 ### Added
