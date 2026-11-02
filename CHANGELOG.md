@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.58.0] - 2026-11-02
+
+### Añadido
+
+- Servidor, web y Android: los subtítulos de imagen incrustados (PGS, VobSub y DVB) se pueden elegir. `GET /api/v1/items/{id}/play` los lista con `burn_in: true` y `url` vacía; al elegirlos con `subtitle=<id>` la reproducción pasa a HLS recodificado con el subtítulo quemado en el vídeo (`reason: subtitle`, parámetro `burnsub` en las URLs firmadas), nunca en copia ni con VA-API. La web y las apps los muestran con la marca « · imagen» y recargan la reproducción en el segundo actual al elegirlos o quitarlos. Probado en el servidor con FFmpeg real y con tests unitarios en web y Android; aún no se ha probado en un dispositivo.
+
 ## [0.57.0] - 2026-11-02
 
 ### Añadido

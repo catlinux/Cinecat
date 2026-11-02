@@ -121,13 +121,17 @@ Polling status codes:
 | `caps` | Device capabilities, comma-separated. |
 | `audio` | Index of the selected audio track. |
 | `quality` | `auto`, `original`, `480`, `720` or `1080`. |
-| `subtitle` | Subtitle identifier; empty to disable it. |
+| `subtitle` | Subtitle identifier; empty to disable it. If it is an embedded image track (`e<N>`), playback switches to HLS and the subtitle is burned into the video. |
 
 The apps declare in `caps` what their device plays: containers `mkv` and `mp4`; video `h264`, `h264hi10`, `hevc`, `hevc10`, `av1` and `vp9`; audio `aac`, `mp3`, `ac3`, `eac3`, `dts`, `truehd`, `opus` and `flac`; and `mch` if it decodes multichannel AAC. Each token means the device can decode that container, codec or format; `hevc10` implies `hevc`, and `mch` is only needed for AAC with more than two channels. If a native app declares `mch` and the chosen track has 6 or more channels, HLS delivers 5.1 AAC; otherwise it delivers stereo. For the server to treat the request as a native app, `caps` must include at least `mkv` or `mp4`. The full list and its effect are in [playback](playback.md#native-apps-android-and-android-tv).
 
-The response includes `url`, `mode`, `expires_at`, `audio_tracks`, `selected_audio`, `qualities`, `selected_quality`, `subtitles` and `selected_subtitle`. `mode` is `direct` or `remux`; when it is not direct, `reason` explains why (`container`, `video` or `audio`).
+The response includes `url`, `mode`, `expires_at`, `audio_tracks`, `selected_audio`, `qualities`, `selected_quality`, `subtitles` and `selected_subtitle`. `mode` is `direct` or `remux`; when it is not direct, `reason` explains why (`container`, `video`, `audio` or `subtitle`).
+
+Each entry in `subtitles` is a `SubtitleOption`: `burn_in` reports whether it is an embedded image track (PGS, VobSub or DVB); in that case `url` is empty and the client must not load it as WebVTT. The rest keep their signed WebVTT URL.
 
 The `/stream` URL is relative to the server, signed and valid for 8 hours. It does not need `Authorization`: prepend the server base and pass it unchanged to the player, such as ExoPlayer. Do not add custom headers or modify the signature.
+
+When an image track is chosen with `subtitle=e<N>`, `mode` is `remux`, `reason` is `subtitle` and the signed HLS URLs under `/stream` include `burnsub=<N>` (the track position in the file, the same `N` as in `e<N>`). Both `/stream/{id}` and `/stream/{id}/{file}` accept `burnsub` and force CPU HLS, never copy or VA-API. The WebVTT endpoint for an image track (`/api/v1/stream/{id}/subtitles/<sid>.vtt`) returns `404`.
 
 Progress is stored with `PUT /api/v1/items/{id}/progress` and a body such as `{"position_seconds": 300, "duration_seconds": 1800}`; `DELETE` on the same route clears it. At 90 % of the duration the server marks the item as watched and removes progress. Watched state is controlled with `PUT` and `DELETE /api/v1/items/{id}/watched`.
 

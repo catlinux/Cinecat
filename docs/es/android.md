@@ -92,6 +92,8 @@ La app no incluye FFmpeg ni libmpv. Reproduce con Media3 (ExoPlayer): al abrir u
 
 El reproductor recuerda en el servidor el audio, los subtítulos y la calidad elegidos para cada elemento y los restaura al reabrirlo, siempre que sigan existiendo; si ya no están, ignora esa preferencia. En el móvil, al salir de la app mientras se reproduce un vídeo, el reproductor pasa a una ventana de imagen en imagen sin los controles de la app; al cerrar la ventana se detiene la reproducción y se guarda el progreso.
 
+Desde la 0.58.0, las pistas de imagen incrustadas (PGS, VobSub y DVB) aparecen en «Pistas» con la marca « · imagen». No se cargan en ExoPlayer: al elegirlas, la app guarda la preferencia y recarga la reproducción con `subtitle=<id>` en el segundo actual; al quitarlas o pasar a texto desde una quemada recarga sin el subtítulo quemado. El servidor las quema al recodificar por HLS.
+
 En la TV, con el mando: centro pausa o reanuda, izquierda y derecha retroceden o avanzan 10 s, abajo muestra los controles, arriba o Menú abre «Pistas» (audio y subtítulos) y Atrás sale. Las pistas sin título se nombran por su idioma o como «Audio 1», «Audio 2», «Subtítulo 1»… (0.49.1). En el móvil la reproducción va a pantalla completa en horizontal. En las series, la ficha ofrece el siguiente episodio.
 
 Desde la 0.49.0, la ficha de una película a medias muestra **Desde el principio** junto a **Continuar**, y el botón del siguiente episodio dice **Continuar S01E01** cuando hay progreso. La TV declara `mch` y recibe AAC 5.1 por HLS cuando la pista elegida tiene 6 o más canales; el móvil no declara `mch` y sigue recibiendo estéreo (0.56.0, pendiente de probar en una TV real).

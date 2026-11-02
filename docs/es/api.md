@@ -121,13 +121,17 @@ Estados del sondeo:
 | `caps` | Capacidades del dispositivo, separadas por comas. |
 | `audio` | Índice de la pista de audio elegida. |
 | `quality` | `auto`, `original`, `480`, `720` o `1080`. |
-| `subtitle` | Identificador de subtítulo; vacío para desactivarlo. |
+| `subtitle` | Identificador de subtítulo; vacío para desactivarlo. Si es una pista de imagen incrustada (`e<N>`), pasa a HLS y se quema en el vídeo. |
 
 Las apps declaran en `caps` lo que su equipo reproduce: contenedores `mkv` y `mp4`; vídeo `h264`, `h264hi10`, `hevc`, `hevc10`, `av1` y `vp9`; audio `aac`, `mp3`, `ac3`, `eac3`, `dts`, `truehd`, `opus` y `flac`; y `mch` si decodifica AAC multicanal. Cada token indica que el equipo puede decodificar ese contenedor, códec o formato; `hevc10` implica `hevc`, y `mch` solo hace falta para AAC de más de dos canales. Si una app nativa declara `mch` y la pista elegida tiene 6 o más canales, el HLS entrega AAC 5.1; en los demás casos entrega estéreo. Para que el servidor trate la petición como app nativa, `caps` debe incluir al menos `mkv` o `mp4`. La lista completa y su efecto están en [reproducción](reproduccion.md#apps-nativas-android-y-android-tv).
 
-La respuesta incluye `url`, `mode`, `expires_at`, `audio_tracks`, `selected_audio`, `qualities`, `selected_quality`, `subtitles` y `selected_subtitle`. `mode` es `direct` o `remux`; si no es directo, `reason` explica el motivo (`container`, `video` o `audio`).
+La respuesta incluye `url`, `mode`, `expires_at`, `audio_tracks`, `selected_audio`, `qualities`, `selected_quality`, `subtitles` y `selected_subtitle`. `mode` es `direct` o `remux`; si no es directo, `reason` explica el motivo (`container`, `video`, `audio` o `subtitle`).
+
+Cada elemento de `subtitles` es un `SubtitleOption`: `burn_in` indica si es una imagen incrustada (PGS, VobSub o DVB); en ese caso `url` va vacía y el cliente no debe cargarla como WebVTT. El resto conserva su URL WebVTT firmada.
 
 La URL de `/stream` es relativa al servidor, está firmada y vale 8 horas. No necesita `Authorization`: antepón la base del servidor y pásala tal cual al reproductor, por ejemplo ExoPlayer. No añadas cabeceras propias ni modifiques la firma.
+
+Si se elige una pista de imagen con `subtitle=e<N>`, `mode` es `remux`, `reason` es `subtitle` y las URLs HLS firmadas de `/stream` incluyen `burnsub=<N>` (la posición de la pista en el archivo, el mismo `N` de `e<N>`). Tanto `/stream/{id}` como `/stream/{id}/{file}` aceptan `burnsub` y fuerzan HLS por CPU, nunca copia ni VA-API. El endpoint WebVTT de una pista de imagen (`/api/v1/stream/{id}/subtitles/<sid>.vtt`) responde `404`.
 
 El progreso se guarda con `PUT /api/v1/items/{id}/progress` y un cuerpo como `{"position_seconds": 300, "duration_seconds": 1800}`; `DELETE` sobre la misma ruta lo borra. Al llegar al 90 % de la duración, el servidor marca el ítem como visto y elimina el progreso. El visionado se controla con `PUT` y `DELETE /api/v1/items/{id}/watched`.
 

@@ -2,7 +2,7 @@
 
 [Español](../es/estado.md) · [Back to README](../../README.en.md)
 
-Current version: **0.56.0**. This page describes the real state of the code, not the original plan. Versions come from the [CHANGELOG](../../CHANGELOG.en.md).
+Current version: **0.58.0**. This page describes the real state of the code, not the original plan. Versions come from the [CHANGELOG](../../CHANGELOG.en.md).
 
 Legend: ✅ done · 🟨 awaiting testing · ⬜ pending.
 
@@ -49,8 +49,9 @@ Legend: ✅ done · 🟨 awaiting testing · ⬜ pending.
 | Playback | Deinterlacing and HDR to SDR while re-encoding | 🟨 0.55.0 | Re-encoding only; uses `yadif` and `zscale`/`tonemap` when FFmpeg has them. Covered by tests, not yet tried on real files. |
 | Playback | 5.1 AAC over HLS for TV | 🟨 0.56.0 | Apps with `mch` and a track of 6 or more channels receive 5.1 AAC; browser and phone stay in stereo. Not yet tried on a real TV. |
 | Playback | Audio, text subtitles and quality | ✅ 0.13.0 | Embedded text and `.srt`/`.vtt`/`.ass` as WebVTT; per-user, per-movie preferences. |
+| Playback | Embedded image subtitles (PGS, VobSub, DVB) | 🟨 0.58.0 | They can be selected in the web app and the apps with the " · imagen" mark; the server burns them into the video when re-encoding for HLS, never in copy mode or with VA-API. Covered by the server's real FFmpeg test and unit tests for web and Android; not yet tried on a real device. |
 | Playback | Custom player with controls, shortcuts and next episode | ✅ 0.13.0 | hls.js for HLS and native `<video>` for direct play. |
-| Playback | Per-device profiles, 10-bit, image subtitles and ABR | ⬜ | Copy mode exists; re-encoding uses VA-API or software and H.264 + stereo or 5.1 AAC. |
+| Playback | Per-device profiles, 10-bit and ABR | ⬜ | Copy mode exists; re-encoding uses VA-API or software and H.264 + stereo or 5.1 AAC. |
 | Web interface | Login, httpOnly session, logout and password change | ✅ 0.2.0 / 0.3.5 | Logout is on `/login`. |
 | Web interface | Portal, movies, series and collections with search, filters, sorting and pagination | ✅ 0.11.0 / 0.15.0 | Columns × rows per page; letter, genre and watched filters on movies. |
 | Web interface | Light/dark/system themes, side or top navigation and responsive layout | ✅ 0.2.0 / 0.14.0 | Theme preference stored in the browser. |
@@ -72,13 +73,13 @@ Legend: ✅ done · 🟨 awaiting testing · ⬜ pending.
 | Security | Argon2id, 24 h sessions and admin/user roles | ✅ 0.1.0 | Only the token hash is stored in the database. |
 | Security | Per-library and per-user permissions | ✅ 0.24.0 | Each account only sees its libraries; hidden content returns 404. |
 | Quality | "Servidor y web" GitHub Actions workflow | 🟨 | `.github/workflows/server-web.yml` runs the Go tests with FFmpeg and the web tests; its first green run still needs checking. |
-| Android / Android TV clients | Android and Android TV | ✅ 0.56.0 | One app for phones, tablets and TV: session or pairing, library, Media3 player with preferences, A–Z index on TV, picture-in-picture on phones, automatic updates and update notices. Since 0.49.0 it offers "From the start" and "Continue", since 0.49.1 it names untitled tracks and since 0.56.0 the TV declares `mch`. Hides empty sections. See [Android](android.md). |
+| Android / Android TV clients | Android and Android TV | ✅ 0.58.0 | One app for phones, tablets and TV: session or pairing, library, Media3 player with preferences, A–Z index on TV, picture-in-picture on phones, automatic updates and update notices. Since 0.49.0 it offers "From the start" and "Continue", since 0.49.1 it names untitled tracks, since 0.56.0 the TV declares `mch` and since 0.58.0 it shows and selects image subtitles with the " · imagen" mark. Hides empty sections. See [Android](android.md). |
 
 ## What comes next, in order
 
 The order comes from the plans in `.agents/plans` and the open tasks; no dates or committed versions.
 
-1. **Advanced playback**: per-device profiles, image subtitles, 10-bit and unsupported audio. Test 0.55.0 deinterlacing and HDR with real files, and 0.56.0 5.1 AAC on a TV.
+1. **Advanced playback**: per-device profiles, 10-bit and unsupported audio. Test 0.55.0 deinterlacing and HDR with real files, and 0.56.0 5.1 AAC on a TV.
 2. **Verify the "Servidor y web" GitHub Actions workflow** and its first green run.
 3. **Plugins**, still at the design stage.
 4. **DLNA/UPnP**, still at the design stage.
@@ -89,10 +90,10 @@ The order comes from the plans in `.agents/plans` and the open tasks; no dates o
 - **Login lockout:** failures are counted per user+IP pair, with an additional per-IP limit; it depends on the proxy forwarding `X-Forwarded-For` correctly and on `CINECAT_TRUSTED_PROXIES`. Attempts and lockouts persist in SQLite (migration 0024).
 - **No CORS:** the server sends no `Access-Control-*` headers. The intended deployment works because Apache serves `/api/` and the web app under the same origin.
 - **Manually corrected series:** scans do not touch `manual` or `none` series; missing seasons or episodes are not filled automatically.
-- **HLS:** re-encoding uses VA-API when `/dev/dri` is mounted and the check succeeds; otherwise it uses libx264 (software). Since 0.55.0 it deinterlaces and converts HDR to SDR when FFmpeg has the filters, but this has not yet been tried on real files. Image subtitles and ABR are still missing. Copying video does not re-encode and uses almost no CPU.
+- **HLS:** re-encoding uses VA-API when `/dev/dri` is mounted and the check succeeds; otherwise it uses libx264 (software). Since 0.55.0 it deinterlaces and converts HDR to SDR when FFmpeg has the filters, but this has not yet been tried on real files. ABR is still missing. Image subtitles are burned while re-encoding on the CPU, never in copy mode or with VA-API. Copying video does not re-encode and uses almost no CPU.
 - **The API still calls HLS `remux`** even though it copies or re-encodes; the client receives HLS in both cases.
 - **If duration cannot be read**, FFmpeg's `event` playlist is used and long seeks are not fast.
-- **Subtitles:** text only; PGS/VobSub are ignored. Administrators can upload `.srt`, `.vtt` or `.ass` files up to 2 MB (stored in `subtitles/`, next to the database) and they are served as WebVTT with `u<N>` ids. HLS has no separate subtitle rendition.
+- **Subtitles:** text subtitles are converted to WebVTT; embedded image subtitles (PGS, VobSub, DVB) can be selected and are burned into the video when re-encoding for HLS, never in copy mode or with VA-API. Administrators can upload `.srt`, `.vtt` or `.ass` files up to 2 MB (stored in `subtitles/`, next to the database) and they are served as WebVTT with `u<N>` ids. HLS has no separate subtitle rendition.
 - **Real HLS tests:** skipped without `ffmpeg`/`ffprobe` in PATH; the "Servidor y web" GitHub Actions workflow installs FFmpeg and runs the Go and web tests.
 - **TMDB:** daily maintenance fetches entries older than 90 days again (up to 40 movies and 20 series per day) so none exceeds the 6 months its terms allow; manually corrected entries are left alone. The 7-day response cache and quotas should be reviewed before heavy use. OMDb is only a fallback and has a daily quota.
 - **Changes on disk:** uploading and moving to the trash require mounting `/media` read-write; music cannot be uploaded or moved.

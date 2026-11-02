@@ -118,12 +118,12 @@ The player offers `auto`, 480p, 720p, 1080p (never above the original height or 
 - **Direct audio:** the original file is kept. It is served directly if the default track is AAC or MP3 (or there is no audio).
 - **HLS audio:** one track is chosen by its position in the `ffprobe` list and converted to stereo AAC at 160 kbps. If the client is a native app that declares `mch` and the chosen track has 6 or more channels, it is kept as 5.1 AAC at 384 kbps with `-channel_layout 5.1`. The user's and movie's preference is stored in `item_preferences`.
 - **Another track on MP4:** if you choose a track in the web app that differs from the one the browser would play on its own in a compatible MP4, the server serves it through HLS with that track (since 0.48.3).
-- **Subtitles:** embedded text tracks and external `.srt`, `.vtt` or `.ass` files next to the video, with language and `forced` suffixes. They are converted to WebVTT. Image tracks (PGS/VobSub) are not supported and HLS has no separate subtitle rendition.
+- **Subtitles:** embedded text tracks and external `.srt`, `.vtt` or `.ass` files next to the video, with language and `forced` suffixes, are converted to WebVTT. Embedded image tracks (PGS, VobSub and DVB) appear in `/play` with `burn_in: true` and an empty `url`; choosing one switches the server to HLS and burns it into the video, so it must re-encode (never copy or VA-API). HLS has no separate subtitle rendition: text is served separately and the image becomes part of the video.
 - **Preferences:** audio, subtitle and quality per user and movie; the player saves them and reloads at the current second when changed.
 
 ## Native apps (Android and Android TV)
 
-The apps declare in `caps` what their device plays: containers (`mkv`, `mp4`), video (`h264`, `h264hi10`, `hevc`, `hevc10`, `av1`, `vp9`), audio (`aac`, `mp3`, `ac3`, `eac3`, `dts`, `truehd`, `opus`, `flac`) and `mch` if it decodes multichannel AAC. With that, an MKV or MP4 whose video and chosen audio track are declared is served **directly**, untouched (AC-3, E-AC-3 or DTS arrive as they are for HDMI passthrough). Otherwise it goes through HLS: HEVC is copied without re-encoding and audio is converted to stereo AAC, unless the app runs on a TV and declares `mch` with a track of 6 or more channels, in which case it receives 5.1 AAC. The mobile app does not declare `mch`; the web does not send these tokens either, so both stay in stereo. `/play` returns `reason` (`container`, `video` or `audio`) to explain why it was not direct.
+The apps declare in `caps` what their device plays: containers (`mkv`, `mp4`), video (`h264`, `h264hi10`, `hevc`, `hevc10`, `av1`, `vp9`), audio (`aac`, `mp3`, `ac3`, `eac3`, `dts`, `truehd`, `opus`, `flac`) and `mch` if it decodes multichannel AAC. With that, an MKV or MP4 whose video and chosen audio track are declared is served **directly**, untouched (AC-3, E-AC-3 or DTS arrive as they are for HDMI passthrough). Otherwise it goes through HLS: HEVC is copied without re-encoding and audio is converted to stereo AAC, unless the app runs on a TV and declares `mch` with a track of 6 or more channels, in which case it receives 5.1 AAC. The mobile app does not declare `mch`; the web does not send these tokens either, so both stay in stereo. `/play` returns `reason` (`container`, `video`, `audio` or `subtitle`) to explain why it was not direct; an image track forces HLS and that last reason.
 
 ## Web player
 
@@ -148,17 +148,18 @@ The apps declare in `caps` what their device plays: containers (`mkv`, `mp4`), v
 | **8-bit H.264**, in MP4 or MKV | Still very compatible: MP4 with AAC/MP3 is served directly and MKV/MOV is copied without re-encoding. |
 | Avoid **10-bit H.265** unless every device needs it | Many browsers and devices cannot play it; the server GPU does not fully decode 10-bit HEVC. It is only copied if the browser declares `hevc10mse`. |
 | **Original audio** (AAC, MP3, AC-3…) | Direct playback keeps it; in HLS only the audio is re-encoded to stereo or 5.1 AAC depending on the client, at a small cost. |
-| **Text subtitles** embedded in the MKV or in `.srt` next to the video | They are converted to WebVTT; image subtitles (PGS/VobSub) cannot be shown. |
+| **Text subtitles** embedded in the MKV or in `.srt` next to the video | They are converted to WebVTT. |
+| **Image subtitles** (PGS, VobSub, DVB) embedded in the video | They can be chosen and are burned into the video when re-encoding for HLS; they require re-encoding and are unavailable in copy mode or with VA-API. |
 | **Keyframes every 2–10 s** | This is common and allows reasonable segments and seeks when copying. Very long intervals make segments longer and seeks less precise. |
 | Avoid **AVI and TS/M2TS** in the library | They are always re-encoded; converting to MKV/MP4 preserves the codec better and saves server work. |
 
-Re-encoding uses VA-API when available and libx264 when not. Copying uses almost no CPU because it neither decodes nor encodes the video.
+Re-encoding uses VA-API when available and libx264 when not. Burning an image subtitle forces the CPU path (libx264), without VA-API. Copying uses almost no CPU because it neither decodes nor encodes the video.
 
 ## What advanced playback still needs
 
 - Per-device profiles and automatic quality selection.
 - 10-bit handling beyond the H.265 that the browser already supports through MSE.
-- Image subtitles and unsupported or passthrough audio without re-encoding.
+- Unsupported or passthrough audio without re-encoding.
 - ABR and a master playlist with several qualities.
 - An explicit `transcode` API mode separate from `remux`.
 

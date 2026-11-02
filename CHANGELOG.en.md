@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.58.0] - 2026-11-02
+
+### Added
+
+- Server, web and Android: embedded image subtitles (PGS, VobSub and DVB) can now be chosen. `GET /api/v1/items/{id}/play` lists them with `burn_in: true` and an empty `url`; choosing one with `subtitle=<id>` switches playback to re-encoded HLS with the subtitle burned into the video (`reason: subtitle`, `burnsub` parameter in the signed URLs), never in copy mode or with VA-API. The web and the apps show them with the " · imagen" mark and reload playback at the current second when one is chosen or removed. Tested on the server with real FFmpeg and with unit tests on web and Android; not yet tested on a device.
+
 ## [0.57.0] - 2026-11-02
 
 ### Added

@@ -2,7 +2,7 @@
 
 [English](../en/status.md) · [Volver al README](../../README.md)
 
-Versión actual: **0.56.0**. Esta página resume el estado real del código, no el plan inicial. Las versiones salen del [CHANGELOG](../../CHANGELOG.md).
+Versión actual: **0.58.0**. Esta página resume el estado real del código, no el plan inicial. Las versiones salen del [CHANGELOG](../../CHANGELOG.md).
 
 Leyenda: ✅ hecho · 🟨 pendiente de probar · ⬜ pendiente.
 
@@ -49,8 +49,9 @@ Leyenda: ✅ hecho · 🟨 pendiente de probar · ⬜ pendiente.
 | Reproducción | Desentrelazado y HDR a SDR al recodificar | 🟨 0.55.0 | Solo al recodificar; usa `yadif` y `zscale`/`tonemap` si FFmpeg los tiene. Cubierto por tests, aún sin probar con archivos reales. |
 | Reproducción | AAC 5.1 por HLS para la TV | 🟨 0.56.0 | Apps con `mch` y pista de 6 o más canales reciben AAC 5.1; navegador y móvil siguen en estéreo. Aún sin probar en una TV real. |
 | Reproducción | Audio, subtítulos de texto y calidad | ✅ 0.13.0 | Subtítulos incrustados de texto y `.srt`/`.vtt`/`.ass` como WebVTT; preferencias por usuario y película. |
+| Reproducción | Subtítulos de imagen incrustados (PGS, VobSub, DVB) | 🟨 0.58.0 | Se eligen en la web y las apps con la marca « · imagen»; el servidor los quema en el vídeo al recodificar por HLS, nunca en copia ni con VA-API. Cubierto por la prueba real del servidor con FFmpeg y tests unitarios de web y Android; sin probar en un dispositivo real. |
 | Reproducción | Reproductor propio con controles, atajos y siguiente episodio | ✅ 0.13.0 | hls.js para HLS y `<video>` nativo para directa. |
-| Reproducción | Perfiles por dispositivo, 10 bits, subtítulos de imagen y ABR | ⬜ | La copia existe; la recodificación usa VA-API o software y H.264 + AAC estéreo o 5.1. |
+| Reproducción | Perfiles por dispositivo, 10 bits y ABR | ⬜ | La copia existe; la recodificación usa VA-API o software y H.264 + AAC estéreo o 5.1. |
 | Interfaz web | Inicio de sesión, sesión en cookie httpOnly, cierre y cambio de contraseña | ✅ 0.2.0 / 0.3.5 | El cierre de sesión está en `/login`. |
 | Interfaz web | Portal, cartelera, series y colecciones con búsqueda, filtros, orden y paginación | ✅ 0.11.0 / 0.15.0 | Columnas × filas por página; filtros por letra, género y visto en películas. |
 | Interfaz web | Temas claro/oscuro/sistema, menú lateral o superior y diseño adaptable | ✅ 0.2.0 / 0.14.0 | La preferencia de tema se guarda en el navegador. |
@@ -72,13 +73,13 @@ Leyenda: ✅ hecho · 🟨 pendiente de probar · ⬜ pendiente.
 | Seguridad | Argon2id, sesiones de 24 h y roles admin/usuario | ✅ 0.1.0 | El token solo se guarda como hash en la base. |
 | Seguridad | Permisos por biblioteca y por usuario | ✅ 0.24.0 | Cada cuenta solo ve sus bibliotecas; lo oculto responde 404. |
 | Calidad | Flujo «Servidor y web» de GitHub Actions | 🟨 | `.github/workflows/server-web.yml` ejecuta los tests de Go con FFmpeg y los de la web; falta comprobar su primera ejecución en verde. |
-| Clientes Android / Android TV | Android y Android TV | ✅ 0.56.0 | Una app para móvil, tableta y TV: sesión o vinculación, biblioteca, reproductor Media3 con preferencias, índice A–Z en TV, imagen en imagen en móvil, actualización automática y avisos de actualización. Desde 0.49.0 ofrece «Desde el principio» y «Continuar», desde 0.49.1 nombra las pistas sin título y desde 0.56.0 la TV declara `mch`. Oculta las secciones vacías. Ver [Android](android.md). |
+| Clientes Android / Android TV | Android y Android TV | ✅ 0.58.0 | Una app para móvil, tableta y TV: sesión o vinculación, biblioteca, reproductor Media3 con preferencias, índice A–Z en TV, imagen en imagen en móvil, actualización automática y avisos de actualización. Desde 0.49.0 ofrece «Desde el principio» y «Continuar», desde 0.49.1 nombra las pistas sin título, desde 0.56.0 la TV declara `mch` y desde 0.58.0 muestra y elige los subtítulos de imagen con la marca « · imagen». Oculta las secciones vacías. Ver [Android](android.md). |
 
 ## Lo que viene, en orden
 
 El orden sale de los planes de `.agents/plans` y de las tareas abiertas; no hay fechas ni versiones comprometidas.
 
-1. **Reproducción avanzada**: perfiles por dispositivo, subtítulos de imagen, 10 bits y audio no soportado. Probar con archivos reales el desentrelazado y el HDR de 0.55.0, y el AAC 5.1 de 0.56.0 en una TV.
+1. **Reproducción avanzada**: perfiles por dispositivo, 10 bits y audio no soportado. Probar con archivos reales el desentrelazado y el HDR de 0.55.0, y el AAC 5.1 de 0.56.0 en una TV.
 2. **Verificar el flujo «Servidor y web»** de GitHub Actions y su primera ejecución en verde.
 3. **Complementos**, todavía en fase de diseño.
 4. **DLNA/UPnP**, todavía en fase de diseño.
@@ -89,10 +90,10 @@ El orden sale de los planes de `.agents/plans` y de las tareas abiertas; no hay 
 - **Bloqueo de login:** los fallos se cuentan por pareja usuario+IP y hay un límite adicional por IP. Depende de que el proxy reenvíe bien `X-Forwarded-For` y de `CINECAT_TRUSTED_PROXIES`; intentos y bloqueos persisten en SQLite (migración 0024).
 - **No hay CORS:** el servidor no envía cabeceras `Access-Control-*`. El despliegue previsto funciona porque Apache sirve `/api/` y la web bajo el mismo origen.
 - **Series corregidas a mano:** el escaneo no vuelve a tocar las series `manual` ni `none`; si faltan temporadas o episodios, no se rellenan solos.
-- **HLS:** la recodificación usa VA-API si se monta `/dev/dri` y la comprobación funciona; si no, usa libx264 (software). Desde 0.55.0 desentrelaza y convierte HDR a SDR si FFmpeg tiene los filtros, pero aún no se ha probado con archivos reales. Siguen faltando subtítulos de imagen y ABR. La copia de vídeo no recodifica y apenas usa CPU.
+- **HLS:** la recodificación usa VA-API si se monta `/dev/dri` y la comprobación funciona; si no, usa libx264 (software). Desde 0.55.0 desentrelaza y convierte HDR a SDR si FFmpeg tiene los filtros, pero aún no se ha probado con archivos reales. Sigue faltando ABR. Las pistas de imagen se queman al recodificar por CPU, nunca en copia ni con VA-API. La copia de vídeo no recodifica y apenas usa CPU.
 - **La API sigue llamando `remux` al HLS** aunque copie o recodifique; el cliente recibe HLS en ambos casos.
 - **Si no se puede leer la duración**, se usa la playlist `event` de FFmpeg y los saltos lejanos no son rápidos.
-- **Subtítulos:** solo de texto; PGS/VobSub se ignoran. Los administradores pueden subir `.srt`, `.vtt` o `.ass` de hasta 2 MB (se guardan en `subtitles/`, junto a la base) y se sirven como WebVTT con ids `u<N>`. El HLS no lleva una pista de subtítulos separada.
+- **Subtítulos:** los de texto se convierten a WebVTT; los de imagen incrustados (PGS, VobSub, DVB) se pueden elegir y se queman en el vídeo al recodificar por HLS, nunca en copia ni con VA-API. Los administradores pueden subir `.srt`, `.vtt` o `.ass` de hasta 2 MB (se guardan en `subtitles/`, junto a la base) y se sirven como WebVTT con ids `u<N>`. El HLS no lleva una pista de subtítulos separada.
 - **Tests HLS reales:** se saltan sin `ffmpeg`/`ffprobe` en PATH; el flujo «Servidor y web» de GitHub Actions instala FFmpeg y ejecuta las pruebas de Go y de la web.
 - **TMDB:** el mantenimiento diario vuelve a pedir las fichas con más de 90 días (máximo 40 películas y 20 series al día) para no superar los 6 meses de sus términos; no toca las corregidas a mano. La caché de respuestas de 7 días y las cuotas deben revisarse antes de un uso intensivo. OMDb solo se usa como respaldo y tiene cuota diaria.
 - **Cambios en los discos:** subir y mover a la papelera exige montar `/media` en lectura y escritura; la música no se puede subir ni mover.

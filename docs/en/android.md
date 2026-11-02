@@ -92,6 +92,8 @@ The app does not include FFmpeg or libmpv. It plays with Media3 (ExoPlayer): whe
 
 The player remembers the audio, subtitles and quality chosen for each item on the server and restores them when it is reopened, as long as they still exist; otherwise that preference is ignored. On phones, leaving the app while a video is playing moves the player to a picture-in-picture window without the app controls; closing the window stops playback and saves progress.
 
+Since 0.58.0, embedded image tracks (PGS, VobSub and DVB) appear under "Tracks" with the " · imagen" mark. They are not loaded into ExoPlayer: choosing one saves the preference and reloads playback with `subtitle=<id>` at the current second; removing it or switching to text from one reloads without the burned subtitle. The server burns them while re-encoding for HLS.
+
 On TV, with the remote: centre pauses or resumes, left and right go back or forward 10 s, down shows the controls, up or Menu opens "Tracks" (audio and subtitles) and Back exits. Untitled tracks are named by language or as "Audio 1", "Audio 2", "Subtitle 1"… (0.49.1). On phones playback goes full screen in landscape. In series, the page offers the next episode.
 
 Since 0.49.0, a partly watched movie page shows **Desde el principio** next to **Continuar**, and the next-episode button reads **Continuar S01E01** when there is progress. The TV declares `mch` and receives 5.1 AAC over HLS when the chosen track has 6 or more channels; the phone does not declare `mch` and stays in stereo (0.56.0, not yet tried on a real TV).

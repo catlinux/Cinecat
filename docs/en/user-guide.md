@@ -128,6 +128,8 @@ The player has custom controls. These are the keyboard shortcuts:
 
 The visible buttons let you play/pause, rewind or forward 10 s, change volume, choose speed (0.5× to 2×), audio, subtitles and quality, enable picture-in-picture, fullscreen and play the next episode. Clicking the video plays or pauses; double-clicking toggles fullscreen.
 
+In the subtitle menu, embedded image tracks (PGS, VobSub and DVB) carry the " · imagen" mark. Choosing one reloads playback at the current second with the subtitle burned in; removing it or switching to text from one reloads without the burn.
+
 Progress is saved every 15 s and on exit. If 15 s or less remain, playback does not resume: it is treated as finished. When an episode ends and there is a next one, an 8-second countdown starts.
 
 ## Themes, menu and account
