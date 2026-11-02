@@ -7,6 +7,14 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Añadido
+
+- `CODE_OF_CONDUCT.md`: código de conducta breve, en castellano e inglés, enlazado desde `CONTRIBUTING.md`.
+
+### Cambiado
+
+- `SECURITY.md` ya no fija un número de versión con soporte, que estaba desfasado.
+
 ## [0.58.0] - 2026-11-02
 
 ### Añadido

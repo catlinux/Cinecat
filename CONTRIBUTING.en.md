@@ -2,7 +2,7 @@
 
 [Versión en español](CONTRIBUTING.md)
 
-Cinecat's server and web client are in active development. Suggestions, corrections and comments on the documents are welcome through *issues*. Code *pull requests* are not accepted without prior agreement with the maintainer.
+Cinecat's server and web client are in active development. Suggestions, corrections and comments on the documents are welcome through *issues*. Code *pull requests* are not accepted without prior agreement with the maintainer. Respectful behaviour is expected, see the [code of conduct](CODE_OF_CONDUCT.md).
 
 ## Project rules
 

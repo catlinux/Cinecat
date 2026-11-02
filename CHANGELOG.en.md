@@ -7,6 +7,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+### Added
+
+- `CODE_OF_CONDUCT.md`: a short code of conduct, in Spanish and English, linked from `CONTRIBUTING.md`.
+
+### Changed
+
+- `SECURITY.md` no longer states a supported version number, which was out of date.
+
 ## [0.58.0] - 2026-11-02
 
 ### Added

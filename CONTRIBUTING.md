@@ -2,7 +2,7 @@
 
 [English version](CONTRIBUTING.en.md)
 
-Cinecat tiene el servidor y el cliente web en desarrollo activo. Las sugerencias, correcciones y comentarios sobre los documentos son bienvenidos mediante *issues*. No se aceptan *pull requests* de código sin un acuerdo previo con el mantenedor.
+Cinecat tiene el servidor y el cliente web en desarrollo activo. Las sugerencias, correcciones y comentarios sobre los documentos son bienvenidos mediante *issues*. No se aceptan *pull requests* de código sin un acuerdo previo con el mantenedor. Se espera un trato respetuoso, ver el [código de conducta](CODE_OF_CONDUCT.md).
 
 ## Normas del proyecto
 
