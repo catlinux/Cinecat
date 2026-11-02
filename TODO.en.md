@@ -39,7 +39,7 @@ This file contains only work that is still open. Published work is in the [CHANG
 - **No CORS:** the server sends no `Access-Control-*` headers; the deployment relies on Apache serving the API and web app under the same origin.
 - **Writing to disks:** uploads and the trash require `CINECAT_MEDIA_MODE=rw`; music cannot be uploaded or moved to the trash.
 - **Re-encoding:** uses VA-API when available and libx264 otherwise. Copying video does not re-encode and uses almost no CPU.
-- **Cache and quotas:** the TMDB TTL is a starting value and OMDb has a daily quota; TMDB requires attribution (the "About" screen is missing).
+- **Cache and quotas:** the TMDB TTL is a starting value and OMDb has a daily quota; TMDB requires attribution (shown since 0.57.0 in the web footer and on the apps' account screen).
 - **Manually corrected series:** scans do not touch them; missing seasons or episodes are not filled automatically.
 - **Playback URLs:** valid for 8 hours, not bound to the user, and invalid after a server restart.
 - **Automatic updater:** only works when the host service is installed; the repository cannot verify its state on a given server.

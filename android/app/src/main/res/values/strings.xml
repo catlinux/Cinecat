@@ -58,6 +58,7 @@
     <string name="nav_collections">Colecciones</string>
     <string name="nav_search">Buscar</string>
     <string name="account_title">Cuenta</string>
+    <string name="account_tmdb_attribution">Este producto usa la API de TMDB pero no está avalado ni certificado por TMDB.</string>
     <string name="back">Volver</string>
     <string name="portal_error">No se pudo cargar el portal</string>
     <string name="retry">Reintentar</string>

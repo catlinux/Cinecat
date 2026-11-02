@@ -103,6 +103,12 @@ fun AccountScreen(
                         label = stringResource(R.string.home_change_server),
                         onClick = onChangeServer
                     )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(R.string.account_tmdb_attribution),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
                 Column(modifier = Modifier.weight(1f)) {
                     AccountUpdateSection(
@@ -165,6 +171,12 @@ fun AccountScreen(
                     label = stringResource(R.string.home_change_server),
                     modifier = Modifier.fillMaxWidth(),
                     onClick = onChangeServer
+                )
+                Text(
+                    text = stringResource(R.string.account_tmdb_attribution),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
                 )
             }
         }

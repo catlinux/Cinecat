@@ -185,6 +185,10 @@
 		<footer>
 			<span>{ui.server_name} {versionLabel} · GPL-3.0</span>
 			<span class="server">Servidor: {apiBaseUrl || 'sin configurar'}</span>
+			<span class="attribution">
+				Este producto usa la API de <a href="https://www.themoviedb.org/" rel="noopener noreferrer">TMDB</a>
+				pero no está avalado ni certificado por TMDB.
+			</span>
 		</footer>
 		{#if versionMismatch(data.serverVersion, data.webVersion)}
 			<p class="version-warning" role="status">

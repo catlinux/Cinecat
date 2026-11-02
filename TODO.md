@@ -38,7 +38,7 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 - **Sin CORS:** el servidor no envía cabeceras `Access-Control-*`; el despliegue depende de que Apache sirva la API y la web bajo el mismo origen.
 - **Escritura en los discos:** subir y la papelera exigen `CINECAT_MEDIA_MODE=rw`; la música no se puede subir ni mover a la papelera.
 - **Recodificación:** usa VA-API si está disponible y libx264 en caso contrario. La copia de vídeo no recodifica y apenas usa CPU.
-- **Caché y cuotas:** el TTL de TMDB es un valor de partida y OMDb tiene cuota diaria; TMDB exige atribución (falta la pantalla «Acerca de»).
+- **Caché y cuotas:** el TTL de TMDB es un valor de partida y OMDb tiene cuota diaria; TMDB exige atribución (visible desde 0.57.0 en el pie de la web y en la cuenta de las apps).
 - **Series corregidas a mano:** el escaneo no las vuelve a tocar; si faltan temporadas o episodios, no se rellenan solos.
 - **URLs de reproducción:** duran 8 horas, no están ligadas al usuario y dejan de valer al reiniciar el servidor.
 - **Actualizador automático:** solo funciona si el servicio del host está instalado; el repositorio no puede comprobar su estado en un servidor concreto.

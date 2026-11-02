@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.57.0] - 2026-11-02
+
+### Added
+
+- Web and Android: the attribution required by TMDB ("This product uses the TMDB API but is not endorsed or certified by TMDB") now shows in the web footer and on the apps' account screen.
+
 ## [0.56.1] - 2026-11-02
 
 ### Fixed

@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.57.0] - 2026-11-02
+
+### Añadido
+
+- Web y Android: la atribución exigida por TMDB («Este producto usa la API de TMDB pero no está avalado ni certificado por TMDB») aparece en el pie de la web y en la pantalla de cuenta de las apps.
+
 ## [0.56.1] - 2026-11-02
 
 ### Corregido
