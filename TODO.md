@@ -8,8 +8,8 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 
 ## 🟠 Próxima fase
 
-- **Reproducción avanzada:** perfiles por dispositivo, subtítulos de imagen y audio no soportado. Probar con archivos reales entrelazados y HDR el desentrelazado y el mapeo a SDR de 0.55.0.
-- **Probar en la TV el audio 5.1 de 0.56.0** con un archivo 5.1 real (AAC 5.1 por HLS) y comprobar que se oye bien.
+- **Reproducción avanzada:** perfiles por dispositivo, subtítulos de imagen y audio no soportado. El desentrelazado y el mapeo a SDR de 0.55.0 ya están probados con FFmpeg real en `hls_real_test.go`; falta verlos en un archivo HDR/entrelazado de la biblioteca.
+- **Comprobar en la TV que el audio 5.1 de 0.56.0 se oye bien:** el servidor ya está probado con FFmpeg real (AC-3, E-AC-3 y AAC 5.1, también 5.1(side)); falta el oído en el equipo de sonido.
 - **Verificar el flujo «Servidor y web» de GitHub Actions** (`.github/workflows/server-web.yml`, ejecuta los tests de Go con FFmpeg y los de la web): comprobar su primera ejecución en verde.
 
 ## 🟢 Más adelante

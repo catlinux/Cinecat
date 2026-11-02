@@ -8,8 +8,8 @@ This file contains only work that is still open. Published work is in the [CHANG
 
 ## 🟠 Next phase
 
-- **Advanced playback:** device profiles, image subtitles and unsupported audio. Test the 0.55.0 deinterlacing and SDR tone mapping with real interlaced and HDR files.
-- **Test the 0.56.0 5.1 audio on the TV** with a real 5.1 file (5.1 AAC over HLS) and check it sounds right.
+- **Advanced playback:** device profiles, image subtitles and unsupported audio. The 0.55.0 deinterlacing and SDR tone mapping are already tested with real FFmpeg in `hls_real_test.go`; still to see on an HDR/interlaced file from the library.
+- **Check on the TV that the 0.56.0 5.1 audio sounds right:** the server is already tested with real FFmpeg (AC-3, E-AC-3 and AAC 5.1, also 5.1(side)); what remains is listening on the sound system.
 - **Verify the "Servidor y web" GitHub Actions workflow** (`.github/workflows/server-web.yml`, runs the Go tests with FFmpeg and the web tests): check its first run is green.
 
 ## 🟢 Later
