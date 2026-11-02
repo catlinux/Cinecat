@@ -210,12 +210,15 @@ func generateImageSubtitleVideo(t *testing.T) string {
 	return target
 }
 
-func frameMD5(t *testing.T, segment, at string) string {
+// frameMD5 resume todos los fotogramas del segmento: la muestra de VobSub solo
+// se ve unos instantes y su tiempo exacto varía según la versión de FFmpeg, así
+// que comparar un único fotograma no es fiable.
+func frameMD5(t *testing.T, segment string) string {
 	t.Helper()
 	out, err := exec.Command("ffmpeg", "-hide_banner", "-loglevel", "error",
-		"-ss", at, "-i", segment, "-frames:v", "1", "-f", "md5", "-").Output()
+		"-i", segment, "-map", "0:v:0", "-f", "md5", "-").Output()
 	if err != nil {
-		t.Fatalf("extraer fotograma de %s: %v", segment, err)
+		t.Fatalf("resumir el vídeo de %s: %v", segment, err)
 	}
 	return strings.TrimSpace(string(out))
 }
@@ -259,10 +262,10 @@ func TestSubtituloImagenQuemadoReal(t *testing.T) {
 
 	plainSegment := filepath.Join(plain.dir, segmentName(0))
 	burnedSegment := filepath.Join(burned.dir, segmentName(0))
-	plainFrame := frameMD5(t, plainSegment, "0")
-	burnedFrame := frameMD5(t, burnedSegment, "0")
+	plainFrame := frameMD5(t, plainSegment)
+	burnedFrame := frameMD5(t, burnedSegment)
 	if plainFrame == burnedFrame {
-		t.Fatalf("el fotograma quemado no cambió: %s", plainFrame)
+		t.Fatalf("el vídeo con el subtítulo quemado no cambió: %s", plainFrame)
 	}
 }
 
