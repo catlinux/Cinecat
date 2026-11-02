@@ -65,9 +65,19 @@ Authorization: Bearer <token>
 
 Las sesiones web duran 24 horas y las de `android`/`androidtv`, 90 días. Se renuevan al usarlas cuando les queda menos de la mitad de su vida. Si una petición devuelve `401`, la sesión no es válida o ha caducado: hay que volver a iniciar sesión.
 
-La sesión actual y las demás sesiones propias se consultan con `GET /api/v1/auth/sessions`; `DELETE /api/v1/auth/sessions/{id}` cierra una sesión concreta. Los administradores pueden consultar y revocar las sesiones de una cuenta con las rutas `/api/v1/users/{id}/sessions`.
+La sesión actual y las demás sesiones propias se consultan con `GET /api/v1/auth/sessions`; `DELETE /api/v1/auth/sessions/{id}` cierra una sesión concreta. Cada elemento de la lista incluye `profile`, el perfil de ese dispositivo. Los administradores pueden consultar y revocar las sesiones de una cuenta con las rutas `/api/v1/users/{id}/sessions`.
 
 El login limita los intentos fallidos por usuario e IP. Al superar el límite responde `429` con la cabecera `Retry-After`; la app debe esperar ese tiempo antes de reintentar.
+
+## Perfil del dispositivo
+
+Cada sesión activa tiene un perfil propio que se aplica al reproducir. Se lee con `GET /api/v1/auth/sessions/{id}/profile` y se sustituye entero con `PUT` sobre la misma ruta. `{id}` admite un identificador numérico o `current` para la sesión que hace la petición; solo se pueden consultar y editar sesiones del propio usuario, y una sesión ajena, caducada o inexistente responde `404`. El cuerpo y la respuesta tienen los tres campos de `SessionProfile`:
+
+- `max_quality`: `""` (sin límite), `480`, `720` o `1080`.
+- `audio_language`: `""` (sin preferencia) o un código de 2 o 3 letras en minúsculas.
+- `subtitle_language`: `""` (sin preferencia), `off` (desactivados) o un código de 2 o 3 letras en minúsculas.
+
+Un valor no válido responde `400`. El perfil pertenece a la sesión: al cerrarla o volver a vincular el dispositivo se pierde y vuelve a estar vacío.
 
 ## Vincular un dispositivo
 
@@ -136,6 +146,8 @@ Si se elige una pista de imagen con `subtitle=e<N>`, `mode` es `remux`, `reason`
 El progreso se guarda con `PUT /api/v1/items/{id}/progress` y un cuerpo como `{"position_seconds": 300, "duration_seconds": 1800}`; `DELETE` sobre la misma ruta lo borra. Al llegar al 90 % de la duración, el servidor marca el ítem como visto y elimina el progreso. El visionado se controla con `PUT` y `DELETE /api/v1/items/{id}/watched`.
 
 Las preferencias de audio, subtítulos y calidad se leen con `GET /api/v1/items/{id}/preferences`, que devuelve `audio_index`, `subtitle_id` y `quality` (o `null` si no hay preferencia). Se guardan con `PUT` sobre la misma ruta y un cuerpo parcial: los campos ausentes no se tocan, `null` los borra y `subtitle_id` vacío significa «sin subtítulos». `DELETE` elimina todas las preferencias del usuario para ese ítem. Las apps las restauran al reabrir el elemento.
+
+`GET /play` aplica esta precedencia: parámetro explícito > preferencia del ítem > perfil de la sesión > valor por defecto. El perfil de audio elige la primera pista de ese idioma; si no hay ninguna, se usa el comportamiento normal. El perfil de subtítulo elige la primera pista de texto (nunca una de imagen) de ese idioma, prefiriendo las no forzadas; `off` no muestra subtítulos por defecto. La calidad máxima solo actúa como tope en HLS: recorta las calidades ofrecidas y baja `auto`, `original` y las alturas superiores al límite; la reproducción directa no cambia.
 
 ## Subtítulos subidos (solo administradores)
 

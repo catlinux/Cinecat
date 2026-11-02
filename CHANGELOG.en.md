@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.59.0] - 2026-11-02
+
+### Added
+
+- Server, web and Android: per-device profiles. Each device (session) stores a maximum quality (no limit, 480, 720 or 1080), a preferred audio language and a preferred subtitle language (or off). They are edited on the web (My account → each device's "Settings") and in the apps (Account → "This device"), through `GET` and `PUT /api/v1/auth/sessions/{id}/profile` (`{id}` numeric or `current`) and the `profile` field in `GET /api/v1/auth/sessions`; migration 0027. They apply when playing if there is no explicit or saved choice for that film (explicit > film > device > default); the default subtitle is never an image one and the maximum quality only limits re-encoded HLS. The profile is lost when the session is closed or the device is paired again. Covered by server, web and Android tests; not yet tested on a device.
+
 ### Added
 
 - `CODE_OF_CONDUCT.md`: a short code of conduct, in Spanish and English, linked from `CONTRIBUTING.md`.

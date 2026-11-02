@@ -2,7 +2,7 @@
 
 [English](../en/status.md) · [Volver al README](../../README.md)
 
-Versión actual: **0.58.0**. Esta página resume el estado real del código, no el plan inicial. Las versiones salen del [CHANGELOG](../../CHANGELOG.md).
+Versión actual: **0.59.0**. Esta página resume el estado real del código, no el plan inicial. Las versiones salen del [CHANGELOG](../../CHANGELOG.md).
 
 Leyenda: ✅ hecho · 🟨 pendiente de probar · ⬜ pendiente.
 
@@ -50,8 +50,9 @@ Leyenda: ✅ hecho · 🟨 pendiente de probar · ⬜ pendiente.
 | Reproducción | AAC 5.1 por HLS para la TV | 🟨 0.56.0 | Apps con `mch` y pista de 6 o más canales reciben AAC 5.1; navegador y móvil siguen en estéreo. Aún sin probar en una TV real. |
 | Reproducción | Audio, subtítulos de texto y calidad | ✅ 0.13.0 | Subtítulos incrustados de texto y `.srt`/`.vtt`/`.ass` como WebVTT; preferencias por usuario y película. |
 | Reproducción | Subtítulos de imagen incrustados (PGS, VobSub, DVB) | 🟨 0.58.0 | Se eligen en la web y las apps con la marca « · imagen»; el servidor los quema en el vídeo al recodificar por HLS, nunca en copia ni con VA-API. Cubierto por la prueba real del servidor con FFmpeg y tests unitarios de web y Android; sin probar en un dispositivo real. |
+| Reproducción | Perfiles por dispositivo (sesión) | 🟨 0.59.0 | Calidad máxima, idioma de audio y de subtítulo por sesión; se editan en la web y las apps y se aplican con la precedencia explícito > ítem > perfil > defecto. Nunca eligen una pista de imagen y el tope de calidad solo afecta a HLS. Cubierto por tests; sin probar en un dispositivo real. |
 | Reproducción | Reproductor propio con controles, atajos y siguiente episodio | ✅ 0.13.0 | hls.js para HLS y `<video>` nativo para directa. |
-| Reproducción | Perfiles por dispositivo, 10 bits y ABR | ⬜ | La copia existe; la recodificación usa VA-API o software y H.264 + AAC estéreo o 5.1. |
+| Reproducción | 10 bits y ABR | ⬜ | La copia existe; la recodificación usa VA-API o software y H.264 + AAC estéreo o 5.1. |
 | Interfaz web | Inicio de sesión, sesión en cookie httpOnly, cierre y cambio de contraseña | ✅ 0.2.0 / 0.3.5 | El cierre de sesión está en `/login`. |
 | Interfaz web | Portal, cartelera, series y colecciones con búsqueda, filtros, orden y paginación | ✅ 0.11.0 / 0.15.0 | Columnas × filas por página; filtros por letra, género y visto en películas. |
 | Interfaz web | Temas claro/oscuro/sistema, menú lateral o superior y diseño adaptable | ✅ 0.2.0 / 0.14.0 | La preferencia de tema se guarda en el navegador. |
@@ -73,13 +74,13 @@ Leyenda: ✅ hecho · 🟨 pendiente de probar · ⬜ pendiente.
 | Seguridad | Argon2id, sesiones de 24 h y roles admin/usuario | ✅ 0.1.0 | El token solo se guarda como hash en la base. |
 | Seguridad | Permisos por biblioteca y por usuario | ✅ 0.24.0 | Cada cuenta solo ve sus bibliotecas; lo oculto responde 404. |
 | Calidad | Flujo «Servidor y web» de GitHub Actions | 🟨 | `.github/workflows/server-web.yml` ejecuta los tests de Go con FFmpeg y los de la web; falta comprobar su primera ejecución en verde. |
-| Clientes Android / Android TV | Android y Android TV | ✅ 0.58.0 | Una app para móvil, tableta y TV: sesión o vinculación, biblioteca, reproductor Media3 con preferencias, índice A–Z en TV, imagen en imagen en móvil, actualización automática y avisos de actualización. Desde 0.49.0 ofrece «Desde el principio» y «Continuar», desde 0.49.1 nombra las pistas sin título, desde 0.56.0 la TV declara `mch` y desde 0.58.0 muestra y elige los subtítulos de imagen con la marca « · imagen». Oculta las secciones vacías. Ver [Android](android.md). |
+| Clientes Android / Android TV | Android y Android TV | ✅ 0.59.0 | Una app para móvil, tableta y TV: sesión o vinculación, biblioteca, reproductor Media3 con preferencias, índice A–Z en TV, imagen en imagen en móvil, actualización automática y avisos de actualización. Desde 0.49.0 ofrece «Desde el principio» y «Continuar», desde 0.49.1 nombra las pistas sin título, desde 0.56.0 la TV declara `mch`, desde 0.58.0 muestra y elige los subtítulos de imagen y desde 0.59.0 edita el perfil de «Este dispositivo». Oculta las secciones vacías. Ver [Android](android.md). |
 
 ## Lo que viene, en orden
 
 El orden sale de los planes de `.agents/plans` y de las tareas abiertas; no hay fechas ni versiones comprometidas.
 
-1. **Reproducción avanzada**: perfiles por dispositivo, 10 bits y audio no soportado. Probar con archivos reales el desentrelazado y el HDR de 0.55.0, y el AAC 5.1 de 0.56.0 en una TV.
+1. **Reproducción avanzada**: 10 bits y audio no soportado. Probar con archivos reales el desentrelazado y el HDR de 0.55.0, y el AAC 5.1 de 0.56.0 en una TV.
 2. **Verificar el flujo «Servidor y web»** de GitHub Actions y su primera ejecución en verde.
 3. **Complementos**, todavía en fase de diseño.
 4. **DLNA/UPnP**, todavía en fase de diseño.

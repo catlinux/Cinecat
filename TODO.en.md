@@ -8,7 +8,8 @@ This file contains only work that is still open. Published work is in the [CHANG
 
 ## 🟠 Next phase
 
-- **Advanced playback:** device profiles and unsupported audio. The 0.58.0 image subtitles were tested on 2026-11-02 on the TV with a test VobSub (choosing one reloads over HLS with the subtitle burned in); still to see with a real PGS and on the phone. On the TV, with direct playback, ExoPlayer already shows the VobSub as a native track and the "· imagen" entry appears too: consider hiding the duplicate. The 0.55.0 deinterlacing and SDR tone mapping are already tested with real FFmpeg in `hls_real_test.go`; still to see on an HDR/interlaced file from the library.
+- **Test the 0.59.0 device profiles on a device** (Account → "This device" on the TV and phone; the profile applies when playing a film with no saved choice).
+- **Advanced playback:** unsupported audio. The 0.58.0 image subtitles were tested on 2026-11-02 on the TV with a test VobSub (choosing one reloads over HLS with the subtitle burned in); still to see with a real PGS and on the phone. On the TV, with direct playback, ExoPlayer already shows the VobSub as a native track and the "· imagen" entry appears too: consider hiding the duplicate. The 0.55.0 deinterlacing and SDR tone mapping are already tested with real FFmpeg in `hls_real_test.go`; still to see on an HDR/interlaced file from the library.
 - **Hear the 0.56.0 5.1 audio on a 5.1 system:** tested on 2026-11-02 on the TV (Xiaomi MiTV-MSSP3) with a test AC-3 5.1 file: the HLS arrives as 6-channel AAC, ExoPlayer opens a 6-channel track (0x3f) and the TV downmixes it to stereo on its speakers. Still to hear on a real 5.1 system.
 - **Verify the "Servidor y web" GitHub Actions workflow** (`.github/workflows/server-web.yml`, runs the Go tests with FFmpeg and the web tests): check its first run is green.
 

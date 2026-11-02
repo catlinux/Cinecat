@@ -120,6 +120,7 @@ The player offers `auto`, 480p, 720p, 1080p (never above the original height or 
 - **Another track on MP4:** if you choose a track in the web app that differs from the one the browser would play on its own in a compatible MP4, the server serves it through HLS with that track (since 0.48.3).
 - **Subtitles:** embedded text tracks and external `.srt`, `.vtt` or `.ass` files next to the video, with language and `forced` suffixes, are converted to WebVTT. Embedded image tracks (PGS, VobSub and DVB) appear in `/play` with `burn_in: true` and an empty `url`; choosing one switches the server to HLS and burns it into the video, so it must re-encode (never copy or VA-API). HLS has no separate subtitle rendition: text is served separately and the image becomes part of the video.
 - **Preferences:** audio, subtitle and quality per user and movie; the player saves them and reloads at the current second when changed.
+- **Device profile:** each session can store a maximum quality and preferred audio and subtitle languages. They apply during playback only when there is no explicit parameter or saved preference for that movie (explicit > item > profile > default). The profile subtitle never picks an image track; `off` disables subtitles by default. Maximum quality only caps HLS: it trims the offered qualities and lowers `auto`, `original` and heights above the cap; direct playback is unchanged.
 
 ## Native apps (Android and Android TV)
 
@@ -157,7 +158,7 @@ Re-encoding uses VA-API when available and libx264 when not. Burning an image su
 
 ## What advanced playback still needs
 
-- Per-device profiles and automatic quality selection.
+- Automatic quality selection.
 - 10-bit handling beyond the H.265 that the browser already supports through MSE.
 - Unsupported or passthrough audio without re-encoding.
 - ABR and a master playlist with several qualities.

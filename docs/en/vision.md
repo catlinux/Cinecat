@@ -17,7 +17,7 @@ People who keep their own video library at home usually end up using someone els
 | 1 | **Own server and clients**, with an own name (Cinecat). |
 | 2 | We **reuse everything that is legal** from other free projects, with credits. The rest is written from scratch. |
 | 3 | Platforms: **web** (PC, phone, tablet; reachable from outside the home) and **Android / Android TV**. Nothing else for now. |
-| 4 | **Optimal playback**: H.265 preferred, H.264 as a fallback; the device declares what it can do and the server decides. The current implementation uses software H.264; H.265 and per-device profiles are future design. |
+| 4 | **Optimal playback**: H.265 preferred, H.264 as a fallback; the device declares what it can do and the server decides. The current implementation uses software H.264; H.265 remains future design and per-device profiles already exist. |
 | 5 | **Metadata from existing databases**, in Spanish (Spain). We do not build our own. |
 | 6 | **Protected access** with username and password; PIN profiles are a design goal, not a current feature. |
 | 7 | **Own, distinctive interface**, unlike what is usual in AI-generated projects. |

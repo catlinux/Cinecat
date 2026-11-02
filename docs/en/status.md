@@ -2,7 +2,7 @@
 
 [Español](../es/estado.md) · [Back to README](../../README.en.md)
 
-Current version: **0.58.0**. This page describes the real state of the code, not the original plan. Versions come from the [CHANGELOG](../../CHANGELOG.en.md).
+Current version: **0.59.0**. This page describes the real state of the code, not the original plan. Versions come from the [CHANGELOG](../../CHANGELOG.en.md).
 
 Legend: ✅ done · 🟨 awaiting testing · ⬜ pending.
 
@@ -50,8 +50,9 @@ Legend: ✅ done · 🟨 awaiting testing · ⬜ pending.
 | Playback | 5.1 AAC over HLS for TV | 🟨 0.56.0 | Apps with `mch` and a track of 6 or more channels receive 5.1 AAC; browser and phone stay in stereo. Not yet tried on a real TV. |
 | Playback | Audio, text subtitles and quality | ✅ 0.13.0 | Embedded text and `.srt`/`.vtt`/`.ass` as WebVTT; per-user, per-movie preferences. |
 | Playback | Embedded image subtitles (PGS, VobSub, DVB) | 🟨 0.58.0 | They can be selected in the web app and the apps with the " · imagen" mark; the server burns them into the video when re-encoding for HLS, never in copy mode or with VA-API. Covered by the server's real FFmpeg test and unit tests for web and Android; not yet tried on a real device. |
+| Playback | Per-device profiles (session) | 🟨 0.59.0 | Maximum quality and preferred audio and subtitle languages per session; edited in the web app and the apps and applied with explicit > item > profile > default precedence. They never pick an image track, and the quality cap only affects HLS. Covered by tests; not yet tried on a real device. |
 | Playback | Custom player with controls, shortcuts and next episode | ✅ 0.13.0 | hls.js for HLS and native `<video>` for direct play. |
-| Playback | Per-device profiles, 10-bit and ABR | ⬜ | Copy mode exists; re-encoding uses VA-API or software and H.264 + stereo or 5.1 AAC. |
+| Playback | 10-bit and ABR | ⬜ | Copy mode exists; re-encoding uses VA-API or software and H.264 + stereo or 5.1 AAC. |
 | Web interface | Login, httpOnly session, logout and password change | ✅ 0.2.0 / 0.3.5 | Logout is on `/login`. |
 | Web interface | Portal, movies, series and collections with search, filters, sorting and pagination | ✅ 0.11.0 / 0.15.0 | Columns × rows per page; letter, genre and watched filters on movies. |
 | Web interface | Light/dark/system themes, side or top navigation and responsive layout | ✅ 0.2.0 / 0.14.0 | Theme preference stored in the browser. |
@@ -73,13 +74,13 @@ Legend: ✅ done · 🟨 awaiting testing · ⬜ pending.
 | Security | Argon2id, 24 h sessions and admin/user roles | ✅ 0.1.0 | Only the token hash is stored in the database. |
 | Security | Per-library and per-user permissions | ✅ 0.24.0 | Each account only sees its libraries; hidden content returns 404. |
 | Quality | "Servidor y web" GitHub Actions workflow | 🟨 | `.github/workflows/server-web.yml` runs the Go tests with FFmpeg and the web tests; its first green run still needs checking. |
-| Android / Android TV clients | Android and Android TV | ✅ 0.58.0 | One app for phones, tablets and TV: session or pairing, library, Media3 player with preferences, A–Z index on TV, picture-in-picture on phones, automatic updates and update notices. Since 0.49.0 it offers "From the start" and "Continue", since 0.49.1 it names untitled tracks, since 0.56.0 the TV declares `mch` and since 0.58.0 it shows and selects image subtitles with the " · imagen" mark. Hides empty sections. See [Android](android.md). |
+| Android / Android TV clients | Android and Android TV | ✅ 0.59.0 | One app for phones, tablets and TV: session or pairing, library, Media3 player with preferences, A–Z index on TV, picture-in-picture on phones, automatic updates and update notices. Since 0.49.0 it offers "From the start" and "Continue", since 0.49.1 it names untitled tracks, since 0.56.0 the TV declares `mch`, since 0.58.0 it shows and selects image subtitles and since 0.59.0 it edits the "Este dispositivo" profile. Hides empty sections. See [Android](android.md). |
 
 ## What comes next, in order
 
 The order comes from the plans in `.agents/plans` and the open tasks; no dates or committed versions.
 
-1. **Advanced playback**: per-device profiles, 10-bit and unsupported audio. Test 0.55.0 deinterlacing and HDR with real files, and 0.56.0 5.1 AAC on a TV.
+1. **Advanced playback**: 10-bit and unsupported audio. Test 0.55.0 deinterlacing and HDR with real files, and 0.56.0 5.1 AAC on a TV.
 2. **Verify the "Servidor y web" GitHub Actions workflow** and its first green run.
 3. **Plugins**, still at the design stage.
 4. **DLNA/UPnP**, still at the design stage.

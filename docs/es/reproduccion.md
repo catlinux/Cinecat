@@ -120,6 +120,7 @@ El reproductor ofrece `auto`, 480p, 720p, 1080p (sin superar la altura original 
 - **Otra pista en MP4:** si en la web eliges una pista distinta de la que el navegador reproduciría sola en un MP4 compatible, el servidor lo sirve por HLS con esa pista (desde 0.48.3).
 - **Subtítulos:** los de texto incrustados y los archivos externos `.srt`, `.vtt` o `.ass` junto al vídeo, con sufijos de idioma y `forced`, se convierten a WebVTT. Las pistas de imagen incrustadas (PGS, VobSub y DVB) aparecen en `/play` con `burn_in: true` y `url` vacía; al elegirlas, el servidor pasa a HLS y las quema en el vídeo, así que hay que recodificar (nunca en copia ni con VA-API). El HLS no lleva una representación separada de subtítulos: el texto se sirve aparte y la imagen forma parte del vídeo.
 - **Preferencias:** audio, subtítulo y calidad por usuario y película; el reproductor las guarda y recarga en el segundo actual al cambiarlas.
+- **Perfil del dispositivo:** cada sesión puede guardar una calidad máxima y un idioma de audio y de subtítulo preferidos. Se aplican al reproducir solo si no hay parámetro explícito ni preferencia guardada para esa película (explícito > ítem > perfil > defecto). El subtítulo del perfil nunca elige una pista de imagen; `off` desactiva los subtítulos por defecto. La calidad máxima solo limita HLS: recorta las calidades ofrecidas y baja `auto`, `original` y las superiores al tope; la reproducción directa no se toca.
 
 ## Apps nativas (Android y Android TV)
 
@@ -157,7 +158,7 @@ La recodificación usa VA-API cuando está disponible y libx264 cuando no. Quema
 
 ## Qué falta para la reproducción avanzada
 
-- Perfiles por dispositivo y elección automática entre calidades.
+- Elección automática entre calidades.
 - Tratamiento de 10 bits más allá del H.265 que el navegador ya admita por MSE.
 - Audio no soportado o passthrough sin recodificar.
 - ABR y playlist maestra con varias calidades.

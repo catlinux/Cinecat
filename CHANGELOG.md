@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.59.0] - 2026-11-02
+
+### Añadido
+
+- Servidor, web y Android: perfiles por dispositivo. Cada dispositivo (sesión) guarda una calidad máxima (sin límite, 480, 720 o 1080), un idioma de audio preferido y un idioma de subtítulo preferido (o desactivados). Se editan en la web (Mi cuenta → «Ajustes» de cada dispositivo) y en las apps (Cuenta → «Este dispositivo»), con `GET` y `PUT /api/v1/auth/sessions/{id}/profile` (`{id}` numérico o `current`) y el campo `profile` en `GET /api/v1/auth/sessions`; migración 0027. Se aplican al reproducir cuando no hay elección explícita ni guardada para esa película (explícito > película > dispositivo > defecto); el subtítulo por defecto nunca es de imagen y la calidad máxima solo limita el HLS recodificado. El perfil se pierde al cerrar sesión o volver a vincular el dispositivo. Cubierto por tests de servidor, web y Android; aún no se ha probado en un dispositivo.
+
 ### Añadido
 
 - `CODE_OF_CONDUCT.md`: código de conducta breve, en castellano e inglés, enlazado desde `CONTRIBUTING.md`.

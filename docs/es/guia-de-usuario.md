@@ -138,6 +138,8 @@ El selector de tema tiene **Auto**, **Claro** y **Oscuro**. Auto sigue el tema d
 
 En **Mi cuenta → Cambiar mi contraseña** puedes cambiar tu contraseña: pide la actual, la nueva y la repetición; la nueva debe tener al menos 8 caracteres. La sesión abierta en ese dispositivo sigue funcionando. En **Mi cuenta → Portal de inicio** eliges qué filas ocultar en tu portal. Como usuario solo ves las bibliotecas que el administrador te haya asignado.
 
+En **Mi cuenta → Sesiones abiertas**, cada dispositivo de la lista tiene **Ajustes**. Allí puedes fijar su calidad máxima (sin límite, 480p, 720p o 1080p), su idioma de audio preferido (sin preferencia o un idioma) y sus subtítulos por defecto (sin preferencia, desactivados o un idioma). Se aplican al reproducir en ese dispositivo cuando no hayas elegido otra cosa para la película; el subtítulo del perfil nunca elige una pista de imagen y el tope de calidad solo afecta a HLS, no a la reproducción directa. El perfil pertenece a la sesión: al cerrarla o volver a vincular el dispositivo se pierde y vuelve a estar vacío.
+
 ## Glosario
 
 - **Biblioteca:** una carpeta del servidor que Cinecat recorre para encontrar vídeos.

@@ -17,7 +17,7 @@ Quien guarda su propia biblioteca de vídeo en casa suele acabar usando un servi
 | 1 | **Servidor y clientes propios**, con nombre propio (Cinecat). |
 | 2 | Se **aprovecha todo lo que sea legal** de otros proyectos libres, con sus créditos. Lo demás se escribe de nuevo. |
 | 3 | Plataformas: **web** (PC, móvil, tableta; accesible desde fuera de casa) y **Android / Android TV**. Nada más de momento. |
-| 4 | **Reproducción óptima**: H.265 preferido, H.264 de reserva; el dispositivo declara qué sabe hacer y el servidor decide. La implementación actual usa H.264 por software; H.265 y los perfiles por dispositivo son diseño futuro. |
+| 4 | **Reproducción óptima**: H.265 preferido, H.264 de reserva; el dispositivo declara qué sabe hacer y el servidor decide. La implementación actual usa H.264 por software; H.265 sigue siendo diseño futuro y los perfiles por dispositivo ya existen. |
 | 5 | **Metadatos de bases de datos existentes**, en español de España. No creamos la nuestra. |
 | 6 | **Acceso protegido** con usuario y contraseña; el PIN para perfiles es un objetivo de diseño, no una función actual. |
 | 7 | **Interfaz propia y distinta** a lo habitual en proyectos generados con IA. |

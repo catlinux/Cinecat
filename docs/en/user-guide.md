@@ -138,6 +138,8 @@ The theme selector offers **Auto**, **Claro** and **Oscuro**. Auto follows the s
 
 In **Mi cuenta → Change my password** you can change your password: enter the current one, the new one and the confirmation; the new one must be at least 8 characters. The current session on that device stays active. Under **Mi cuenta → Portal de inicio** you choose which rows to hide in your portal. As a user you only see the libraries assigned to you by the administrator.
 
+Under **Mi cuenta → Open sessions**, each device in the list has **Ajustes**. There you can set its maximum quality (no limit, 480p, 720p or 1080p), preferred audio language (no preference or a language) and default subtitles (no preference, disabled or a language). They apply when playing on that device unless you have chosen something else for the movie; the profile subtitle never picks an image track, and the quality cap only affects HLS, not direct playback. The profile belongs to the session: closing it or pairing the device again discards it and leaves it empty.
+
 ## Glossary
 
 - **Biblioteca:** a server folder that Cinecat scans for videos.

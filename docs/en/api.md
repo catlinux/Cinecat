@@ -65,9 +65,19 @@ Authorization: Bearer <token>
 
 Web sessions last 24 hours; `android` and `androidtv` sessions last 90 days. They are renewed on use when less than half of their lifetime remains. If a request returns `401`, the session is missing, invalid or expired: sign in again.
 
-The current session and the user's other sessions are listed by `GET /api/v1/auth/sessions`; `DELETE /api/v1/auth/sessions/{id}` closes a specific session. Administrators can list and revoke an account's sessions through the `/api/v1/users/{id}/sessions` routes.
+The current session and the user's other sessions are listed by `GET /api/v1/auth/sessions`; `DELETE /api/v1/auth/sessions/{id}` closes a specific session. Each list entry includes `profile`, the profile for that device. Administrators can list and revoke an account's sessions through the `/api/v1/users/{id}/sessions` routes.
 
 Login limits failed attempts per user and IP. When the limit is exceeded it returns `429` with a `Retry-After` header; the app must wait that long before retrying.
+
+## Device profile
+
+Each active session has its own profile that is applied during playback. It is read with `GET /api/v1/auth/sessions/{id}/profile` and replaced as a whole with `PUT` on the same route. `{id}` accepts a numeric identifier or `current` for the session making the request; only the user's own sessions can be read or edited, and a session belonging to someone else, expired or missing returns `404`. The body and response contain the three `SessionProfile` fields:
+
+- `max_quality`: `""` (no limit), `480`, `720` or `1080`.
+- `audio_language`: `""` (no preference) or a 2- or 3-letter lowercase code.
+- `subtitle_language`: `""` (no preference), `off` (disabled) or a 2- or 3-letter lowercase code.
+
+An invalid value returns `400`. The profile belongs to the session: closing it or pairing the device again discards it and leaves it empty.
 
 ## Pairing a device
 
@@ -136,6 +146,8 @@ When an image track is chosen with `subtitle=e<N>`, `mode` is `remux`, `reason` 
 Progress is stored with `PUT /api/v1/items/{id}/progress` and a body such as `{"position_seconds": 300, "duration_seconds": 1800}`; `DELETE` on the same route clears it. At 90 % of the duration the server marks the item as watched and removes progress. Watched state is controlled with `PUT` and `DELETE /api/v1/items/{id}/watched`.
 
 Audio, subtitle and quality preferences are read with `GET /api/v1/items/{id}/preferences`, which returns `audio_index`, `subtitle_id` and `quality` (or `null` when there is no preference). They are saved with `PUT` on the same route and a partial body: absent fields are left untouched, `null` clears them and an empty `subtitle_id` means "no subtitles". `DELETE` removes all the user's preferences for that item. The apps restore them when the item is reopened.
+
+`GET /play` applies this precedence: explicit parameter > item preference > session profile > default. The audio profile picks the first track in that language; if none exists, normal behaviour applies. The subtitle profile picks the first text track (never an image track) in that language, preferring non-forced tracks; `off` shows no subtitles by default. Maximum quality only acts as a cap for HLS: it trims the offered qualities and lowers `auto`, `original` and heights above the limit; direct playback is unchanged.
 
 ## Uploaded subtitles (administrators only)
 
