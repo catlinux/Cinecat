@@ -18,7 +18,7 @@ EjecuciÃ³n secuencial (Ã¡rbol Ãºnico). Tras cada paso: revisar diff, `go t
 
 1. [x] **Servidor** (`internal/playback`, `internal/library`, `api/openapi.yaml`, tests). Ejecutor: AgentRelay, esfuerzo alto. Terminado: tests de Go pasan (incluye una prueba real con FFmpeg que genera un MKV con subtÃ­tulo PGS o dvd_subtitle â€”por ejemplo `-c:s dvdsub` desde un `.srt` convertidoâ€” y comprueba que el segmento resultante se genera y que cambia respecto a la versiÃ³n sin quemar), `apicontract` verde, `burn_in`/`reason: subtitle`/`burnsub` documentados en `api/openapi.yaml`.
 2. [x] **Web** (`web/src/lib/components/Player.svelte` y componentes de menÃº): las pistas con `burn_in` aparecen en el menÃº de subtÃ­tulos con una marca (Â«imagenÂ»); elegirlas recarga la reproducciÃ³n con `subtitle=<id>` conservando la posiciÃ³n (como ya hace el audio); no se crea `<track>` para ellas. Tests con vitest. Ejecutor: AgentRelay, esfuerzo medio.
-3. [ ] **Android y Android TV** (`PlayerViewModel.kt`, `PlayerScreen.kt`, `api` DTO `burnIn`): mismo comportamiento; `PlayerSubtitle` ya recarga con `subtitleId`. Tests unitarios. Ejecutor: AgentRelay, esfuerzo medio.
+3. [x] **Android y Android TV** (`PlayerViewModel.kt`, `PlayerScreen.kt`, `api` DTO `burnIn`): mismo comportamiento; `PlayerSubtitle` ya recarga con `subtitleId`. Tests unitarios. Ejecutor: AgentRelay, esfuerzo medio.
 4. [ ] **VersiÃ³n 0.58.0**, CHANGELOG es/en, TODO es/en (quitar Â«subtÃ­tulos de imagenÂ»), docs es/en (`reproduccion.md`/`playback.md`, `api`, `estado`/`status`, `android`). Ejecutor: AgentRelay esfuerzo bajo; la prueba en la TV con un vÃ­deo generado la hace la sesiÃ³n.
 
 Imprevistos de diseÃ±o: parar y anotarlos aquÃ­.
