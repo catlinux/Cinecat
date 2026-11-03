@@ -155,7 +155,7 @@ The response has this shape:
 
 The apps declare in `caps` what their device plays: containers `mkv` and `mp4`; video `h264`, `h264hi10`, `hevc`, `hevc10`, `av1` and `vp9`; audio `aac`, `mp3`, `ac3`, `eac3`, `dts`, `truehd`, `opus` and `flac`; and `mch` if it decodes multichannel AAC. Each token means the device can decode that container, codec or format; `hevc10` implies `hevc`, and `mch` is only needed for AAC with more than two channels. If a native app declares `mch` and the chosen track has 6 or more channels, HLS delivers 5.1 AAC; otherwise it delivers stereo. For the server to treat the request as a native app, `caps` must include at least `mkv` or `mp4`. The full list and its effect are in [playback](playback.md#native-apps-android-and-android-tv).
 
-The response includes `url`, `mode`, `expires_at`, `audio_tracks`, `selected_audio`, `qualities`, `selected_quality`, `subtitles` and `selected_subtitle`. `mode` is `direct` or `remux`; when it is not direct, `reason` explains why (`container`, `video`, `audio` or `subtitle`).
+The response includes `url`, `mode`, `expires_at`, `audio_tracks`, `selected_audio`, `qualities`, `selected_quality`, `subtitles`, `selected_subtitle` and `segments`. `mode` is `direct` or `remux`; when it is not direct, `reason` explains why (`container`, `video`, `audio` or `subtitle`).
 
 Each entry in `subtitles` is a `SubtitleOption`: `burn_in` reports whether it is an embedded image track (PGS, VobSub or DVB); in that case `url` is empty and the client must not load it as WebVTT. The rest keep their signed WebVTT URL.
 
@@ -168,6 +168,18 @@ Progress is stored with `PUT /api/v1/items/{id}/progress` and a body such as `{"
 Audio, subtitle and quality preferences are read with `GET /api/v1/items/{id}/preferences`, which returns `audio_index`, `subtitle_id` and `quality` (or `null` when there is no preference). They are saved with `PUT` on the same route and a partial body: absent fields are left untouched, `null` clears them and an empty `subtitle_id` means "no subtitles". `DELETE` removes all the user's preferences for that item. The apps restore them when the item is reopened.
 
 `GET /play` applies this precedence: explicit parameter > item preference > session profile > default. The audio profile picks the first track in that language; if none exists, normal behaviour applies. The subtitle profile picks the first text track (never an image track) in that language, preferring non-forced tracks; `off` shows no subtitles by default. Maximum quality only acts as a cap for HLS: it trims the offered qualities and lowers `auto`, `original` and heights above the limit; direct playback is unchanged.
+
+## Intro and credits segments
+
+`segments` is a possibly empty list of `{kind, start, end, source}` objects. `kind` is `intro` or `credits`, `start` and `end` are in seconds and `source` is `chapter` or `manual`. Manual segments replace detected segments of the same type. Detection uses the technical file's chapters and their normalised titles (case, accents and extra spaces ignored); segments can also be marked by hand on the item page. There is no audio detection. If the file details cannot be read, the list is empty and playback continues unchanged.
+
+The editing routes require the `admin` role:
+
+- `GET /api/v1/items/{id}/segments` returns `{"manual":[…],"chapters":[…]}`. Each item has `kind`, `start` and `end`; `manual` contains the saved ones and `chapters` the ones detected in the file.
+- `PUT /api/v1/items/{id}/segments` accepts `{"segments":[{"kind":"intro","start":10,"end":85}]}` and replaces every manual segment for the item. An empty list deletes them. It returns `204`; an invalid value (unknown or repeated type, negative `start` or `end` not greater than `start`) returns `400` with a Spanish message.
+- `POST /api/v1/items/{id}/segments/apply-season` copies the episode's manual segments to the other episodes in the same series and season, replacing theirs, and returns `{"updated":n}`. If the item is not an episode, it returns `400`.
+
+A missing or invisible item returns `404`; without the administrator role, `403`.
 
 ## Uploaded subtitles (administrators only)
 

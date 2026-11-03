@@ -88,6 +88,28 @@ En la ficha de una película o serie, como administrador, abre **Corregir ficha*
 
 En **Cambiar imagen** puedes fijar una URL de cartel o fondo, elegir una de las que ofrece TMDB o **Restaurar la de TMDB**. Las imágenes fijadas a mano no las pisa el escaneo.
 
+## Intro y créditos
+
+Cinecat puede saltar la intro y los créditos en la web, Android y Android TV. Los segmentos salen de los capítulos del archivo o de los que marques a mano; no se detectan por audio.
+
+### Capítulos del archivo
+
+La ficha técnica lee los capítulos con `ffprobe` y muestra su inicio, fin y título. El título se compara sin mayúsculas, sin acentos y sin espacios sobrantes:
+
+- **Intro:** `intro`, `introduccion`, `opening`, `apertura`, `cabecera`, `cortinilla`, `generique`, `generique de debut`.
+- **Créditos:** `credits`, `creditos`, `ending`, `end credits`, `final credits`, `generique de fin`, `titulos de credito`.
+
+Se toma el primer capítulo de cada tipo. Un segmento debe empezar en 0 o después, terminar después del inicio y no pasarse de la duración del vídeo; la intro debe durar menos de 10 minutos y los créditos no tienen límite. Para nombrarlos, escribe esos títulos en los metadatos de capítulo del archivo; por ejemplo, en un MKV creado con FFmpeg, `title=Intro` en el bloque `[CHAPTER]` del `FFMETADATA`.
+
+### Segmentos manuales
+
+En la ficha de un ítem, los administradores tienen una sección plegable **Intro y créditos** con una fila para la intro y otra para los créditos:
+
+1. Escribe el **Inicio** y el **Fin** en formato `mm:ss` o `h:mm:ss`.
+2. Deja una fila vacía para eliminar ese segmento.
+3. Pulsa **Guardar**. Un segmento manual sustituye al de capítulos del mismo tipo; el editor muestra debajo lo detectado en el archivo.
+4. En un episodio, **Aplicar a toda la temporada** copia los segmentos manuales de ese episodio a los demás de la misma serie y temporada, sustituyendo los suyos.
+
 ## Identificar colecciones en TMDB
 
 En la ficha de una colección, **Gestionar colección** incluye **Identificación en TMDB**. Desde ahí puedes buscar una colección por nombre y usar un candidato con **Usar esta**: se guardan su identificador, nombre, sinopsis e imágenes, y la ficha enlaza a TMDB. También puedes desvincular una colección manual ya identificada; las colecciones automáticas de TMDB no se pueden desvincular. La ficha muestra además las películas de la saga que faltan en tu biblioteca visible, con cartel y año.

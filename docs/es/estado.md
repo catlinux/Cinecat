@@ -2,7 +2,7 @@
 
 [English](../en/status.md) · [Volver al README](../../README.md)
 
-Versión actual: **0.61.0**. Esta página resume el estado real del código, no el plan inicial. Las versiones salen del [CHANGELOG](../../CHANGELOG.md).
+Versión actual: **0.62.0**. Esta página resume el estado real del código, no el plan inicial. Las versiones salen del [CHANGELOG](../../CHANGELOG.md).
 
 Leyenda: ✅ hecho · 🟨 pendiente de probar · ⬜ pendiente.
 
@@ -52,6 +52,7 @@ Leyenda: ✅ hecho · 🟨 pendiente de probar · ⬜ pendiente.
 | Reproducción | Audio, subtítulos de texto y calidad | ✅ 0.13.0 | Subtítulos incrustados de texto y `.srt`/`.vtt`/`.ass` como WebVTT; preferencias por usuario y película. |
 | Reproducción | Subtítulos de imagen incrustados (PGS, VobSub, DVB) | 🟨 0.58.0 | Se eligen en la web y las apps con la marca « · imagen»; el servidor los quema en el vídeo al recodificar por HLS, nunca en copia ni con VA-API. Cubierto por la prueba real del servidor con FFmpeg y tests unitarios de web y Android; sin probar en un dispositivo real. |
 | Reproducción | Perfiles por dispositivo (sesión) | 🟨 0.59.0 | Calidad máxima, idioma de audio y de subtítulo por sesión; se editan en la web y las apps y se aplican con la precedencia explícito > ítem > perfil > defecto. Nunca eligen una pista de imagen y el tope de calidad solo afecta a HLS. Cubierto por tests; sin probar en un dispositivo real. |
+| Reproducción | Saltar intro y créditos desde capítulos o marcas manuales | 🟨 0.62.0 | Botones en la web, Android y Android TV; el administrador edita los manuales y los aplica a la temporada. Detección por títulos de capítulo, sin huella de audio. Migración 0029. Cubierto por tests; aún sin probar en un dispositivo real. |
 | Reproducción | Reproductor propio con controles, atajos y siguiente episodio | ✅ 0.13.0 | hls.js para HLS y `<video>` nativo para directa. |
 | Reproducción | 10 bits y ABR | ⬜ | La copia existe; la recodificación usa VA-API o software y H.264 + AAC estéreo o 5.1. |
 | Interfaz web | Inicio de sesión, sesión en cookie httpOnly, cierre y cambio de contraseña | ✅ 0.2.0 / 0.3.5 | El cierre de sesión está en `/login`. |
@@ -95,6 +96,7 @@ El orden sale de los planes de `.agents/plans` y de las tareas abiertas; no hay 
 - **La API sigue llamando `remux` al HLS** aunque copie o recodifique; el cliente recibe HLS en ambos casos.
 - **Si no se puede leer la duración**, se usa la playlist `event` de FFmpeg y los saltos lejanos no son rápidos.
 - **Subtítulos:** los de texto se convierten a WebVTT; los de imagen incrustados (PGS, VobSub, DVB) se pueden elegir y se queman en el vídeo al recodificar por HLS, nunca en copia ni con VA-API. Los administradores pueden subir `.srt`, `.vtt` o `.ass` de hasta 2 MB (se guardan en `subtitles/`, junto a la base) y se sirven como WebVTT con ids `u<N>`. El HLS no lleva una pista de subtítulos separada.
+- **Segmentos de intro y créditos:** se detectan solo por el título de los capítulos o por marcas manuales; no hay detección por huella de audio. La intro debe durar menos de 10 minutos y los manuales sustituyen al capítulo del mismo tipo.
 - **Tests HLS reales:** se saltan sin `ffmpeg`/`ffprobe` en PATH; el flujo «Servidor y web» de GitHub Actions instala FFmpeg y ejecuta las pruebas de Go y de la web.
 - **TMDB:** el mantenimiento diario vuelve a pedir las fichas con más de 90 días (máximo 40 películas y 20 series al día) para no superar los 6 meses de sus términos; no toca las corregidas a mano. La caché de respuestas de 7 días y las cuotas deben revisarse antes de un uso intensivo. OMDb solo se usa como respaldo y tiene cuota diaria.
 - **Cambios en los discos:** subir y mover a la papelera exige montar `/media` en lectura y escritura; la música no se puede subir ni mover.

@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.62.0] - 2026-11-03
+
+### Añadido
+
+- Servidor, web y Android: saltar intro y créditos. Los segmentos salen de los capítulos del archivo con títulos como «Intro», «Opening», «Créditos» o «Ending», o de las marcas manuales del administrador, que se editan en la ficha y se pueden aplicar a toda la temporada; `/play` devuelve `segments`, la ficha técnica `chapter_list` y hay rutas de administración `/api/v1/items/{id}/segments`; migración 0029. La web muestra «Saltar intro» y, en los créditos, «Siguiente episodio» o «Saltar créditos»; las apps, «Saltar intro» y «Saltar créditos» (en TV con el foco). Cubierto por tests, incluido uno real con FFmpeg; aún no se ha probado en un dispositivo.
+
 ## [0.61.0] - 2026-11-03
 
 ### Añadido

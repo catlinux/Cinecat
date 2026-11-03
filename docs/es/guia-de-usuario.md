@@ -136,6 +136,8 @@ El reproductor tiene controles propios. Estos son los atajos de teclado:
 
 Los botones visibles permiten reproducir/pausar, retroceder o avanzar 10 s, cambiar el volumen, elegir velocidad (0,5× a 2×), audio, subtítulos y calidad, activar imagen en imagen, pantalla completa y pasar al siguiente episodio. El clic en el vídeo reproduce o pausa; el doble clic alterna pantalla completa.
 
+Si el archivo tiene segmentos, durante la intro aparece solo un botón **Saltar intro** sobre los controles y salta al final del segmento. En los créditos aparece **Siguiente episodio** cuando hay uno y lo abre; si no lo hay, aparece **Saltar créditos** y salta al final. El botón cambia solo al entrar o salir del segmento y no te quita el foco del teclado. Los administradores pueden revisar o marcar estos segmentos desde la ficha del ítem (ver [administración](administracion.md#intro-y-créditos)).
+
 En el menú de subtítulos, las pistas de imagen incrustadas (PGS, VobSub y DVB) aparecen con la marca « · imagen». Al elegirlas, la reproducción se recarga en el segundo actual con el subtítulo quemado; al quitarlas o pasar a texto desde una de ellas, se recarga sin el quemado.
 
 El progreso se guarda cada 15 s y al salir. Si quedan 15 s o menos, no se reanuda: se considera terminado. Al acabar un episodio con siguiente, aparece una cuenta atrás de 8 s para reproducirlo.

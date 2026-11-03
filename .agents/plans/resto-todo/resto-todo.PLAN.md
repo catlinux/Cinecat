@@ -38,7 +38,7 @@ Ya existen los tipos `video`, `clips` y `music` (`libraries.kind`, `internal/lib
 - **3c. Android/TV** (AgentRelay, medio): sección Fotos con cuadrícula y visor (mando en TV), solo si el servidor tiene bibliotecas de fotos.
 - **3d. Docs** es/en (guía de usuario, administración, API, android). Cierra 0.61.0.
 
-### 4. [ ] Saltar intro y créditos — 0.62.0 (menor)
+### 4. [x] Saltar intro y créditos — 0.62.0 (menor)
 
 Diseño sin detección por huella de audio (cara y frágil):
 - Servidor: tabla de segmentos por ítem (`item_segments`: item_id, tipo `intro`|`credits`, inicio, fin). Fuentes: (1) capítulos del MKV cuyo título coincide (sin mayúsculas ni acentos) con intro/opening/apertura/cabecera o credits/créditos/ending/final, leídos con `ffprobe -show_chapters` (ya se piden en `fileinfo.go`; hoy solo se cuentan); (2) edición manual del administrador. API: `segments` en la respuesta de `/play` y `PUT /api/v1/items/{id}/segments` (solo admin). Para episodios, un botón de administración «aplicar a toda la temporada» copia la marca de un episodio a los demás con los mismos tiempos.

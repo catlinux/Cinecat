@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.62.0] - 2026-11-03
+
+### Added
+
+- Server, web and Android: skip intro and credits. Segments come from the file's chapters titled like «Intro», «Opening», «Credits» or «Ending», or from the administrator's manual marks, which are edited on the detail page and can be applied to a whole season; `/play` returns `segments`, file info returns `chapter_list` and there are `/api/v1/items/{id}/segments` admin routes; migration 0029. The web shows «Skip intro» and, during credits, «Next episode» or «Skip credits»; the apps show «Skip intro» and «Skip credits» (focused on TV). Covered by tests, including a real FFmpeg one; not yet tested on a device.
+
 ## [0.61.0] - 2026-11-03
 
 ### Added

@@ -136,6 +136,8 @@ The player has custom controls. These are the keyboard shortcuts:
 
 The visible buttons let you play/pause, rewind or forward 10 s, change volume, choose speed (0.5× to 2×), audio, subtitles and quality, enable picture-in-picture, fullscreen and play the next episode. Clicking the video plays or pauses; double-clicking toggles fullscreen.
 
+If the file has segments, a **Saltar intro** button appears on its own above the controls during the intro and jumps to the end of the segment. During the credits it shows **Siguiente episodio** when there is one and opens it; if there is none, it shows **Saltar créditos** and jumps to the end. The button changes by itself when entering or leaving the segment and does not take keyboard focus away. Administrators can review or mark these segments from the item page (see [administration](administration.md#intro-and-credits)).
+
 In the subtitle menu, embedded image tracks (PGS, VobSub and DVB) carry the " · imagen" mark. Choosing one reloads playback at the current second with the subtitle burned in; removing it or switching to text from one reloads without the burn.
 
 Progress is saved every 15 s and on exit. If 15 s or less remain, playback does not resume: it is treated as finished. When an episode ends and there is a next one, an 8-second countdown starts.

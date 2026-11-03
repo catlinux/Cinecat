@@ -113,6 +113,14 @@ The details are calculated from the cached `ffprobe` record, the browser capabil
 
 The player offers `auto`, 480p, 720p, 1080p (never above the original height or `playback.max_height`) and `original`. Direct playback only has `original`. In HLS, copying does not change the resolution; lower qualities are re-encoded.
 
+## Intro and credits
+
+`/play` includes `segments`, a possibly empty list of `{kind, start, end, source}`. `kind` is `intro` or `credits`, the times are in seconds and `source` is `chapter` or `manual`. The technical details expose the chapters in `chapter_list` (start, end and title).
+
+The server treats a chapter as an intro when its title, ignoring case, accents and extra spaces, is or starts with `intro`, `introduccion`, `opening`, `apertura`, `cabecera`, `cortinilla`, `generique` or `generique de debut`, and as credits when it starts with `credits`, `creditos`, `ending`, `end credits`, `final credits`, `generique de fin` or `titulos de credito`. The first chapter of each type is used; it must satisfy `0 <= start < end <= duration` and an intro cannot last 10 minutes or more. Credits have no duration limit. There is no audio detection.
+
+Manual segments are stored in `item_segments` and replace the chapter segment of the same type. On the web item page, an administrator can write them, delete them by leaving the row empty and, for episodes, apply them to the whole season. The web app shows **Saltar intro** or **Saltar créditos** and, on episodes with a next one, **Siguiente episodio** during the credits; Android and Android TV only show the two skip buttons.
+
 ## Audio, subtitles and quality
 
 - **Direct audio:** the original file is kept. It is served directly if the default track is AAC or MP3 (or there is no audio).

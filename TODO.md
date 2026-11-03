@@ -12,6 +12,7 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 - **Reproducción avanzada:** DTS y TrueHD siguen convirtiéndose a AAC en HLS (el AC-3/E-AC-3 se copia desde 0.60.0 para las apps que lo declaran; falta probarlo en un equipo con AC-3). Los subtítulos de imagen de 0.58.0 se probaron el 2026-11-02 en la TV con un VobSub de prueba (elegirlos recarga por HLS con el subtítulo quemado); falta verlos con un PGS real y en el móvil. El desentrelazado y el mapeo a SDR de 0.55.0 ya están probados con FFmpeg real en `hls_real_test.go`; falta verlos en un archivo HDR/entrelazado de la biblioteca.
 - **Oír el audio 5.1 de 0.56.0 en un equipo 5.1:** probado el 2026-11-02 en la TV (Xiaomi MiTV-MSSP3) con un AC-3 5.1 de prueba: el HLS llega como AAC de 6 canales, ExoPlayer abre una pista de 6 canales (0x3f) y la TV la mezcla a estéreo por sus altavoces. Falta oírlo con un sistema 5.1 real.
 - **Probar en un dispositivo las bibliotecas de fotos de 0.61.0** (crear una biblioteca de tipo Fotos, escanear y abrir la sección en la web, el móvil y la TV).
+- **Probar en un dispositivo saltar intro y créditos de 0.62.0** (un episodio con capítulos «Intro»/«Créditos» o con marcas manuales, en la web, el móvil y la TV).
 - **Verificar el flujo «Servidor y web» de GitHub Actions** (`.github/workflows/server-web.yml`, ejecuta los tests de Go con FFmpeg y los de la web): comprobar su primera ejecución en verde.
 
 ## 🟢 Más adelante
@@ -19,7 +20,7 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 - 🟢 **Copiar las copias de seguridad fuera del volumen** (otro disco o equipo): hoy están en `/data/backups`, junto a la base. El usuario no lo quiere por ahora.
 - **Complementos**, todavía en diseño.
 - **DLNA/UPnP**, todavía en diseño.
-- Televisión en directo y contenido de internet, segmentos de intro/créditos, descargas sin conexión y sincronización entre dispositivos.
+- Televisión en directo y contenido de internet, descargas sin conexión y sincronización entre dispositivos.
 - Otras plataformas (Apple, televisores Samsung/LG).
 
 ## Descartado y por qué

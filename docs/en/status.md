@@ -2,7 +2,7 @@
 
 [Español](../es/estado.md) · [Back to README](../../README.en.md)
 
-Current version: **0.61.0**. This page describes the real state of the code, not the original plan. Versions come from the [CHANGELOG](../../CHANGELOG.en.md).
+Current version: **0.62.0**. This page describes the real state of the code, not the original plan. Versions come from the [CHANGELOG](../../CHANGELOG.en.md).
 
 Legend: ✅ done · 🟨 awaiting testing · ⬜ pending.
 
@@ -52,6 +52,7 @@ Legend: ✅ done · 🟨 awaiting testing · ⬜ pending.
 | Playback | Audio, text subtitles and quality | ✅ 0.13.0 | Embedded text and `.srt`/`.vtt`/`.ass` as WebVTT; per-user, per-movie preferences. |
 | Playback | Embedded image subtitles (PGS, VobSub, DVB) | 🟨 0.58.0 | They can be selected in the web app and the apps with the " · imagen" mark; the server burns them into the video when re-encoding for HLS, never in copy mode or with VA-API. Covered by the server's real FFmpeg test and unit tests for web and Android; not yet tried on a real device. |
 | Playback | Per-device profiles (session) | 🟨 0.59.0 | Maximum quality and preferred audio and subtitle languages per session; edited in the web app and the apps and applied with explicit > item > profile > default precedence. They never pick an image track, and the quality cap only affects HLS. Covered by tests; not yet tried on a real device. |
+| Playback | Skip intro and credits from chapters or manual marks | 🟨 0.62.0 | Buttons in the web app, Android and Android TV; administrators edit manual segments and apply them to the season. Detection by chapter titles, with no audio fingerprinting. Migration 0029. Covered by tests; not yet tried on a real device. |
 | Playback | Custom player with controls, shortcuts and next episode | ✅ 0.13.0 | hls.js for HLS and native `<video>` for direct play. |
 | Playback | 10-bit and ABR | ⬜ | Copy mode exists; re-encoding uses VA-API or software and H.264 + stereo or 5.1 AAC. |
 | Web interface | Login, httpOnly session, logout and password change | ✅ 0.2.0 / 0.3.5 | Logout is on `/login`. |
@@ -95,6 +96,7 @@ The order comes from the plans in `.agents/plans` and the open tasks; no dates o
 - **The API still calls HLS `remux`** even though it copies or re-encodes; the client receives HLS in both cases.
 - **If duration cannot be read**, FFmpeg's `event` playlist is used and long seeks are not fast.
 - **Subtitles:** text subtitles are converted to WebVTT; embedded image subtitles (PGS, VobSub, DVB) can be selected and are burned into the video when re-encoding for HLS, never in copy mode or with VA-API. Administrators can upload `.srt`, `.vtt` or `.ass` files up to 2 MB (stored in `subtitles/`, next to the database) and they are served as WebVTT with `u<N>` ids. HLS has no separate subtitle rendition.
+- **Intro and credits segments:** they are detected only from chapter titles or manual marks; there is no audio-fingerprint detection. An intro must last less than 10 minutes, and manual segments replace the chapter segment of the same type.
 - **Real HLS tests:** skipped without `ffmpeg`/`ffprobe` in PATH; the "Servidor y web" GitHub Actions workflow installs FFmpeg and runs the Go and web tests.
 - **TMDB:** daily maintenance fetches entries older than 90 days again (up to 40 movies and 20 series per day) so none exceeds the 6 months its terms allow; manually corrected entries are left alone. The 7-day response cache and quotas should be reviewed before heavy use. OMDb is only a fallback and has a daily quota.
 - **Changes on disk:** uploading and moving to the trash require mounting `/media` read-write; music cannot be uploaded or moved.

@@ -113,6 +113,14 @@ La ficha se calcula con los datos cacheados de `ffprobe`, las capacidades del na
 
 El reproductor ofrece `auto`, 480p, 720p, 1080p (sin superar la altura original ni `playback.max_height`) y `original`. En directa solo hay `original`. En HLS, la copia no cambia la resolución; las calidades inferiores se recodifican.
 
+## Intro y créditos
+
+`/play` incluye `segments`, una lista posiblemente vacía de `{kind, start, end, source}`. `kind` es `intro` o `credits`, los tiempos están en segundos y `source` indica `chapter` o `manual`. La ficha técnica expone los capítulos en `chapter_list` (inicio, fin y título).
+
+El servidor reconoce un capítulo como intro si su título, sin mayúsculas, acentos ni espacios sobrantes, es o empieza por `intro`, `introduccion`, `opening`, `apertura`, `cabecera`, `cortinilla`, `generique` o `generique de debut`, y como créditos si empieza por `credits`, `creditos`, `ending`, `end credits`, `final credits`, `generique de fin` o `titulos de credito`. Se toma el primero de cada tipo; debe cumplir `0 <= inicio < fin <= duración` y la intro no puede durar 10 minutos o más. Los créditos no tienen límite de duración. No hay detección por audio.
+
+Los segmentos manuales se guardan en `item_segments` y sustituyen al capítulo del mismo tipo. En la ficha web, un administrador puede escribirlos, borrarlos dejando la fila vacía y, en episodios, aplicarlos a toda la temporada. La web muestra **Saltar intro** o **Saltar créditos** y, en episodios con siguiente, **Siguiente episodio** en los créditos; Android y Android TV solo muestran los dos botones de salto.
+
 ## Audio, subtítulos y calidad
 
 - **Audio directo:** se conserva el archivo original. Se sirve directo si la pista por defecto es AAC o MP3 (o no hay audio).

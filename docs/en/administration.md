@@ -88,6 +88,28 @@ On a movie or series page, as an administrator, open **Corregir ficha**:
 
 Under **Cambiar imagen** you can set a poster or backdrop URL, choose one TMDB offers, or **Restaurar la de TMDB**. Manually set images are not overwritten by scans.
 
+## Intro and credits
+
+Cinecat can skip intros and credits in the web app, Android and Android TV. Segments come from the file's chapters or from the ones you mark by hand; they are not detected from audio.
+
+### File chapters
+
+The technical details read chapters with `ffprobe` and show their start, end and title. The title is compared without case, accents or extra spaces:
+
+- **Intro:** `intro`, `introduccion`, `opening`, `apertura`, `cabecera`, `cortinilla`, `generique`, `generique de debut`.
+- **Credits:** `credits`, `creditos`, `ending`, `end credits`, `final credits`, `generique de fin`, `titulos de credito`.
+
+The first chapter of each type is used. A segment must start at 0 or later, end after its start and stay within the video duration; intros must be shorter than 10 minutes and credits have no limit. To name them, write those titles in the file's chapter metadata; for example, in an MKV created with FFmpeg, use `title=Intro` in the `[CHAPTER]` block of the `FFMETADATA`.
+
+### Manual segments
+
+On an item page, administrators have a collapsible **Intro y créditos** section with one row for the intro and one for the credits:
+
+1. Enter the **Inicio** and **Fin** in `mm:ss` or `h:mm:ss` format.
+2. Leave a row empty to remove that segment.
+3. Press **Guardar**. A manual segment replaces the chapter segment of the same type; the editor shows the detected one underneath.
+4. On an episode, **Aplicar a toda la temporada** copies that episode's manual segments to the other episodes in the same series and season, replacing theirs.
+
 ## Identifying collections in TMDB
 
 On a collection page, **Gestionar colección** includes **Identificación en TMDB**. From there you can search for a collection by name and use a candidate with **Usar esta**: its identifier, name, synopsis and images are saved, and the page links to TMDB. You can also unlink a manual collection that is already identified; automatic TMDB collections cannot be unlinked. The page also lists the films in the saga that are missing from your visible library, with their poster and year.
