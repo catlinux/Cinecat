@@ -85,6 +85,7 @@ type seriesDetailDTO struct {
 	Watchlist        bool              `json:"watchlist"`
 	Seasons          []seriesSeasonDTO `json:"seasons"`
 	NextEpisode      *mediaItemDTO     `json:"next_episode"`
+	AutoplayNext     bool              `json:"autoplay_next"`
 }
 
 type seriesSeasonDetailDTO struct {
@@ -617,6 +618,15 @@ func (a *API) handleSeriesDetail(w http.ResponseWriter, r *http.Request) {
 	if detail.NextEpisode != nil {
 		compactMediaItemDetail(detail.NextEpisode, admin)
 	}
+	autoplayNext, err := seriesAutoplayEnabled(
+		r.Context(), a.db, sessionUserID(r), detail.ID,
+	)
+	if err != nil {
+		log.Printf("library: leer reproducción automática de la serie %d: %v", detail.ID, err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
+	detail.AutoplayNext = autoplayNext
 	writeJSON(w, http.StatusOK, detail)
 }
 

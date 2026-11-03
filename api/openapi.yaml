@@ -4180,6 +4180,95 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/series/{id}/autoplay:
+    get:
+      summary: Reproducción automática del siguiente episodio
+      description: |
+        Devuelve si el usuario de la sesión quiere reproducir automáticamente
+        el siguiente episodio de la serie. Sin fila guardada, el valor es
+        `true`. Requiere una sesión válida y una serie visible.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ItemId'
+      responses:
+        '200':
+          description: Ajuste de reproducción automática
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeriesAutoplay'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: La serie no existe, no es una serie o no es visible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      summary: Cambia la reproducción automática del siguiente episodio
+      description: |
+        Guarda el ajuste del usuario de la sesión para la serie y devuelve el
+        valor guardado. El cuerpo debe incluir `enabled`. Requiere una sesión
+        válida y una serie visible.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - enabled
+              properties:
+                enabled:
+                  type: boolean
+              additionalProperties: false
+      responses:
+        '200':
+          description: Ajuste guardado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeriesAutoplay'
+        '400':
+          description: El cuerpo no es válido o le falta enabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: La serie no existe, no es una serie o no es visible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/series/{id}/similar:
     get:
       summary: Series similares a una serie
@@ -8541,6 +8630,7 @@ components:
         - watchlist
         - seasons
         - next_episode
+        - autoplay_next
       properties:
         id:
           type: integer
@@ -8628,6 +8718,19 @@ components:
           allOf:
             - $ref: '#/components/schemas/MediaItem'
           nullable: true
+        autoplay_next:
+          type: boolean
+          description: |
+            Si el usuario quiere reproducir automáticamente el siguiente
+            episodio. Es `true` cuando no hay ajuste guardado.
+      additionalProperties: false
+    SeriesAutoplay:
+      type: object
+      required:
+        - enabled
+      properties:
+        enabled:
+          type: boolean
       additionalProperties: false
     SeasonDetail:
       type: object
@@ -9031,6 +9134,7 @@ components:
         - subtitles
         - selected_subtitle
         - segments
+        - autoplay_next
       properties:
         url:
           type: string
@@ -9077,6 +9181,11 @@ components:
           description: Segmentos de intro y créditos aplicables a la reproducción.
           items:
             $ref: '#/components/schemas/PlaySegment'
+        autoplay_next:
+          type: boolean
+          description: |
+            Para un episodio, el ajuste de su serie; para cualquier otro
+            ítem, `true`.
       additionalProperties: false
     PlaySegment:
       type: object

@@ -46,6 +46,7 @@ type trashSnapshot struct {
 	PlaybackProgress []map[string]any `json:"playback_progress"`
 	ItemPreferences  []map[string]any `json:"item_preferences"`
 	ItemLists        []map[string]any `json:"item_lists"`
+	SeriesAutoplay   []map[string]any `json:"series_autoplay"`
 	CollectionItems  []map[string]any `json:"collection_items"`
 }
 
@@ -436,6 +437,15 @@ func captureTrashSnapshot(ctx context.Context, tx *sql.Tx, id int64) (string, er
 		}
 		*target = rows
 	}
+	if kind, _ := snapshot.MediaItem["kind"].(string); kind == KindSeries {
+		// series_autoplay se identifica por series_id, no por media_item_id.
+		rows, err := queryRowMaps(ctx, tx,
+			`SELECT * FROM series_autoplay WHERE series_id = ?`, id)
+		if err != nil {
+			return "", err
+		}
+		snapshot.SeriesAutoplay = rows
+	}
 	encoded, err := json.Marshal(snapshot)
 	if err != nil {
 		return "", err
@@ -669,7 +679,8 @@ func (a *API) restoreTrashDatabase(ctx context.Context, row trashRestoreRow) (in
 	normalizeSnapshotNumbers(snapshot.MediaItem)
 	for _, table := range [][]map[string]any{
 		snapshot.PlaybackState, snapshot.WatchState, snapshot.PlaybackProgress,
-		snapshot.ItemPreferences, snapshot.ItemLists, snapshot.CollectionItems,
+		snapshot.ItemPreferences, snapshot.ItemLists, snapshot.SeriesAutoplay,
+		snapshot.CollectionItems,
 	} {
 		for _, values := range table {
 			normalizeSnapshotNumbers(values)
@@ -741,6 +752,15 @@ func (a *API) restoreTrashDatabase(ctx context.Context, row trashRestoreRow) (in
 				}
 				log.Printf("library: papelera: no se pudo restaurar %s: %v", table, err)
 			}
+		}
+	}
+	for _, values := range snapshot.SeriesAutoplay {
+		values["series_id"] = newID
+		if _, err := insertSnapshotRow(ctx, tx, "series_autoplay", values); err != nil {
+			if !isForeignKeyError(err) {
+				return 0, fmt.Errorf("library: restaurar series_autoplay: %w", err)
+			}
+			log.Printf("library: papelera: no se pudo restaurar series_autoplay: %v", err)
 		}
 	}
 	if _, err := tx.ExecContext(ctx, `DELETE FROM trash_items WHERE id = ?`, row.ID); err != nil {

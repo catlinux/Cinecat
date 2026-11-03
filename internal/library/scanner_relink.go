@@ -1,4 +1,4 @@
-﻿package library
+package library
 
 import (
 	"context"
@@ -197,6 +197,9 @@ var userStateTables = []string{
 	"collection_items", "item_preferences", "item_lists",
 }
 
+// series_autoplay se trata aparte porque su clave es series_id, no
+// media_item_id; solo aplica a una ficha de tipo serie.
+
 // transferToSuccessor traslada el estado de usuario de una ficha que se va a
 // podar a la ficha vista en este escaneo que la sustituye. Cubre la conversiÃ³n
 // de un archivo a otro formato con otra extensiÃ³n: durante el escaneo ambos
@@ -282,5 +285,34 @@ func transferToSuccessor(
 			return fmt.Errorf("library: trasladar %s de %q: %w", table, oldPath, err)
 		}
 	}
+	// series_autoplay se identifica por series_id, no por media_item_id; solo
+	// aplica a una ficha de tipo serie y si ambas existen en la tabla series.
+	if old.kind == KindSeries {
+		if err := transferSeriesAutoplay(ctx, tx, oldID, successors[0]); err != nil {
+			return fmt.Errorf("library: trasladar series_autoplay de %q: %w", oldPath, err)
+		}
+	}
 	return nil
+}
+
+func transferSeriesAutoplay(ctx context.Context, tx *sql.Tx, oldID, newID int64) error {
+	var exists int
+	if err := tx.QueryRowContext(ctx,
+		`SELECT 1 FROM series WHERE id = ?`, oldID).Scan(&exists); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil
+		}
+		return err
+	}
+	if err := tx.QueryRowContext(ctx,
+		`SELECT 1 FROM series WHERE id = ?`, newID).Scan(&exists); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil
+		}
+		return err
+	}
+	_, err := tx.ExecContext(ctx, `
+		UPDATE OR IGNORE series_autoplay SET series_id = ? WHERE series_id = ?`,
+		newID, oldID)
+	return err
 }

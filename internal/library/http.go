@@ -142,6 +142,8 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.Handle("GET /api/v1/series", a.requireSession(a.handleSeries))
 	mux.Handle("GET /api/v1/series/genres", a.requireSession(a.handleSeriesGenres))
 	mux.Handle("GET /api/v1/series/{id}", a.requireSession(a.handleSeriesDetail))
+	mux.Handle("GET /api/v1/series/{id}/autoplay", a.requireSession(a.handleSeriesAutoplayGet))
+	mux.Handle("PUT /api/v1/series/{id}/autoplay", a.requireSession(a.handleSeriesAutoplayPut))
 	mux.Handle("GET /api/v1/series/{id}/similar", a.requireSession(a.handleSimilarSeries))
 	mux.Handle("PUT /api/v1/series/{id}/lists/{list}", a.requireSession(a.handleSeriesListPut))
 	mux.Handle("DELETE /api/v1/series/{id}/lists/{list}", a.requireSession(a.handleSeriesListDelete))
@@ -426,6 +428,7 @@ type playResponse struct {
 	Subtitles        []subtitleDTO   `json:"subtitles"`
 	SelectedSubtitle *string         `json:"selected_subtitle"`
 	Segments         []playSegment   `json:"segments"`
+	AutoplayNext     bool            `json:"autoplay_next"`
 }
 
 type mediaFile struct {
@@ -503,6 +506,12 @@ func (a *API) handlePlay(w http.ResponseWriter, r *http.Request) {
 			segments = resolved
 		}
 	}
+	autoplayNext, err := a.autoplayNextForPlay(r.Context(), sessionUserID(r), id)
+	if err != nil {
+		log.Printf("library: leer reproducción automática del ítem %d: %v", id, err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
 
 	target := "/api/v1/stream/" + strconv.FormatInt(id, 10)
 	if mode == playback.ModeRemux {
@@ -537,6 +546,7 @@ func (a *API) handlePlay(w http.ResponseWriter, r *http.Request) {
 		Subtitles:        options.Subtitles,
 		SelectedSubtitle: options.SelectedSubtitle,
 		Segments:         segments,
+		AutoplayNext:     autoplayNext,
 	})
 }
 

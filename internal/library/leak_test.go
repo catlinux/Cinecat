@@ -382,6 +382,8 @@ func leakRoutes() []leakCase {
 		{name: "géneros de series", pattern: "/api/v1/series/genres", path: "/api/v1/series/genres", adminMarca: true},
 		{name: "serie oculta", pattern: "/api/v1/series/{id}", notFound: true},
 		{name: "serie visible", pattern: "/api/v1/series/{id}"},
+		{name: "autoplay de serie oculta", pattern: "/api/v1/series/{id}/autoplay", notFound: true},
+		{name: "autoplay de serie oculta PUT", pattern: "/api/v1/series/{id}/autoplay", path: "/api/v1/series/", method: http.MethodPut, body: map[string]any{"enabled": false}, notFound: true},
 		{name: "similares de serie oculta", pattern: "/api/v1/series/{id}/similar", notFound: true},
 		{name: "similares de serie visible", pattern: "/api/v1/series/{id}/similar"},
 		{name: "temporada de serie oculta", pattern: "/api/v1/series/{id}/seasons/{n}", notFound: true},
@@ -523,6 +525,12 @@ func TestPruebaDeFugas(t *testing.T) {
 		},
 		"serie visible": func() string {
 			return "/api/v1/series/" + strconv.FormatInt(fixture.visibleSeries, 10)
+		},
+		"autoplay de serie oculta": func() string {
+			return "/api/v1/series/" + strconv.FormatInt(fixture.hiddenSeries, 10) + "/autoplay"
+		},
+		"autoplay de serie oculta PUT": func() string {
+			return "/api/v1/series/" + strconv.FormatInt(fixture.hiddenSeries, 10) + "/autoplay"
 		},
 		"similares de serie oculta": func() string {
 			return "/api/v1/series/" + strconv.FormatInt(fixture.hiddenSeries, 10) + "/similar"

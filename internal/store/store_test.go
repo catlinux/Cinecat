@@ -61,6 +61,7 @@ func TestMigrateCreaTablas(t *testing.T) {
 		"series_seasons", "settings", "item_preferences", "music_artists", "music_albums",
 		"music_tracks", "item_lists", "series_lists", "collection_lists", "trash_items",
 		"user_libraries", "login_attempts", "login_lockouts", "user_portal_rows", "item_subtitles",
+		"series_autoplay",
 		"session_profiles", "item_segments",
 	} {
 		if !got[name] {
