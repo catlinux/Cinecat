@@ -7,6 +7,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+### Added
+
+- Documentation: web, Android TV and Android screenshots in the README (`docs/img/`).
+
 ## [0.59.0] - 2026-11-02
 
 ### Added

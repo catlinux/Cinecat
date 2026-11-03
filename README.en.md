@@ -66,7 +66,22 @@ Details, systemd/linger requirements, backups and manual recovery are in [update
 
 ## Screenshots
 
-<!-- capturas: pendiente de D2 -->
+Screenshots of the author's real library, with the posters the server downloads from TMDB.
+
+**Web**
+
+![Web home page](docs/img/web-inicio.jpg)
+![Movie listing](docs/img/web-peliculas.jpg)
+![Movie detail page](docs/img/web-ficha.jpg)
+
+**Android TV**
+
+![Android TV home](docs/img/tv-inicio.jpg)
+![Android TV detail page](docs/img/tv-ficha.jpg)
+
+**Android (phone)**
+
+<img src="docs/img/movil-inicio.jpg" alt="Phone home" width="280"> <img src="docs/img/movil-ficha.jpg" alt="Phone detail page" width="280">
 
 ## Documentation
 

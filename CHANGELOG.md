@@ -7,6 +7,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Añadido
+
+- Documentación: capturas de la web, Android TV y Android en el README (`docs/img/`).
+
 ## [0.59.0] - 2026-11-02
 
 ### Añadido

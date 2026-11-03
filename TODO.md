@@ -47,7 +47,6 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 ## Documentación abierta
 
 - Activar los avisos privados de seguridad en GitHub; `SECURITY.md` ya los ofrece como canal.
-- Capturas de pantalla del cliente web y sustitución del enlace privado a la maqueta; las hará la tarea D2.
 
 ## Mantenimiento de documentos
 

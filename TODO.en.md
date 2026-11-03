@@ -48,7 +48,6 @@ This file contains only work that is still open. Published work is in the [CHANG
 ## Open documentation
 
 - Enable private vulnerability reporting on GitHub; `SECURITY.md` already offers it as a channel.
-- Web client screenshots and replacement of the private mockup link; task D2 will produce them.
 
 ## Document maintenance
 

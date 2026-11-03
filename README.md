@@ -66,7 +66,22 @@ Los detalles, requisitos de systemd/linger, copias y recuperación manual están
 
 ## Capturas
 
-<!-- capturas: pendiente de D2 -->
+Capturas de la biblioteca real del autor, con los carteles que descarga el servidor desde TMDB.
+
+**Web**
+
+![Portada de la web](docs/img/web-inicio.jpg)
+![Cartelera de películas](docs/img/web-peliculas.jpg)
+![Ficha de una película](docs/img/web-ficha.jpg)
+
+**Android TV**
+
+![Inicio en Android TV](docs/img/tv-inicio.jpg)
+![Ficha en Android TV](docs/img/tv-ficha.jpg)
+
+**Android (móvil)**
+
+<img src="docs/img/movil-inicio.jpg" alt="Inicio en el móvil" width="280"> <img src="docs/img/movil-ficha.jpg" alt="Ficha en el móvil" width="280">
 
 ## Documentación
 
