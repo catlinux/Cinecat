@@ -343,6 +343,7 @@ func leakRoutes() []leakCase {
 		{name: "items miniatura visible", pattern: "/api/v1/items/{id}/thumbnail"},
 		{name: "items file-info oculto", pattern: "/api/v1/items/{id}/file-info", notFound: true},
 		{name: "items file-info visible", pattern: "/api/v1/items/{id}/file-info"},
+		{name: "items descarga oculta", pattern: "/api/v1/items/{id}/download", notFound: true},
 		{name: "items preferencias ocultas", pattern: "/api/v1/items/{id}/preferences", notFound: true},
 		{name: "items preferencias visibles", pattern: "/api/v1/items/{id}/preferences"},
 		{name: "items reproducción oculta", pattern: "/api/v1/items/{id}/play", notFound: true},
@@ -444,6 +445,9 @@ func TestPruebaDeFugas(t *testing.T) {
 		},
 		"items file-info visible": func() string {
 			return "/api/v1/items/" + strconv.FormatInt(fixture.visibleMovie, 10) + "/file-info"
+		},
+		"items descarga oculta": func() string {
+			return "/api/v1/items/" + strconv.FormatInt(fixture.hiddenMovie, 10) + "/download"
 		},
 		"items preferencias ocultas": func() string {
 			return "/api/v1/items/" + strconv.FormatInt(fixture.hiddenMovie, 10) + "/preferences"

@@ -171,6 +171,7 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.Handle("PUT /api/v1/items/{id}/lists/{list}", a.requireSession(a.handleItemListPut))
 	mux.Handle("DELETE /api/v1/items/{id}/lists/{list}", a.requireSession(a.handleItemListDelete))
 	mux.Handle("GET /api/v1/items/{id}/file-info", a.requireSession(a.handleItemFileInfo))
+	mux.Handle("GET /api/v1/items/{id}/download", a.requireSession(a.handleItemDownload))
 	mux.Handle("GET /api/v1/items/{id}/segments", a.requireAdmin(a.handleItemSegmentsGet))
 	mux.Handle("PUT /api/v1/items/{id}/segments", a.requireAdmin(a.handleItemSegmentsPut))
 	mux.Handle("POST /api/v1/items/{id}/segments/apply-season", a.requireAdmin(a.handleItemSegmentsApplySeason))
@@ -428,6 +429,7 @@ type playResponse struct {
 }
 
 type mediaFile struct {
+	kind        string
 	path        string
 	libraryPath string
 }
@@ -775,11 +777,11 @@ func (a *API) mediaFile(r *http.Request, id int64) (mediaFile, error) {
 	var media mediaFile
 	var libraryID int64
 	err := a.db.QueryRowContext(r.Context(), `
-		SELECT mi.path, l.path, l.id
+		SELECT mi.kind, mi.path, l.path, l.id
 		  FROM media_items mi
 		  JOIN libraries l ON l.id = mi.library_id
 		 WHERE mi.id = ?`, id,
-	).Scan(&media.path, &media.libraryPath, &libraryID)
+	).Scan(&media.kind, &media.path, &media.libraryPath, &libraryID)
 	if err != nil {
 		return media, err
 	}

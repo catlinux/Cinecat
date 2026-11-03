@@ -48,7 +48,7 @@ Diseño sin detección por huella de audio (cara y frágil):
 ### 5. [ ] Descargas sin conexión en Android — 0.63.0 (menor)
 
 - Solo archivos que la app reproduciría en directo (mismo criterio que `/play` con las capacidades de la app). Si el archivo necesita HLS, el botón explica que no se puede descargar (no se genera una versión recodificada en esta versión).
-- Descarga con `WorkManager` al almacenamiento privado de la app, con progreso, cancelar y borrar; pantalla «Descargas» en el móvil (no en TV). Reproducción local con el mismo reproductor; el progreso se guarda en local y se envía al servidor al volver la conexión.
+- Descarga con el `DownloadManager` del sistema (sin dependencias nuevas; decidido en vez de `WorkManager`) a la carpeta privada de la app (`getExternalFilesDir`) usando la ruta autenticada `GET /api/v1/items/{id}/download` (paso 5a), con progreso, cancelar y borrar; pantalla «Descargas» en el móvil (no en TV). Reproducción local con el mismo reproductor; el progreso se guarda en local y se envía al servidor al volver la conexión.
 - Servidor: si hace falta, una ruta de descarga autenticada con soporte de rangos (revisar si la URL de directa ya sirve; dura 8 h).
 - Pasos: 5a servidor si procede (medio), 5b Android (alto), 5c docs.
 

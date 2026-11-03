@@ -2887,6 +2887,98 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/items/{id}/download:
+    get:
+      summary: Descarga el archivo original de una película o episodio
+      description: |
+        Devuelve el archivo original con soporte de rangos HTTP (206 e
+        If-Range) y Last-Modified. Requiere una sesión válida y acceso a la
+        biblioteca del ítem. Solo se sirven ítems `movie` o `episode` con
+        archivo; un ítem inexistente, oculto, de otro tipo o sin archivo
+        responde 404. El nombre se envía en `Content-Disposition` como
+        `filename*=UTF-8''...` y el tipo depende de la extensión: `.mkv` es
+        `video/x-matroska`, `.mp4` y `.m4v` son `video/mp4` y el resto
+        `application/octet-stream`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ItemId'
+      responses:
+        '200':
+          description: Archivo original completo
+          headers:
+            Content-Disposition:
+              description: Nombre del archivo para descargar
+              schema:
+                type: string
+                example: "attachment; filename*=UTF-8''pelicula.mkv"
+            Accept-Ranges:
+              description: El servidor admite peticiones por rangos
+              schema:
+                type: string
+                example: bytes
+            Last-Modified:
+              description: Fecha de modificación del archivo
+              schema:
+                type: string
+          content:
+            video/x-matroska:
+              schema:
+                type: string
+                format: binary
+            video/mp4:
+              schema:
+                type: string
+                format: binary
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '206':
+          description: Parte del archivo (petición con Range)
+          headers:
+            Content-Disposition:
+              description: Nombre del archivo para descargar
+              schema:
+                type: string
+            Content-Range:
+              description: Rango devuelto
+              schema:
+                type: string
+                example: bytes 0-99/12345
+          content:
+            video/x-matroska:
+              schema:
+                type: string
+                format: binary
+            video/mp4:
+              schema:
+                type: string
+                format: binary
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: El ítem no existe, no es visible, no es una película o episodio, o falta el archivo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '416':
+          description: Rango solicitado fuera del archivo
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/items/{id}/segments:
     get:
       summary: Segmentos de intro y créditos de un ítem (solo administradores)
