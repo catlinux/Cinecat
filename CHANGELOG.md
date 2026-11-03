@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.60.1] - 2026-11-03
+
+### Corregido
+
+- Android TV: en reproducción directa ya no aparece dos veces el mismo subtítulo de imagen; la entrada «· imagen» se oculta cuando el reproductor ya ofrece esa pista con el mismo idioma.
+
 ## [0.60.0] - 2026-11-03
 
 ### Añadido

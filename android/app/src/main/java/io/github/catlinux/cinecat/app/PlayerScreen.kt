@@ -330,6 +330,7 @@ fun PlayerScreen(
                             tracks = tracks,
                             subtitles = current.subtitles,
                             burnSubtitles = current.burnSubtitles,
+                            isHls = current.isHls,
                             onDismiss = { showTracks = false },
                             onAudioSelected = { index ->
                                 viewModel.savePlaybackPreferences(
@@ -398,6 +399,7 @@ private fun TrackDialog(
     tracks: Tracks?,
     subtitles: List<PlayerSubtitle>,
     burnSubtitles: List<PlayerBurnSubtitle>,
+    isHls: Boolean,
     onDismiss: () -> Unit,
     onAudioSelected: (Int) -> Unit,
     onSubtitleSelected: (String) -> Unit,
@@ -405,6 +407,23 @@ private fun TrackDialog(
 ) {
     val groups = tracks?.groups.orEmpty()
         .filter { it.type == C.TRACK_TYPE_AUDIO || it.type == C.TRACK_TYPE_TEXT }
+    val nativeImageLanguages = groups
+        .filter { it.type == C.TRACK_TYPE_TEXT }
+        .flatMap { group ->
+            (0 until group.mediaTrackGroup.length).flatMap { index ->
+                val format = group.mediaTrackGroup.getFormat(index)
+                if (format.sampleMimeType in nativeImageSubtitleMimeTypes) {
+                    listOf(format.language)
+                } else {
+                    emptyList()
+                }
+            }
+        }
+    val shownBurnSubtitles = visibleBurnSubtitles(
+        burn = burnSubtitles,
+        nativeImageLanguages = nativeImageLanguages,
+        isHls = isHls
+    )
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.player_tracks)) },
@@ -418,7 +437,7 @@ private fun TrackDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                if (groups.isEmpty() && burnSubtitles.isEmpty()) {
+                if (groups.isEmpty() && shownBurnSubtitles.isEmpty()) {
                     Text(stringResource(R.string.player_no_tracks))
                 }
                 var nextAudioIndex = 0
@@ -454,12 +473,12 @@ private fun TrackDialog(
                     }
                     nextSubtitleIndex += group.mediaTrackGroup.length
                 }
-                if (burnSubtitles.isNotEmpty()) {
+                if (shownBurnSubtitles.isNotEmpty()) {
                     Text(
                         text = stringResource(R.string.player_image_subtitles),
                         style = MaterialTheme.typography.titleMedium
                     )
-                    burnSubtitles.forEach { subtitle ->
+                    shownBurnSubtitles.forEach { subtitle ->
                         TextButton(onClick = { onBurnSubtitleSelected(subtitle.id) }) {
                             Text(
                                 if (subtitle.selected) {
@@ -471,7 +490,7 @@ private fun TrackDialog(
                         }
                     }
                 }
-                if (groups.any { it.type == C.TRACK_TYPE_TEXT } || burnSubtitles.isNotEmpty()) {
+                if (groups.any { it.type == C.TRACK_TYPE_TEXT } || shownBurnSubtitles.isNotEmpty()) {
                     TextButton(
                         onClick = {
                             player.trackSelectionParameters =
@@ -612,6 +631,12 @@ private fun PlayerUiState.Ready.toMediaItem(): ExoMediaItem {
         .setSubtitleConfigurations(subtitleConfigurations)
         .build()
 }
+
+private val nativeImageSubtitleMimeTypes = setOf(
+    MimeTypes.APPLICATION_VOBSUB,
+    MimeTypes.APPLICATION_PGS,
+    MimeTypes.APPLICATION_DVBSUBS
+)
 
 private const val SEEK_INCREMENT_MS = 10_000L
 

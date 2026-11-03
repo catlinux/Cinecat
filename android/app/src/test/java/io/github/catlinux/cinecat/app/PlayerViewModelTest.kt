@@ -231,7 +231,14 @@ class PlayerViewModelTest {
         assertEquals(listOf("e0", "e2"), ready.subtitles.map { it.id })
         assertEquals(listOf(false, false), ready.subtitles.map { it.selected })
         assertEquals(
-            listOf(PlayerBurnSubtitle(id = "e1", label = "PGS · imagen", selected = true)),
+            listOf(
+                PlayerBurnSubtitle(
+                    id = "e1",
+                    label = "PGS · imagen",
+                    selected = true,
+                    language = "es"
+                )
+            ),
             ready.burnSubtitles
         )
         assertEquals("e1", ready.selectedSubtitle)

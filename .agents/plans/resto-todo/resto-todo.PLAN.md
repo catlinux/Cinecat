@@ -25,7 +25,7 @@ Hoy (`internal/playback/hls.go`, `transcodeAudioArgs`) el HLS siempre recodifica
 - Docs: `docs/es/reproduccion.md`/`docs/en/playback.md` (quitar «passthrough sin recodificar» de lo que falta, explicar cuándo se copia).
 - Ejecutor: AgentRelay, esfuerzo alto. CHANGELOG: «Servidor: el HLS copia el audio AC-3/E-AC-3 sin recodificar para las apps que lo declaran.»
 
-### 2. [ ] TV: no duplicar el subtítulo de imagen en reproducción directa — 0.60.1 (parche)
+### 2. [x] TV: no duplicar el subtítulo de imagen en reproducción directa — 0.60.1 (parche)
 
 En directa, ExoPlayer ya expone los VobSub/PGS del MKV como pistas de texto nativas y `TrackDialog` (`android/app/src/main/java/.../PlayerScreen.kt`) añade además la sección «Subtítulos de imagen» (que recarga por HLS quemando). Diseño: en modo directo, ocultar en «Subtítulos de imagen» cada pista de imagen del servidor para la que ExoPlayer ya ofrece una pista de texto con un MIME de imagen (`application/vobsub`, `application/pgs`, `application/dvbsubs`) y el mismo idioma; si no hay coincidencia, mostrarla como hoy. En HLS no cambia nada. Lógica pura en una función testeable (`PlayerViewModel` o archivo propio) con tests unitarios.
 - Ejecutor: AgentRelay, esfuerzo medio. CHANGELOG: «Android TV: en reproducción directa ya no aparece dos veces el mismo subtítulo de imagen.»

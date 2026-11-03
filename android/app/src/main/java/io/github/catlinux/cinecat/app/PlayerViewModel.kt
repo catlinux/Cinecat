@@ -1,6 +1,8 @@
 package io.github.catlinux.cinecat.app
 
+import android.annotation.SuppressLint
 import androidx.lifecycle.ViewModel
+import androidx.media3.common.util.Util
 import io.github.catlinux.cinecat.core.api.ApiResult
 import io.github.catlinux.cinecat.core.api.ItemPreferences
 import io.github.catlinux.cinecat.core.api.PlayResponse
@@ -8,6 +10,7 @@ import io.github.catlinux.cinecat.core.api.PreferencesPatch
 import io.github.catlinux.cinecat.core.api.SubtitleOption
 import io.github.catlinux.cinecat.core.data.PlaybackRepository
 import java.io.IOException
+import java.util.Locale
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -28,7 +31,8 @@ data class PlayerSubtitle(
 data class PlayerBurnSubtitle(
     val id: String,
     val label: String,
-    val selected: Boolean
+    val selected: Boolean,
+    val language: String? = null
 )
 
 data class PlaybackRequest(
@@ -66,6 +70,62 @@ fun shouldReloadSubtitle(
     val targetIsImage = targetSubtitle != null &&
         burnSubtitles.any { it.id == targetSubtitle }
     return currentIsImage || targetIsImage
+}
+
+@SuppressLint("UnsafeOptInUsageError")
+fun visibleBurnSubtitles(
+    burn: List<PlayerBurnSubtitle>,
+    nativeImageLanguages: List<String?>,
+    isHls: Boolean
+): List<PlayerBurnSubtitle> {
+    if (isHls) {
+        return burn
+    }
+    val normalizedNative = nativeImageLanguages.map(::normalizeLanguage)
+    val hiddenNative = BooleanArray(normalizedNative.size)
+    return burn.filter { subtitle ->
+        val language = normalizeLanguage(subtitle.language)
+        val match = normalizedNative.indices.firstOrNull { index ->
+            !hiddenNative[index] && normalizedNative[index] == language
+        }
+        if (match == null) {
+            true
+        } else {
+            // Una pista nativa solo tapa una entrada aunque el servidor repita idioma.
+            hiddenNative[match] = true
+            false
+        }
+    }
+}
+
+private fun normalizeLanguage(language: String?): String? {
+    if (language.isNullOrBlank()) {
+        return null
+    }
+    val normalizedValue: String? = try {
+        Util.normalizeLanguageCode(language)
+    } catch (error: RuntimeException) {
+        null
+    }
+    val normalized = normalizedValue?.takeIf { it.isNotBlank() }
+    // Fuera de Android, TextUtils no está disponible; el respaldo conserva el
+    // mapa ISO 639 que usa Util para que la función siga siendo comprobable.
+    return normalized ?: isoLanguage(language)
+}
+
+private fun isoLanguage(language: String): String {
+    val lower = language.lowercase(Locale.ROOT)
+    val base = lower.substringBefore('-').substringBefore('_')
+    return iso3ToIso1[base] ?: base
+}
+
+private val iso3ToIso1: Map<String, String> by lazy {
+    Locale.getISOLanguages().mapNotNull { code ->
+        runCatching { Locale(code).getISO3Language() }
+            .getOrNull()
+            ?.lowercase(Locale.ROOT)
+            ?.let { it to code }
+    }.toMap()
 }
 
 class PlayerViewModel(
@@ -278,7 +338,8 @@ class PlayerViewModel(
                 burnSubtitles += PlayerBurnSubtitle(
                     id = subtitle.id,
                     label = "$label · imagen",
-                    selected = subtitle.id == resolved.subtitleId
+                    selected = subtitle.id == resolved.subtitleId,
+                    language = subtitle.language
                 )
                 return@forEach
             }
