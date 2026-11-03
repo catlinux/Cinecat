@@ -1,0 +1,21 @@
+# Reproducción automática por serie, intro/créditos y descargas
+
+Encargo del usuario (2026-11-03): terminar intro, créditos y «siguiente episodio»; en cada serie debe poder activarse o desactivarse la reproducción automática de forma fácil y visible; seguir con las descargas móviles.
+
+Ejecución secuencial. Misma metodología que `resto-todo.PLAN.md`: AgentRelay, revisión del diff, tests (`go test ./internal/...` con FFmpeg en el PATH, `npm run check` y `npm test`, `gradlew.bat testDebugUnitTest assembleDebug`), commit por nombre de archivo, versión y CHANGELOG/TODO/docs en el commit que cierra cada paso, etiqueta local, **sin push sin aprobación**.
+
+## Diseño (decidido)
+
+- Ajuste por usuario y serie: `series_autoplay` (sin fila = activada). `autoplay_next` en `GET /api/v1/series/{id}` y en `GET /api/v1/items/{id}/play` (true para ítems que no son episodio). `PUT/GET /api/v1/series/{id}/autoplay`.
+- Con la reproducción automática **desactivada**, no hay cuenta atrás ni salto automático al terminar un episodio; el botón manual «Siguiente episodio» en los créditos sigue disponible.
+- Con ella **activada**, al terminar el episodio (o al llegar a los créditos con el botón pulsado) pasa al siguiente tras una cuenta atrás de 8 s cancelable. Sin siguiente episodio no hace nada.
+- Web: interruptor «Reproducir el siguiente episodio automáticamente» bien visible en la ficha de la serie y en el reproductor (junto a la cuenta atrás). Android/TV: interruptor equivalente en la ficha de la serie y en la cuenta atrás; «Siguiente episodio» en el reproductor.
+
+## Pasos
+
+1. [ ] **Servidor**: migración 0030, rutas, `autoplay_next`. AgentRelay, medio. Versión 0.64.0 (menor) se asigna al cerrar el paso 3.
+2. [ ] **Web**: interruptor en la ficha de serie y en el reproductor; el reproductor respeta `autoplay_next`. AgentRelay, medio.
+3. [ ] **Android/TV**: navegación al siguiente episodio desde el reproductor con cuenta atrás cancelable, botón «Siguiente episodio» en créditos, interruptor en la ficha de serie. Docs es/en. Cierra **0.64.0**. AgentRelay, medio.
+4. [ ] **Probar las descargas en el móvil** (Pixel por adb), corregir lo que falle y cerrar **0.64.1** o lo que toque.
+
+Imprevistos de diseño:
