@@ -429,6 +429,7 @@ type playResponse struct {
 	SelectedSubtitle *string         `json:"selected_subtitle"`
 	Segments         []playSegment   `json:"segments"`
 	AutoplayNext     bool            `json:"autoplay_next"`
+	NextEpisode      *nextEpisodeDTO `json:"next_episode"`
 }
 
 type mediaFile struct {
@@ -513,6 +514,11 @@ func (a *API) handlePlay(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	nextEpisode, nextErr := queryNextEpisode(r.Context(), a.db, id, accessFromRequest(r))
+	if nextErr != nil {
+		log.Printf("library: leer siguiente episodio del ítem %d: %v", id, nextErr)
+	}
+
 	target := "/api/v1/stream/" + strconv.FormatInt(id, 10)
 	if mode == playback.ModeRemux {
 		target += "/playlist.m3u8"
@@ -547,6 +553,7 @@ func (a *API) handlePlay(w http.ResponseWriter, r *http.Request) {
 		SelectedSubtitle: options.SelectedSubtitle,
 		Segments:         segments,
 		AutoplayNext:     autoplayNext,
+		NextEpisode:      nextEpisode,
 	})
 }
 

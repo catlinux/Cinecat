@@ -9135,6 +9135,7 @@ components:
         - selected_subtitle
         - segments
         - autoplay_next
+        - next_episode
       properties:
         url:
           type: string
@@ -9186,6 +9187,31 @@ components:
           description: |
             Para un episodio, el ajuste de su serie; para cualquier otro
             ítem, `true`.
+        next_episode:
+          allOf:
+            - $ref: '#/components/schemas/NextEpisode'
+          nullable: true
+          description: |
+            Episodio inmediatamente posterior de la misma serie; `null` si no
+            hay otro o si el ítem no es un episodio.
+      additionalProperties: false
+    NextEpisode:
+      type: object
+      required:
+        - id
+        - title
+        - season
+        - episode
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        season:
+          type: integer
+        episode:
+          type: integer
       additionalProperties: false
     PlaySegment:
       type: object
