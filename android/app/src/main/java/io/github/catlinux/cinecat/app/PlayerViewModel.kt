@@ -143,7 +143,8 @@ class PlayerViewModel(
         ApiResult.Success(Unit)
     },
     private val serverUrl: () -> HttpUrl?,
-    private val scope: CoroutineScope
+    private val scope: CoroutineScope,
+    private val localUri: String? = null
 ) : ViewModel() {
     constructor(
         itemId: Long,
@@ -151,7 +152,9 @@ class PlayerViewModel(
         repository: PlaybackRepository,
         caps: String,
         scope: CoroutineScope,
-        serverUrl: () -> HttpUrl? = { null }
+        serverUrl: () -> HttpUrl? = { null },
+        localUri: String? = null,
+        localProgress: (suspend (Double, Double) -> Unit)? = null
     ) : this(
         itemId = itemId,
         startSeconds = startSeconds,
@@ -166,12 +169,18 @@ class PlayerViewModel(
             )
         },
         persistProgress = { position, duration ->
-            repository.saveProgress(itemId, position, duration)
+            if (localProgress != null) {
+                localProgress(position, duration)
+                ApiResult.Success(Unit)
+            } else {
+                repository.saveProgress(itemId, position, duration)
+            }
         },
         loadPreferences = { repository.itemPreferences(itemId) },
         persistPreferences = { patch -> repository.saveItemPreferences(itemId, patch) },
         serverUrl = serverUrl,
-        scope = scope
+        scope = scope,
+        localUri = localUri
     )
 
     private val _state = MutableStateFlow<PlayerUiState>(PlayerUiState.Loading)
@@ -182,12 +191,20 @@ class PlayerViewModel(
     private var initialPreferences: ItemPreferences? = null
 
     init {
-        load()
+        if (localUri != null) {
+            _state.value = localReadyState()
+        } else {
+            load()
+        }
     }
 
     fun load() {
         loadJob?.cancel()
         fallbackAttempted = false
+        if (localUri != null) {
+            _state.value = localReadyState()
+            return
+        }
         _state.value = PlayerUiState.Loading
         loadJob = scope.launch {
             initialPreferences = preferencesOrNull()
@@ -204,6 +221,10 @@ class PlayerViewModel(
     }
 
     fun onPlaybackError(positionSeconds: Double = 0.0) {
+        if (localUri != null) {
+            _state.value = PlayerUiState.Error()
+            return
+        }
         val ready = _state.value as? PlayerUiState.Ready ?: return
         if (ready.isHls || fallbackAttempted) {
             _state.value = PlayerUiState.Error()
@@ -226,7 +247,7 @@ class PlayerViewModel(
         subtitleId: String? = null,
         quality: String? = null
     ) {
-        if (audioIndex == null && subtitleId == null && quality == null) {
+        if (localUri != null || audioIndex == null && subtitleId == null && quality == null) {
             return
         }
         scope.launch {
@@ -243,6 +264,9 @@ class PlayerViewModel(
     }
 
     fun selectSubtitle(subtitleId: String?, positionSeconds: Double) {
+        if (localUri != null) {
+            return
+        }
         val ready = _state.value as? PlayerUiState.Ready ?: return
         val target = subtitleId?.takeIf { it.isNotBlank() }
         val currentIsImage = ready.burnSubtitles.any { it.selected }
@@ -322,6 +346,13 @@ class PlayerViewModel(
             is ApiResult.HttpError, is ApiResult.NetworkError -> null
         }
     }
+
+    private fun localReadyState(): PlayerUiState.Ready = PlayerUiState.Ready(
+        streamUrl = localUri.orEmpty(),
+        isHls = false,
+        subtitles = emptyList(),
+        initialPositionSeconds = startSeconds.coerceAtLeast(0.0)
+    )
 
     private fun resolve(
         response: PlayResponse,

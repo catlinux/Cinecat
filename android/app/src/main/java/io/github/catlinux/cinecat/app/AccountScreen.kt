@@ -40,6 +40,7 @@ fun AccountScreen(
     deviceProfileViewModel: DeviceProfileViewModel,
     isTelevision: Boolean,
     onBack: () -> Unit,
+    onOpenDownloads: (() -> Unit)?,
     onChangeServer: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
@@ -172,6 +173,14 @@ fun AccountScreen(
                     isTelevision = false
                 )
                 Spacer(Modifier.height(8.dp))
+                if (onOpenDownloads != null) {
+                    SecondaryActionButton(
+                        isTelevision = false,
+                        label = stringResource(R.string.downloads_title),
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = onOpenDownloads
+                    )
+                }
                 PrimaryActionButton(
                     isTelevision = false,
                     label = stringResource(R.string.home_logout),

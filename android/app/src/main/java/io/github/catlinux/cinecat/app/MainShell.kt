@@ -31,6 +31,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -79,6 +80,9 @@ data object Search
 data object Account
 
 @Serializable
+data object Downloads
+
+@Serializable
 data class MovieDetail(val id: Long)
 
 @Serializable
@@ -88,7 +92,11 @@ data class SeriesDetail(val id: Long)
 data class CollectionDetail(val id: Long)
 
 @Serializable
-data class Player(val itemId: Long, val startSeconds: Double = 0.0)
+data class Player(
+    val itemId: Long,
+    val startSeconds: Double = 0.0,
+    val localUri: String? = null
+)
 
 internal data class MainTab(
     @StringRes val labelRes: Int,
@@ -109,6 +117,11 @@ fun MainShell(
     // null significa que no se pudo consultar; en ese caso se muestran todos.
     var sections by remember { mutableStateOf<SectionsResponse?>(null) }
     var hasPhotos by remember { mutableStateOf(false) }
+    val downloads by container.downloadRepository.records.collectAsState()
+    val hasLocalDownloads = downloads.downloads.any { container.downloadRepository.hasLocalFile(it) }
+    LaunchedEffect(container) {
+        container.downloadRepository.flushPending()
+    }
     LaunchedEffect(container) {
         sections = when (val result = container.libraryRepository.sections()) {
             is ApiResult.Success -> result.value
@@ -243,6 +256,11 @@ fun MainShell(
                             viewModel = portalViewModel,
                             isTelevision = isTelevision,
                             onOpenAccount = if (useRail) null else ({ navController.navigate(Account) }),
+                            onOpenDownloads = if (!isTelevision && hasLocalDownloads) {
+                                { navController.navigate(Downloads) }
+                            } else {
+                                null
+                            },
                             onOpenMovie = { navController.navigate(MovieDetail(it)) },
                             onOpenSeries = { navController.navigate(SeriesDetail(it)) }
                         )
@@ -309,7 +327,27 @@ fun MainShell(
                             deviceProfileViewModel = deviceProfileViewModel,
                             isTelevision = isTelevision,
                             onBack = { navController.popBackStack() },
+                            onOpenDownloads = if (isTelevision) {
+                                null
+                            } else {
+                                { navController.navigate(Downloads) }
+                            },
                             onChangeServer = onChangeServer
+                        )
+                    }
+                    composable<Downloads> {
+                        DownloadsScreen(
+                            downloads = container.downloadRepository,
+                            onPlay = { record ->
+                                navController.navigate(
+                                    Player(
+                                        itemId = record.itemId,
+                                        startSeconds = record.positionSeconds,
+                                        localUri = container.downloadRepository.localUri(record)
+                                    )
+                                )
+                            },
+                            onBack = { navController.popBackStack() }
                         )
                     }
                     composable<MovieDetail> {
@@ -323,9 +361,20 @@ fun MainShell(
                         }
                         MovieDetailScreen(
                             viewModel = movieViewModel,
+                            downloads = container.downloadRepository,
+                            caps = container.caps,
                             onBack = { navController.popBackStack() },
                             onPlay = { id, position ->
                                 navController.navigate(Player(id, position))
+                            },
+                            onPlayLocal = { record ->
+                                navController.navigate(
+                                    Player(
+                                        itemId = record.itemId,
+                                        startSeconds = record.positionSeconds,
+                                        localUri = container.downloadRepository.localUri(record)
+                                    )
+                                )
                             },
                             onOpenMovie = { id -> navController.navigate(MovieDetail(id)) },
                             onOpenCollection = { id ->
@@ -344,9 +393,20 @@ fun MainShell(
                         }
                         SeriesDetailScreen(
                             viewModel = seriesViewModel,
+                            downloads = container.downloadRepository,
+                            caps = container.caps,
                             onBack = { navController.popBackStack() },
                             onPlayEpisode = { id, position ->
                                 navController.navigate(Player(id, position))
+                            },
+                            onPlayLocal = { record ->
+                                navController.navigate(
+                                    Player(
+                                        itemId = record.itemId,
+                                        startSeconds = record.positionSeconds,
+                                        localUri = container.downloadRepository.localUri(record)
+                                    )
+                                )
                             },
                             onOpenSeries = { id -> navController.navigate(SeriesDetail(id)) }
                         )
@@ -360,7 +420,19 @@ fun MainShell(
                                 repository = container.playbackRepository,
                                 caps = container.caps,
                                 scope = container.appScope,
-                                serverUrl = { container.sessionRepository.currentServer() }
+                                serverUrl = { container.sessionRepository.currentServer() },
+                                localUri = route.localUri,
+                                localProgress = if (route.localUri != null) {
+                                    { position, duration ->
+                                        container.downloadRepository.saveLocalProgress(
+                                            route.itemId,
+                                            position,
+                                            duration
+                                        )
+                                    }
+                                } else {
+                                    null
+                                }
                             )
                         }
                         PlayerScreen(

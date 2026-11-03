@@ -11,6 +11,7 @@ import coil3.disk.directory
 import coil3.map.Mapper
 import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
+import io.github.catlinux.cinecat.core.api.DownloadRegistry
 import io.github.catlinux.cinecat.core.api.LocalAddressDns
 import io.github.catlinux.cinecat.core.api.createApi
 import io.github.catlinux.cinecat.core.api.createOkHttpClient
@@ -20,6 +21,7 @@ import io.github.catlinux.cinecat.core.data.LibraryRepository
 import io.github.catlinux.cinecat.core.data.LocalNetworkMonitor
 import io.github.catlinux.cinecat.core.data.PlaybackRepository
 import io.github.catlinux.cinecat.core.data.SessionRepository
+import io.github.catlinux.cinecat.core.data.SessionState
 import io.github.catlinux.cinecat.core.data.SessionStore
 import io.github.catlinux.cinecat.core.data.deviceName
 import io.github.catlinux.cinecat.app.update.AppUpdater
@@ -28,6 +30,8 @@ import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import okhttp3.Dns
 import okhttp3.OkHttpClient
 
@@ -51,6 +55,7 @@ class AppContainer(context: Context) {
     val libraryRepository: LibraryRepository
     val playbackRepository: PlaybackRepository
     val deviceProfileRepository: DeviceProfileRepository
+    val downloadRepository: DownloadRepository
     val imageLoader: ImageLoader
 
     val caps: String by lazy { calculateCaps(appContext) }
@@ -122,6 +127,17 @@ class AppContainer(context: Context) {
                 sessionRepository.currentServer()?.let { origin -> createApi(origin, client) }
             }
         )
+        downloadRepository = DownloadRepository(
+            context = appContext,
+            registry = DownloadRegistry(File(appContext.filesDir, "downloads.json")),
+            playbackRepository = playbackRepository,
+            sessionRepository = sessionRepository,
+            client = client
+        )
+        appScope.launch {
+            sessionRepository.state.first { it !is SessionState.Loading }
+            downloadRepository.initialize()
+        }
         imageLoader = ImageLoader.Builder(appContext)
             .components {
                 add(OkHttpNetworkFetcherFactory(callFactory = { client }))

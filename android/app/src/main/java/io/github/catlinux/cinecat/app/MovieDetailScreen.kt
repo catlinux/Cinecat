@@ -45,6 +45,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.catlinux.cinecat.core.api.CastCredit
+import io.github.catlinux.cinecat.core.api.DownloadRecord
 import io.github.catlinux.cinecat.core.api.MediaItem
 import io.github.catlinux.cinecat.core.api.tmdbImage
 import kotlinx.coroutines.flow.collect
@@ -52,8 +53,11 @@ import kotlinx.coroutines.flow.collect
 @Composable
 fun MovieDetailScreen(
     viewModel: MovieDetailViewModel,
+    downloads: DownloadRepository,
+    caps: String,
     onBack: () -> Unit,
     onPlay: (Long, Double) -> Unit,
+    onPlayLocal: (DownloadRecord) -> Unit,
     onOpenMovie: (Long) -> Unit,
     onOpenCollection: (Long) -> Unit
 ) {
@@ -97,7 +101,10 @@ fun MovieDetailScreen(
                     state = current,
                     tablet = tablet,
                     horizontalPadding = horizontalPadding,
+                    downloads = downloads,
+                    caps = caps,
                     onPlay = onPlay,
+                    onPlayLocal = onPlayLocal,
                     onOpenMovie = onOpenMovie,
                     onOpenCollection = onOpenCollection,
                     onToggleFavorite = viewModel::toggleFavorite,
@@ -129,7 +136,10 @@ private fun MovieDetailContent(
     state: MovieDetailUiState.Ready,
     tablet: Boolean,
     horizontalPadding: androidx.compose.ui.unit.Dp,
+    downloads: DownloadRepository,
+    caps: String,
     onPlay: (Long, Double) -> Unit,
+    onPlayLocal: (DownloadRecord) -> Unit,
     onOpenMovie: (Long) -> Unit,
     onOpenCollection: (Long) -> Unit,
     onToggleFavorite: () -> Unit,
@@ -179,7 +189,10 @@ private fun MovieDetailContent(
                 item = item,
                 horizontalPadding = horizontalPadding,
                 playFocusRequester = playFocusRequester,
+                downloads = downloads,
+                caps = caps,
                 onPlay = onPlay,
+                onPlayLocal = onPlayLocal,
                 onToggleFavorite = onToggleFavorite,
                 onToggleWatchlist = onToggleWatchlist,
                 onToggleWatched = onToggleWatched
@@ -367,7 +380,10 @@ private fun MovieActions(
     item: MediaItem,
     horizontalPadding: androidx.compose.ui.unit.Dp,
     playFocusRequester: FocusRequester,
+    downloads: DownloadRepository,
+    caps: String,
     onPlay: (Long, Double) -> Unit,
+    onPlayLocal: (DownloadRecord) -> Unit,
     onToggleFavorite: () -> Unit,
     onToggleWatchlist: () -> Unit,
     onToggleWatched: () -> Unit
@@ -413,6 +429,12 @@ private fun MovieActions(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+        DownloadButton(
+            item = item,
+            downloads = downloads,
+            caps = caps,
+            onPlayLocal = onPlayLocal
+        )
         Row(
             modifier = Modifier
                 .fillMaxWidth()

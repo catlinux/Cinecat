@@ -65,6 +65,7 @@ import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
 import androidx.media3.common.VideoSize
 import androidx.media3.common.Format
+import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -94,7 +95,9 @@ fun PlayerScreen(
     val exoPlayer = remember(client, context) {
         ExoPlayer.Builder(context)
             .setMediaSourceFactory(
-                DefaultMediaSourceFactory(OkHttpDataSource.Factory(client))
+                DefaultMediaSourceFactory(
+                    DefaultDataSource.Factory(context, OkHttpDataSource.Factory(client))
+                )
             )
             .setSeekBackIncrementMs(SEEK_INCREMENT_MS)
             .setSeekForwardIncrementMs(SEEK_INCREMENT_MS)

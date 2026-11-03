@@ -22,6 +22,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -44,6 +45,7 @@ fun PortalScreen(
     viewModel: PortalViewModel,
     isTelevision: Boolean,
     onOpenAccount: (() -> Unit)?,
+    onOpenDownloads: (() -> Unit)?,
     onOpenMovie: (Long) -> Unit,
     onOpenSeries: (Long) -> Unit
 ) {
@@ -102,6 +104,11 @@ fun PortalScreen(
                             )
                             Button(onClick = viewModel::retry) {
                                 Text(stringResource(R.string.retry))
+                            }
+                            if (onOpenDownloads != null) {
+                                OutlinedButton(onClick = onOpenDownloads) {
+                                    Text(stringResource(R.string.downloads_open))
+                                }
                             }
                         }
                     }

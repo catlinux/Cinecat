@@ -1,0 +1,53 @@
+package io.github.catlinux.cinecat.app
+
+import io.github.catlinux.cinecat.core.api.ApiResult
+import io.github.catlinux.cinecat.core.api.PlayResponse
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class LocalPlaybackViewModelTest {
+    @Test
+    fun laReproduccionLocalNoPidePlayYSalvaElProgreso() = runTest {
+        var playbackCalls = 0
+        var savedPosition: Double? = null
+        var savedDuration: Double? = null
+        val viewModel = PlayerViewModel(
+            itemId = 7,
+            startSeconds = 33.0,
+            caps = "caps",
+            loadPlayback = {
+                playbackCalls++
+                ApiResult.Success(PlayResponse(url = "/stream", mode = "direct"))
+            },
+            persistProgress = { position, duration ->
+                savedPosition = position
+                savedDuration = duration
+                ApiResult.Success(Unit)
+            },
+            serverUrl = { null },
+            scope = this,
+            localUri = "file:///descargas/7.mkv"
+        )
+
+        advanceUntilIdle()
+
+        val ready = viewModel.state.value as PlayerUiState.Ready
+        assertEquals("file:///descargas/7.mkv", ready.streamUrl)
+        assertEquals(33.0, ready.initialPositionSeconds, 0.0)
+        assertFalse(ready.isHls)
+        assertTrue(ready.subtitles.isEmpty())
+        assertEquals(0, playbackCalls)
+
+        viewModel.saveProgress(40.0, 100.0)
+        advanceUntilIdle()
+
+        assertEquals(40.0, savedPosition ?: 0.0, 0.0)
+        assertEquals(100.0, savedDuration ?: 0.0, 0.0)
+    }
+}

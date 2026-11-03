@@ -57,6 +57,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import io.github.catlinux.cinecat.core.api.CastCredit
+import io.github.catlinux.cinecat.core.api.DownloadRecord
 import io.github.catlinux.cinecat.core.api.MediaItem
 import io.github.catlinux.cinecat.core.api.Season
 import io.github.catlinux.cinecat.core.api.SeriesDetail
@@ -66,8 +67,11 @@ import kotlinx.coroutines.flow.collect
 @Composable
 fun SeriesDetailScreen(
     viewModel: SeriesDetailViewModel,
+    downloads: DownloadRepository,
+    caps: String,
     onBack: () -> Unit,
     onPlayEpisode: (Long, Double) -> Unit,
+    onPlayLocal: (DownloadRecord) -> Unit,
     onOpenSeries: (Long) -> Unit
 ) {
     val state by viewModel.state.collectAsState()
@@ -113,6 +117,8 @@ fun SeriesDetailScreen(
                     state = current,
                     tablet = tablet,
                     horizontalPadding = horizontalPadding,
+                    downloads = downloads,
+                    caps = caps,
                     onSelectSeason = viewModel::selectSeason,
                     onRetrySeason = viewModel::retrySeason,
                     onToggleFavorite = viewModel::toggleFavorite,
@@ -121,6 +127,7 @@ fun SeriesDetailScreen(
                     onToggleSeasonWatched = viewModel::toggleSeasonWatched,
                     onToggleEpisodeWatched = viewModel::toggleEpisodeWatched,
                     onPlayEpisode = onPlayEpisode,
+                    onPlayLocal = onPlayLocal,
                     onOpenSeries = onOpenSeries
                 )
             }
@@ -148,6 +155,8 @@ private fun SeriesDetailContent(
     state: SeriesDetailUiState.Ready,
     tablet: Boolean,
     horizontalPadding: androidx.compose.ui.unit.Dp,
+    downloads: DownloadRepository,
+    caps: String,
     onSelectSeason: (Int) -> Unit,
     onRetrySeason: () -> Unit,
     onToggleFavorite: () -> Unit,
@@ -156,6 +165,7 @@ private fun SeriesDetailContent(
     onToggleSeasonWatched: () -> Unit,
     onToggleEpisodeWatched: (Long) -> Unit,
     onPlayEpisode: (Long, Double) -> Unit,
+    onPlayLocal: (DownloadRecord) -> Unit,
     onOpenSeries: (Long) -> Unit
 ) {
     val series = state.series
@@ -353,7 +363,16 @@ private fun SeriesDetailContent(
                                     episode.progress?.positionSeconds ?: 0.0
                                 )
                             },
-                            onToggleWatched = { onToggleEpisodeWatched(episode.id) }
+                            onToggleWatched = { onToggleEpisodeWatched(episode.id) },
+                            downloadButton = {
+                                DownloadButton(
+                                    item = episode,
+                                    downloads = downloads,
+                                    caps = caps,
+                                    onPlayLocal = onPlayLocal,
+                                    compact = true
+                                )
+                            }
                         )
                     }
                 }
@@ -615,7 +634,8 @@ internal fun EpisodeRow(
     item: MediaItem,
     horizontalPadding: androidx.compose.ui.unit.Dp,
     onClick: () -> Unit,
-    onToggleWatched: () -> Unit
+    onToggleWatched: () -> Unit,
+    downloadButton: (@Composable () -> Unit)? = null
 ) {
     Row(
         modifier = Modifier
@@ -734,6 +754,7 @@ internal fun EpisodeRow(
                     }
                 }
             }
+            downloadButton?.invoke()
         }
     }
 }
