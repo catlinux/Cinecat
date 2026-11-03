@@ -23,6 +23,7 @@ export const load: LayoutServerLoad = async ({ locals, fetch, url }) => {
 		| 'series'
 		| 'videos'
 		| 'music'
+		| 'photos'
 		| 'favorites'
 		| 'watchlist'
 		| 'history'
@@ -35,7 +36,9 @@ export const load: LayoutServerLoad = async ({ locals, fetch, url }) => {
 					? 'history'
 				: pathname === '/music' || pathname.startsWith('/music/')
 					? 'music'
-					: pathname === '/videos' || pathname.startsWith('/videos/')
+					: pathname === '/photos' || pathname.startsWith('/photos/')
+						? 'photos'
+						: pathname === '/videos' || pathname.startsWith('/videos/')
 						? 'videos'
 						: pathname === '/movies' ||
 							  pathname.startsWith('/movies/') ||
@@ -65,6 +68,7 @@ export const load: LayoutServerLoad = async ({ locals, fetch, url }) => {
 			hasVideo: true,
 			hasClips: false,
 			hasMusic: false,
+			hasPhotos: false,
 			hasAnyLibraryAccess: false,
 			sections: ALL_SECTIONS,
 			isHome,
@@ -98,6 +102,7 @@ export const load: LayoutServerLoad = async ({ locals, fetch, url }) => {
 	let hasVideo = unrestricted;
 	let hasClips = unrestricted;
 	let hasMusic = unrestricted;
+	let hasPhotos = false;
 	let hasAnyLibraryAccess = unrestricted;
 	try {
 		const libraries = await createApiClient(fetch).listLibraries(locals.sessionToken);
@@ -105,11 +110,14 @@ export const load: LayoutServerLoad = async ({ locals, fetch, url }) => {
 		hasVideo = unrestricted || visible.some((library) => library.kind === 'video');
 		hasClips = unrestricted || visible.some((library) => library.kind === 'clips');
 		hasMusic = unrestricted || visible.some((library) => library.kind === 'music');
+		// Fotos solo aparece si existe una biblioteca real, también para admin.
+		hasPhotos = visible.some((library) => library.kind === 'photos');
 		hasAnyLibraryAccess = unrestricted || visible.length > 0;
 	} catch {
 		hasVideo = unrestricted;
 		hasClips = unrestricted;
 		hasMusic = unrestricted;
+		hasPhotos = false;
 		hasAnyLibraryAccess = unrestricted;
 	}
 
@@ -128,6 +136,7 @@ export const load: LayoutServerLoad = async ({ locals, fetch, url }) => {
 		hasVideo,
 		hasClips,
 		hasMusic,
+		hasPhotos,
 		hasAnyLibraryAccess,
 		sections,
 		isHome,

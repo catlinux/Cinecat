@@ -24,6 +24,7 @@ function layoutData(overrides: Record<string, unknown> = {}) {
 		hasVideo: true,
 		hasClips: false,
 		hasMusic: false,
+		hasPhotos: false,
 		hasAnyLibraryAccess: true,
 		sections: { movies: true, series: true, collections: true },
 		isHome: false,
@@ -121,6 +122,49 @@ describe('menú de Música', () => {
 	});
 });
 
+describe('menú de Fotos', () => {
+	it('muestra Fotos en el menú lateral solo con hasPhotos', () => {
+		const withPhotos = render(Layout, {
+			props: {
+				data: layoutData({ hasPhotos: true, activeCategory: 'photos' }),
+				children
+			}
+		}).body;
+		expect(withPhotos).toContain('href="/photos"');
+		expect(withPhotos).toContain('aria-current="page"');
+		expect(withPhotos).toContain('Fotos');
+
+		const withoutPhotos = render(Layout, {
+			props: { data: layoutData(), children }
+		}).body;
+		expect(withoutPhotos).not.toContain('href="/photos"');
+	});
+
+	it('muestra Fotos en el menú superior solo con hasPhotos', () => {
+		const withPhotos = render(Layout, {
+			props: {
+				data: layoutData({
+					hasPhotos: true,
+					activeCategory: 'photos',
+					ui: { ...DEFAULT_PUBLIC_UI, nav_layout: 'top' }
+				}),
+				children
+			}
+		}).body;
+		expect(withPhotos).toContain('class="marquee"');
+		expect(withPhotos).toContain('href="/photos"');
+		expect(withPhotos).toContain('aria-current="page"');
+
+		const withoutPhotos = render(Layout, {
+			props: {
+				data: layoutData({ ui: { ...DEFAULT_PUBLIC_UI, nav_layout: 'top' } }),
+				children
+			}
+		}).body;
+		expect(withoutPhotos).not.toContain('href="/photos"');
+	});
+});
+
 describe('load del layout', () => {
 	it('calcula hasMusic y activeCategory para música', async () => {
 		const result = (await load(
@@ -134,6 +178,24 @@ describe('load del layout', () => {
 		expect(result.hasMusic).toBe(true);
 		expect(result.hasClips).toBe(true);
 		expect(result.activeCategory).toBe('music');
+	});
+
+	it('calcula hasPhotos y activeCategory para fotos incluso para admin', async () => {
+		const result = (await load(
+			loadEvent(
+				layoutFetch([
+					{ id: 3, kind: 'photos', name: 'Fotos', path: '/f', paths: [], item_count: 2 }
+				]),
+				'/photos/3'
+			) as never
+		)) as any;
+		expect(result.hasPhotos).toBe(true);
+		expect(result.activeCategory).toBe('photos');
+
+		const adminWithoutPhotos = (await load(
+			loadEvent(layoutFetch([], 'admin'), '/photos') as never
+		)) as any;
+		expect(adminWithoutPhotos.hasPhotos).toBe(false);
 	});
 
 	it('tolera que falle la lista de bibliotecas', async () => {

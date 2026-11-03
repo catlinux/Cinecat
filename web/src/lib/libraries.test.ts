@@ -8,18 +8,20 @@ import {
 } from './libraries';
 
 describe('textos de tipo de biblioteca', () => {
-	it('traduce los tres tipos', () => {
+	it('traduce los tipos de biblioteca', () => {
 		expect(libraryKindLabel('video')).toBe('Películas y series');
 		expect(libraryKindLabel('clips')).toBe('Vídeos');
 		expect(libraryKindLabel('music')).toBe('Música');
+		expect(libraryKindLabel('photos')).toBe('Fotos');
 		expect(libraryKindLabel(undefined)).toBe('Películas y series');
 	});
 
-	it('deja disponibles los tres tipos de biblioteca', () => {
+	it('deja disponibles los tipos de biblioteca', () => {
 		expect(LIBRARY_KIND_OPTIONS).toEqual([
 			{ value: 'video', label: 'Películas y series', disabled: false },
 			{ value: 'clips', label: 'Vídeos (videoclips, conciertos…)', disabled: false },
-			{ value: 'music', label: 'Música', disabled: false }
+			{ value: 'music', label: 'Música', disabled: false },
+			{ value: 'photos', label: 'Fotos', disabled: false }
 		]);
 	});
 });

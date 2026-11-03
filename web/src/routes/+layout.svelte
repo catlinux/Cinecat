@@ -79,6 +79,7 @@
 			hasSeries={sections.series}
 			hasClips={data.hasClips}
 			hasMusic={data.hasMusic}
+			hasPhotos={data.hasPhotos}
 			{versionLabel}
 		/>
 	{/if}
@@ -136,6 +137,13 @@
 								href="/music"
 								class:category-active={data.activeCategory === 'music'}
 								aria-current={data.activeCategory === 'music' ? 'page' : undefined}>Música</a
+							>
+						{/if}
+						{#if data.hasPhotos}
+							<a
+								href="/photos"
+								class:category-active={data.activeCategory === 'photos'}
+								aria-current={data.activeCategory === 'photos' ? 'page' : undefined}>Fotos</a
 							>
 						{/if}
 					</nav>

@@ -36,17 +36,19 @@ export interface LibraryKindOption {
 export const LIBRARY_KIND_LABELS: Record<LibraryKind, string> = {
 	video: 'Películas y series',
 	clips: 'Vídeos',
-	music: 'Música'
+	music: 'Música',
+	photos: 'Fotos'
 };
 
 export const LIBRARY_KIND_OPTIONS: LibraryKindOption[] = [
 	{ value: 'video', label: 'Películas y series', disabled: false },
 	{ value: 'clips', label: 'Vídeos (videoclips, conciertos…)', disabled: false },
-	{ value: 'music', label: 'Música', disabled: false }
+	{ value: 'music', label: 'Música', disabled: false },
+	{ value: 'photos', label: 'Fotos', disabled: false }
 ];
 
 export function libraryKindLabel(kind: string | null | undefined): string {
-	if (kind === 'video' || kind === 'clips' || kind === 'music') {
+	if (kind === 'video' || kind === 'clips' || kind === 'music' || kind === 'photos') {
 		return LIBRARY_KIND_LABELS[kind];
 	}
 	return 'Películas y series';

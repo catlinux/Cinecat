@@ -5,7 +5,7 @@ import { createApiClient } from '$lib/api-factory';
 import { requireSessionToken } from '$lib/session';
 
 const ADMIN_MESSAGE = 'Esta sección es solo para administradores.';
-const ALLOWED_KINDS = new Set<LibraryKind>(['video', 'clips', 'music']);
+const ALLOWED_KINDS = new Set<LibraryKind>(['video', 'clips', 'music', 'photos']);
 
 function actionFailure(
 	reason: unknown,

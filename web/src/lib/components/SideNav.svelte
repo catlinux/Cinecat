@@ -13,6 +13,7 @@
 		hasSeries = true,
 		hasClips = false,
 		hasMusic = false,
+		hasPhotos = false,
 		versionLabel
 	}: {
 		ui: PublicUI;
@@ -22,6 +23,7 @@
 			| 'series'
 			| 'videos'
 			| 'music'
+			| 'photos'
 			| 'favorites'
 			| 'watchlist'
 			| 'history'
@@ -34,6 +36,7 @@
 		hasSeries?: boolean;
 		hasClips?: boolean;
 		hasMusic?: boolean;
+		hasPhotos?: boolean;
 		versionLabel: string;
 	} = $props();
 </script>
@@ -89,6 +92,14 @@
 					<a
 						href="/music"
 						aria-current={activeCategory === 'music' ? 'page' : undefined}>Música</a
+					>
+				</li>
+			{/if}
+			{#if hasPhotos}
+				<li>
+					<a
+						href="/photos"
+						aria-current={activeCategory === 'photos' ? 'page' : undefined}>Fotos</a
 					>
 				</li>
 			{/if}

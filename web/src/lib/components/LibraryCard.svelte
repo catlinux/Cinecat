@@ -28,7 +28,9 @@
 		typeof library.item_count === 'number'
 			? library.kind === 'music'
 				? `${library.item_count} ${library.item_count === 1 ? 'pista' : 'pistas'}`
-				: `${library.item_count} ${library.item_count === 1 ? 'ficha' : 'fichas'}`
+				: library.kind === 'photos'
+					? `${library.item_count} ${library.item_count === 1 ? 'foto' : 'fotos'}`
+					: `${library.item_count} ${library.item_count === 1 ? 'ficha' : 'fichas'}`
 			: null
 	);
 
@@ -158,7 +160,7 @@
 	</form>
 
 	<div class="library-actions">
-		{#if library.kind !== 'music'}
+		{#if library.kind !== 'music' && library.kind !== 'photos'}
 			<LibraryUploadPanel {library} />
 		{/if}
 

@@ -426,6 +426,7 @@ describe('página de usuarios', () => {
 					isAdmin: true,
 					hasClips: true,
 					hasMusic: true,
+					hasPhotos: false,
 					isHome: false,
 					activeCategory: null,
 					serverVersion: null,

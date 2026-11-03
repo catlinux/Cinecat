@@ -43,7 +43,7 @@ export interface ErrorResponse {
 	error: string;
 }
 
-export type LibraryKind = 'video' | 'clips' | 'music';
+export type LibraryKind = 'video' | 'clips' | 'music' | 'photos';
 
 export interface LibraryPath {
 	id: number;
@@ -61,6 +61,31 @@ export interface Library {
 
 export interface LibrariesResponse {
 	libraries: Library[];
+}
+
+export type PhotoSort = 'date' | 'name';
+
+export interface PhotoItem {
+	id: number;
+	name: string;
+	width: number;
+	height: number;
+	taken_at: number | null;
+	size: number;
+}
+
+export interface PhotosResponse {
+	folders: string[];
+	items: PhotoItem[];
+	total: number;
+}
+
+export interface PhotosQuery {
+	library_id: number;
+	folder?: string;
+	sort?: PhotoSort;
+	limit?: number;
+	offset?: number;
 }
 
 export interface SectionsResponse {
@@ -1482,6 +1507,19 @@ export class ApiClient {
 
 	async getMusicPlay(id: number, token: string): Promise<MusicPlayResponse> {
 		return this.get<MusicPlayResponse>(`/api/v1/music/tracks/${id}/play`, token);
+	}
+
+	async getPhotos(query: PhotosQuery, token: string): Promise<PhotosResponse> {
+		const params = new URLSearchParams();
+		params.set('library_id', String(query.library_id));
+		if (query.folder) {
+			params.set('folder', query.folder);
+		}
+		if (query.sort) {
+			params.set('sort', query.sort);
+		}
+		appendPagination(params, query);
+		return this.get<PhotosResponse>(`/api/v1/photos${querySuffix(params)}`, token);
 	}
 
 	async getSeries(query: SeriesQuery, token: string): Promise<SeriesResponse> {

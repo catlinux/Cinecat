@@ -61,6 +61,16 @@ describe('tarjeta de biblioteca', () => {
 		expect(html).not.toContain('Subir archivos');
 	});
 
+	it('muestra el tipo Fotos y cuenta imágenes sin subida de archivos', () => {
+		const html = body({
+			library: { ...library, kind: 'photos', name: 'Recuerdos', item_count: 4 }
+		});
+
+		expect(html).toContain('Fotos');
+		expect(html).toContain('4 fotos');
+		expect(html).not.toContain('Subir archivos');
+	});
+
 	it('conserva el nombre y la ruta escritos tras un error', () => {
 		const html = body({
 			library,

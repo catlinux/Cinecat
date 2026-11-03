@@ -41,9 +41,11 @@
 	const kindHelp = $derived(
 		kind === 'music'
 			? 'Se leen las etiquetas de los archivos; estructura recomendada Artista/Álbum/Pista.'
-			: kind === 'clips'
-				? 'Sin identificación: el título sale del nombre del archivo y se navega por carpetas.'
-				: 'Identifica películas y series con TMDB; también acepta episodios organizados por temporadas.'
+			: kind === 'photos'
+				? 'Indexa JPEG, PNG, WebP y GIF; no se admiten HEIC ni RAW.'
+				: kind === 'clips'
+					? 'Sin identificación: el título sale del nombre del archivo y se navega por carpetas.'
+					: 'Identifica películas y series con TMDB; también acepta episodios organizados por temporadas.'
 	);
 	const currentStatus = $derived(status ?? (form?.started ? runningStatus() : null));
 	const createMessage = $derived(form?.action === 'create' ? form : null);

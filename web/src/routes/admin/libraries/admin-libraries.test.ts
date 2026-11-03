@@ -565,6 +565,26 @@ describe('página de administración', () => {
 		expect(body).toContain('name="paths"');
 	});
 
+	it('ofrece el tipo Fotos y explica los formatos admitidos', () => {
+		const { body } = render(AdminPage, {
+			props: {
+				data: { libraries },
+				form: {
+					success: false,
+					action: 'create',
+					message: 'error',
+					name: 'Álbum',
+					kind: 'photos',
+					paths: ['/media/fotos']
+				}
+			}
+		});
+
+		expect(body).toContain('Fotos');
+		expect(body).toContain('Indexa JPEG, PNG, WebP y GIF');
+		expect(body).toMatch(/value="photos"[^>]*selected/);
+	});
+
 	it('explica la estructura recomendada al elegir Música', () => {
 		const { body } = render(AdminPage, {
 			props: {

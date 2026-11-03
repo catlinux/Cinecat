@@ -330,6 +330,7 @@ function pageData(overrides: Record<string, unknown> = {}) {
 		sections: { movies: true, series: true, collections: true },
 		hasClips: false,
 		hasMusic: false,
+		hasPhotos: false,
 		isHome: false,
 		activeCategory: 'movies' as const,
 		serverVersion: null,
