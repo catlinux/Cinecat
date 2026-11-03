@@ -93,6 +93,7 @@ Screenshots of the author's real library, with the posters the server downloads 
 | Vision and decisions | [visión](docs/es/vision.md) | [vision](docs/en/vision.md) |
 | Architecture and security | [arquitectura](docs/es/arquitectura.md) | [architecture](docs/en/architecture.md) |
 | API for native clients | [API](docs/es/api.md) | [API](docs/en/api.md) |
+| Plugins (proposal) | [complementos](docs/es/complementos.md) | [plugins](docs/en/plugins.md) |
 | Android app | [Android](docs/es/android.md) | [Android](docs/en/android.md) |
 | Playback and codecs | [reproducción](docs/es/reproduccion.md) | [playback](docs/en/playback.md) |
 | Metadata | [metadatos](docs/es/metadatos.md) | [metadata](docs/en/metadata.md) |

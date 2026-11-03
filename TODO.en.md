@@ -19,7 +19,7 @@ This file contains only work that is still open. Published work is in the [CHANG
 ## 🟢 Later
 
 - 🟢 **Copy backups outside the volume** (another disk or machine): today they live in `/data/backups`, next to the database. The user does not want it for now.
-- **Plugins**, still at the design stage.
+- **Plugins:** approve or amend the [plugins](docs/en/plugins.md) proposal and answer its two questions before implementing.
 - **DLNA/UPnP**, still at the design stage.
 - **Android and Android TV clients.** No code yet; plan in `.agents/plans/apps-android/apps-android.PLAN.md` (first device sessions, pairing by code, native capabilities and a stable API contract on the server).
 - Live TV and internet content and cross-device sync.

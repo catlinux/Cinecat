@@ -19,7 +19,7 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 ## 🟢 Más adelante
 
 - 🟢 **Copiar las copias de seguridad fuera del volumen** (otro disco o equipo): hoy están en `/data/backups`, junto a la base. El usuario no lo quiere por ahora.
-- **Complementos**, todavía en diseño.
+- **Complementos:** aprobar o corregir la propuesta de [complementos](docs/es/complementos.md) y responder sus dos preguntas antes de implementar.
 - **DLNA/UPnP**, todavía en diseño.
 - Televisión en directo y contenido de internet y sincronización entre dispositivos.
 - Otras plataformas (Apple, televisores Samsung/LG).

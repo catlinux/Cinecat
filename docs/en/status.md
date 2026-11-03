@@ -85,7 +85,7 @@ The order comes from the plans in `.agents/plans` and the open tasks; no dates o
 
 1. **Advanced playback**: 10-bit and DTS/TrueHD without re-encoding in HLS. Test 0.55.0 deinterlacing and HDR with real files, and 0.56.0 5.1 AAC on a TV.
 2. **Verify the "Servidor y web" GitHub Actions workflow** and its first green run.
-3. **Plugins**, still at the design stage.
+3. **Plugins**: design proposal in [plugins](plugins.md), awaiting approval.
 4. **DLNA/UPnP**, still at the design stage.
 
 ## Known limitations and risks

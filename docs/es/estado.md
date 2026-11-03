@@ -85,7 +85,7 @@ El orden sale de los planes de `.agents/plans` y de las tareas abiertas; no hay 
 
 1. **Reproducción avanzada**: 10 bits y DTS/TrueHD sin recodificar en HLS. Probar con archivos reales el desentrelazado y el HDR de 0.55.0, y el AAC 5.1 de 0.56.0 en una TV.
 2. **Verificar el flujo «Servidor y web»** de GitHub Actions y su primera ejecución en verde.
-3. **Complementos**, todavía en fase de diseño.
+3. **Complementos**: propuesta de diseño en [complementos](complementos.md), pendiente de aprobación.
 4. **DLNA/UPnP**, todavía en fase de diseño.
 
 ## Limitaciones y riesgos conocidos

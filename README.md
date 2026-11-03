@@ -93,6 +93,7 @@ Capturas de la biblioteca real del autor, con los carteles que descarga el servi
 | Visión y decisiones | [visión](docs/es/vision.md) | [vision](docs/en/vision.md) |
 | Arquitectura y seguridad | [arquitectura](docs/es/arquitectura.md) | [architecture](docs/en/architecture.md) |
 | API para clientes nativos | [API](docs/es/api.md) | [API](docs/en/api.md) |
+| Complementos (propuesta) | [complementos](docs/es/complementos.md) | [plugins](docs/en/plugins.md) |
 | App Android | [Android](docs/es/android.md) | [Android](docs/en/android.md) |
 | Reproducción y códecs | [reproducción](docs/es/reproduccion.md) | [playback](docs/en/playback.md) |
 | Metadatos | [metadatos](docs/es/metadatos.md) | [metadata](docs/en/metadata.md) |

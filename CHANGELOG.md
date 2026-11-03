@@ -7,6 +7,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+### Añadido
+
+- Documentación: propuesta de diseño de complementos (`docs/es/complementos.md`), pendiente de aprobación.
+
 ## [0.63.0] - 2026-11-03
 
 ### Añadido

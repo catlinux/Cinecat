@@ -7,6 +7,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+### Added
+
+- Documentation: plugin design proposal (`docs/en/plugins.md`), awaiting approval.
+
 ## [0.63.0] - 2026-11-03
 
 ### Added

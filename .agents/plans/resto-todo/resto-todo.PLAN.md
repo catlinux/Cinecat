@@ -56,7 +56,7 @@ Diseño sin detección por huella de audio (cara y frágil):
 
 El progreso y el estado de visto ya viven en el servidor y se comparten entre dispositivos. Antes de implementar, preguntar al usuario qué quiere decir: (a) mandar la reproducción de un dispositivo a otro («reproducir en la TV» desde el móvil) o (b) ver lo mismo a la vez en varios equipos. No implementar sin respuesta.
 
-### 7. [ ] Complementos — diseño (Opus) — sin versión
+### 7. [x] Complementos — diseño (Opus) — sin versión
 
 Solo documento de diseño en `docs/es/complementos.md` y `docs/en/plugins.md`, que escribe un modelo potente: qué puede extender un complemento (fuentes de metadatos, acciones tras escanear, notificaciones), cómo se aísla (proceso externo con protocolo JSON por stdin/stdout, sin cargar código en el servidor, sin red salvo lo declarado), permisos y riesgos. Implementar solo tras la aprobación del usuario.
 
