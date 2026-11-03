@@ -22,11 +22,12 @@ This file contains only work that is still open. Published work is in the [CHANG
 - **Plugins:** approve or amend the [plugins](docs/en/plugins.md) proposal and answer its two questions before implementing.
 - **DLNA/UPnP**, still at the design stage.
 - **Android and Android TV clients.** No code yet; plan in `.agents/plans/apps-android/apps-android.PLAN.md` (first device sessions, pairing by code, native capabilities and a stable API contract on the server).
-- Live TV and internet content and cross-device sync.
+- Live TV and internet content.
 - Other platforms (Apple, Samsung/LG TVs).
 
 ## Discarded and why
 
+- **Cross-device sync** (sending playback to another device or watching together): not needed for now (decided on 2026-11-03); progress and watched state are already shared through the server.
 - **`transcode` mode in the API:** `mode` in `GET /api/v1/items/{id}/play` stays `remux` for copied or re-encoded HLS. Changing it would break already installed apps, which compare against `remux`; `reason` already says why it is not direct.
 - **Caddy as a bundled proxy:** discarded in 0.3.1; the host Apache already manages vhosts and HTTPS.
 - **fMP4 segments for copy mode:** discarded; real containers and timestamps made reliable fMP4 unviable. Copying uses MPEG-TS with cuts at real keyframes; re-encoding still uses H.264.

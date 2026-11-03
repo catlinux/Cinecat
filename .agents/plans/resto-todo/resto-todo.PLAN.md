@@ -52,7 +52,7 @@ Diseño sin detección por huella de audio (cara y frágil):
 - Servidor: si hace falta, una ruta de descarga autenticada con soporte de rangos (revisar si la URL de directa ya sirve; dura 8 h).
 - Pasos: 5a servidor si procede (medio), 5b Android (alto), 5c docs.
 
-### 6. [ ] Sincronización entre dispositivos — **pendiente de definir con el usuario**
+### 6. [-] Sincronización entre dispositivos — descartada por ahora (el usuario, 2026-11-03)
 
 El progreso y el estado de visto ya viven en el servidor y se comparten entre dispositivos. Antes de implementar, preguntar al usuario qué quiere decir: (a) mandar la reproducción de un dispositivo a otro («reproducir en la TV» desde el móvil) o (b) ver lo mismo a la vez en varios equipos. No implementar sin respuesta.
 

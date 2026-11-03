@@ -21,11 +21,12 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 - 🟢 **Copiar las copias de seguridad fuera del volumen** (otro disco o equipo): hoy están en `/data/backups`, junto a la base. El usuario no lo quiere por ahora.
 - **Complementos:** aprobar o corregir la propuesta de [complementos](docs/es/complementos.md) y responder sus dos preguntas antes de implementar.
 - **DLNA/UPnP**, todavía en diseño.
-- Televisión en directo y contenido de internet y sincronización entre dispositivos.
+- Televisión en directo y contenido de internet.
 - Otras plataformas (Apple, televisores Samsung/LG).
 
 ## Descartado y por qué
 
+- **Sincronización entre dispositivos** (mandar la reproducción a otro equipo o ver a la vez): no hace falta por ahora (decidido el 2026-11-03); el progreso y el estado de visto ya se comparten por el servidor.
 - **Modo `transcode` en la API:** el valor `mode` de `GET /api/v1/items/{id}/play` sigue siendo `remux` para el HLS copiado o recodificado. Cambiarlo rompería a las apps ya instaladas, que comparan con `remux`; `reason` ya indica por qué no va en directo.
 - **Caddy como proxy propio:** se descartó en 0.3.1; el Apache del host ya gestiona los vhosts y HTTPS.
 - **Segmentos fMP4 para la copia:** se descartaron; los contenedores reales y los timestamps hacían inviable un fMP4 fiable. La copia usa MPEG-TS con cortes en fotogramas clave reales; la recodificación sigue usando H.264.
