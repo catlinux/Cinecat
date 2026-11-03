@@ -60,4 +60,6 @@ El progreso y el estado de visto ya viven en el servidor y se comparten entre di
 
 Solo documento de diseño en `docs/es/complementos.md` y `docs/en/plugins.md`, que escribe un modelo potente: qué puede extender un complemento (fuentes de metadatos, acciones tras escanear, notificaciones), cómo se aísla (proceso externo con protocolo JSON por stdin/stdout, sin cargar código en el servidor, sin red salvo lo declarado), permisos y riesgos. Implementar solo tras la aprobación del usuario.
 
+Fotos y complementos quedan aparcados por el usuario (2026-11-03): no ampliar ni implementar sin hablarlo antes.
+
 Imprevistos de diseño:
