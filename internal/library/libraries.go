@@ -184,10 +184,10 @@ func normalizeLibraryKind(kind string) (string, error) {
 		return "video", nil
 	}
 	switch kind {
-	case "video", "clips", "music":
+	case "video", "clips", "music", "photos":
 		return kind, nil
 	default:
-		return "", errors.New("el tipo debe ser video, clips o music")
+		return "", errors.New("el tipo debe ser video, clips, music o photos")
 	}
 }
 
@@ -276,6 +276,8 @@ func (a *API) listLibraries(ctx context.Context, access ...libraryAccess) ([]lib
 		SELECT l.id, l.name, l.kind, l.path,
 		       CASE WHEN l.kind = 'music'
 		            THEN (SELECT count(*) FROM music_tracks mt WHERE mt.library_id = l.id)
+		            WHEN l.kind = 'photos'
+		            THEN (SELECT count(*) FROM photos p WHERE p.library_id = l.id)
 		            ELSE (SELECT count(*) FROM media_items mi WHERE mi.library_id = l.id)
 		       END
 		  FROM libraries l
@@ -610,6 +612,11 @@ func (a *API) handleDeleteLibraryPath(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
 		return
 	}
+	if err := deletePhotosUnderPath(r.Context(), tx, id, removed); err != nil {
+		logLibraryError("borrar fotos de la carpeta", err)
+		writeJSONError(w, http.StatusInternalServerError, "error interno")
+		return
+	}
 	if _, err := tx.ExecContext(r.Context(),
 		`DELETE FROM library_paths WHERE id = ? AND library_id = ?`, pathID, id); err != nil {
 		logLibraryError("borrar carpeta de biblioteca", err)
@@ -687,6 +694,8 @@ func (a *API) libraryByID(ctx context.Context, id int64) (libraryDTO, error) {
 		SELECT l.id, l.name, l.kind, l.path,
 		       CASE WHEN l.kind = 'music'
 		            THEN (SELECT count(*) FROM music_tracks mt WHERE mt.library_id = l.id)
+		            WHEN l.kind = 'photos'
+		            THEN (SELECT count(*) FROM photos p WHERE p.library_id = l.id)
 		            ELSE (SELECT count(*) FROM media_items mi WHERE mi.library_id = l.id)
 		       END
 		  FROM libraries l WHERE l.id = ?`, id).

@@ -142,6 +142,10 @@ func (a libraryAccess) MusicClause(alias string) string {
 	return "(" + alias + ".library_id IN (SELECT id FROM libraries WHERE kind = 'music')) AND (" + a.Clause(alias) + ")"
 }
 
+func (a libraryAccess) PhotosClause(alias string) string {
+	return "(" + alias + ".library_id IN (SELECT id FROM libraries WHERE kind = 'photos')) AND (" + a.Clause(alias) + ")"
+}
+
 type libraryAccessKey struct{}
 
 func withLibraryAccess(ctx context.Context, access libraryAccess) context.Context {

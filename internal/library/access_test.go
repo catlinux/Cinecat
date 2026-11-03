@@ -37,6 +37,9 @@ func TestLibraryAccessClausulas(t *testing.T) {
 	if got := restricted.MusicClause("mi"); !strings.Contains(got, "kind = 'music'") {
 		t.Fatalf("MusicClause = %q", got)
 	}
+	if got := restricted.PhotosClause("mi"); !strings.Contains(got, "kind = 'photos'") {
+		t.Fatalf("PhotosClause = %q", got)
+	}
 
 	all := unrestrictedLibraryAccess()
 	if !all.Unrestricted() || !all.Allows(999999) || all.Clause("mi") != "1 = 1" ||

@@ -96,9 +96,9 @@ type Result struct {
 	Warnings           []string
 }
 
-// Scan recorre las bibliotecas de tipo vídeo y clips. Cada biblioteca puede
-// tener varias carpetas; si una carpeta no está disponible no se podan sus
-// fichas y se avisa en el resultado.
+// Scan recorre las bibliotecas de vídeo, clips, música y fotos. Cada
+// biblioteca puede tener varias carpetas; si una carpeta no está disponible no
+// se podan sus fichas y se avisa en el resultado.
 func (s *Scanner) Scan(ctx context.Context) (Result, error) {
 	var res Result
 
@@ -131,7 +131,7 @@ func (s *Scanner) Scan(ctx context.Context) (Result, error) {
 
 	for _, l := range libraries {
 		res.Libraries++
-		if l.kind != "video" && l.kind != "clips" && l.kind != "music" {
+		if l.kind != "video" && l.kind != "clips" && l.kind != "music" && l.kind != "photos" {
 			res.Warnings = append(res.Warnings,
 				fmt.Sprintf("%s: tipo %s pendiente de implementar", l.name, l.kind))
 			continue
@@ -155,6 +155,12 @@ func (s *Scanner) Scan(ctx context.Context) (Result, error) {
 		}
 		if l.kind == "music" {
 			if err := s.pruneMusicLibrary(ctx, l.id, seen, scannedRoots, &res); err != nil {
+				return res, err
+			}
+			continue
+		}
+		if l.kind == "photos" {
+			if err := s.prunePhotosLibrary(ctx, l.id, seen, scannedRoots, &res); err != nil {
 				return res, err
 			}
 			continue
@@ -209,6 +215,7 @@ func (s *Scanner) scanLibraryPath(
 	}
 
 	musicFiles := make([]musicFile, 0)
+	photoFiles := make([]photoFile, 0)
 	walkFailed := false
 	err = filepath.WalkDir(root, func(path string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
@@ -245,6 +252,12 @@ func (s *Scanner) scanLibraryPath(
 		if libraryKind == "music" {
 			if IsAudioFile(d.Name()) {
 				musicFiles = append(musicFiles, musicFile{path: path, root: root})
+			}
+			return nil
+		}
+		if libraryKind == "photos" {
+			if IsPhotoFile(d.Name()) {
+				photoFiles = append(photoFiles, photoFile{path: path, root: root})
 			}
 			return nil
 		}
@@ -342,6 +355,11 @@ func (s *Scanner) scanLibraryPath(
 	}
 	if libraryKind == "music" {
 		if err := s.scanMusicFiles(ctx, libraryID, musicFiles, seen, res); err != nil {
+			return false, err
+		}
+	}
+	if libraryKind == "photos" {
+		if err := s.scanPhotoFiles(ctx, libraryID, photoFiles, seen, res); err != nil {
 			return false, err
 		}
 	}

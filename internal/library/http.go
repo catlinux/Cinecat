@@ -42,6 +42,7 @@ type API struct {
 	thumbnails           *Thumbnailer
 	subtitlesDir         string
 	musicCovers          *MusicCoverer
+	photoThumbnails      *PhotoThumbnailer
 	tmdbImages           *TMDBImageCache
 	now                  func() time.Time
 }
@@ -114,6 +115,9 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.Handle("GET /api/v1/music/albums/{id}/cover", a.requireSession(a.handleMusicAlbumCover))
 	mux.Handle("GET /api/v1/music/tracks", a.requireSession(a.handleMusicTracks))
 	mux.Handle("GET /api/v1/music/tracks/{id}/play", a.requireSession(a.handleMusicTrackPlay))
+	mux.Handle("GET /api/v1/photos", a.requireSession(a.handlePhotos))
+	mux.Handle("GET /api/v1/photos/{id}/thumb", a.requireSession(a.handlePhotoThumb))
+	mux.Handle("GET /api/v1/photos/{id}/original", a.requireSession(a.handlePhotoOriginal))
 	mux.Handle("GET /api/v1/images/tmdb/{size}/{file}", sessionCookieAsBearer(a.requireSession(a.handleTMDBImage)))
 	mux.Handle("GET /api/v1/genres", a.requireSession(a.handleGenres))
 	mux.Handle("GET /api/v1/home", a.requireSession(a.handleHome))

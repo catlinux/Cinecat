@@ -220,6 +220,7 @@ func main() {
 	api = api.WithThumbnails(thumbnailCacheDir(cfg.DatabasePath))
 	api = api.WithSubtitles(subtitlesDir(cfg.DatabasePath))
 	api = api.WithMusicCovers(musicCoverCacheDir(cfg.DatabasePath))
+	api = api.WithPhotoThumbnails(photoThumbnailCacheDir(cfg.DatabasePath))
 	api = api.WithTMDBImages(tmdbImageCacheDir(cfg.DatabasePath))
 	api = api.WithMediaRoots(cfg.MediaRoots)
 	go api.StartTrashPurger(ctx)
@@ -494,6 +495,15 @@ func musicCoverCacheDir(databasePath string) string {
 		return ""
 	}
 	return filepath.Join(filepath.Dir(path), "cache", "covers")
+}
+
+// photoThumbnailCacheDir guarda las miniaturas JPEG generadas por FFmpeg.
+func photoThumbnailCacheDir(databasePath string) string {
+	path := strings.TrimSpace(databasePath)
+	if path == "" || path == ":memory:" {
+		return ""
+	}
+	return filepath.Join(filepath.Dir(path), "cache", "photos")
 }
 
 func newHandler(authSvc *auth.Service, api *library.API, updateAPIs ...*update.API) http.Handler {

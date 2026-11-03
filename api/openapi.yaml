@@ -1218,13 +1218,14 @@ paths:
     post:
       summary: Inicia un escaneo en segundo plano (solo administradores)
       description: |
-        Recorre todas las carpetas de las bibliotecas de tipo `video` y `clips`,
-        analiza los nombres de los archivos y actualiza `media_items` sin
+        Recorre todas las carpetas de las bibliotecas y actualiza sus tablas sin
         duplicar entradas. Las bibliotecas `video` pueden identificarse con
         metadatos externos; las de `clips` nunca hacen peticiones a TMDB ni OMDb
-        y guardan el título a partir del nombre del archivo. La música todavía
-        se omite con un aviso. Si una carpeta no está disponible, conserva sus
-        fichas y avisa en el resultado. La respuesta vuelve en cuanto arranca el
+        y guardan el título a partir del nombre del archivo. Las de `music`
+        leen etiquetas de audio y las de `photos` indexan JPEG, PNG, WebP y GIF
+        con sus dimensiones y la fecha EXIF cuando existe. Si una carpeta no
+        está disponible, conserva sus fichas y avisa en el resultado. La
+        respuesta vuelve en cuanto arranca el
         escaneo; el progreso y el resultado se consultan con
         `GET /api/v1/libraries/scan`. Si ya hay uno en marcha, responde 409.
         Requiere una sesión con rol `admin`.
@@ -4712,6 +4713,180 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/photos:
+    get:
+      summary: Lista fotos de una biblioteca
+      description: |
+        Devuelve las subcarpetas directas de `folder` y las fotos que contiene,
+        paginadas. Solo se puede consultar una biblioteca de tipo `photos` a la
+        que el usuario tenga acceso. Los formatos indexados son JPEG, PNG, WebP
+        y GIF; HEIC y RAW no se admiten.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: library_id
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - name: folder
+          in: query
+          description: Carpeta relativa a la raíz de la biblioteca; vacía para la raíz.
+          schema:
+            type: string
+        - name: sort
+          in: query
+          description: Orden de las fotos. `date` usa taken_at y, si falta, mtime.
+          schema:
+            type: string
+            enum: [date, name]
+            default: date
+        - $ref: '#/components/parameters/PageLimit'
+        - $ref: '#/components/parameters/PageOffset'
+      responses:
+        '200':
+          description: Subcarpetas y fotos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PhotosResponse'
+        '400':
+          description: Parámetros no válidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Biblioteca no encontrada o sin acceso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/photos/{id}/thumb:
+    get:
+      summary: Miniatura JPEG de una foto
+      description: |
+        Genera con FFmpeg una miniatura JPEG de 400 px de lado mayor y la cachea
+        por id y mtime. También responde 304 si coincide el ETag.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        '200':
+          description: Miniatura JPEG
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        '304':
+          description: La miniatura no ha cambiado
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Foto o miniatura no disponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Demasiadas miniaturas generándose
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/photos/{id}/original:
+    get:
+      summary: Sirve la foto original
+      description: |
+        Sirve el archivo con soporte de rangos HTTP y el Content-Type de su
+        extensión. El archivo debe seguir dentro de la biblioteca.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        '200':
+          description: Archivo completo
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+            image/gif:
+              schema:
+                type: string
+                format: binary
+        '206':
+          description: Rango parcial
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+            image/gif:
+              schema:
+                type: string
+                format: binary
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Foto no encontrada o fuera de su biblioteca
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/images/tmdb/{size}/{file}:
     get:
       summary: Sirve una imagen de TMDB desde la caché del servidor
@@ -6790,7 +6965,7 @@ components:
           type: string
         kind:
           type: string
-          enum: [video, clips, music]
+          enum: [video, clips, music, photos]
         path:
           type: string
           description: Carpeta principal, por compatibilidad con clientes antiguos.
@@ -7033,7 +7208,7 @@ components:
           maxLength: 80
         kind:
           type: string
-          enum: [video, clips, music]
+          enum: [video, clips, music, photos]
           default: video
         path:
           type: string
@@ -9028,6 +9203,54 @@ components:
           format: date-time
         playable:
           type: boolean
+      additionalProperties: false
+    PhotoItem:
+      type: object
+      required:
+        - id
+        - name
+        - width
+        - height
+        - taken_at
+        - size
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        width:
+          type: integer
+        height:
+          type: integer
+        taken_at:
+          type: integer
+          format: int64
+          nullable: true
+          description: Fecha de captura EXIF en segundos Unix, o null si no existe.
+        size:
+          type: integer
+          format: int64
+      additionalProperties: false
+    PhotosResponse:
+      type: object
+      required:
+        - folders
+        - items
+        - total
+      properties:
+        folders:
+          type: array
+          description: Nombres de las subcarpetas directas de la carpeta consultada.
+          items:
+            type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PhotoItem'
+        total:
+          type: integer
+          format: int64
       additionalProperties: false
     TrashItem:
       type: object
