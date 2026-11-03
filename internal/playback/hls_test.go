@@ -193,6 +193,43 @@ func TestHLSArgsAudio51ParaNativoMch(t *testing.T) {
 	}
 }
 
+func TestHLSArgsAudioCopy(t *testing.T) {
+	settings := defaultTranscodeSettings()
+	settings.AudioCopy = true
+	settings.AudioChannels = 6
+	cases := map[string][]string{
+		"software": hlsTranscodeArgs("/tmp/peli.mkv", 0, settings),
+		"hw cpu":   hlsHardwareArgs("/tmp/peli.mkv", 0, settings, false, "/dev/dri/renderD128"),
+		"hw full":  hlsHardwareArgs("/tmp/peli.mkv", 0, settings, true, "/dev/dri/renderD128"),
+		"copy":     hlsCopyArgs("/tmp/peli.mkv", 0, []float64{0, 6, 12}, settings),
+	}
+	for name, args := range cases {
+		t.Run(name, func(t *testing.T) {
+			joined := strings.Join(args, "\n")
+			if !strings.Contains(joined, "-c:a\ncopy") {
+				t.Fatalf("falta -c:a copy: %v", args)
+			}
+			for _, unexpected := range []string{"-ac\n", "-b:a\n", "-channel_layout\n"} {
+				if strings.Contains(joined, unexpected) {
+					t.Fatalf("la copia de audio no debe llevar %q: %v", unexpected, args)
+				}
+			}
+		})
+	}
+}
+
+func TestStreamKeyDistingueAudioCopiado(t *testing.T) {
+	base := defaultTranscodeSettings()
+	copied := base
+	copied.AudioCopy = true
+	if transcodeKey(base) == transcodeKey(copied) {
+		t.Fatal("copiar el audio debe cambiar la clave de caché")
+	}
+	if streamKey(base, "auto") == streamKey(copied, "auto") {
+		t.Fatal("copiar el audio debe cambiar la clave del stream")
+	}
+}
+
 func TestHLSArgsQuemaSubtituloImagen(t *testing.T) {
 	settings := TranscodeSettings{MaxHeight: 720, CRF: 20, Preset: "veryfast", Threads: 4, BurnSubtitle: 2}
 	args := hlsTranscodeArgsWithVideo("/tmp/peli.mkv", 0, settings,

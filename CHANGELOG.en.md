@@ -7,8 +7,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.60.0] - 2026-11-03
+
 ### Added
 
+- Server: HLS copies the chosen AC-3 and E-AC-3 audio track without re-encoding for apps that declare that codec (devices with a decoder or an HDMI output that accepts it); DTS, TrueHD and the web still receive AAC. Covered by tests, including a real FFmpeg one; not tested on an AC-3 device (the home TV does not decode it).
 - Documentation: web, Android TV and Android screenshots in the README (`docs/img/`).
 
 ## [0.59.0] - 2026-11-02

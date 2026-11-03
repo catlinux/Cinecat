@@ -94,6 +94,27 @@ func AudioChannelsFor(caps Capabilities, info *FileInfo, audioIndex int) int {
 	return 2
 }
 
+// AudioCopyFor indica si el HLS puede copiar el audio de la pista elegida. Solo
+// ocurre con AC-3 o E-AC-3 en una app nativa que declara el mismo códec; DTS,
+// TrueHD y el navegador siguen recodificando a AAC.
+func AudioCopyFor(caps Capabilities, info *FileInfo, audioIndex int) bool {
+	if !caps.Native() || info == nil {
+		return false
+	}
+	audio, ok := selectedAudio(info, audioIndex)
+	if !ok {
+		return false
+	}
+	switch strings.ToLower(strings.TrimSpace(audio.Codec)) {
+	case "ac3":
+		return caps.native.has(nativeAC3)
+	case "eac3":
+		return caps.native.has(nativeEAC3)
+	default:
+		return false
+	}
+}
+
 // Reason explica por qué no se reproduce en directo. Vacío en directo.
 type Reason string
 

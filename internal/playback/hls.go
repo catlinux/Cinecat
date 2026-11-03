@@ -190,6 +190,9 @@ func burnInVideoFilter(settings TranscodeSettings, video *VideoStream, hdrFilter
 }
 
 func transcodeAudioArgs(settings TranscodeSettings) []string {
+	if settings.AudioCopy {
+		return []string{"-c:a", "copy"}
+	}
 	if settings.AudioChannels == 6 {
 		// Las apps con mch reciben AAC 5.1; el layout explícito evita que un
 		// origen 5.1(side) haga fallar al codificador.
@@ -532,10 +535,10 @@ func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string, s
 	if selection.MaxHeight > 0 {
 		transcode.MaxHeight = selection.MaxHeight
 	}
+	caps := ParseCapabilities(selection.Caps)
 	transcode.Audio = selection.Audio
-	transcode.AudioChannels = AudioChannelsFor(
-		ParseCapabilities(selection.Caps), selection.Info, selection.Audio,
-	)
+	transcode.AudioChannels = AudioChannelsFor(caps, selection.Info, selection.Audio)
+	transcode.AudioCopy = AudioCopyFor(caps, selection.Info, selection.Audio)
 	transcode.BurnSubtitle = selection.BurnSubtitle
 
 	absInput, err := filepath.Abs(inputPath)
@@ -787,6 +790,9 @@ func transcodeKey(settings TranscodeSettings) string {
 		settings.Audio, settings.AudioChannels)
 	if settings.BurnSubtitle > 0 {
 		key += fmt.Sprintf("-b%d", settings.BurnSubtitle)
+	}
+	if settings.AudioCopy {
+		key += "-acopy"
 	}
 	return key
 }

@@ -2,7 +2,7 @@
 
 [English](../en/status.md) · [Volver al README](../../README.md)
 
-Versión actual: **0.59.0**. Esta página resume el estado real del código, no el plan inicial. Las versiones salen del [CHANGELOG](../../CHANGELOG.md).
+Versión actual: **0.60.0**. Esta página resume el estado real del código, no el plan inicial. Las versiones salen del [CHANGELOG](../../CHANGELOG.md).
 
 Leyenda: ✅ hecho · 🟨 pendiente de probar · ⬜ pendiente.
 
@@ -80,7 +80,7 @@ Leyenda: ✅ hecho · 🟨 pendiente de probar · ⬜ pendiente.
 
 El orden sale de los planes de `.agents/plans` y de las tareas abiertas; no hay fechas ni versiones comprometidas.
 
-1. **Reproducción avanzada**: 10 bits y audio no soportado. Probar con archivos reales el desentrelazado y el HDR de 0.55.0, y el AAC 5.1 de 0.56.0 en una TV.
+1. **Reproducción avanzada**: 10 bits y DTS/TrueHD sin recodificar en HLS. Probar con archivos reales el desentrelazado y el HDR de 0.55.0, y el AAC 5.1 de 0.56.0 en una TV.
 2. **Verificar el flujo «Servidor y web»** de GitHub Actions y su primera ejecución en verde.
 3. **Complementos**, todavía en fase de diseño.
 4. **DLNA/UPnP**, todavía en fase de diseño.

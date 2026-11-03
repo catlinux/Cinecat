@@ -15,7 +15,7 @@ Encargo del usuario (2026-11-03): «Menos DLNA por ahora puedes hacer todo el re
 
 ## Pasos
 
-### 1. [ ] Audio AC-3/E-AC-3 copiado en el HLS — 0.60.0 (menor)
+### 1. [x] Audio AC-3/E-AC-3 copiado en el HLS — 0.60.0 (menor)
 
 Hoy (`internal/playback/hls.go`, `transcodeAudioArgs`) el HLS siempre recodifica el audio a AAC 2.0 o 5.1. Diseño:
 - Si el cliente es nativo (`caps.Native()`) y declara el códec de la pista elegida (`ac3` o `eac3` en `internal/playback/native.go`), el HLS usa `-c:a copy` para esa pista. Nunca para DTS/TrueHD (MPEG-TS/HLS y ExoPlayer no lo admiten bien), ni para la web, ni si la pista no es AC-3/E-AC-3.

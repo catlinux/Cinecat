@@ -2,7 +2,7 @@
 
 [Español](../es/estado.md) · [Back to README](../../README.en.md)
 
-Current version: **0.59.0**. This page describes the real state of the code, not the original plan. Versions come from the [CHANGELOG](../../CHANGELOG.en.md).
+Current version: **0.60.0**. This page describes the real state of the code, not the original plan. Versions come from the [CHANGELOG](../../CHANGELOG.en.md).
 
 Legend: ✅ done · 🟨 awaiting testing · ⬜ pending.
 
@@ -80,7 +80,7 @@ Legend: ✅ done · 🟨 awaiting testing · ⬜ pending.
 
 The order comes from the plans in `.agents/plans` and the open tasks; no dates or committed versions.
 
-1. **Advanced playback**: 10-bit and unsupported audio. Test 0.55.0 deinterlacing and HDR with real files, and 0.56.0 5.1 AAC on a TV.
+1. **Advanced playback**: 10-bit and DTS/TrueHD without re-encoding in HLS. Test 0.55.0 deinterlacing and HDR with real files, and 0.56.0 5.1 AAC on a TV.
 2. **Verify the "Servidor y web" GitHub Actions workflow** and its first green run.
 3. **Plugins**, still at the design stage.
 4. **DLNA/UPnP**, still at the design stage.

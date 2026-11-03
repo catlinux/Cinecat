@@ -42,6 +42,9 @@ type TranscodeSettings struct {
 	// AudioChannels es 2 para AAC estéreo o 6 para AAC 5.1 en las apps que
 	// declaran mch y una pista de 6 o más canales.
 	AudioChannels int
+	// AudioCopy copia el audio sin recodificar cuando la app nativa declara
+	// exactamente el códec AC-3 o E-AC-3 de la pista elegida.
+	AudioCopy bool
 	// BurnSubtitle es la posición de la pista de imagen más uno; cero
 	// significa que no se quema ninguna.
 	BurnSubtitle int

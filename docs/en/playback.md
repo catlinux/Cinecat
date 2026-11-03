@@ -116,7 +116,7 @@ The player offers `auto`, 480p, 720p, 1080p (never above the original height or 
 ## Audio, subtitles and quality
 
 - **Direct audio:** the original file is kept. It is served directly if the default track is AAC or MP3 (or there is no audio).
-- **HLS audio:** one track is chosen by its position in the `ffprobe` list and converted to stereo AAC at 160 kbps. If the client is a native app that declares `mch` and the chosen track has 6 or more channels, it is kept as 5.1 AAC at 384 kbps with `-channel_layout 5.1`. The user's and movie's preference is stored in `item_preferences`.
+- **HLS audio:** one track is chosen by its position in the `ffprobe` list and converted to stereo AAC at 160 kbps. If the client is a native app that declares `mch` and the chosen track has 6 or more channels, it is kept as 5.1 AAC at 384 kbps with `-channel_layout 5.1`. The exception is a native app that declares the same codec as the chosen track and that track is AC-3 or E-AC-3: HLS copies the audio as is, whether the video is copied or re-encoded. DTS and TrueHD are never copied, and the web always receives AAC. The user's and movie's preference is stored in `item_preferences`.
 - **Another track on MP4:** if you choose a track in the web app that differs from the one the browser would play on its own in a compatible MP4, the server serves it through HLS with that track (since 0.48.3).
 - **Subtitles:** embedded text tracks and external `.srt`, `.vtt` or `.ass` files next to the video, with language and `forced` suffixes, are converted to WebVTT. Embedded image tracks (PGS, VobSub and DVB) appear in `/play` with `burn_in: true` and an empty `url`; choosing one switches the server to HLS and burns it into the video, so it must re-encode (never copy or VA-API). HLS has no separate subtitle rendition: text is served separately and the image becomes part of the video.
 - **Preferences:** audio, subtitle and quality per user and movie; the player saves them and reloads at the current second when changed.
@@ -124,7 +124,7 @@ The player offers `auto`, 480p, 720p, 1080p (never above the original height or 
 
 ## Native apps (Android and Android TV)
 
-The apps declare in `caps` what their device plays: containers (`mkv`, `mp4`), video (`h264`, `h264hi10`, `hevc`, `hevc10`, `av1`, `vp9`), audio (`aac`, `mp3`, `ac3`, `eac3`, `dts`, `truehd`, `opus`, `flac`) and `mch` if it decodes multichannel AAC. With that, an MKV or MP4 whose video and chosen audio track are declared is served **directly**, untouched (AC-3, E-AC-3 or DTS arrive as they are for HDMI passthrough). Otherwise it goes through HLS: HEVC is copied without re-encoding and audio is converted to stereo AAC, unless the app runs on a TV and declares `mch` with a track of 6 or more channels, in which case it receives 5.1 AAC. The mobile app does not declare `mch`; the web does not send these tokens either, so both stay in stereo. `/play` returns `reason` (`container`, `video`, `audio` or `subtitle`) to explain why it was not direct; an image track forces HLS and that last reason.
+The apps declare in `caps` what their device plays: containers (`mkv`, `mp4`), video (`h264`, `h264hi10`, `hevc`, `hevc10`, `av1`, `vp9`), audio (`aac`, `mp3`, `ac3`, `eac3`, `dts`, `truehd`, `opus`, `flac`) and `mch` if it decodes multichannel AAC. With that, an MKV or MP4 whose video and chosen audio track are declared is served **directly**, untouched (AC-3, E-AC-3 or DTS arrive as they are for HDMI passthrough). Otherwise it goes through HLS: HEVC is copied without re-encoding and audio is converted to stereo AAC, unless the app runs on a TV and declares `mch` with a track of 6 or more channels, in which case it receives 5.1 AAC. The mobile app does not declare `mch`; the web does not send these tokens either, so both stay in stereo. If the app declares `ac3` or `eac3` and the chosen track uses that same codec, HLS copies the audio; DTS and TrueHD are never copied. `/play` returns `reason` (`container`, `video`, `audio` or `subtitle`) to explain why it was not direct; an image track forces HLS and that last reason.
 
 ## Web player
 
@@ -160,7 +160,7 @@ Re-encoding uses VA-API when available and libx264 when not. Burning an image su
 
 - Automatic quality selection.
 - 10-bit handling beyond the H.265 that the browser already supports through MSE.
-- Unsupported or passthrough audio without re-encoding.
+- DTS and TrueHD without re-encoding in HLS (today they are converted to AAC).
 - ABR and a master playlist with several qualities.
 - An explicit `transcode` API mode separate from `remux`.
 

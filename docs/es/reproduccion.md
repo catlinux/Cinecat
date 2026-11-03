@@ -116,7 +116,7 @@ El reproductor ofrece `auto`, 480p, 720p, 1080p (sin superar la altura original 
 ## Audio, subtítulos y calidad
 
 - **Audio directo:** se conserva el archivo original. Se sirve directo si la pista por defecto es AAC o MP3 (o no hay audio).
-- **Audio HLS:** se elige una pista por posición en la lista de `ffprobe` y se convierte a AAC estéreo de 160 kbps. Si la app es nativa, declara `mch` y la pista elegida tiene 6 o más canales, se conserva como AAC 5.1 de 384 kbps con `-channel_layout 5.1`. La preferencia del usuario y de la película se guarda en `item_preferences`.
+- **Audio HLS:** se elige una pista por posición en la lista de `ffprobe` y se convierte a AAC estéreo de 160 kbps. Si la app es nativa, declara `mch` y la pista elegida tiene 6 o más canales, se conserva como AAC 5.1 de 384 kbps con `-channel_layout 5.1`. La excepción es una app nativa que declara el mismo códec de la pista elegida y esta es AC-3 o E-AC-3: el HLS copia el audio tal cual, tanto si el vídeo se copia como si se recodifica. Nunca se copian DTS ni TrueHD, y la web siempre recibe AAC. La preferencia del usuario y de la película se guarda en `item_preferences`.
 - **Otra pista en MP4:** si en la web eliges una pista distinta de la que el navegador reproduciría sola en un MP4 compatible, el servidor lo sirve por HLS con esa pista (desde 0.48.3).
 - **Subtítulos:** los de texto incrustados y los archivos externos `.srt`, `.vtt` o `.ass` junto al vídeo, con sufijos de idioma y `forced`, se convierten a WebVTT. Las pistas de imagen incrustadas (PGS, VobSub y DVB) aparecen en `/play` con `burn_in: true` y `url` vacía; al elegirlas, el servidor pasa a HLS y las quema en el vídeo, así que hay que recodificar (nunca en copia ni con VA-API). El HLS no lleva una representación separada de subtítulos: el texto se sirve aparte y la imagen forma parte del vídeo.
 - **Preferencias:** audio, subtítulo y calidad por usuario y película; el reproductor las guarda y recarga en el segundo actual al cambiarlas.
@@ -124,7 +124,7 @@ El reproductor ofrece `auto`, 480p, 720p, 1080p (sin superar la altura original 
 
 ## Apps nativas (Android y Android TV)
 
-Las apps declaran en `caps` lo que su equipo reproduce: contenedores (`mkv`, `mp4`), vídeo (`h264`, `h264hi10`, `hevc`, `hevc10`, `av1`, `vp9`), audio (`aac`, `mp3`, `ac3`, `eac3`, `dts`, `truehd`, `opus`, `flac`) y `mch` si decodifica AAC multicanal. Con eso, un MKV o MP4 cuyo vídeo y pista de audio elegida estén declarados se sirve **en directo**, sin tocar el archivo (AC-3, E-AC-3 o DTS llegan tal cual para pasarlos por HDMI). Si no, va por HLS: el HEVC se copia sin recodificar y el audio se convierte a AAC estéreo, salvo que la app sea de TV y declare `mch` con una pista de 6 o más canales, en cuyo caso recibe AAC 5.1. El móvil no declara `mch`; la web tampoco envía esos tokens, así que sigue en estéreo. `/play` devuelve `reason` (`container`, `video`, `audio` o `subtitle`) para saber por qué no fue en directo; una pista de imagen fuerza HLS y ese último motivo.
+Las apps declaran en `caps` lo que su equipo reproduce: contenedores (`mkv`, `mp4`), vídeo (`h264`, `h264hi10`, `hevc`, `hevc10`, `av1`, `vp9`), audio (`aac`, `mp3`, `ac3`, `eac3`, `dts`, `truehd`, `opus`, `flac`) y `mch` si decodifica AAC multicanal. Con eso, un MKV o MP4 cuyo vídeo y pista de audio elegida estén declarados se sirve **en directo**, sin tocar el archivo (AC-3, E-AC-3 o DTS llegan tal cual para pasarlos por HDMI). Si no, va por HLS: el HEVC se copia sin recodificar y el audio se convierte a AAC estéreo, salvo que la app sea de TV y declare `mch` con una pista de 6 o más canales, en cuyo caso recibe AAC 5.1. El móvil no declara `mch`; la web tampoco envía esos tokens, así que sigue en estéreo. Si la app declara `ac3` o `eac3` y la pista elegida usa ese mismo códec, el HLS copia el audio; DTS y TrueHD nunca se copian. `/play` devuelve `reason` (`container`, `video`, `audio` o `subtitle`) para saber por qué no fue en directo; una pista de imagen fuerza HLS y ese último motivo.
 
 ## Reproductor web
 
@@ -160,7 +160,7 @@ La recodificación usa VA-API cuando está disponible y libx264 cuando no. Quema
 
 - Elección automática entre calidades.
 - Tratamiento de 10 bits más allá del H.265 que el navegador ya admita por MSE.
-- Audio no soportado o passthrough sin recodificar.
+- DTS y TrueHD sin recodificar en HLS (hoy se convierten a AAC).
 - ABR y playlist maestra con varias calidades.
 - Un modo de API `transcode` explícito, separado de `remux`.
 

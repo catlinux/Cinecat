@@ -127,6 +127,44 @@ func TestAudioChannelsFor(t *testing.T) {
 	}
 }
 
+func TestAudioCopyFor(t *testing.T) {
+	info := &FileInfo{Audio: []AudioStream{
+		{Codec: "aac", Channels: 2},
+		{Codec: "ac3", Channels: 6},
+		{Codec: "eac3", Channels: 8},
+		{Codec: "dts", Channels: 6},
+	}}
+	nativeAC3 := ParseCapabilities("mkv,h264,ac3")
+	nativeEAC3 := ParseCapabilities("mkv,h264,eac3")
+	nativeBoth := ParseCapabilities("mkv,h264,ac3,eac3")
+	browser := ParseCapabilities("h264,aac,ac3,eac3")
+	tests := []struct {
+		name  string
+		caps  Capabilities
+		info  *FileInfo
+		audio int
+		want  bool
+	}{
+		{name: "nativo ac3 con pista ac3", caps: nativeAC3, info: info, audio: 1, want: true},
+		{name: "nativo eac3 con pista eac3", caps: nativeEAC3, info: info, audio: 2, want: true},
+		{name: "nativo sin ac3", caps: ParseCapabilities("mkv,h264,aac"), info: info, audio: 1, want: false},
+		{name: "nativo ac3 con pista eac3", caps: nativeAC3, info: info, audio: 2, want: false},
+		{name: "pista dts nunca copia", caps: nativeBoth, info: info, audio: 3, want: false},
+		{name: "web nunca copia", caps: browser, info: info, audio: 1, want: false},
+		{name: "sin ficha", caps: nativeBoth, info: nil, audio: 1, want: false},
+		{name: "índice negativo usa la primera", caps: nativeAC3,
+			info:  &FileInfo{Audio: []AudioStream{{Codec: "ac3", Channels: 6}}},
+			audio: -1, want: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := AudioCopyFor(test.caps, test.info, test.audio); got != test.want {
+				t.Fatalf("AudioCopyFor = %v, se esperaba %v", got, test.want)
+			}
+		})
+	}
+}
+
 func TestDecisionNativa(t *testing.T) {
 	h264 := VideoStream{Codec: "h264", Profile: "High", PixelFormat: "yuv420p", BitDepth: 8}
 	h264Hi10 := VideoStream{Codec: "h264", Profile: "High 10", PixelFormat: "yuv420p10le", BitDepth: 10}

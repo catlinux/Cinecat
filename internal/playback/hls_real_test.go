@@ -97,6 +97,24 @@ func TestAudio51Real(t *testing.T) {
 	}
 }
 
+func TestAudioCopyAC3Real(t *testing.T) {
+	requireVideoTools(t)
+	source := generate51(t, "audio-copy.mkv", "ac3")
+
+	info, streams, _ := firstSegmentStreams(t, source, "mkv,mp4,h264,ac3", 0)
+	if len(info.Audio) == 0 || info.Audio[0].Channels != 6 {
+		t.Fatalf("el origen debería tener AC-3 de 6 canales: %+v", info.Audio)
+	}
+	if !strings.Contains(streams, "ac3,audio,6") {
+		t.Fatalf("el HLS debía conservar AC-3 de 6 canales, hay: %s", streams)
+	}
+
+	_, streams, _ = firstSegmentStreams(t, source, "mkv,mp4,h264,aac", 0)
+	if !strings.Contains(streams, "aac,audio,2") {
+		t.Fatalf("sin ac3 debía recodificar a AAC estéreo, hay: %s", streams)
+	}
+}
+
 func TestAudio51LayoutLateralReal(t *testing.T) {
 	requireVideoTools(t)
 	target := filepath.Join(t.TempDir(), "side.mkv")
