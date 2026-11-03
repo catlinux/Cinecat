@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -77,6 +78,7 @@ fun SeriesDetailScreen(
     val state by viewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val actionError = stringResource(R.string.detail_action_error)
+    val autoplayError = stringResource(R.string.autoplay_save_error)
     val backFocusRequester = remember { FocusRequester() }
     val tablet = useNavigationRail(LocalConfiguration.current.screenWidthDp)
     val horizontalPadding = if (tablet) 28.dp else 16.dp
@@ -84,8 +86,10 @@ fun SeriesDetailScreen(
     ReloadOnResume(viewModel::load)
 
     LaunchedEffect(viewModel) {
-        viewModel.events.collect {
-            snackbarHostState.showSnackbar(actionError)
+        viewModel.events.collect { action ->
+            snackbarHostState.showSnackbar(
+                if (action == DetailAction.Autoplay) autoplayError else actionError
+            )
         }
     }
 
@@ -107,6 +111,7 @@ fun SeriesDetailScreen(
                     onToggleFavorite = viewModel::toggleFavorite,
                     onToggleWatchlist = viewModel::toggleWatchlist,
                     onToggleSeriesWatched = viewModel::toggleSeriesWatched,
+                    onToggleAutoplay = viewModel::toggleSeriesAutoplay,
                     onToggleSeasonWatched = viewModel::toggleSeasonWatched,
                     onToggleEpisodeWatched = viewModel::toggleEpisodeWatched,
                     onPlayEpisode = onPlayEpisode,
@@ -124,6 +129,7 @@ fun SeriesDetailScreen(
                     onToggleFavorite = viewModel::toggleFavorite,
                     onToggleWatchlist = viewModel::toggleWatchlist,
                     onToggleSeriesWatched = viewModel::toggleSeriesWatched,
+                    onToggleAutoplay = viewModel::toggleSeriesAutoplay,
                     onToggleSeasonWatched = viewModel::toggleSeasonWatched,
                     onToggleEpisodeWatched = viewModel::toggleEpisodeWatched,
                     onPlayEpisode = onPlayEpisode,
@@ -162,6 +168,7 @@ private fun SeriesDetailContent(
     onToggleFavorite: () -> Unit,
     onToggleWatchlist: () -> Unit,
     onToggleSeriesWatched: () -> Unit,
+    onToggleAutoplay: () -> Unit,
     onToggleSeasonWatched: () -> Unit,
     onToggleEpisodeWatched: (Long) -> Unit,
     onPlayEpisode: (Long, Double) -> Unit,
@@ -252,7 +259,8 @@ private fun SeriesDetailContent(
                 initialFocusRequester = if (hasNextEpisode) null else initialFocusRequester,
                 onToggleFavorite = onToggleFavorite,
                 onToggleWatchlist = onToggleWatchlist,
-                onToggleSeriesWatched = onToggleSeriesWatched
+                onToggleSeriesWatched = onToggleSeriesWatched,
+                onToggleAutoplay = onToggleAutoplay
             )
         }
         item(key = "synopsis") {
@@ -480,52 +488,92 @@ private fun SeriesActions(
     initialFocusRequester: FocusRequester?,
     onToggleFavorite: () -> Unit,
     onToggleWatchlist: () -> Unit,
-    onToggleSeriesWatched: () -> Unit
+    onToggleSeriesWatched: () -> Unit,
+    onToggleAutoplay: () -> Unit
 ) {
-    Row(
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(start = horizontalPadding, end = horizontalPadding, top = 20.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            DetailActionChip(
+                label = stringResource(R.string.favorite),
+                active = state.series.favorite,
+                modifier = initialFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier,
+                icon = {
+                    Icon(
+                        imageVector = if (state.series.favorite) {
+                            Icons.Filled.Favorite
+                        } else {
+                            Icons.Filled.FavoriteBorder
+                        },
+                        contentDescription = null
+                    )
+                },
+                onClick = onToggleFavorite
+            )
+            DetailActionChip(
+                label = stringResource(R.string.watchlist),
+                active = state.series.watchlist,
+                icon = {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_watchlist),
+                        contentDescription = null
+                    )
+                },
+                onClick = onToggleWatchlist
+            )
+            DetailActionChip(
+                label = stringResource(R.string.series_watched),
+                active = state.seriesWatched,
+                icon = {
+                    Icon(
+                        imageVector = Icons.Filled.CheckCircle,
+                        contentDescription = null
+                    )
+                },
+                onClick = onToggleSeriesWatched
+            )
+        }
+        SeriesAutoplayControl(
+            enabled = state.series.autoplayNext,
+            horizontalPadding = horizontalPadding,
+            onToggle = onToggleAutoplay
+        )
+    }
+}
+
+@Composable
+internal fun SeriesAutoplayControl(
+    enabled: Boolean,
+    horizontalPadding: androidx.compose.ui.unit.Dp,
+    onToggle: () -> Unit
+) {
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .padding(start = horizontalPadding, end = horizontalPadding, top = 20.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(horizontal = horizontalPadding, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        DetailActionChip(
-            label = stringResource(R.string.favorite),
-            active = state.series.favorite,
-            modifier = initialFocusRequester?.let { Modifier.focusRequester(it) } ?: Modifier,
-            icon = {
-                Icon(
-                    imageVector = if (state.series.favorite) {
-                        Icons.Filled.Favorite
-                    } else {
-                        Icons.Filled.FavoriteBorder
-                    },
-                    contentDescription = null
-                )
-            },
-            onClick = onToggleFavorite
+        Text(
+            text = stringResource(R.string.autoplay_next_title),
+            style = MaterialTheme.typography.titleSmall
         )
         DetailActionChip(
-            label = stringResource(R.string.watchlist),
-            active = state.series.watchlist,
+            label = stringResource(
+                if (enabled) R.string.autoplay_on else R.string.autoplay_off
+            ),
+            active = enabled,
             icon = {
                 Icon(
-                    painter = painterResource(R.drawable.ic_watchlist),
+                    imageVector = Icons.Filled.PlayArrow,
                     contentDescription = null
                 )
             },
-            onClick = onToggleWatchlist
-        )
-        DetailActionChip(
-            label = stringResource(R.string.series_watched),
-            active = state.seriesWatched,
-            icon = {
-                Icon(
-                    imageVector = Icons.Filled.CheckCircle,
-                    contentDescription = null
-                )
-            },
-            onClick = onToggleSeriesWatched
+            onClick = onToggle
         )
     }
 }

@@ -103,7 +103,8 @@ internal fun sampleSeasonDetail(
 
 internal fun sampleSeriesDetail(
     seasons: List<io.github.catlinux.cinecat.core.api.Season>,
-    nextEpisode: MediaItem? = null
+    nextEpisode: MediaItem? = null,
+    autoplayNext: Boolean = true
 ): io.github.catlinux.cinecat.core.api.SeriesDetail =
     io.github.catlinux.cinecat.core.api.SeriesDetail(
         id = 3,
@@ -127,5 +128,6 @@ internal fun sampleSeriesDetail(
         favorite = false,
         watchlist = false,
         seasons = seasons,
-        nextEpisode = nextEpisode
+        nextEpisode = nextEpisode,
+        autoplayNext = autoplayNext
     )

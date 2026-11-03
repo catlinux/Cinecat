@@ -439,7 +439,12 @@ fun MainShell(
                             viewModel = playerViewModel,
                             client = container.client,
                             isTelevision = isTelevision,
-                            onBack = { navController.popBackStack() }
+                            onBack = { navController.popBackStack() },
+                            onPlayNext = { nextId ->
+                                navController.navigate(Player(nextId)) {
+                                    popUpTo<Player> { inclusive = true }
+                                }
+                            }
                         )
                     }
                     composable<CollectionDetail> {

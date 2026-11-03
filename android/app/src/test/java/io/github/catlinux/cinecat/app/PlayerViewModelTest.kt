@@ -3,6 +3,7 @@ package io.github.catlinux.cinecat.app
 import io.github.catlinux.cinecat.core.api.ApiResult
 import io.github.catlinux.cinecat.core.api.AudioTrack
 import io.github.catlinux.cinecat.core.api.ItemPreferences
+import io.github.catlinux.cinecat.core.api.NextEpisode
 import io.github.catlinux.cinecat.core.api.PlayResponse
 import io.github.catlinux.cinecat.core.api.PlaySegment
 import io.github.catlinux.cinecat.core.api.PreferencesPatch
@@ -273,6 +274,40 @@ class PlayerViewModelTest {
 
         val ready = viewModel.state.value as PlayerUiState.Ready
         assertTrue(ready.segments.isEmpty())
+    }
+
+    @Test
+    fun keepsAutoplayAndNextEpisodeFromPlayResponse() = runTest {
+        val next = NextEpisode(id = 9, title = "Siguiente", season = 2, episode = 4)
+        val viewModel = viewModel(
+            play = {
+                ApiResult.Success(
+                    PlayResponse(
+                        url = "/stream",
+                        mode = "direct",
+                        autoplayNext = false,
+                        nextEpisode = next
+                    )
+                )
+            }
+        )
+        advanceUntilIdle()
+
+        val ready = viewModel.state.value as PlayerUiState.Ready
+        assertFalse(ready.autoplayNext)
+        assertEquals(next, ready.nextEpisode)
+    }
+
+    @Test
+    fun playbackWithoutNewFieldsDefaultsToAutoplayAndNoNextEpisode() = runTest {
+        val viewModel = viewModel(
+            play = { ApiResult.Success(PlayResponse(url = "/stream", mode = "direct")) }
+        )
+        advanceUntilIdle()
+
+        val ready = viewModel.state.value as PlayerUiState.Ready
+        assertTrue(ready.autoplayNext)
+        assertNull(ready.nextEpisode)
     }
 
     @Test

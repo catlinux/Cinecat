@@ -102,7 +102,9 @@ class LibraryApiTest {
         server.enqueue(jsonResponse(seriesDetailJson()))
         val detail = api().seriesDetail(3)
         assertTrue(detail is ApiResult.Success)
-        assertEquals(1, (detail as ApiResult.Success).value.seasons.first().season)
+        val detailValue = (detail as ApiResult.Success).value
+        assertEquals(1, detailValue.seasons.first().season)
+        assertFalse(detailValue.autoplayNext)
         assertEquals("/api/v1/series/3", server.takeRequest().path)
 
         server.enqueue(jsonResponse(seasonDetailJson()))
@@ -173,6 +175,29 @@ class LibraryApiTest {
         assertEquals(3, seriesLetters[0].offset)
         assertEquals(4, seriesLetters[0].count)
         assertTrue(server.takeRequest().path.orEmpty().contains("letters=true"))
+    }
+
+    @Test
+    fun seriesAutoplayDefaultsAndCanBeReadAndSaved() = runTest {
+        server.enqueue(jsonResponse("""{"id":3,"title":"Serie","seasons":[],"next_episode":null}"""))
+        val defaults = api().seriesDetail(3) as ApiResult.Success
+        assertTrue(defaults.value.autoplayNext)
+        assertEquals("/api/v1/series/3", server.takeRequest().path)
+
+        server.enqueue(jsonResponse("""{"enabled":false}"""))
+        val read = api().seriesAutoplay(3)
+        assertTrue(read is ApiResult.Success)
+        assertFalse((read as ApiResult.Success).value.enabled)
+        assertEquals("/api/v1/series/3/autoplay", server.takeRequest().path)
+
+        server.enqueue(jsonResponse("""{"enabled":true}"""))
+        val saved = api().setSeriesAutoplay(3, enabled = true)
+        assertTrue(saved is ApiResult.Success)
+        assertTrue((saved as ApiResult.Success).value.enabled)
+        val request = server.takeRequest()
+        assertEquals("PUT", request.method)
+        assertEquals("/api/v1/series/3/autoplay", request.path)
+        assertTrue(request.body.readUtf8().contains("\"enabled\":true"))
     }
 
     @Test
@@ -435,6 +460,7 @@ class LibraryApiTest {
           "watchlist":false,
           "seasons":[${seasonJson()}],
           "next_episode":null,
+          "autoplay_next":false,
           "unknown":"ignored"
         }""".trimIndent()
 

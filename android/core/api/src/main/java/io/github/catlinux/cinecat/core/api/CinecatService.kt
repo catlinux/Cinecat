@@ -110,6 +110,15 @@ interface CinecatService {
         @Path("n") season: Int
     ): SeasonDetail
 
+    @GET("api/v1/series/{id}/autoplay")
+    suspend fun seriesAutoplay(@Path("id") id: Long): SeriesAutoplayResponse
+
+    @PUT("api/v1/series/{id}/autoplay")
+    suspend fun setSeriesAutoplay(
+        @Path("id") id: Long,
+        @Body request: SeriesAutoplayRequest
+    ): SeriesAutoplayResponse
+
     @GET("api/v1/series/{id}/similar")
     suspend fun seriesSimilar(
         @Path("id") id: Long,

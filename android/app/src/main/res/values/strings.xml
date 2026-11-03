@@ -246,4 +246,13 @@
         <item quantity="one">%1$d biblioteca</item>
         <item quantity="other">%1$d bibliotecas</item>
     </plurals>
+    <string name="autoplay_next_title">Reproducir el siguiente episodio automáticamente</string>
+    <string name="autoplay_on">Activado</string>
+    <string name="autoplay_off">Desactivado</string>
+    <string name="autoplay_save_error">No se pudo guardar</string>
+    <string name="player_next_episode">Siguiente episodio</string>
+    <string name="player_next_episode_title">Siguiente episodio · T%1$dE%2$d · %3$s</string>
+    <string name="player_next_episode_countdown">Se reproduce en %1$d s</string>
+    <string name="player_play_now">Reproducir ya</string>
+    <string name="cancel">Cancelar</string>
 </resources>

@@ -7,6 +7,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -42,6 +43,8 @@ class LocalPlaybackViewModelTest {
         assertEquals(33.0, ready.initialPositionSeconds, 0.0)
         assertFalse(ready.isHls)
         assertTrue(ready.subtitles.isEmpty())
+        assertNull(ready.nextEpisode)
+        assertTrue(ready.autoplayNext)
         assertEquals(0, playbackCalls)
 
         viewModel.saveProgress(40.0, 100.0)

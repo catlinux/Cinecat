@@ -156,6 +156,47 @@ class SeriesDetailViewModelTest {
     }
 
     @Test
+    fun autoplayComesFromSeriesDetailAndCanBeToggled() = runTest {
+        val series = sampleSeriesDetail(
+            seasons = listOf(sampleSeason(1)),
+            autoplayNext = false
+        )
+        val harness = createHarness(
+            series = series,
+            seasonDetails = mapOf(1 to sampleSeasonDetail(1, emptyList())),
+            setSeriesAutoplay = { ApiResult.Success(Unit) }
+        )
+        advanceUntilIdle()
+
+        assertFalse((harness.state.value as SeriesDetailUiState.Ready).series.autoplayNext)
+
+        harness.toggleAutoplay()
+        assertTrue((harness.state.value as SeriesDetailUiState.Ready).series.autoplayNext)
+        advanceUntilIdle()
+
+        assertEquals(1, harness.setAutoplayCalls)
+        assertTrue((harness.state.value as SeriesDetailUiState.Ready).series.autoplayNext)
+    }
+
+    @Test
+    fun autoplayToggleRollsBackAndNotifiesOnFailure() = runTest {
+        val series = sampleSeriesDetail(seasons = listOf(sampleSeason(1)))
+        val harness = createHarness(
+            series = series,
+            seasonDetails = mapOf(1 to sampleSeasonDetail(1, emptyList())),
+            setSeriesAutoplay = { ApiResult.NetworkError(IOException("sin red")) }
+        )
+        advanceUntilIdle()
+
+        harness.toggleAutoplay()
+        advanceUntilIdle()
+
+        assertTrue((harness.state.value as SeriesDetailUiState.Ready).series.autoplayNext)
+        assertEquals(1, harness.setAutoplayCalls)
+        assertEquals(DetailAction.Autoplay, harness.events.first())
+    }
+
+    @Test
     fun seasonWatchedCallsEndpointAndReloadsSeason() = runTest {
         val series = sampleSeriesDetail(seasons = listOf(sampleSeason(1)))
         val harness = createHarness(
@@ -220,6 +261,7 @@ class SeriesDetailViewModelTest {
                 ?: ApiResult.NetworkError(IOException("sin temporada"))
         },
         setSeriesList: suspend (UserList) -> ApiResult<Unit> = { ApiResult.Success(Unit) },
+        setSeriesAutoplay: suspend (Boolean) -> ApiResult<Unit> = { ApiResult.Success(Unit) },
         setSeasonWatched: suspend (Int) -> ApiResult<Unit> = { ApiResult.Success(Unit) },
         setEpisodeWatched: suspend (Long) -> ApiResult<Unit> = { ApiResult.Success(Unit) },
         loadSimilar: suspend () -> ApiResult<SimilarSeriesResponse> = {
@@ -252,7 +294,11 @@ class SeriesDetailViewModelTest {
                 setEpisodeWatched(id)
             },
             clearEpisodeWatched = { ApiResult.Success(Unit) },
-            scope = this
+            scope = this,
+            setSeriesAutoplay = { enabled ->
+                counters.setAutoplayCalls++
+                setSeriesAutoplay(enabled)
+            }
         )
         return TestHarness(viewModel, counters)
     }
@@ -260,6 +306,7 @@ class SeriesDetailViewModelTest {
     private class Counters {
         val seasonRequests = mutableListOf<Int>()
         var favoriteSetCalls = 0
+        var setAutoplayCalls = 0
         var setSeasonWatchedCalls = 0
         var setEpisodeWatchedCalls = 0
     }
@@ -272,11 +319,13 @@ class SeriesDetailViewModelTest {
         val events get() = viewModel.events
         val seasonRequests get() = counters.seasonRequests
         val favoriteSetCalls get() = counters.favoriteSetCalls
+        val setAutoplayCalls get() = counters.setAutoplayCalls
         val setSeasonWatchedCalls get() = counters.setSeasonWatchedCalls
         val setEpisodeWatchedCalls get() = counters.setEpisodeWatchedCalls
 
         fun selectSeason(season: Int) = viewModel.selectSeason(season)
         fun toggleFavorite() = viewModel.toggleFavorite()
+        fun toggleAutoplay() = viewModel.toggleSeriesAutoplay()
         fun toggleSeasonWatched() = viewModel.toggleSeasonWatched()
         fun toggleEpisodeWatched(id: Long) = viewModel.toggleEpisodeWatched(id)
     }

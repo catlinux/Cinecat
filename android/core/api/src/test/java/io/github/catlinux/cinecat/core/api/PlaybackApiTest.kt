@@ -5,6 +5,7 @@ import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -44,6 +45,31 @@ class PlaybackApiTest {
         assertEquals("audio", remuxValue.reason)
         assertEquals("e0", remuxValue.selectedSubtitle)
         assertEquals("/api/v1/items/7/play", server.takeRequest().path)
+    }
+
+    @Test
+    fun parsesAutoplayAndNextEpisodeWithDefaults() = runTest {
+        server.enqueue(
+            jsonResponse(
+                """{
+                  "url":"/stream",
+                  "mode":"direct",
+                  "autoplay_next":false,
+                  "next_episode":{"id":9,"title":"El siguiente","season":2,"episode":3}
+                }"""
+            )
+        )
+        val explicit = api().play(7) as ApiResult.Success
+        assertFalse(explicit.value.autoplayNext)
+        assertEquals(9L, explicit.value.nextEpisode?.id)
+        assertEquals("El siguiente", explicit.value.nextEpisode?.title)
+        assertEquals(2, explicit.value.nextEpisode?.season)
+        assertEquals(3, explicit.value.nextEpisode?.episode)
+
+        server.enqueue(jsonResponse(directJson()))
+        val omitted = api().play(7) as ApiResult.Success
+        assertTrue(omitted.value.autoplayNext)
+        assertNull(omitted.value.nextEpisode)
     }
 
     @Test

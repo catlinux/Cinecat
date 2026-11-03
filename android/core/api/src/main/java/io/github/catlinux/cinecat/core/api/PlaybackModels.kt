@@ -15,7 +15,17 @@ data class PlayResponse(
     @SerialName("selected_quality") val selectedQuality: String = "",
     val subtitles: List<SubtitleOption> = emptyList(),
     @SerialName("selected_subtitle") val selectedSubtitle: String? = null,
-    val segments: List<PlaySegment> = emptyList()
+    val segments: List<PlaySegment> = emptyList(),
+    @SerialName("autoplay_next") val autoplayNext: Boolean = true,
+    @SerialName("next_episode") val nextEpisode: NextEpisode? = null
+)
+
+@Serializable
+data class NextEpisode(
+    val id: Long,
+    val title: String = "",
+    val season: Int = 0,
+    val episode: Int = 0
 )
 
 @Serializable

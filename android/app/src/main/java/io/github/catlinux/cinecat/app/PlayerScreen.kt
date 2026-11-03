@@ -35,6 +35,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -70,6 +71,7 @@ import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
+import io.github.catlinux.cinecat.core.api.NextEpisode
 import java.util.Locale
 import kotlin.math.roundToLong
 import kotlinx.coroutines.delay
@@ -81,7 +83,8 @@ fun PlayerScreen(
     viewModel: PlayerViewModel,
     client: OkHttpClient,
     isTelevision: Boolean,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onPlayNext: (Long) -> Unit
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
@@ -113,12 +116,21 @@ fun PlayerScreen(
     var playerView by remember { mutableStateOf<PlayerView?>(null) }
     var positionSeconds by remember(exoPlayer) { mutableStateOf(0.0) }
     var segmentFocused by remember { mutableStateOf(false) }
+    var countdownSeconds by remember(exoPlayer) { mutableStateOf<Int?>(null) }
+    val latestState by rememberUpdatedState(state)
+    val latestInPip by rememberUpdatedState(inPip)
     val rootFocus = remember { FocusRequester() }
     val segmentFocus = remember { FocusRequester() }
+    val countdownFocus = remember { FocusRequester() }
     val segmentButton = (state as? PlayerUiState.Ready)?.let { ready ->
-        activeSegmentButton(positionSeconds, ready.segments)
+        activeSegmentButton(
+            positionSeconds = positionSeconds,
+            segments = ready.segments,
+            hasNextEpisode = ready.nextEpisode != null
+        )
     }
-    val showSegmentButton = !inPip && !showTracks && segmentButton != null
+    val showSegmentButton = !inPip && !showTracks && countdownSeconds == null &&
+        segmentButton != null
 
     fun saveCurrentProgress() {
         val duration = exoPlayer.duration
@@ -128,6 +140,12 @@ fun PlayerScreen(
                 duration = duration / 1000.0
             )
         }
+    }
+
+    fun playNextNow() {
+        val next = (state as? PlayerUiState.Ready)?.nextEpisode ?: return
+        countdownSeconds = null
+        onPlayNext(next.id)
     }
 
     val pipEligible = isPipEligible(
@@ -179,6 +197,24 @@ fun PlayerScreen(
                 pictureInPicture.aspectRatio = pipAspectRatio(videoSize.width, videoSize.height)
             }
 
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                if (playbackState != Player.STATE_ENDED || latestInPip ||
+                    countdownSeconds != null
+                ) {
+                    return
+                }
+                val ready = latestState as? PlayerUiState.Ready ?: return
+                if (shouldStartNextEpisodeCountdown(
+                        autoplayNext = ready.autoplayNext,
+                        nextEpisode = ready.nextEpisode,
+                        playbackEnded = true
+                    )
+                ) {
+                    showTracks = false
+                    countdownSeconds = 8
+                }
+            }
+
             override fun onPlayerError(error: PlaybackException) {
                 viewModel.onPlaybackError(exoPlayer.currentPosition / 1000.0)
             }
@@ -193,13 +229,18 @@ fun PlayerScreen(
 
     PlayerFullscreenEffect(isTelevision)
     BackHandler {
-        saveCurrentProgress()
-        onBack()
+        if (countdownSeconds != null) {
+            countdownSeconds = null
+        } else {
+            saveCurrentProgress()
+            onBack()
+        }
     }
 
     LaunchedEffect(exoPlayer, state) {
         when (val current = state) {
             is PlayerUiState.Ready -> {
+                countdownSeconds = null
                 exoPlayer.setMediaItem(current.toMediaItem())
                 exoPlayer.seekTo(
                     (current.initialPositionSeconds * 1000.0).roundToLong()
@@ -235,12 +276,36 @@ fun PlayerScreen(
         showSegmentButton,
         showTracks,
         inPip,
-        isTelevision
+        isTelevision,
+        countdownSeconds
     ) {
-        val rootCanTakeFocus = !showTracks && !inPip &&
+        val rootCanTakeFocus = !showTracks && !inPip && countdownSeconds == null &&
             !(isTelevision && showSegmentButton)
         if (state is PlayerUiState.Ready && rootCanTakeFocus) {
             runCatching { rootFocus.requestFocus() }
+        }
+    }
+
+    LaunchedEffect(countdownSeconds) {
+        val remaining = countdownSeconds ?: return@LaunchedEffect
+        if (remaining <= 0) {
+            countdownSeconds = null
+            val next = (latestState as? PlayerUiState.Ready)?.nextEpisode
+            if (next != null) {
+                onPlayNext(next.id)
+            }
+        } else {
+            delay(1_000)
+            if (countdownSeconds == remaining) {
+                countdownSeconds = remaining - 1
+            }
+        }
+    }
+
+    LaunchedEffect(isTelevision, countdownSeconds != null) {
+        if (isTelevision && countdownSeconds != null) {
+            withFrameNanos { }
+            runCatching { countdownFocus.requestFocus() }
         }
     }
 
@@ -265,7 +330,7 @@ fun PlayerScreen(
             runCatching { segmentFocus.requestFocus() }
         } else {
             segmentFocused = false
-            if (!inPip && !showTracks) {
+            if (!inPip && !showTracks && countdownSeconds == null) {
                 withFrameNanos { }
                 runCatching { rootFocus.requestFocus() }
             }
@@ -292,7 +357,9 @@ fun PlayerScreen(
             .focusRequester(rootFocus)
             .focusable()
             .onPreviewKeyEvent { event ->
-                if (inPip || state !is PlayerUiState.Ready || showTracks) {
+                if (inPip || state !is PlayerUiState.Ready || showTracks ||
+                    countdownSeconds != null
+                ) {
                     return@onPreviewKeyEvent false
                 }
                 // Con el botón de segmento enfocado, la tecla central debe
@@ -370,13 +437,29 @@ fun PlayerScreen(
                     keepAwake = keepAwake,
                     onCreated = { playerView = it }
                 )
+                val countdown = countdownSeconds
+                val nextEpisode = current.nextEpisode
+                if (!inPip && countdown != null && nextEpisode != null) {
+                    NextEpisodePanel(
+                        nextEpisode = nextEpisode,
+                        seconds = countdown,
+                        focusRequester = countdownFocus,
+                        onPlayNow = ::playNextNow,
+                        onCancel = { countdownSeconds = null },
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
                 val button = segmentButton
                 if (showSegmentButton && button != null) {
                     Button(
                         onClick = {
-                            positionSeconds = button.endSeconds
-                            exoPlayer.seekTo((button.endSeconds * 1000.0).roundToLong())
-                            playerView?.showController()
+                            if (button.action == SegmentAction.Next) {
+                                current.nextEpisode?.let { onPlayNext(it.id) }
+                            } else {
+                                positionSeconds = button.endSeconds
+                                exoPlayer.seekTo((button.endSeconds * 1000.0).roundToLong())
+                                playerView?.showController()
+                            }
                         },
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
@@ -474,6 +557,64 @@ private fun PlayerViewSurface(
         },
         modifier = Modifier.fillMaxSize()
     )
+}
+
+@Composable
+private fun NextEpisodePanel(
+    nextEpisode: NextEpisode,
+    seconds: Int,
+    focusRequester: FocusRequester,
+    onPlayNow: () -> Unit,
+    onCancel: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .padding(24.dp)
+            .background(
+                color = Color.Black.copy(alpha = 0.84f),
+                shape = RoundedCornerShape(16.dp)
+            )
+            .padding(20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            text = stringResource(
+                R.string.player_next_episode_title,
+                nextEpisode.season,
+                nextEpisode.episode,
+                nextEpisode.title
+            ),
+            style = MaterialTheme.typography.titleLarge,
+            color = Color.White
+        )
+        Text(
+            text = stringResource(
+                R.string.player_next_episode_countdown,
+                seconds
+            ),
+            style = MaterialTheme.typography.bodyLarge,
+            color = Color.White
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Button(
+                onClick = onPlayNow,
+                modifier = Modifier
+                    .focusRequester(focusRequester)
+                    .focusRing(RoundedCornerShape(50))
+            ) {
+                Text(stringResource(R.string.player_play_now))
+            }
+            OutlinedButton(
+                onClick = onCancel,
+                modifier = Modifier.focusRing(RoundedCornerShape(50)),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+            ) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    }
 }
 
 @SuppressLint("UnsafeOptInUsageError")

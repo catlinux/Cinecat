@@ -69,7 +69,10 @@ class SeriesDetailViewModel(
     private val clearSeasonWatched: suspend (Int) -> ApiResult<Unit>,
     private val setEpisodeWatched: suspend (Long) -> ApiResult<Unit>,
     private val clearEpisodeWatched: suspend (Long) -> ApiResult<Unit>,
-    private val scope: CoroutineScope
+    private val scope: CoroutineScope,
+    private val setSeriesAutoplay: suspend (Boolean) -> ApiResult<Unit> = {
+        ApiResult.Success(Unit)
+    }
 ) : ViewModel() {
     constructor(id: Long, repository: LibraryRepository, scope: CoroutineScope) : this(
         id = id,
@@ -84,7 +87,14 @@ class SeriesDetailViewModel(
         clearSeasonWatched = { season -> repository.clearSeasonWatched(id, season) },
         setEpisodeWatched = { itemId -> repository.setWatched(itemId) },
         clearEpisodeWatched = { itemId -> repository.clearWatched(itemId) },
-        scope = scope
+        scope = scope,
+        setSeriesAutoplay = { enabled ->
+            when (val result = repository.setSeriesAutoplay(id, enabled)) {
+                is ApiResult.Success -> ApiResult.Success(Unit)
+                is ApiResult.HttpError -> result
+                is ApiResult.NetworkError -> result
+            }
+        }
     )
 
     private val _state = MutableStateFlow<SeriesDetailUiState>(SeriesDetailUiState.Loading)
@@ -100,6 +110,7 @@ class SeriesDetailViewModel(
     private var watchlistJob: Job? = null
     private var seriesWatchedJob: Job? = null
     private var seasonWatchedJob: Job? = null
+    private var autoplayJob: Job? = null
     private val episodeJobs = mutableMapOf<Long, Job>()
 
     init {
@@ -229,6 +240,33 @@ class SeriesDetailViewModel(
                         }
                     }
                     eventChannel.trySend(DetailAction.Watchlist)
+                }
+            }
+        }
+    }
+
+    fun toggleSeriesAutoplay() {
+        val ready = _state.value as? SeriesDetailUiState.Ready ?: return
+        if (autoplayJob?.isActive == true) {
+            return
+        }
+        val previous = ready.series.autoplayNext
+        val next = !previous
+        _state.value = ready.copy(series = ready.series.copy(autoplayNext = next))
+        autoplayJob = scope.launch {
+            when (val result = safe { setSeriesAutoplay(next) }) {
+                is ApiResult.Success -> Unit
+                is ApiResult.HttpError, is ApiResult.NetworkError -> {
+                    _state.update { current ->
+                        if (current is SeriesDetailUiState.Ready) {
+                            current.copy(
+                                series = current.series.copy(autoplayNext = previous)
+                            )
+                        } else {
+                            current
+                        }
+                    }
+                    eventChannel.trySend(DetailAction.Autoplay)
                 }
             }
         }
@@ -504,6 +542,7 @@ class SeriesDetailViewModel(
         watchlistJob?.cancel()
         seriesWatchedJob?.cancel()
         seasonWatchedJob?.cancel()
+        autoplayJob?.cancel()
         episodeJobs.values.forEach { it.cancel() }
     }
 }

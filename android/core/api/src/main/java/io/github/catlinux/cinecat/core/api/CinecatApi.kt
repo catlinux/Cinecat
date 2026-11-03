@@ -206,6 +206,14 @@ class CinecatApi(
         service.season(id, n)
     }
 
+    suspend fun seriesAutoplay(id: Long): ApiResult<SeriesAutoplayResponse> = call {
+        service.seriesAutoplay(id)
+    }
+
+    suspend fun setSeriesAutoplay(id: Long, enabled: Boolean): ApiResult<SeriesAutoplayResponse> = call {
+        service.setSeriesAutoplay(id, SeriesAutoplayRequest(enabled))
+    }
+
     suspend fun seriesSimilar(
         id: Long,
         limit: Int? = null

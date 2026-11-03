@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.media3.common.util.Util
 import io.github.catlinux.cinecat.core.api.ApiResult
 import io.github.catlinux.cinecat.core.api.ItemPreferences
+import io.github.catlinux.cinecat.core.api.NextEpisode
 import io.github.catlinux.cinecat.core.api.PlayResponse
 import io.github.catlinux.cinecat.core.api.PlaySegment
 import io.github.catlinux.cinecat.core.api.PreferencesPatch
@@ -55,7 +56,9 @@ sealed interface PlayerUiState {
         val selectedSubtitle: String? = null,
         val selectedQuality: String = "",
         val burnSubtitles: List<PlayerBurnSubtitle> = emptyList(),
-        val segments: List<PlaySegment> = emptyList()
+        val segments: List<PlaySegment> = emptyList(),
+        val autoplayNext: Boolean = true,
+        val nextEpisode: NextEpisode? = null
     ) : PlayerUiState
 }
 
@@ -394,7 +397,9 @@ class PlayerViewModel(
             selectedSubtitle = resolved.subtitleId,
             selectedQuality = resolved.quality,
             burnSubtitles = burnSubtitles,
-            segments = response.segments
+            segments = response.segments,
+            autoplayNext = response.autoplayNext,
+            nextEpisode = response.nextEpisode
         )
     }
 

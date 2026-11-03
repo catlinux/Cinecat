@@ -23,7 +23,8 @@ import kotlinx.coroutines.launch
 enum class DetailAction {
     Favorite,
     Watchlist,
-    Watched
+    Watched,
+    Autoplay
 }
 
 sealed interface MovieDetailUiState {

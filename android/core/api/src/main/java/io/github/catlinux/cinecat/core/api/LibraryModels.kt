@@ -150,8 +150,15 @@ data class SeriesDetail(
     val favorite: Boolean = false,
     val watchlist: Boolean = false,
     val seasons: List<Season> = emptyList(),
-    @SerialName("next_episode") val nextEpisode: MediaItem? = null
+    @SerialName("next_episode") val nextEpisode: MediaItem? = null,
+    @SerialName("autoplay_next") val autoplayNext: Boolean = true
 )
+
+@Serializable
+data class SeriesAutoplayRequest(val enabled: Boolean)
+
+@Serializable
+data class SeriesAutoplayResponse(val enabled: Boolean = true)
 
 @Serializable
 data class Season(

@@ -16,6 +16,7 @@ import io.github.catlinux.cinecat.core.api.PublicSettings
 import io.github.catlinux.cinecat.core.api.SeasonDetail
 import io.github.catlinux.cinecat.core.api.SectionsResponse
 import io.github.catlinux.cinecat.core.api.Series as ApiSeries
+import io.github.catlinux.cinecat.core.api.SeriesAutoplayResponse
 import io.github.catlinux.cinecat.core.api.SeriesDetail
 import io.github.catlinux.cinecat.core.api.SeriesResponse
 import io.github.catlinux.cinecat.core.api.SimilarItemsResponse
@@ -144,6 +145,15 @@ class LibraryRepository(
     suspend fun season(id: Long, n: Int): ApiResult<SeasonDetail> = withApi {
         it.season(id, n)
     }
+
+    suspend fun seriesAutoplay(id: Long): ApiResult<SeriesAutoplayResponse> =
+        withApi { it.seriesAutoplay(id) }
+
+    suspend fun setSeriesAutoplay(
+        id: Long,
+        enabled: Boolean
+    ): ApiResult<SeriesAutoplayResponse> =
+        withApi { it.setSeriesAutoplay(id, enabled) }
 
     suspend fun seriesSimilar(
         id: Long,

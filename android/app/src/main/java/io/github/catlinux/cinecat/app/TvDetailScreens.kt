@@ -222,6 +222,7 @@ fun TvSeriesDetailContent(
     onToggleFavorite: () -> Unit,
     onToggleWatchlist: () -> Unit,
     onToggleSeriesWatched: () -> Unit,
+    onToggleAutoplay: () -> Unit,
     onToggleSeasonWatched: () -> Unit,
     onToggleEpisodeWatched: (Long) -> Unit,
     onPlayEpisode: (Long, Double) -> Unit,
@@ -295,6 +296,14 @@ fun TvSeriesDetailContent(
                 onToggleFavorite = onToggleFavorite,
                 onToggleWatchlist = onToggleWatchlist,
                 onToggleWatched = onToggleSeriesWatched
+            )
+        }
+
+        item(key = "autoplay") {
+            SeriesAutoplayControl(
+                enabled = series.autoplayNext,
+                horizontalPadding = horizontalPadding,
+                onToggle = onToggleAutoplay
             )
         }
 
