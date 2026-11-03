@@ -24,9 +24,16 @@ type FileInfo struct {
 	Audio             []AudioStream    `json:"audio"`
 	Subtitles         []SubtitleStream `json:"subtitles"`
 	Chapters          int              `json:"chapters"`
+	ChapterList       []Chapter        `json:"chapter_list"`
 	Quality           string           `json:"quality"`
 	Tags              AudioTags        `json:"tags,omitempty"`
 	HasEmbeddedCover  bool             `json:"has_embedded_cover,omitempty"`
+}
+
+type Chapter struct {
+	Start float64 `json:"start"`
+	End   float64 `json:"end"`
+	Title string  `json:"title"`
 }
 
 type VideoStream struct {
@@ -114,9 +121,15 @@ func (s *Service) Inspect(ctx context.Context, path string) (*FileInfo, error) {
 }
 
 type ffprobeOutput struct {
-	Streams  []ffprobeStream   `json:"streams"`
-	Format   ffprobeFormat     `json:"format"`
-	Chapters []json.RawMessage `json:"chapters"`
+	Streams  []ffprobeStream  `json:"streams"`
+	Format   ffprobeFormat    `json:"format"`
+	Chapters []ffprobeChapter `json:"chapters"`
+}
+
+type ffprobeChapter struct {
+	StartTime ffFloat           `json:"start_time"`
+	EndTime   ffFloat           `json:"end_time"`
+	Tags      map[string]string `json:"tags"`
 }
 
 type ffprobeFormat struct {
@@ -226,7 +239,16 @@ func parseFFprobeJSON(data []byte) (*FileInfo, error) {
 		Audio:             make([]AudioStream, 0),
 		Subtitles:         make([]SubtitleStream, 0),
 		Chapters:          len(raw.Chapters),
+		ChapterList:       make([]Chapter, 0, len(raw.Chapters)),
 		Tags:              audioTagsFromTags(raw.Format.Tags),
+	}
+
+	for _, chapter := range raw.Chapters {
+		info.ChapterList = append(info.ChapterList, Chapter{
+			Start: float64(chapter.StartTime),
+			End:   float64(chapter.EndTime),
+			Title: tagValue(chapter.Tags, "title"),
+		})
 	}
 
 	for _, stream := range raw.Streams {

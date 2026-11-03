@@ -151,6 +151,35 @@ func TestParseFFprobeJSONMKV(t *testing.T) {
 	}
 }
 
+func TestParseFFprobeJSONCapitulos(t *testing.T) {
+	info := mustParseFileInfo(t, `{
+	  "format": {"filename": "capitulos.mkv", "format_name": "matroska", "duration": "600"},
+	  "chapters": [
+	    {
+	      "start_time": "0.000000",
+	      "end_time": "75.500000",
+	      "tags": {"title": "Intro"}
+	    },
+	    {
+	      "start_time": "75.5",
+	      "end_time": "600.000000",
+	      "tags": {"title": "Créditos"}
+	    }
+	  ]
+	}`)
+
+	if info.Chapters != 2 || len(info.ChapterList) != 2 {
+		t.Fatalf("capítulos = %d, lista = %+v", info.Chapters, info.ChapterList)
+	}
+	first, second := info.ChapterList[0], info.ChapterList[1]
+	if first.Start != 0 || first.End != 75.5 || first.Title != "Intro" {
+		t.Fatalf("primer capítulo inesperado: %+v", first)
+	}
+	if second.Start != 75.5 || second.End != 600 || second.Title != "Créditos" {
+		t.Fatalf("segundo capítulo inesperado: %+v", second)
+	}
+}
+
 func TestParseFFprobeJSONAVI(t *testing.T) {
 	info := mustParseFileInfo(t, `{
 	  "streams": [

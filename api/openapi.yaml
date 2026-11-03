@@ -2887,6 +2887,146 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/items/{id}/segments:
+    get:
+      summary: Segmentos de intro y créditos de un ítem (solo administradores)
+      description: |
+        Devuelve los segmentos manuales guardados y los detectados en los
+        capítulos del archivo. En `/play`, un segmento manual sustituye al
+        detectado del mismo tipo. Requiere una sesión con rol `admin`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ItemId'
+      responses:
+        '200':
+          description: Segmentos manuales y detectados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SegmentsResponse'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La cuenta no tiene el rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ítem inexistente o no visible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      summary: Sustituye los segmentos manuales de un ítem (solo administradores)
+      description: |
+        Reemplaza todos los segmentos manuales del ítem. Una lista vacía los
+        borra. Cada tipo (`intro` o `credits`) puede aparecer como máximo una
+        vez; `start` no puede ser negativo y `end` debe ser mayor que `start`.
+        Requiere una sesión con rol `admin`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SegmentsRequest'
+      responses:
+        '204':
+          description: Segmentos manuales guardados
+        '400':
+          description: Segmentos no válidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La cuenta no tiene el rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ítem inexistente o no visible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/items/{id}/segments/apply-season:
+    post:
+      summary: Copia los segmentos manuales a la temporada (solo administradores)
+      description: |
+        Copia los segmentos manuales del episodio a los demás episodios de la
+        misma serie y temporada, sustituyendo los suyos. Devuelve el número de
+        episodios actualizados. Requiere una sesión con rol `admin`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ItemId'
+      responses:
+        '200':
+          description: Episodios actualizados
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplySegmentsResponse'
+        '400':
+          description: El ítem no es un episodio
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Sesión no válida o ausente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: La cuenta no tiene el rol de administrador
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ítem inexistente o no visible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/items/{id}/subtitles:
     post:
       summary: Sube un subtítulo externo a un ítem (solo administradores)
@@ -7500,6 +7640,7 @@ components:
         - audio
         - subtitles
         - chapters
+        - chapter_list
         - quality
       properties:
         container:
@@ -7534,8 +7675,31 @@ components:
             $ref: '#/components/schemas/SubtitleStream'
         chapters:
           type: integer
+        chapter_list:
+          type: array
+          items:
+            $ref: '#/components/schemas/Chapter'
         quality:
           type: string
+    Chapter:
+      type: object
+      required:
+        - start
+        - end
+        - title
+      properties:
+        start:
+          type: number
+          format: double
+          description: Inicio del capítulo en segundos.
+        end:
+          type: number
+          format: double
+          description: Fin del capítulo en segundos.
+        title:
+          type: string
+          description: Título del capítulo; puede estar vacío.
+      additionalProperties: false
     FileInfoResponse:
       allOf:
         - $ref: '#/components/schemas/FileInfo'
@@ -8774,6 +8938,7 @@ components:
         - selected_quality
         - subtitles
         - selected_subtitle
+        - segments
       properties:
         url:
           type: string
@@ -8815,6 +8980,91 @@ components:
         selected_subtitle:
           type: string
           nullable: true
+        segments:
+          type: array
+          description: Segmentos de intro y créditos aplicables a la reproducción.
+          items:
+            $ref: '#/components/schemas/PlaySegment'
+      additionalProperties: false
+    PlaySegment:
+      type: object
+      required:
+        - kind
+        - start
+        - end
+        - source
+      properties:
+        kind:
+          type: string
+          enum: [intro, credits]
+        start:
+          type: number
+          format: double
+          description: Inicio del segmento en segundos.
+        end:
+          type: number
+          format: double
+          description: Fin del segmento en segundos.
+        source:
+          type: string
+          enum: [chapter, manual]
+          description: Origen del segmento.
+      additionalProperties: false
+    Segment:
+      type: object
+      required:
+        - kind
+        - start
+        - end
+      properties:
+        kind:
+          type: string
+          enum: [intro, credits]
+        start:
+          type: number
+          format: double
+          description: Inicio del segmento en segundos.
+        end:
+          type: number
+          format: double
+          description: Fin del segmento en segundos.
+      additionalProperties: false
+    SegmentsResponse:
+      type: object
+      required:
+        - manual
+        - chapters
+      properties:
+        manual:
+          type: array
+          description: Segmentos manuales guardados.
+          items:
+            $ref: '#/components/schemas/Segment'
+        chapters:
+          type: array
+          description: Segmentos detectados en los capítulos del archivo.
+          items:
+            $ref: '#/components/schemas/Segment'
+      additionalProperties: false
+    SegmentsRequest:
+      type: object
+      required:
+        - segments
+      properties:
+        segments:
+          type: array
+          description: Lista completa de segmentos manuales; vacía para borrarlos.
+          items:
+            $ref: '#/components/schemas/Segment'
+      additionalProperties: false
+    ApplySegmentsResponse:
+      type: object
+      required:
+        - updated
+      properties:
+        updated:
+          type: integer
+          description: Número de episodios de la temporada actualizados.
       additionalProperties: false
     SettingsResponse:
       type: object

@@ -171,6 +171,9 @@ func (a *API) Register(mux *http.ServeMux) {
 	mux.Handle("PUT /api/v1/items/{id}/lists/{list}", a.requireSession(a.handleItemListPut))
 	mux.Handle("DELETE /api/v1/items/{id}/lists/{list}", a.requireSession(a.handleItemListDelete))
 	mux.Handle("GET /api/v1/items/{id}/file-info", a.requireSession(a.handleItemFileInfo))
+	mux.Handle("GET /api/v1/items/{id}/segments", a.requireAdmin(a.handleItemSegmentsGet))
+	mux.Handle("PUT /api/v1/items/{id}/segments", a.requireAdmin(a.handleItemSegmentsPut))
+	mux.Handle("POST /api/v1/items/{id}/segments/apply-season", a.requireAdmin(a.handleItemSegmentsApplySeason))
 	mux.Handle("POST /api/v1/items/{id}/subtitles", a.requireAdmin(a.handleItemSubtitleUpload))
 	mux.Handle("DELETE /api/v1/items/{id}/subtitles/{subId}", a.requireAdmin(a.handleItemSubtitleDelete))
 	mux.Handle("GET /api/v1/items/{id}/preferences", a.requireSession(a.handleItemPreferencesGet))
@@ -421,6 +424,7 @@ type playResponse struct {
 	SelectedQuality  string          `json:"selected_quality"`
 	Subtitles        []subtitleDTO   `json:"subtitles"`
 	SelectedSubtitle *string         `json:"selected_subtitle"`
+	Segments         []playSegment   `json:"segments"`
 }
 
 type mediaFile struct {
@@ -449,7 +453,7 @@ func (a *API) handlePlay(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusInternalServerError, "error interno")
 		return
 	}
-	info, _ := a.cachedFileInfo(r.Context(), safePath)
+	info, infoErr := a.cachedFileInfo(r.Context(), safePath)
 	var infoPointer *playback.FileInfo
 	if info.FileName != "" || len(info.Video) > 0 || len(info.Audio) > 0 || len(info.Subtitles) > 0 {
 		infoPointer = &info
@@ -489,6 +493,15 @@ func (a *API) handlePlay(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	segments := make([]playSegment, 0)
+	if infoErr == nil {
+		if resolved, err := a.segmentsForPlay(r.Context(), id, &info); err != nil {
+			log.Printf("library: leer segmentos del ítem %d: %v", id, err)
+		} else {
+			segments = resolved
+		}
+	}
+
 	target := "/api/v1/stream/" + strconv.FormatInt(id, 10)
 	if mode == playback.ModeRemux {
 		target += "/playlist.m3u8"
@@ -521,6 +534,7 @@ func (a *API) handlePlay(w http.ResponseWriter, r *http.Request) {
 		SelectedQuality:  options.SelectedQuality,
 		Subtitles:        options.Subtitles,
 		SelectedSubtitle: options.SelectedSubtitle,
+		Segments:         segments,
 	})
 }
 

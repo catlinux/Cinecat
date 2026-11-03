@@ -198,6 +198,9 @@ func normalizedFileInfo(info *playback.FileInfo) playback.FileInfo {
 	if result.Subtitles == nil {
 		result.Subtitles = []playback.SubtitleStream{}
 	}
+	if result.ChapterList == nil {
+		result.ChapterList = []playback.Chapter{}
+	}
 	return result
 }
 
