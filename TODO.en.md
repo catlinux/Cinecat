@@ -13,6 +13,8 @@ This file contains only work that is still open. Published work is in the [CHANG
 - **Hear the 0.56.0 5.1 audio on a 5.1 system:** tested on 2026-11-02 on the TV (Xiaomi MiTV-MSSP3) with a test AC-3 5.1 file: the HLS arrives as 6-channel AAC, ExoPlayer opens a 6-channel track (0x3f) and the TV downmixes it to stereo on its speakers. Still to hear on a real 5.1 system.
 - **Test the 0.62.0 skip intro and credits on a device** (an episode with «Intro»/«Credits» chapters or manual marks, on the web, the phone and the TV).
 - **Test the 0.63.0 offline downloads on the phone** (download, watch in airplane mode, delete; check that progress reaches the server when the connection returns).
+- **Test the 0.64.0 per-series autoplay on a device** (switch on the series page, countdown when an episode ends, «Next episode» in the credits, on the web, the phone and the TV).
+- **Pending improvement:** autoplay switch inside the apps' player (needs `/play` to return the series id).
 - **Verify the "Servidor y web" GitHub Actions workflow** (`.github/workflows/server-web.yml`, runs the Go tests with FFmpeg and the web tests): check its first run is green.
 
 ## 🟢 Later

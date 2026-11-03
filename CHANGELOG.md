@@ -7,8 +7,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.64.0] - 2026-11-03
+
 ### Añadido
 
+- Servidor, web y Android: reproducción automática del siguiente episodio por serie. Cada usuario puede activarla o desactivarla en la ficha de cada serie (web, móvil y TV) y, en la web, también desde el reproductor; por defecto está activada. Con ella desactivada no hay cuenta atrás al terminar un episodio, pero el botón «Siguiente episodio» de los créditos sigue disponible. Las apps de Android y TV estrenan el panel «Siguiente episodio» con cuenta atrás de 8 segundos y el botón «Siguiente episodio» en los créditos. API: `GET/PUT /api/v1/series/{id}/autoplay`, `autoplay_next` en el detalle de serie y en `/play`, y `next_episode` en `/play`; migración 0030. Cubierto por tests de servidor, web y Android; aún no se ha probado en un dispositivo.
 - Documentación: propuesta de diseño de complementos (`docs/es/complementos.md`), pendiente de aprobación.
 
 ## [0.63.0] - 2026-11-03

@@ -2,7 +2,7 @@
 
 [English](../en/roadmap.md) · [Volver al README](../../README.md) · [Estado](estado.md)
 
-La versión actual es **0.63.0**. El detalle de funciones, versiones y límites está en [estado](estado.md); esta página solo resume las fases.
+La versión actual es **0.64.0**. El detalle de funciones, versiones y límites está en [estado](estado.md); esta página solo resume las fases.
 
 ## Fase 0: preparación (`0.0.x`) — hecha
 
@@ -26,7 +26,7 @@ TMDB, fichas completas, colecciones, series, ajustes en caliente, panel de admin
 
 ## Próximas tandas
 
-Ya están hechos los favoritos y próximas a ver, las colecciones y su identificación en TMDB, las bibliotecas con varias carpetas, la subida y papelera, los usuarios, las sesiones, la actividad, las copias, el historial, las filas del portal personalizables, los subtítulos subidos por administradores y los de imagen incrustados, los perfiles por dispositivo, el desentrelazado y HDR a SDR, el AAC 5.1 para la TV, los segmentos de intro y créditos, las descargas sin conexión en móvil y tableta y los clientes Android y Android TV. Quedan la reproducción avanzada (ABR y audio no soportado), los complementos, DLNA/UPnP y verificar el flujo de GitHub Actions. El detalle está en [estado](estado.md).
+Ya están hechos los favoritos y próximas a ver, las colecciones y su identificación en TMDB, las bibliotecas con varias carpetas, la subida y papelera, los usuarios, las sesiones, la actividad, las copias, el historial, las filas del portal personalizables, los subtítulos subidos por administradores y los de imagen incrustados, los perfiles por dispositivo, el desentrelazado y HDR a SDR, el AAC 5.1 para la TV, los segmentos de intro y créditos, la reproducción automática del siguiente episodio por serie, las descargas sin conexión en móvil y tableta y los clientes Android y Android TV. Quedan la reproducción avanzada (ABR y audio no soportado), los complementos, DLNA/UPnP y verificar el flujo de GitHub Actions. El detalle está en [estado](estado.md).
 
 ## Fase 4: Android y Android TV — hecha, con mejoras pendientes
 

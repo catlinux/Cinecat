@@ -155,7 +155,7 @@ La respuesta tiene la forma:
 
 Las apps declaran en `caps` lo que su equipo reproduce: contenedores `mkv` y `mp4`; vídeo `h264`, `h264hi10`, `hevc`, `hevc10`, `av1` y `vp9`; audio `aac`, `mp3`, `ac3`, `eac3`, `dts`, `truehd`, `opus` y `flac`; y `mch` si decodifica AAC multicanal. Cada token indica que el equipo puede decodificar ese contenedor, códec o formato; `hevc10` implica `hevc`, y `mch` solo hace falta para AAC de más de dos canales. Si una app nativa declara `mch` y la pista elegida tiene 6 o más canales, el HLS entrega AAC 5.1; en los demás casos entrega estéreo. Para que el servidor trate la petición como app nativa, `caps` debe incluir al menos `mkv` o `mp4`. La lista completa y su efecto están en [reproducción](reproduccion.md#apps-nativas-android-y-android-tv).
 
-La respuesta incluye `url`, `mode`, `expires_at`, `audio_tracks`, `selected_audio`, `qualities`, `selected_quality`, `subtitles`, `selected_subtitle` y `segments`. `mode` es `direct` o `remux`; si no es directo, `reason` explica el motivo (`container`, `video`, `audio` o `subtitle`).
+La respuesta incluye `url`, `mode`, `expires_at`, `audio_tracks`, `selected_audio`, `qualities`, `selected_quality`, `subtitles`, `selected_subtitle`, `segments`, `autoplay_next` y `next_episode`. `mode` es `direct` o `remux`; si no es directo, `reason` explica el motivo (`container`, `video`, `audio` o `subtitle`).
 
 Cada elemento de `subtitles` es un `SubtitleOption`: `burn_in` indica si es una imagen incrustada (PGS, VobSub o DVB); en ese caso `url` va vacía y el cliente no debe cargarla como WebVTT. El resto conserva su URL WebVTT firmada.
 
@@ -168,6 +168,12 @@ El progreso se guarda con `PUT /api/v1/items/{id}/progress` y un cuerpo como `{"
 Las preferencias de audio, subtítulos y calidad se leen con `GET /api/v1/items/{id}/preferences`, que devuelve `audio_index`, `subtitle_id` y `quality` (o `null` si no hay preferencia). Se guardan con `PUT` sobre la misma ruta y un cuerpo parcial: los campos ausentes no se tocan, `null` los borra y `subtitle_id` vacío significa «sin subtítulos». `DELETE` elimina todas las preferencias del usuario para ese ítem. Las apps las restauran al reabrir el elemento.
 
 `GET /play` aplica esta precedencia: parámetro explícito > preferencia del ítem > perfil de la sesión > valor por defecto. El perfil de audio elige la primera pista de ese idioma; si no hay ninguna, se usa el comportamiento normal. El perfil de subtítulo elige la primera pista de texto (nunca una de imagen) de ese idioma, prefiriendo las no forzadas; `off` no muestra subtítulos por defecto. La calidad máxima solo actúa como tope en HLS: recorta las calidades ofrecidas y baja `auto`, `original` y las alturas superiores al límite; la reproducción directa no cambia.
+
+## Reproducción automática del siguiente episodio
+
+El ajuste es por usuario y serie y, si no hay fila guardada, está activado. Se lee con `GET /api/v1/series/{id}/autoplay` y se guarda con `PUT` sobre la misma ruta y un cuerpo `{"enabled": true}` o `{"enabled": false}`; ambas respuestas son `{"enabled": ...}`. Requieren sesión y una serie visible: una serie inexistente, oculta o que no sea serie responde `404`, y un cuerpo inválido `400`.
+
+`GET /api/v1/series/{id}` incluye `autoplay_next` con ese ajuste. `GET /api/v1/items/{id}/play` también lo incluye: para un episodio refleja el de su serie y para cualquier otro ítem es `true`. Además, `next_episode` es `null` o `{id, title, season, episode}` con el episodio inmediatamente posterior visible, por temporada y número; si no hay otro o el ítem no es un episodio, es `null`. Un siguiente episodio oculto por los permisos de biblioteca no se revela.
 
 ## Descarga para ver sin conexión
 

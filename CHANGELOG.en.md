@@ -7,8 +7,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.64.0] - 2026-11-03
+
 ### Added
 
+- Server, web and Android: automatic playback of the next episode per series. Each user can turn it on or off on every series page (web, phone and TV) and, on the web, also from the player; it is on by default. With it off there is no countdown when an episode ends, but the «Next episode» button in the credits is still available. The Android and TV apps gain the «Next episode» panel with an 8-second countdown and the «Next episode» button in the credits. API: `GET/PUT /api/v1/series/{id}/autoplay`, `autoplay_next` in series detail and in `/play`, and `next_episode` in `/play`; migration 0030. Covered by server, web and Android tests; not yet tested on a device.
 - Documentation: plugin design proposal (`docs/en/plugins.md`), awaiting approval.
 
 ## [0.63.0] - 2026-11-03

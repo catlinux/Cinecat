@@ -13,6 +13,8 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 - **Oír el audio 5.1 de 0.56.0 en un equipo 5.1:** probado el 2026-11-02 en la TV (Xiaomi MiTV-MSSP3) con un AC-3 5.1 de prueba: el HLS llega como AAC de 6 canales, ExoPlayer abre una pista de 6 canales (0x3f) y la TV la mezcla a estéreo por sus altavoces. Falta oírlo con un sistema 5.1 real.
 - **Probar en un dispositivo saltar intro y créditos de 0.62.0** (un episodio con capítulos «Intro»/«Créditos» o con marcas manuales, en la web, el móvil y la TV).
 - **Probar en el móvil las descargas sin conexión de 0.63.0** (descargar, ver en modo avión, borrar; comprobar que el progreso llega al servidor al volver la conexión).
+- **Probar en un dispositivo la reproducción automática por serie de 0.64.0** (interruptor en la ficha de la serie, cuenta atrás al terminar un episodio, «Siguiente episodio» en los créditos, en la web, el móvil y la TV).
+- **Mejora pendiente:** interruptor de reproducción automática dentro del reproductor de las apps (necesita que `/play` devuelva el id de la serie).
 - **Verificar el flujo «Servidor y web» de GitHub Actions** (`.github/workflows/server-web.yml`, ejecuta los tests de Go con FFmpeg y los de la web): comprobar su primera ejecución en verde.
 
 ## 🟢 Más adelante

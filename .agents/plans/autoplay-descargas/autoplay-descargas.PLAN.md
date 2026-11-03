@@ -13,9 +13,9 @@ Ejecución secuencial. Misma metodología que `resto-todo.PLAN.md`: AgentRelay, 
 
 ## Pasos
 
-1. [ ] **Servidor**: migración 0030, rutas, `autoplay_next`. AgentRelay, medio. Versión 0.64.0 (menor) se asigna al cerrar el paso 3.
-2. [ ] **Web**: interruptor en la ficha de serie y en el reproductor; el reproductor respeta `autoplay_next`. AgentRelay, medio.
-3. [ ] **Android/TV**: navegación al siguiente episodio desde el reproductor con cuenta atrás cancelable, botón «Siguiente episodio» en créditos, interruptor en la ficha de serie. Docs es/en. Cierra **0.64.0**. AgentRelay, medio.
+1. [x] **Servidor**: migración 0030, rutas, `autoplay_next`. AgentRelay, medio. Versión 0.64.0 (menor) se asigna al cerrar el paso 3.
+2. [x] **Web**: interruptor en la ficha de serie y en el reproductor; el reproductor respeta `autoplay_next`. AgentRelay, medio.
+3. [x] **Android/TV**: navegación al siguiente episodio desde el reproductor con cuenta atrás cancelable, botón «Siguiente episodio» en créditos, interruptor en la ficha de serie. Docs es/en. Cierra **0.64.0**. AgentRelay, medio.
 4. [ ] **Probar las descargas en el móvil** (Pixel por adb), corregir lo que falle y cerrar **0.64.1** o lo que toque.
 
 Imprevistos de diseño:

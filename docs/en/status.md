@@ -2,7 +2,7 @@
 
 [Español](../es/estado.md) · [Back to README](../../README.en.md)
 
-Current version: **0.63.0**. This page describes the real state of the code, not the original plan. Versions come from the [CHANGELOG](../../CHANGELOG.en.md).
+Current version: **0.64.0**. This page describes the real state of the code, not the original plan. Versions come from the [CHANGELOG](../../CHANGELOG.en.md).
 
 Legend: ✅ done · 🟨 awaiting testing · ⬜ pending.
 
@@ -78,6 +78,7 @@ Legend: ✅ done · 🟨 awaiting testing · ⬜ pending.
 | Quality | "Servidor y web" GitHub Actions workflow | 🟨 | `.github/workflows/server-web.yml` runs the Go tests with FFmpeg and the web tests; its first green run still needs checking. |
 | Android / Android TV clients | Android and Android TV | ✅ 0.59.0 | One app for phones, tablets and TV: session or pairing, library, Media3 player with preferences, A–Z index on TV, picture-in-picture on phones, automatic updates and update notices. Since 0.49.0 it offers "From the start" and "Continue", since 0.49.1 it names untitled tracks, since 0.56.0 the TV declares `mch`, since 0.58.0 it shows and selects image subtitles and since 0.59.0 it edits the "Este dispositivo" profile. Hides empty sections. See [Android](android.md). |
 | Android / Android TV clients | Offline downloads on phones and tablets | 🟨 0.63.0 | Button on the movie page and every episode only with direct playback; DownloadManager into the private folder, Descargas screen, local playback with embedded subtitles and pending progress sync. TV does not show them. Covered by tests; not yet tried on a real device. |
+| Playback | Automatic next-episode playback per series | 🟨 0.64.0 | Per-user, per-series setting (no row means enabled); cancellable 8-second countdown in the web app, Android and Android TV, manual credits button and `next_episode` in `/play`. Migration 0030. Covered by tests; not yet tried on a real device. |
 
 ## What comes next, in order
 

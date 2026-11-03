@@ -155,7 +155,7 @@ The response has this shape:
 
 The apps declare in `caps` what their device plays: containers `mkv` and `mp4`; video `h264`, `h264hi10`, `hevc`, `hevc10`, `av1` and `vp9`; audio `aac`, `mp3`, `ac3`, `eac3`, `dts`, `truehd`, `opus` and `flac`; and `mch` if it decodes multichannel AAC. Each token means the device can decode that container, codec or format; `hevc10` implies `hevc`, and `mch` is only needed for AAC with more than two channels. If a native app declares `mch` and the chosen track has 6 or more channels, HLS delivers 5.1 AAC; otherwise it delivers stereo. For the server to treat the request as a native app, `caps` must include at least `mkv` or `mp4`. The full list and its effect are in [playback](playback.md#native-apps-android-and-android-tv).
 
-The response includes `url`, `mode`, `expires_at`, `audio_tracks`, `selected_audio`, `qualities`, `selected_quality`, `subtitles`, `selected_subtitle` and `segments`. `mode` is `direct` or `remux`; when it is not direct, `reason` explains why (`container`, `video`, `audio` or `subtitle`).
+The response includes `url`, `mode`, `expires_at`, `audio_tracks`, `selected_audio`, `qualities`, `selected_quality`, `subtitles`, `selected_subtitle`, `segments`, `autoplay_next` and `next_episode`. `mode` is `direct` or `remux`; when it is not direct, `reason` explains why (`container`, `video`, `audio` or `subtitle`).
 
 Each entry in `subtitles` is a `SubtitleOption`: `burn_in` reports whether it is an embedded image track (PGS, VobSub or DVB); in that case `url` is empty and the client must not load it as WebVTT. The rest keep their signed WebVTT URL.
 
@@ -168,6 +168,12 @@ Progress is stored with `PUT /api/v1/items/{id}/progress` and a body such as `{"
 Audio, subtitle and quality preferences are read with `GET /api/v1/items/{id}/preferences`, which returns `audio_index`, `subtitle_id` and `quality` (or `null` when there is no preference). They are saved with `PUT` on the same route and a partial body: absent fields are left untouched, `null` clears them and an empty `subtitle_id` means "no subtitles". `DELETE` removes all the user's preferences for that item. The apps restore them when the item is reopened.
 
 `GET /play` applies this precedence: explicit parameter > item preference > session profile > default. The audio profile picks the first track in that language; if none exists, normal behaviour applies. The subtitle profile picks the first text track (never an image track) in that language, preferring non-forced tracks; `off` shows no subtitles by default. Maximum quality only acts as a cap for HLS: it trims the offered qualities and lowers `auto`, `original` and heights above the limit; direct playback is unchanged.
+
+## Automatic next-episode playback
+
+The setting is per user and series and is enabled when no row has been saved. It is read with `GET /api/v1/series/{id}/autoplay` and saved with `PUT` on the same route and a `{"enabled": true}` or `{"enabled": false}` body; both responses are `{"enabled": ...}`. They require a session and a visible series: a missing series, a hidden one or a non-series identifier returns `404`, and an invalid body returns `400`.
+
+`GET /api/v1/series/{id}` includes `autoplay_next` with that setting. `GET /api/v1/items/{id}/play` also includes it: for an episode it reflects its series setting, and for any other item it is `true`. In addition, `next_episode` is `null` or `{id, title, season, episode}` with the immediately following visible episode, ordered by season and number; if there is no other episode or the item is not an episode, it is `null`. A next episode hidden by library permissions is not revealed.
 
 ## Downloading for offline viewing
 

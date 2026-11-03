@@ -53,7 +53,7 @@ Administrators see "Gestionar colección" inside a collection to change its name
 
 "Series" shows the paginated series list. You can search, filter by genre, choose the order and filter by letter. Opening a series shows its page and the season selector; each season shows its episodes with title, synopsis, image and runtime.
 
-The watched buttons mark an episode, a season or the whole series as watched. The main series button changes with your progress: "Empezar", "Continuar" or "Volver a ver". Administrators also see **Cambiar imagen** and **Corregir ficha** at the end of the series page.
+The watched buttons mark an episode, a season or the whole series as watched. The main series button changes with your progress: "Empezar", "Continuar" or "Volver a ver". Below the action buttons is the **Reproducir el siguiente episodio automáticamente** switch, showing **Activado** or **Desactivado**. It is saved when pressed for your account and that series; if it fails, it reverts and shows "No se pudo guardar". It is enabled by default. Administrators also see **Cambiar imagen** and **Corregir ficha** at the end of the series page.
 
 ### Vídeos
 
@@ -140,7 +140,7 @@ If the file has segments, a **Saltar intro** button appears on its own above the
 
 In the subtitle menu, embedded image tracks (PGS, VobSub and DVB) carry the " · imagen" mark. Choosing one reloads playback at the current second with the subtitle burned in; removing it or switching to text from one reloads without the burn.
 
-Progress is saved every 15 s and on exit. If 15 s or less remain, playback does not resume: it is treated as finished. When an episode ends and there is a next one, an 8-second countdown starts.
+Progress is saved every 15 s and on exit. If 15 s or less remain, playback does not resume: it is treated as finished. In the web player, **Reproducción automática** enables or disables jumping to the next episode during playback; on Android and Android TV the switch is only on the series page. With the setting on and a next episode, an 8-second countdown with **Reproducir ya** and **Cancelar** starts when the episode ends; at zero it opens the next one. With the setting off there is no countdown or automatic jump, but the manual **Siguiente episodio** button during the credits remains available. On Android and Android TV, Back cancels the countdown, and local downloads have no automatic next episode.
 
 ## Offline downloads
 

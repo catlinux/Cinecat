@@ -119,7 +119,11 @@ El reproductor ofrece `auto`, 480p, 720p, 1080p (sin superar la altura original 
 
 El servidor reconoce un capítulo como intro si su título, sin mayúsculas, acentos ni espacios sobrantes, es o empieza por `intro`, `introduccion`, `opening`, `apertura`, `cabecera`, `cortinilla`, `generique` o `generique de debut`, y como créditos si empieza por `credits`, `creditos`, `ending`, `end credits`, `final credits`, `generique de fin` o `titulos de credito`. Se toma el primero de cada tipo; debe cumplir `0 <= inicio < fin <= duración` y la intro no puede durar 10 minutos o más. Los créditos no tienen límite de duración. No hay detección por audio.
 
-Los segmentos manuales se guardan en `item_segments` y sustituyen al capítulo del mismo tipo. En la ficha web, un administrador puede escribirlos, borrarlos dejando la fila vacía y, en episodios, aplicarlos a toda la temporada. La web muestra **Saltar intro** o **Saltar créditos** y, en episodios con siguiente, **Siguiente episodio** en los créditos; Android y Android TV solo muestran los dos botones de salto.
+Los segmentos manuales se guardan en `item_segments` y sustituyen al capítulo del mismo tipo. En la ficha web, un administrador puede escribirlos, borrarlos dejando la fila vacía y, en episodios, aplicarlos a toda la temporada. La web muestra **Saltar intro** o **Saltar créditos** y, en episodios con siguiente, **Siguiente episodio** en los créditos; Android y Android TV también muestran **Siguiente episodio** cuando hay uno.
+
+## Reproducción automática del siguiente episodio
+
+El ajuste vive en la tabla `series_autoplay` (usuario y serie; sin fila está activado) y `/play` lo devuelve como `autoplay_next`. `/play` incluye además `next_episode`, que es `null` o `{id, title, season, episode}` con el episodio inmediatamente posterior visible por temporada y número; un episodio siguiente oculto por permisos de biblioteca no aparece. La web y las apps usan estos campos para la cuenta atrás. Con el ajuste desactivado no hay salto automático, pero el botón manual **Siguiente episodio** de los créditos sigue disponible.
 
 ## Audio, subtítulos y calidad
 
@@ -140,7 +144,7 @@ Las apps declaran en `caps` lo que su equipo reproduce: contenedores (`mkv`, `mp
 - Controles propios: play/pausa, ±10 s, barra de progreso, volumen, silencio, velocidad (0,5×–2×), audio, subtítulos, calidad, imagen en imagen, pantalla completa y siguiente episodio.
 - Atajos: `Espacio`/`K`, `J`/`L` o flechas, `M`, `F`, `C`, `,`/`.`, `0`–`9` y `Esc`. El detalle está en la [guía de usuario](guia-de-usuario.md).
 - El progreso se envía cada 15 s y al salir; al 90 % se marca como visto y se borra el progreso. Si quedan 15 s o menos, no se reanuda.
-- Al terminar un episodio con siguiente, aparece una cuenta atrás de 8 s.
+- Con la reproducción automática activa y un siguiente episodio, al terminar aparece una cuenta atrás de 8 s; el interruptor **Reproducción automática** de los controles permite cambiarla durante la reproducción.
 
 ## URLs firmadas
 

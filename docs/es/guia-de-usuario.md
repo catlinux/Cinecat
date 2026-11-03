@@ -53,7 +53,7 @@ Si eres administrador, dentro de una colección aparece «Gestionar colección»
 
 «Series» muestra las series paginadas. Puedes buscar, filtrar por género, elegir orden y filtrar por letra. Al abrir una serie verás su ficha y el selector de temporadas; cada temporada muestra sus episodios con título, sinopsis, imagen y duración.
 
-Los botones de visionado permiten marcar un episodio, una temporada o la serie completa como vistos. El botón principal de la serie cambia según tu progreso: «Empezar», «Continuar» o «Volver a ver». Si eres administrador, al final de la ficha aparecen **Cambiar imagen** y **Corregir ficha**.
+Los botones de visionado permiten marcar un episodio, una temporada o la serie completa como vistos. El botón principal de la serie cambia según tu progreso: «Empezar», «Continuar» o «Volver a ver». Debajo de los botones de acción está el interruptor **Reproducir el siguiente episodio automáticamente**, con su estado **Activado** o **Desactivado**. Se guarda al pulsarlo para tu cuenta y esa serie; si falla, vuelve al estado anterior y avisa «No se pudo guardar». Viene activado por defecto. Si eres administrador, al final de la ficha aparecen **Cambiar imagen** y **Corregir ficha**.
 
 ### Vídeos
 
@@ -140,7 +140,7 @@ Si el archivo tiene segmentos, durante la intro aparece solo un botón **Saltar 
 
 En el menú de subtítulos, las pistas de imagen incrustadas (PGS, VobSub y DVB) aparecen con la marca « · imagen». Al elegirlas, la reproducción se recarga en el segundo actual con el subtítulo quemado; al quitarlas o pasar a texto desde una de ellas, se recarga sin el quemado.
 
-El progreso se guarda cada 15 s y al salir. Si quedan 15 s o menos, no se reanuda: se considera terminado. Al acabar un episodio con siguiente, aparece una cuenta atrás de 8 s para reproducirlo.
+El progreso se guarda cada 15 s y al salir. Si quedan 15 s o menos, no se reanuda: se considera terminado. En el reproductor web, **Reproducción automática** permite activar o desactivar el salto al siguiente episodio durante la reproducción; en Android y Android TV el interruptor está solo en la ficha de la serie. Con el ajuste activado y un siguiente episodio, al terminar aparece una cuenta atrás de 8 s con **Reproducir ya** y **Cancelar**; al llegar a cero se abre el siguiente. Con el ajuste desactivado no hay cuenta atrás ni salto automático, pero el botón manual **Siguiente episodio** de los créditos sigue disponible. En Android y Android TV, Atrás cancela la cuenta atrás, y en las reproducciones locales de descargas no hay siguiente episodio automático.
 
 ## Descargas sin conexión
 

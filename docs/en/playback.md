@@ -119,7 +119,11 @@ The player offers `auto`, 480p, 720p, 1080p (never above the original height or 
 
 The server treats a chapter as an intro when its title, ignoring case, accents and extra spaces, is or starts with `intro`, `introduccion`, `opening`, `apertura`, `cabecera`, `cortinilla`, `generique` or `generique de debut`, and as credits when it starts with `credits`, `creditos`, `ending`, `end credits`, `final credits`, `generique de fin` or `titulos de credito`. The first chapter of each type is used; it must satisfy `0 <= start < end <= duration` and an intro cannot last 10 minutes or more. Credits have no duration limit. There is no audio detection.
 
-Manual segments are stored in `item_segments` and replace the chapter segment of the same type. On the web item page, an administrator can write them, delete them by leaving the row empty and, for episodes, apply them to the whole season. The web app shows **Saltar intro** or **Saltar créditos** and, on episodes with a next one, **Siguiente episodio** during the credits; Android and Android TV only show the two skip buttons.
+Manual segments are stored in `item_segments` and replace the chapter segment of the same type. On the web item page, an administrator can write them, delete them by leaving the row empty and, for episodes, apply them to the whole season. The web app shows **Saltar intro** or **Saltar créditos** and, on episodes with a next one, **Siguiente episodio** during the credits; Android and Android TV also show **Siguiente episodio** when there is one.
+
+## Automatic next-episode playback
+
+The setting lives in the `series_autoplay` table (user and series; with no row it is enabled) and `/play` returns it as `autoplay_next`. `/play` also includes `next_episode`, which is `null` or `{id, title, season, episode}` with the immediately following visible episode ordered by season and number; a next episode hidden by library permissions does not appear. The web app and the apps use these fields for the countdown. With the setting off there is no automatic jump, but the manual **Siguiente episodio** button during the credits remains available.
 
 ## Audio, subtitles and quality
 
@@ -140,7 +144,7 @@ The apps declare in `caps` what their device plays: containers (`mkv`, `mp4`), v
 - Custom controls: play/pause, ±10 s, progress bar, volume, mute, speed (0.5×–2×), audio, subtitles, quality, picture-in-picture, fullscreen and next episode.
 - Shortcuts: `Space`/`K`, `J`/`L` or arrows, `M`, `F`, `C`, `,`/`.`, `0`–`9` and `Esc`. Details are in the [user guide](user-guide.md).
 - Progress is sent every 15 s and on exit; at 90 % it is marked watched and progress is cleared. If 15 s or less remain, it does not resume.
-- When an episode ends and there is a next one, an 8-second countdown appears.
+- With automatic playback on and a next episode, an 8-second countdown appears when the episode ends; the **Reproducción automática** switch in the controls changes it during playback.
 
 ## Signed URLs
 

@@ -2,7 +2,7 @@
 
 [English](../en/status.md) · [Volver al README](../../README.md)
 
-Versión actual: **0.63.0**. Esta página resume el estado real del código, no el plan inicial. Las versiones salen del [CHANGELOG](../../CHANGELOG.md).
+Versión actual: **0.64.0**. Esta página resume el estado real del código, no el plan inicial. Las versiones salen del [CHANGELOG](../../CHANGELOG.md).
 
 Leyenda: ✅ hecho · 🟨 pendiente de probar · ⬜ pendiente.
 
@@ -78,6 +78,7 @@ Leyenda: ✅ hecho · 🟨 pendiente de probar · ⬜ pendiente.
 | Calidad | Flujo «Servidor y web» de GitHub Actions | 🟨 | `.github/workflows/server-web.yml` ejecuta los tests de Go con FFmpeg y los de la web; falta comprobar su primera ejecución en verde. |
 | Clientes Android / Android TV | Android y Android TV | ✅ 0.59.0 | Una app para móvil, tableta y TV: sesión o vinculación, biblioteca, reproductor Media3 con preferencias, índice A–Z en TV, imagen en imagen en móvil, actualización automática y avisos de actualización. Desde 0.49.0 ofrece «Desde el principio» y «Continuar», desde 0.49.1 nombra las pistas sin título, desde 0.56.0 la TV declara `mch`, desde 0.58.0 muestra y elige los subtítulos de imagen y desde 0.59.0 edita el perfil de «Este dispositivo». Oculta las secciones vacías. Ver [Android](android.md). |
 | Clientes Android / Android TV | Descargas sin conexión en móvil y tableta | 🟨 0.63.0 | Botón en la ficha y en cada episodio solo con reproducción directa; DownloadManager a la carpeta privada, pantalla Descargas, reproducción local con subtítulos incrustados y sincronización pendiente de progreso. La TV no las muestra. Cubierto por tests; aún sin probar en un dispositivo real. |
+| Reproducción | Reproducción automática del siguiente episodio por serie | 🟨 0.64.0 | Ajuste por usuario y serie (sin fila = activado); cuenta atrás de 8 s cancelable en web, Android y Android TV, botón manual en los créditos y `next_episode` visible en `/play`. Migración 0030. Cubierto por tests; aún sin probar en un dispositivo real. |
 
 ## Lo que viene, en orden
 
