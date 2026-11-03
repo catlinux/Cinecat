@@ -5,9 +5,12 @@
 		FileInfoResult,
 		ImageKind,
 		ImageOptions,
+		ItemSegment,
+		ItemSegmentsResponse,
 		MediaItem,
 		PlaybackSubtitle,
-		PlayResponse
+		PlayResponse,
+		SegmentKind
 	} from '$lib/api';
 	import CastRow from '$lib/components/CastRow.svelte';
 	import CollectionManageDialog from '$lib/components/CollectionManageDialog.svelte';
@@ -31,6 +34,8 @@
 	} from '$lib/media';
 	import { posterColors } from '$lib/poster-color';
 	import { formatProgressTime, progressPercent } from '$lib/progress';
+	import { formatSegmentTime, segmentDrafts } from '$lib/segments';
+	import type { SegmentDraftMap } from '$lib/segments';
 	import type { PageData } from './$types';
 
 	interface MatchSearch {
@@ -51,6 +56,8 @@
 		collectionName?: string;
 		collectionOverview?: string;
 		subtitlePanel?: boolean;
+		segmentsPanel?: boolean;
+		segmentValues?: SegmentDraftMap;
 	}
 
 	let { data, form }: { data: PageData; form?: ActionForm | null } = $props();
@@ -129,7 +136,108 @@
 			.then((result) => (result.data ? formatDurationSeconds(result.data.duration_seconds) : ''))
 			.catch(() => '')
 	);
+	const segmentsData = $derived(
+		(data as PageData & { segments?: ItemSegmentsResponse | null }).segments ?? null
+	);
+	const manualSegments = $derived<ItemSegment[]>(
+		Array.isArray(segmentsData?.manual) ? segmentsData.manual : []
+	);
+	const segmentValues = $derived<SegmentDraftMap>(
+		actionForm?.segmentValues ?? segmentDrafts(manualSegments)
+	);
+	const segmentChapters = $derived<ItemSegment[]>(
+		Array.isArray(segmentsData?.chapters) ? segmentsData.chapters : []
+	);
+
+	function chapterFor(kind: SegmentKind): ItemSegment | null {
+		return segmentChapters.find((chapter) => chapter.kind === kind) ?? null;
+	}
 </script>
+
+{#snippet segmentsEditor()}
+	{#if data.isAdmin}
+		{@const introChapter = chapterFor('intro')}
+		{@const creditsChapter = chapterFor('credits')}
+		<details class="segments-editor" open={Boolean(actionForm?.segmentsPanel)}>
+			<summary>Intro y créditos</summary>
+			<p class="segments-help">
+				Tiempos en mm:ss o h:mm:ss. Deja una fila vacía para quitar ese segmento.
+			</p>
+			<form method="POST" action="?/segmentsSave" class="segments-form">
+				<div class="segment-row">
+					<span class="segment-name">Intro</span>
+					<label>
+						<span>Inicio</span>
+						<input
+							name="intro_start"
+							value={segmentValues.intro.start}
+							placeholder="mm:ss o h:mm:ss"
+							inputmode="text"
+						/>
+					</label>
+					<label>
+						<span>Fin</span>
+						<input
+							name="intro_end"
+							value={segmentValues.intro.end}
+							placeholder="mm:ss o h:mm:ss"
+							inputmode="text"
+						/>
+					</label>
+				</div>
+				{#if introChapter}
+					<p class="segment-detected">
+						Detectado en capítulos: {formatSegmentTime(introChapter.start)} –
+						{formatSegmentTime(introChapter.end)}
+					</p>
+				{/if}
+				<div class="segment-row">
+					<span class="segment-name">Créditos</span>
+					<label>
+						<span>Inicio</span>
+						<input
+							name="credits_start"
+							value={segmentValues.credits.start}
+							placeholder="mm:ss o h:mm:ss"
+							inputmode="text"
+						/>
+					</label>
+					<label>
+						<span>Fin</span>
+						<input
+							name="credits_end"
+							value={segmentValues.credits.end}
+							placeholder="mm:ss o h:mm:ss"
+							inputmode="text"
+						/>
+					</label>
+				</div>
+				{#if creditsChapter}
+					<p class="segment-detected">
+						Detectado en capítulos: {formatSegmentTime(creditsChapter.start)} –
+						{formatSegmentTime(creditsChapter.end)}
+					</p>
+				{/if}
+				<button class="button" type="submit">Guardar</button>
+			</form>
+			{#if actionForm?.segmentsPanel && actionForm.message}
+				<p
+					class={actionForm.success ? 'success' : 'error'}
+					role={actionForm.success ? 'status' : 'alert'}
+				>
+					{actionForm.message}
+				</p>
+			{/if}
+			{#if isEpisode}
+				<form method="POST" action="?/segmentsApplySeason" class="segments-apply">
+					<button class="button button-secondary" type="submit">
+						Aplicar a toda la temporada
+					</button>
+				</form>
+			{/if}
+		</details>
+	{/if}
+{/snippet}
 
 {#snippet trashDialog()}
 	<ConfirmActionDialog
@@ -254,7 +362,7 @@
 				</div>
 			{/if}
 
-			{#if actionForm?.message && !actionForm.subtitlePanel}
+			{#if actionForm?.message && !actionForm.subtitlePanel && !actionForm.segmentsPanel}
 				<p
 					class={actionForm.success ? 'success' : 'error'}
 					role={actionForm.success ? 'status' : 'alert'}
@@ -273,6 +381,8 @@
 				subtitleMessage={actionForm?.subtitlePanel ? actionForm.message : null}
 				subtitleSuccess={Boolean(actionForm?.success)}
 			/>
+
+			{@render segmentsEditor()}
 
 			<EpisodeNav
 				previous={episodeNavigation?.previous ?? null}
@@ -358,7 +468,7 @@
 				</div>
 			{/if}
 
-			{#if actionForm?.message && !actionForm.subtitlePanel}
+			{#if actionForm?.message && !actionForm.subtitlePanel && !actionForm.segmentsPanel}
 				<p
 					class={actionForm.success ? 'success' : 'error'}
 					role={actionForm.success ? 'status' : 'alert'}
@@ -375,6 +485,8 @@
 				subtitleMessage={actionForm?.subtitlePanel ? actionForm.message : null}
 				subtitleSuccess={Boolean(actionForm?.success)}
 			/>
+
+			{@render segmentsEditor()}
 
 			{#if data.isAdmin}
 				<div class="item-admin-actions">
@@ -502,7 +614,7 @@
 				</div>
 			{/if}
 
-			{#if actionForm?.message && !actionForm.subtitlePanel}
+			{#if actionForm?.message && !actionForm.subtitlePanel && !actionForm.segmentsPanel}
 				<p
 					class={actionForm.success ? 'success' : 'error'}
 					role={actionForm.success ? 'status' : 'alert'}
@@ -551,6 +663,8 @@
 				subtitleSuccess={Boolean(actionForm?.success)}
 			/>
 
+			{@render segmentsEditor()}
+
 			{#if isMovie && similarItems}
 				{#if Array.isArray(similarItems)}
 					{@const similar = similarItems as MediaItem[]}
@@ -597,3 +711,91 @@
 		</div>
 	</section>
 {/if}
+
+<style>
+	.segments-editor {
+		margin: 1.5rem 0;
+		padding: 0.9rem 1rem;
+		border: 1px solid var(--borde-suave);
+		border-radius: 4px;
+		background: var(--superficie);
+	}
+
+	.segments-editor summary {
+		cursor: pointer;
+		color: var(--granate);
+		font-family: 'Fraunces', Georgia, serif;
+		font-size: 1.1rem;
+		font-weight: 600;
+	}
+
+	.segments-help {
+		margin: 0.6rem 0;
+		color: var(--texto-apagado);
+		font-size: 0.8rem;
+	}
+
+	.segment-row {
+		display: grid;
+		grid-template-columns: minmax(5rem, 0.8fr) repeat(2, minmax(0, 1fr));
+		gap: 0.6rem;
+		align-items: end;
+		margin: 0.6rem 0;
+	}
+
+	.segment-row label {
+		display: grid;
+		gap: 0.2rem;
+		color: var(--texto-tenue);
+		font-size: 0.7rem;
+		font-weight: 600;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+	}
+
+	.segment-row input {
+		width: 100%;
+		padding: 0.45rem 0.55rem;
+		border: 1px solid var(--borde-medio);
+		border-radius: 3px;
+		background: var(--crema-clara);
+		color: var(--tinta);
+		font: inherit;
+		font-size: 0.85rem;
+		letter-spacing: normal;
+		text-transform: none;
+	}
+
+	.segment-name {
+		padding-bottom: 0.55rem;
+		color: var(--granate);
+		font-weight: 600;
+	}
+
+	.segment-detected {
+		margin: -0.2rem 0 0.6rem;
+		color: var(--texto-apagado);
+		font-size: 0.75rem;
+	}
+
+	.segments-form > .button {
+		margin-top: 0.4rem;
+	}
+
+	.segments-apply {
+		margin-top: 0.8rem;
+		padding-top: 0.7rem;
+		border-top: 1px solid var(--borde-tenue);
+	}
+
+	@media (max-width: 600px) {
+		.segment-row {
+			grid-template-columns: 1fr 1fr;
+		}
+
+		.segment-name {
+			grid-column: 1 / -1;
+			padding-bottom: 0;
+		}
+	}
+</style>

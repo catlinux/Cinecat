@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+	activeSegmentButton,
 	clampSeekTime,
 	controlsShouldHide,
 	countdownLabel,
@@ -93,6 +94,36 @@ describe('utilidades del reproductor', () => {
 		).toBe('e1');
 		expect(firstSubtitleForToggle([{ id: 'e0', burn_in: true }])).toBe('e0');
 		expect(firstSubtitleForToggle([])).toBeNull();
+	});
+
+	it('decide el botón de segmento según el tiempo actual', () => {
+		const segments = [
+			{ kind: 'intro' as const, start: 10, end: 20, source: 'chapter' as const },
+			{ kind: 'credits' as const, start: 80, end: 90, source: 'manual' as const }
+		];
+		expect(activeSegmentButton(9.99, segments, false)).toBeNull();
+		expect(activeSegmentButton(10, segments, false)).toEqual({
+			kind: 'intro',
+			label: 'Saltar intro',
+			action: 'seek',
+			end: 20
+		});
+		expect(activeSegmentButton(19.99, segments, false)?.action).toBe('seek');
+		expect(activeSegmentButton(20, segments, false)).toBeNull();
+		expect(activeSegmentButton(80, segments, true)).toEqual({
+			kind: 'credits',
+			label: 'Siguiente episodio',
+			action: 'next',
+			end: 90
+		});
+		expect(activeSegmentButton(80, segments, false)).toEqual({
+			kind: 'credits',
+			label: 'Saltar créditos',
+			action: 'seek',
+			end: 90
+		});
+		expect(activeSegmentButton(Number.NaN, segments, true)).toBeNull();
+		expect(activeSegmentButton(10, undefined, true)).toBeNull();
 	});
 
 	it('construye la URL de recarga conservando audio, calidad y tiempo', () => {

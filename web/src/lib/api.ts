@@ -790,6 +790,27 @@ export interface PlaybackSubtitle {
 	burn_in?: boolean;
 }
 
+export type SegmentKind = 'intro' | 'credits';
+
+export interface ItemSegment {
+	kind: SegmentKind;
+	start: number;
+	end: number;
+}
+
+export interface PlaySegment extends ItemSegment {
+	source: 'chapter' | 'manual';
+}
+
+export interface ItemSegmentsResponse {
+	manual: ItemSegment[];
+	chapters: ItemSegment[];
+}
+
+export interface ApplySegmentsResponse {
+	updated: number;
+}
+
 export interface PlayResponse {
 	url: string;
 	mode: 'direct' | 'remux';
@@ -800,6 +821,7 @@ export interface PlayResponse {
 	selected_quality?: string;
 	subtitles?: PlaybackSubtitle[];
 	selected_subtitle?: string | null;
+	segments?: PlaySegment[];
 }
 
 export interface PlayQuery {
@@ -1681,6 +1703,18 @@ export class ApiClient {
 		}
 		const suffix = params.toString() ? `?${params}` : '';
 		return this.get<PlayResponse>(`/api/v1/items/${id}/play${suffix}`, token);
+	}
+
+	async getSegments(id: number, token: string): Promise<ItemSegmentsResponse> {
+		return this.get<ItemSegmentsResponse>(`/api/v1/items/${id}/segments`, token);
+	}
+
+	async putSegments(id: number, segments: ItemSegment[], token: string): Promise<void> {
+		await this.put<void>(`/api/v1/items/${id}/segments`, { segments }, token);
+	}
+
+	async applySegmentsToSeason(id: number, token: string): Promise<ApplySegmentsResponse> {
+		return this.post<ApplySegmentsResponse>(`/api/v1/items/${id}/segments/apply-season`, undefined, token);
 	}
 
 	async getPreferences(id: number, token: string): Promise<ItemPreferences> {

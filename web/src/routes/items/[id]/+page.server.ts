@@ -7,6 +7,7 @@ import type {
 	FileInfoResult,
 	ImageKind,
 	ImageOptions,
+	ItemSegmentsResponse,
 	MediaItem,
 	PlaybackSubtitle,
 	PlayResponse,
@@ -15,6 +16,8 @@ import type {
 import { ConfigurationError, createApiClient } from '$lib/api-factory';
 import { sanitizeClientCapabilities } from '$lib/client-caps';
 import { loadEpisodeNavigation } from '$lib/episode-navigation';
+import { parseSegmentForm } from '$lib/segments';
+import type { SegmentDraftMap } from '$lib/segments';
 import { requireSessionToken } from '$lib/session';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -38,6 +41,17 @@ export const load: PageServerLoad = async ({ params, locals, fetch, url, parent,
 		const api = createApiClient(fetch);
 		const item = await api.getItem(id, token);
 		const isClip = item.library_kind === 'clips';
+		let segments: ItemSegmentsResponse | null = null;
+		if (isAdmin) {
+			try {
+				segments = await api.getSegments(id, token);
+			} catch (err) {
+				// La sesión caducada la traduce el catch exterior de la carga.
+				if (err instanceof ApiError && err.status === 401) {
+					throw err;
+				}
+			}
+		}
 		const fileInfo: Promise<FileInfoResult> = api.getFileInfo(id, token, caps).then(
 			(data) => ({ data }),
 			(cause) => ({ error: fileInfoError(cause) })
@@ -81,7 +95,8 @@ export const load: PageServerLoad = async ({ params, locals, fetch, url, parent,
 			playbackOptions,
 			uploadedSubtitles,
 			similarItems,
-			episodeNavigation
+			episodeNavigation,
+			segments
 		};
 	} catch (err) {
 		if (err instanceof ApiError) {
@@ -285,6 +300,40 @@ function subtitleFailure(cause: unknown) {
 	});
 }
 
+function segmentsFailure(cause: unknown, values?: SegmentDraftMap) {
+	if (cause instanceof ApiError) {
+		if (cause.status === 401) {
+			redirect(303, '/login');
+		}
+		if (cause.status === 400) {
+			return fail(400, {
+				segmentsPanel: true,
+				message: cause.message || 'Los segmentos no son válidos.',
+				segmentValues: values
+			});
+		}
+		if (cause.status === 403) {
+			return fail(403, {
+				segmentsPanel: true,
+				message: 'Solo los administradores pueden editar los segmentos.',
+				segmentValues: values
+			});
+		}
+		if (cause.status === 404) {
+			return fail(404, {
+				segmentsPanel: true,
+				message: 'No se encontró el ítem.',
+				segmentValues: values
+			});
+		}
+	}
+	return fail(502, {
+		segmentsPanel: true,
+		message: 'No se pudieron guardar los segmentos. Inténtalo de nuevo.',
+		segmentValues: values
+	});
+}
+
 function subtitleFile(value: FormDataEntryValue | null): File | null {
 	if (!value || typeof value === 'string') {
 		return null;
@@ -404,6 +453,67 @@ export const actions: Actions = {
 			});
 		}
 		return { success: true, preferencesPanel: true, message: 'Opciones guardadas.' };
+	},
+
+	segmentsSave: async ({ request, locals, fetch, params }) => {
+		const token = requireSessionToken(locals);
+		const id = itemID(params);
+		if (id === null) {
+			return fail(404, { segmentsPanel: true, message: 'Ítem no encontrado.' });
+		}
+		const form = await request.formData();
+		const values: SegmentDraftMap = {
+			intro: {
+				start: String(form.get('intro_start') ?? ''),
+				end: String(form.get('intro_end') ?? '')
+			},
+			credits: {
+				start: String(form.get('credits_start') ?? ''),
+				end: String(form.get('credits_end') ?? '')
+			}
+		};
+		const parsed = parseSegmentForm(values);
+		if (parsed.error) {
+			return fail(400, {
+				segmentsPanel: true,
+				message: parsed.error,
+				segmentValues: parsed.values
+			});
+		}
+		try {
+			await createApiClient(fetch).putSegments(id, parsed.segments, token);
+		} catch (err) {
+			return segmentsFailure(err, values);
+		}
+		return {
+			success: true,
+			segmentsPanel: true,
+			message: 'Segmentos guardados.',
+			segmentValues: values
+		};
+	},
+
+	segmentsApplySeason: async ({ locals, fetch, params }) => {
+		const token = requireSessionToken(locals);
+		const id = itemID(params);
+		if (id === null) {
+			return fail(404, { segmentsPanel: true, message: 'Ítem no encontrado.' });
+		}
+		try {
+			const result = await createApiClient(fetch).applySegmentsToSeason(id, token);
+			return {
+				success: true,
+				segmentsPanel: true,
+				message:
+					result.updated === 0
+						? 'No había otros episodios en la temporada.'
+						: `Segmentos aplicados a ${result.updated} ${
+								result.updated === 1 ? 'episodio' : 'episodios'
+							}.`
+			};
+		} catch (err) {
+			return segmentsFailure(err);
+		}
 	},
 
 	watched: async ({ request, locals, fetch, params }) => {

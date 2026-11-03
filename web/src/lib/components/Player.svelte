@@ -5,6 +5,7 @@
 	import { chooseHlsStrategy } from '$lib/hls-strategy';
 	import {
 		absoluteSubtitleURL,
+		activeSegmentButton,
 		clampSeekTime,
 		countdownLabel,
 		controlsShouldHide,
@@ -89,6 +90,10 @@
 	const audioTracks = $derived(options?.audio_tracks ?? []);
 	const qualities = $derived(options?.qualities ?? []);
 	const subtitles = $derived(options?.subtitles ?? []);
+	const segments = $derived(options?.segments ?? []);
+	const segmentButton = $derived(
+		activeSegmentButton(currentTime, segments, Boolean(nextEpisodeUrl))
+	);
 	const canPictureInPicture = $derived(pictureInPictureEnabled);
 	const selectedSubtitleLabel = $derived(
 		selectedSubtitle
@@ -397,6 +402,22 @@
 	function seekBy(delta: number) {
 		seek((video?.currentTime ?? 0) + delta);
 		showNotice(`${delta > 0 ? '+' : ''}${delta} s`);
+	}
+
+	function followSegment() {
+		const button = segmentButton;
+		if (!button) {
+			return;
+		}
+		activity();
+		if (button.action === 'next') {
+			clearCountdown();
+			if (nextEpisodeUrl) {
+				window.location.href = nextEpisodeUrl;
+			}
+			return;
+		}
+		seek(button.end);
 	}
 
 	function setVolume(value: number) {
@@ -844,6 +865,17 @@
 		{/each}
 	</video>
 
+	{#if segmentButton}
+		<button
+			type="button"
+			class="segment-skip"
+			onclick={followSegment}
+			onfocus={activity}
+		>
+			{segmentButton.label}
+		</button>
+	{/if}
+
 	<PlayerControls
 		{playing}
 		{currentTime}
@@ -955,6 +987,33 @@
 	.up-next div {
 		display: flex;
 		gap: 0.4rem;
+	}
+	.segment-skip {
+		position: absolute;
+		right: 1rem;
+		bottom: 5.4rem;
+		z-index: 5;
+		padding: 0.65rem 1rem;
+		border: 1px solid var(--dorado);
+		border-radius: 999px;
+		background: var(--boton-fondo);
+		color: var(--boton-texto);
+		font: inherit;
+		font-size: 0.9rem;
+		font-weight: 700;
+		white-space: nowrap;
+		cursor: pointer;
+		box-shadow: 0 0.5rem 1.5rem var(--sombra);
+	}
+	.segment-skip:hover,
+	.segment-skip:focus-visible {
+		background: var(--boton-hover);
+		border-color: var(--naranja);
+	}
+	@media (max-width: 700px) {
+		.segment-skip {
+			bottom: 7.6rem;
+		}
 	}
 	:global(video::cue) {
 		color: #fff4e1;

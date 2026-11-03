@@ -1,8 +1,44 @@
+import type { PlaySegment, SegmentKind } from './api';
+
 export const PLAYER_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
 export const CONTROLS_HIDE_MS = 3000;
 export const SEEK_STEP_SECONDS = 10;
 export const SEEK_STEP_LONG_SECONDS = 30;
 export const FRAME_STEP_SECONDS = 1 / 24;
+
+export interface SegmentButton {
+	kind: SegmentKind;
+	label: string;
+	action: 'seek' | 'next';
+	end: number;
+}
+
+// El botón se decide solo por el tiempo y el segmento activo; no depende del
+// DOM para que el reproductor pueda probarlo sin montar el vídeo.
+export function activeSegmentButton(
+	currentTime: number,
+	segments: PlaySegment[] | null | undefined,
+	hasNextEpisode: boolean
+): SegmentButton | null {
+	if (!Number.isFinite(currentTime) || !Array.isArray(segments)) {
+		return null;
+	}
+	const segment = segments.find(
+		(candidate) => currentTime >= candidate.start && currentTime < candidate.end
+	);
+	if (!segment) {
+		return null;
+	}
+	if (segment.kind === 'intro') {
+		return { kind: 'intro', label: 'Saltar intro', action: 'seek', end: segment.end };
+	}
+	if (segment.kind === 'credits') {
+		return hasNextEpisode
+			? { kind: 'credits', label: 'Siguiente episodio', action: 'next', end: segment.end }
+			: { kind: 'credits', label: 'Saltar créditos', action: 'seek', end: segment.end };
+	}
+	return null;
+}
 
 export type PlayerShortcut =
 	| { type: 'toggle' }
