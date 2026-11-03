@@ -40,6 +40,14 @@ export function activeSegmentButton(
 	return null;
 }
 
+export function shouldStartAutoplayCountdown(
+	autoplayNext: boolean | undefined,
+	hasNextEpisode: boolean,
+	ended: boolean
+): boolean {
+	return ended && hasNextEpisode && (autoplayNext ?? true);
+}
+
 export type PlayerShortcut =
 	| { type: 'toggle' }
 	| { type: 'seek'; value: number }

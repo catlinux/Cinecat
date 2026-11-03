@@ -31,6 +31,7 @@
 		imagePanel?: boolean;
 		imageKind?: ImageKind;
 		imageOptions?: ImageOptions;
+		autoplay?: boolean;
 		message?: string;
 		candidates?: Candidate[];
 		search?: MatchSearch;
@@ -44,6 +45,7 @@
 	const playChoice = $derived(seriesPlayChoice(series, series.next_episode, firstAvailable));
 	const allWatched = $derived(seriesWatched(series));
 	const actionForm = $derived((form ?? null) as ActionForm | null);
+	const autoplayNext = $derived(actionForm?.autoplay ?? series.autoplay_next ?? true);
 	const candidates = $derived(actionForm?.candidates ?? []);
 	const search = $derived(actionForm?.search ?? null);
 	const panelOpen = $derived(Boolean(data.corregir || actionForm?.panel));
@@ -202,6 +204,24 @@
 				/>
 			{/if}
 		</div>
+
+		<form method="POST" action="?/autoplay" use:enhance class="autoplay-form">
+			<input type="hidden" name="enabled" value={autoplayNext ? '0' : '1'} />
+			<button
+				type="submit"
+				class="autoplay-switch"
+				class:on={autoplayNext}
+				role="switch"
+				aria-checked={autoplayNext}
+				aria-label="Reproducir el siguiente episodio automáticamente"
+			>
+				<span class="autoplay-switch-track" aria-hidden="true"><span></span></span>
+				<span class="autoplay-switch-copy">
+					<span class="autoplay-switch-label">Reproducir el siguiente episodio automáticamente</span>
+					<span class="autoplay-switch-state">{autoplayNext ? 'Activado' : 'Desactivado'}</span>
+				</span>
+			</button>
+		</form>
 
 		{#if actionForm?.message}
 			<p

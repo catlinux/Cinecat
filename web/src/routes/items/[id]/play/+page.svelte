@@ -38,6 +38,8 @@
 				startAt={data.startAt}
 				options={data.play}
 				nextEpisodeUrl={data.nextEpisodeUrl}
+				autoplayNext={data.play.autoplay_next ?? true}
+				autoplaySeriesId={data.item.series_id}
 			/>
 		</div>
 	{:else}

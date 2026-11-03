@@ -921,6 +921,84 @@ footer {
 	margin: 0;
 }
 
+.autoplay-form {
+	margin-top: 1rem;
+}
+
+.autoplay-switch {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.7rem;
+	max-width: 100%;
+	padding: 0.55rem 0.8rem;
+	border: 1px solid var(--borde-suave);
+	border-radius: 4px;
+	background: var(--superficie);
+	color: var(--texto-tenue);
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+
+.autoplay-switch:hover,
+.autoplay-switch:focus-visible {
+	border-color: var(--dorado);
+	background: var(--tinte);
+	outline: 2px solid var(--dorado);
+	outline-offset: 2px;
+}
+
+.autoplay-switch-track {
+	position: relative;
+	flex: 0 0 auto;
+	width: 2.1rem;
+	height: 1.15rem;
+	border-radius: 999px;
+	background: var(--borde-suave);
+}
+
+.autoplay-switch-track span {
+	position: absolute;
+	top: 0.14rem;
+	left: 0.14rem;
+	width: 0.87rem;
+	height: 0.87rem;
+	border-radius: 50%;
+	background: var(--superficie);
+	transition: transform 140ms ease;
+}
+
+.autoplay-switch.on .autoplay-switch-track {
+	background: var(--dorado);
+}
+
+.autoplay-switch.on .autoplay-switch-track span {
+	transform: translateX(0.95rem);
+}
+
+.autoplay-switch-copy {
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+}
+
+.autoplay-switch-label {
+	color: var(--texto-suave);
+	font-size: 0.88rem;
+}
+
+.autoplay-switch-state {
+	color: var(--texto-apagado);
+	font-size: 0.72rem;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.autoplay-switch.on .autoplay-switch-state {
+	color: var(--granate);
+}
+
 .button-secondary {
 	background: transparent;
 	color: var(--granate);

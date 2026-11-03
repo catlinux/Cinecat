@@ -22,6 +22,9 @@
 		nextEpisodeUrl = null,
 		canPictureInPicture = false,
 		canFullscreen = true,
+		autoplayEnabled = false,
+		showAutoplay = false,
+		autoplaySaving = false,
 		onToggle,
 		onSeek,
 		onSeekBy,
@@ -33,6 +36,7 @@
 		onQuality,
 		onPictureInPicture,
 		onFullscreen,
+		onAutoplay,
 		onActivity,
 		onMenuChange,
 		onFocusChange
@@ -54,6 +58,9 @@
 		nextEpisodeUrl?: string | null;
 		canPictureInPicture?: boolean;
 		canFullscreen?: boolean;
+		autoplayEnabled?: boolean;
+		showAutoplay?: boolean;
+		autoplaySaving?: boolean;
 		onToggle: () => void;
 		onSeek: (value: number) => void;
 		onSeekBy: (delta: number) => void;
@@ -65,6 +72,7 @@
 		onQuality: (value: string) => void;
 		onPictureInPicture: () => void;
 		onFullscreen: () => void;
+		onAutoplay: (enabled: boolean) => void;
 		onActivity: () => void;
 		onMenuChange: (open: boolean) => void;
 		onFocusChange: (focused: boolean) => void;
@@ -342,6 +350,21 @@
 		</button>
 	{/if}
 
+	{#if showAutoplay}
+		<button
+			type="button"
+			class="control-button autoplay-control"
+			class:on={autoplayEnabled}
+			role="switch"
+			aria-checked={autoplayEnabled}
+			aria-label="Reproducción automática"
+			disabled={autoplaySaving}
+			onclick={() => onAutoplay(!autoplayEnabled)}
+		>
+			<span>Reproducción automática: {autoplayEnabled ? 'Activada' : 'Desactivada'}</span>
+		</button>
+	{/if}
+
 	{#if nextEpisodeUrl}
 		<button
 			type="button"
@@ -493,6 +516,19 @@
 	.volume {
 		width: 76px;
 		accent-color: #d9a441;
+	}
+	.autoplay-control {
+		border-color: rgba(246, 234, 215, 0.25);
+		font-size: 0.76rem;
+		white-space: nowrap;
+	}
+	.autoplay-control.on {
+		border-color: #d9a441;
+		color: #f0c878;
+	}
+	.autoplay-control:disabled {
+		opacity: 0.65;
+		cursor: wait;
 	}
 	.next-episode {
 		margin-left: auto;

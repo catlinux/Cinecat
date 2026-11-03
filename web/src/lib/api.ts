@@ -744,6 +744,11 @@ export interface SeriesDetail {
 	watchlist?: boolean;
 	seasons: SeriesSeason[];
 	next_episode: MediaItem | null;
+	autoplay_next?: boolean;
+}
+
+export interface SeriesAutoplayResponse {
+	enabled: boolean;
 }
 
 export interface SeriesSeasonDetail {
@@ -822,6 +827,7 @@ export interface PlayResponse {
 	subtitles?: PlaybackSubtitle[];
 	selected_subtitle?: string | null;
 	segments?: PlaySegment[];
+	autoplay_next?: boolean;
 }
 
 export interface PlayQuery {
@@ -1634,6 +1640,18 @@ export class ApiClient {
 			method: 'DELETE',
 			token
 		});
+	}
+
+	async setSeriesAutoplay(
+		id: number,
+		enabled: boolean,
+		token: string
+	): Promise<SeriesAutoplayResponse> {
+		return this.put<SeriesAutoplayResponse>(
+			`/api/v1/series/${id}/autoplay`,
+			{ enabled },
+			token
+		);
 	}
 
 	async setSeriesWatched(id: number, watched: boolean, token: string): Promise<void> {

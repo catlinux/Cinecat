@@ -30,6 +30,23 @@ function watchedValue(value: FormDataEntryValue | null): boolean | null {
 	return null;
 }
 
+function autoplayFailure(cause: unknown) {
+	if (cause instanceof ApiError) {
+		if (cause.status === 401) {
+			redirect(303, '/login');
+		}
+		if (cause.status === 400) {
+			return fail(400, { message: 'Ajuste de reproducción automática no válido.' });
+		}
+		if (cause.status === 404) {
+			return fail(404, { message: 'Serie no encontrada.' });
+		}
+	}
+	return fail(502, {
+		message: 'No se pudo guardar la reproducción automática. Inténtalo de nuevo.'
+	});
+}
+
 function watchedFailure(cause: unknown) {
 	if (cause instanceof ApiError) {
 		if (cause.status === 401) {
@@ -204,6 +221,29 @@ export const load: PageServerLoad = async ({ params, locals, fetch, url, parent 
 };
 
 export const actions: Actions = {
+	autoplay: async ({ request, locals, fetch, params }) => {
+		const token = requireSessionToken(locals);
+		const id = seriesID(params);
+		if (id === null) {
+			return fail(404, { message: 'Serie no encontrada.' });
+		}
+		const form = await request.formData();
+		const enabled = watchedValue(form.get('enabled'));
+		if (enabled === null) {
+			return fail(400, { message: 'Ajuste de reproducción automática no válido.' });
+		}
+		try {
+			const response = await createApiClient(fetch).setSeriesAutoplay(id, enabled, token);
+			return {
+				success: true,
+				autoplay: response.enabled,
+				message: 'Guardado'
+			};
+		} catch (cause) {
+			return autoplayFailure(cause);
+		}
+	},
+
 	watchedSeries: async ({ request, locals, fetch, params }) => {
 		const token = requireSessionToken(locals);
 		const id = seriesID(params);

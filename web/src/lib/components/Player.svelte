@@ -13,6 +13,7 @@
 		formatSpeed,
 		playbackReloadURL,
 		PLAYER_SPEEDS,
+		shouldStartAutoplayCountdown,
 		shortcutAction,
 		subtitleNeedsReload
 	} from '$lib/player';
@@ -32,7 +33,9 @@
 		itemId = undefined,
 		startAt = 0,
 		options = null,
-		nextEpisodeUrl = null
+		nextEpisodeUrl = null,
+		autoplayNext = true,
+		autoplaySeriesId = null
 	}: {
 		src: string;
 		mode: 'direct' | 'remux';
@@ -41,6 +44,8 @@
 		startAt?: number;
 		options?: PlayResponse | null;
 		nextEpisodeUrl?: string | null;
+		autoplayNext?: boolean;
+		autoplaySeriesId?: number | null;
 	} = $props();
 
 	const volumeStorageKey = 'cinecat.player.volume';
@@ -82,6 +87,16 @@
 	let countdownTimer: ReturnType<typeof setInterval> | null = null;
 	let clickTimer: ReturnType<typeof setTimeout> | null = null;
 	let pictureInPictureEnabled = $state(false);
+	// La preferencia se aplica al instante y se revierte si no se puede guardar.
+	// svelte-ignore state_referenced_locally
+	let autoplay = $state(autoplayNext);
+	let autoplaySaving = $state(false);
+
+	$effect(() => {
+		if (!autoplay && countdown !== null) {
+			clearCountdown();
+		}
+	});
 
 	let resumeApplied = false;
 	let lastProgressAt: number | null = null;
@@ -346,7 +361,7 @@
 		playing = false;
 		controlsHidden = false;
 		saveSnapshot('ended');
-		if (nextEpisodeUrl) {
+		if (shouldStartAutoplayCountdown(autoplay, Boolean(nextEpisodeUrl), true)) {
 			startCountdown();
 		}
 	}
@@ -629,6 +644,9 @@
 	}
 
 	function startCountdown() {
+		if (!autoplay || !nextEpisodeUrl) {
+			return;
+		}
 		if (countdownTimer !== null) {
 			clearInterval(countdownTimer);
 		}
@@ -653,6 +671,46 @@
 			countdownTimer = null;
 		}
 		countdown = null;
+	}
+
+	async function updateAutoplay(enabled: boolean) {
+		if (!autoplaySeriesId || autoplaySaving) {
+			return;
+		}
+		const previous = autoplay;
+		autoplay = enabled;
+		if (!enabled) {
+			clearCountdown();
+		}
+		autoplaySaving = true;
+		try {
+			const response = await fetch(`/series/${autoplaySeriesId}/autoplay`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ enabled })
+			});
+			if (!response.ok) {
+				throw new Error('no se pudo guardar');
+			}
+			const data = (await response.json()) as { enabled?: unknown };
+			if (typeof data.enabled === 'boolean') {
+				autoplay = data.enabled;
+				if (!autoplay) {
+					clearCountdown();
+				}
+			}
+			showNotice(
+				autoplay ? 'Reproducción automática activada' : 'Reproducción automática desactivada'
+			);
+		} catch {
+			autoplay = previous;
+			if (!autoplay) {
+				clearCountdown();
+			}
+			showNotice('No se pudo guardar la reproducción automática');
+		} finally {
+			autoplaySaving = false;
+		}
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
@@ -819,6 +877,21 @@
 	{#if countdown !== null && nextEpisodeUrl}
 		<div class="up-next" role="dialog" aria-label="Siguiente episodio">
 			<p>{countdownLabel(countdown)}</p>
+			{#if autoplaySeriesId}
+				<button
+					type="button"
+					class="autoplay-toggle"
+					class:on={autoplay}
+					role="switch"
+					aria-checked={autoplay}
+					aria-label="Reproducción automática"
+					disabled={autoplaySaving}
+					onclick={() => void updateAutoplay(!autoplay)}
+				>
+					<span>Reproducción automática</span>
+					<strong>{autoplay ? 'Activada' : 'Desactivada'}</strong>
+				</button>
+			{/if}
 			<div>
 				<button type="button" class="button button-secondary" onclick={clearCountdown}>Cancelar</button>
 				<button
@@ -893,6 +966,10 @@
 		{selectedSubtitle}
 		{nextEpisodeUrl}
 		{canPictureInPicture}
+		autoplayEnabled={autoplay}
+		showAutoplay={autoplaySeriesId !== null}
+		autoplaySaving={autoplaySaving}
+		onAutoplay={(enabled) => void updateAutoplay(enabled)}
 		onToggle={togglePlay}
 		onSeek={seek}
 		onSeekBy={seekBy}
@@ -987,6 +1064,34 @@
 	.up-next div {
 		display: flex;
 		gap: 0.4rem;
+	}
+	.autoplay-toggle {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.7rem;
+		width: 100%;
+		margin: 0 0 0.6rem;
+		padding: 0.4rem 0.5rem;
+		border: 1px solid rgba(246, 234, 215, 0.32);
+		border-radius: 6px;
+		background: transparent;
+		color: #f6ead7;
+		font: inherit;
+		font-size: 0.78rem;
+		text-align: left;
+		cursor: pointer;
+	}
+	.autoplay-toggle strong {
+		color: #d9a441;
+		font-size: 0.7rem;
+		text-transform: uppercase;
+	}
+	.autoplay-toggle:hover,
+	.autoplay-toggle:focus-visible {
+		border-color: #d9a441;
+		background: rgba(246, 234, 215, 0.12);
+		outline: none;
 	}
 	.segment-skip {
 		position: absolute;

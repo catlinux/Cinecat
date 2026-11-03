@@ -24,6 +24,24 @@ describe('Player', () => {
 		expect(body).not.toContain('src="http://api.test/playlist.m3u8"');
 	});
 
+	it('muestra el interruptor de reproduccion automatica', () => {
+		const { body } = render(Player, {
+			props: {
+				src: 'http://api.test/api/v1/stream/7?exp=1&sig=abc',
+				mode: 'direct',
+				title: 'Episodio',
+				itemId: 7,
+				autoplayNext: false,
+				autoplaySeriesId: 5
+			}
+		});
+
+		expect(body).toContain('aria-label="Reproducción automática"');
+		expect(body).toContain('role="switch"');
+		expect(body).toContain('aria-checked="false"');
+		expect(body).toContain('Desactivada');
+	});
+
 	it('pinta los controles propios, las pistas y los subtítulos', () => {
 		const { body } = render(Player, {
 			props: {

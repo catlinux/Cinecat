@@ -11,6 +11,7 @@ import {
 	playbackReloadURL,
 	pointerPosition,
 	shortcutAction,
+	shouldStartAutoplayCountdown,
 	subtitleNeedsReload
 } from './player';
 
@@ -124,6 +125,14 @@ describe('utilidades del reproductor', () => {
 		});
 		expect(activeSegmentButton(Number.NaN, segments, true)).toBeNull();
 		expect(activeSegmentButton(10, undefined, true)).toBeNull();
+	});
+
+	it('decide si arranca la cuenta atras al terminar', () => {
+		expect(shouldStartAutoplayCountdown(true, true, true)).toBe(true);
+		expect(shouldStartAutoplayCountdown(undefined, true, true)).toBe(true);
+		expect(shouldStartAutoplayCountdown(false, true, true)).toBe(false);
+		expect(shouldStartAutoplayCountdown(true, false, true)).toBe(false);
+		expect(shouldStartAutoplayCountdown(true, true, false)).toBe(false);
 	});
 
 	it('construye la URL de recarga conservando audio, calidad y tiempo', () => {
