@@ -68,6 +68,18 @@ class CinecatApi(
 
     suspend fun sections(): ApiResult<SectionsResponse> = call { service.sections() }
 
+    suspend fun libraries(): ApiResult<LibrariesResponse> = call { service.libraries() }
+
+    suspend fun photos(
+        libraryId: Long,
+        folder: String? = null,
+        sort: String? = null,
+        limit: Int? = null,
+        offset: Int? = null
+    ): ApiResult<PhotosResponse> = call {
+        service.photos(libraryId, folder, sort, limit, offset)
+    }
+
     suspend fun publicSettings(): ApiResult<PublicSettings> = call { service.publicSettings() }
 
     suspend fun items(

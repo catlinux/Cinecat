@@ -70,6 +70,9 @@ data object Series
 data object Collections
 
 @Serializable
+data object Photos
+
+@Serializable
 data object Search
 
 @Serializable
@@ -105,13 +108,20 @@ fun MainShell(
     val allTabs = remember { mainTabs() }
     // null significa que no se pudo consultar; en ese caso se muestran todos.
     var sections by remember { mutableStateOf<SectionsResponse?>(null) }
+    var hasPhotos by remember { mutableStateOf(false) }
     LaunchedEffect(container) {
         sections = when (val result = container.libraryRepository.sections()) {
             is ApiResult.Success -> result.value
             is ApiResult.HttpError, is ApiResult.NetworkError -> null
         }
+        hasPhotos = when (val result = container.libraryRepository.libraries()) {
+            is ApiResult.Success -> result.value.libraries.any { it.kind == "photos" }
+            is ApiResult.HttpError, is ApiResult.NetworkError -> false
+        }
     }
-    val tabs = remember(allTabs, sections) { visibleMainTabs(allTabs, sections) }
+    val tabs = remember(allTabs, sections, hasPhotos) {
+        visibleMainTabs(allTabs, sections, hasPhotos)
+    }
     val configuration = LocalConfiguration.current
     val useRail = useNavigationRail(configuration.screenWidthDp)
     val compactBottomLabels = !useRail && !isTelevision &&
@@ -137,7 +147,7 @@ fun MainShell(
         }
     }
 
-    LaunchedEffect(sections, currentDestination) {
+    LaunchedEffect(sections, hasPhotos, currentDestination) {
         if (sections == null) {
             return@LaunchedEffect
         }
@@ -264,6 +274,15 @@ fun MainShell(
                             onOpenCollection = {
                                 navController.navigate(CollectionDetail(it))
                             }
+                        )
+                    }
+                    composable<Photos> {
+                        val photosViewModel: PhotosViewModel = viewModel {
+                            PhotosViewModel(container.libraryRepository, container.appScope)
+                        }
+                        PhotosScreen(
+                            viewModel = photosViewModel,
+                            isTelevision = isTelevision
                         )
                     }
                     composable<Search> {
@@ -413,19 +432,22 @@ private fun TabIcon(tab: MainTab) {
 
 internal fun visibleMainTabs(
     allTabs: List<MainTab>,
-    sections: SectionsResponse?
+    sections: SectionsResponse?,
+    hasPhotos: Boolean = false
 ): List<MainTab> {
-    if (sections == null) {
-        return allTabs
-    }
-    return allTabs.filter { tab ->
-        when (tab.route) {
-            Movies -> sections.movies
-            Series -> sections.series
-            Collections -> sections.collections
-            else -> true
+    val bySections = if (sections == null) {
+        allTabs
+    } else {
+        allTabs.filter { tab ->
+            when (tab.route) {
+                Movies -> sections.movies
+                Series -> sections.series
+                Collections -> sections.collections
+                else -> true
+            }
         }
     }
+    return bySections.filter { tab -> tab.route != Photos || hasPhotos }
 }
 
 internal fun mainTabs(): List<MainTab> = listOf(
@@ -433,5 +455,6 @@ internal fun mainTabs(): List<MainTab> = listOf(
     MainTab(R.string.nav_movies, Movies, iconRes = R.drawable.ic_nav_movies),
     MainTab(R.string.nav_series, Series, iconRes = R.drawable.ic_nav_series),
     MainTab(R.string.nav_collections, Collections, iconRes = R.drawable.ic_nav_collections),
+    MainTab(R.string.nav_photos, Photos, iconRes = R.drawable.ic_nav_photos),
     MainTab(R.string.nav_search, Search, icon = Icons.Filled.Search)
 )

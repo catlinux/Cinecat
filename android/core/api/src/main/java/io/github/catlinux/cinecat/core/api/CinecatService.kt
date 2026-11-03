@@ -44,6 +44,18 @@ interface CinecatService {
     @GET("api/v1/sections")
     suspend fun sections(): SectionsResponse
 
+    @GET("api/v1/libraries")
+    suspend fun libraries(): LibrariesResponse
+
+    @GET("api/v1/photos")
+    suspend fun photos(
+        @Query("library_id") libraryId: Long,
+        @Query("folder") folder: String?,
+        @Query("sort") sort: String?,
+        @Query("limit") limit: Int?,
+        @Query("offset") offset: Int?
+    ): PhotosResponse
+
     @GET("api/v1/settings/public")
     suspend fun publicSettings(): PublicSettings
 

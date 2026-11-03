@@ -7,8 +7,10 @@ import io.github.catlinux.cinecat.core.api.CollectionsResponse
 import io.github.catlinux.cinecat.core.api.GenresResponse
 import io.github.catlinux.cinecat.core.api.HomeResponse
 import io.github.catlinux.cinecat.core.api.ItemsResponse
+import io.github.catlinux.cinecat.core.api.LibrariesResponse
 import io.github.catlinux.cinecat.core.api.ListsResponse
 import io.github.catlinux.cinecat.core.api.MediaItem
+import io.github.catlinux.cinecat.core.api.PhotosResponse
 import io.github.catlinux.cinecat.core.api.PortalRow
 import io.github.catlinux.cinecat.core.api.PublicSettings
 import io.github.catlinux.cinecat.core.api.SeasonDetail
@@ -57,6 +59,24 @@ class LibraryRepository(
     suspend fun home(): ApiResult<HomeResponse> = withApi { it.home() }
 
     suspend fun sections(): ApiResult<SectionsResponse> = withApi { it.sections() }
+
+    suspend fun libraries(): ApiResult<LibrariesResponse> = withApi { it.libraries() }
+
+    suspend fun photos(
+        libraryId: Long,
+        folder: String,
+        sort: String,
+        limit: Int? = null,
+        offset: Int? = null
+    ): ApiResult<PhotosResponse> = withApi {
+        it.photos(
+            libraryId = libraryId,
+            folder = folder.ifBlank { null },
+            sort = sort,
+            limit = limit,
+            offset = offset
+        )
+    }
 
     suspend fun publicSettings(): ApiResult<PublicSettings> = withApi { it.publicSettings() }
 

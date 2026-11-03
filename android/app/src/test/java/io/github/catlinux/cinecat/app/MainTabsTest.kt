@@ -2,6 +2,7 @@ package io.github.catlinux.cinecat.app
 
 import io.github.catlinux.cinecat.core.api.SectionsResponse
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MainTabsTest {
@@ -26,10 +27,12 @@ class MainTabsTest {
     }
 
     @Test
-    fun showsEveryTabWhenSectionsCouldNotBeLoaded() {
-        val visible = visibleMainTabs(mainTabs(), sections = null)
+    fun showsEverySectionWhenSectionsCouldNotBeLoadedButOnlyShowsPhotosWithLibraries() {
+        val withoutPhotos = visibleMainTabs(mainTabs(), sections = null)
+        assertEquals(mainTabs().filter { it.route != Photos }.map { it.route }, withoutPhotos.map { it.route })
 
-        assertEquals(mainTabs().map { it.route }, visible.map { it.route })
+        val withPhotos = visibleMainTabs(mainTabs(), sections = null, hasPhotos = true)
+        assertEquals(mainTabs().map { it.route }, withPhotos.map { it.route })
     }
 
     @Test
@@ -40,5 +43,22 @@ class MainTabsTest {
         )
 
         assertEquals(listOf(Portal, Search), visible.map { it.route })
+    }
+
+    @Test
+    fun photosTabOnlyAppearsWithAccessiblePhotoLibraries() {
+        val withoutPhotos = visibleMainTabs(
+            mainTabs(),
+            SectionsResponse(movies = true, series = true, collections = true),
+            hasPhotos = false
+        )
+        assertTrue(withoutPhotos.none { it.route == Photos })
+
+        val withPhotos = visibleMainTabs(
+            mainTabs(),
+            SectionsResponse(movies = true, series = true, collections = true),
+            hasPhotos = true
+        )
+        assertTrue(withPhotos.any { it.route == Photos })
     }
 }
