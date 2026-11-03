@@ -13,6 +13,7 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -35,10 +36,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -105,7 +108,14 @@ fun PlayerScreen(
     var appliedAudioStream by remember(exoPlayer) { mutableStateOf<String?>(null) }
     var showTracks by remember { mutableStateOf(false) }
     var playerView by remember { mutableStateOf<PlayerView?>(null) }
+    var positionSeconds by remember(exoPlayer) { mutableStateOf(0.0) }
+    var segmentFocused by remember { mutableStateOf(false) }
     val rootFocus = remember { FocusRequester() }
+    val segmentFocus = remember { FocusRequester() }
+    val segmentButton = (state as? PlayerUiState.Ready)?.let { ready ->
+        activeSegmentButton(positionSeconds, ready.segments)
+    }
+    val showSegmentButton = !inPip && !showTracks && segmentButton != null
 
     fun saveCurrentProgress() {
         val duration = exoPlayer.duration
@@ -217,8 +227,46 @@ fun PlayerScreen(
         }
     }
 
-    LaunchedEffect(state is PlayerUiState.Ready) {
-        runCatching { rootFocus.requestFocus() }
+    LaunchedEffect(
+        state is PlayerUiState.Ready,
+        showSegmentButton,
+        showTracks,
+        inPip,
+        isTelevision
+    ) {
+        val rootCanTakeFocus = !showTracks && !inPip &&
+            !(isTelevision && showSegmentButton)
+        if (state is PlayerUiState.Ready && rootCanTakeFocus) {
+            runCatching { rootFocus.requestFocus() }
+        }
+    }
+
+    LaunchedEffect(exoPlayer, state) {
+        val ready = state as? PlayerUiState.Ready ?: return@LaunchedEffect
+        if (ready.segments.isEmpty()) {
+            positionSeconds = exoPlayer.currentPosition / 1000.0
+            return@LaunchedEffect
+        }
+        while (true) {
+            positionSeconds = exoPlayer.currentPosition / 1000.0
+            delay(500)
+        }
+    }
+
+    LaunchedEffect(showSegmentButton, isTelevision) {
+        if (!isTelevision) {
+            return@LaunchedEffect
+        }
+        if (showSegmentButton) {
+            withFrameNanos { }
+            runCatching { segmentFocus.requestFocus() }
+        } else {
+            segmentFocused = false
+            if (!inPip && !showTracks) {
+                withFrameNanos { }
+                runCatching { rootFocus.requestFocus() }
+            }
+        }
     }
 
     LaunchedEffect(tracks, state) {
@@ -242,6 +290,15 @@ fun PlayerScreen(
             .focusable()
             .onPreviewKeyEvent { event ->
                 if (inPip || state !is PlayerUiState.Ready || showTracks) {
+                    return@onPreviewKeyEvent false
+                }
+                // Con el botón de segmento enfocado, la tecla central debe
+                // llegar al botón; las flechas siguen controlando el vídeo.
+                if (showSegmentButton && segmentFocused &&
+                    (event.key == Key.DirectionCenter ||
+                        event.key == Key.Enter ||
+                        event.key == Key.NumPadEnter)
+                ) {
                     return@onPreviewKeyEvent false
                 }
                 val action: (() -> Unit) = when (event.key) {
@@ -310,6 +367,30 @@ fun PlayerScreen(
                     keepAwake = keepAwake,
                     onCreated = { playerView = it }
                 )
+                val button = segmentButton
+                if (showSegmentButton && button != null) {
+                    Button(
+                        onClick = {
+                            positionSeconds = button.endSeconds
+                            exoPlayer.seekTo((button.endSeconds * 1000.0).roundToLong())
+                            playerView?.showController()
+                        },
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(end = 24.dp, bottom = 96.dp)
+                            .focusRequester(segmentFocus)
+                            .onFocusChanged { segmentFocused = it.isFocused }
+                            .focusRing(RoundedCornerShape(24.dp)),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        ),
+                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp)
+                    ) {
+                        Text(stringResource(button.labelRes))
+                    }
+                }
                 if (!inPip) {
                     TextButton(
                         onClick = { showTracks = true },

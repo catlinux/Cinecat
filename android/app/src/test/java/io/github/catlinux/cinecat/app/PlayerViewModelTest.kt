@@ -4,6 +4,7 @@ import io.github.catlinux.cinecat.core.api.ApiResult
 import io.github.catlinux.cinecat.core.api.AudioTrack
 import io.github.catlinux.cinecat.core.api.ItemPreferences
 import io.github.catlinux.cinecat.core.api.PlayResponse
+import io.github.catlinux.cinecat.core.api.PlaySegment
 import io.github.catlinux.cinecat.core.api.PreferencesPatch
 import io.github.catlinux.cinecat.core.api.QualityOption
 import io.github.catlinux.cinecat.core.api.SubtitleOption
@@ -242,6 +243,36 @@ class PlayerViewModelTest {
             ready.burnSubtitles
         )
         assertEquals("e1", ready.selectedSubtitle)
+    }
+
+    @Test
+    fun keepsSegmentsFromPlayResponseInReadyState() = runTest {
+        val segments = listOf(
+            PlaySegment(kind = "intro", start = 10.0, end = 25.0, source = "chapter"),
+            PlaySegment(kind = "credits", start = 3500.0, end = 3560.0, source = "manual")
+        )
+        val viewModel = viewModel(
+            play = {
+                ApiResult.Success(
+                    PlayResponse(url = "/stream", mode = "direct", segments = segments)
+                )
+            }
+        )
+        advanceUntilIdle()
+
+        val ready = viewModel.state.value as PlayerUiState.Ready
+        assertEquals(segments, ready.segments)
+    }
+
+    @Test
+    fun withoutSegmentsLeavesAnEmptyList() = runTest {
+        val viewModel = viewModel(
+            play = { ApiResult.Success(PlayResponse(url = "/stream", mode = "direct")) }
+        )
+        advanceUntilIdle()
+
+        val ready = viewModel.state.value as PlayerUiState.Ready
+        assertTrue(ready.segments.isEmpty())
     }
 
     @Test

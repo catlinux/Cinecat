@@ -14,7 +14,16 @@ data class PlayResponse(
     val qualities: List<QualityOption> = emptyList(),
     @SerialName("selected_quality") val selectedQuality: String = "",
     val subtitles: List<SubtitleOption> = emptyList(),
-    @SerialName("selected_subtitle") val selectedSubtitle: String? = null
+    @SerialName("selected_subtitle") val selectedSubtitle: String? = null,
+    val segments: List<PlaySegment> = emptyList()
+)
+
+@Serializable
+data class PlaySegment(
+    val kind: String = "",
+    val start: Double = 0.0,
+    val end: Double = 0.0,
+    val source: String = ""
 )
 
 @Serializable

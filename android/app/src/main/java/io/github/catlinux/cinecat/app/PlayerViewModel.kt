@@ -6,6 +6,7 @@ import androidx.media3.common.util.Util
 import io.github.catlinux.cinecat.core.api.ApiResult
 import io.github.catlinux.cinecat.core.api.ItemPreferences
 import io.github.catlinux.cinecat.core.api.PlayResponse
+import io.github.catlinux.cinecat.core.api.PlaySegment
 import io.github.catlinux.cinecat.core.api.PreferencesPatch
 import io.github.catlinux.cinecat.core.api.SubtitleOption
 import io.github.catlinux.cinecat.core.data.PlaybackRepository
@@ -53,7 +54,8 @@ sealed interface PlayerUiState {
         val selectedAudio: Int = 0,
         val selectedSubtitle: String? = null,
         val selectedQuality: String = "",
-        val burnSubtitles: List<PlayerBurnSubtitle> = emptyList()
+        val burnSubtitles: List<PlayerBurnSubtitle> = emptyList(),
+        val segments: List<PlaySegment> = emptyList()
     ) : PlayerUiState
 }
 
@@ -360,7 +362,8 @@ class PlayerViewModel(
             selectedAudio = resolved.audioIndex,
             selectedSubtitle = resolved.subtitleId,
             selectedQuality = resolved.quality,
-            burnSubtitles = burnSubtitles
+            burnSubtitles = burnSubtitles,
+            segments = response.segments
         )
     }
 

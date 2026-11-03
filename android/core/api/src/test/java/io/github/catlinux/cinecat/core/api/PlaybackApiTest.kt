@@ -33,6 +33,7 @@ class PlaybackApiTest {
         assertEquals("Auto", directValue.qualities.single().label)
         assertEquals("e0", directValue.subtitles.single().id)
         assertEquals("/api/v1/stream/7/subtitles/e0.vtt", directValue.subtitles.single().url)
+        assertTrue(directValue.segments.isEmpty())
         assertEquals("/api/v1/items/7/play", server.takeRequest().path)
 
         server.enqueue(jsonResponse(remuxJson()))
@@ -62,6 +63,37 @@ class PlaybackApiTest {
         val subtitle = (result as ApiResult.Success).value.subtitles.single()
         assertEquals("e1", subtitle.id)
         assertTrue(subtitle.burnIn)
+    }
+
+    @Test
+    fun parsesSegmentsAndAllowsResponsesWithoutThem() = runTest {
+        server.enqueue(
+            jsonResponse(
+                """{
+                  "url":"/stream",
+                  "mode":"remux",
+                  "segments":[
+                    {"kind":"intro","start":10.5,"end":42.0,"source":"chapter"},
+                    {"kind":"credits","start":3500,"end":3600,"source":"manual"}
+                  ]
+                }"""
+            )
+        )
+        val withSegments = api().play(7)
+        assertTrue(withSegments is ApiResult.Success)
+        val segments = (withSegments as ApiResult.Success).value.segments
+        assertEquals(2, segments.size)
+        assertEquals("intro", segments[0].kind)
+        assertEquals(10.5, segments[0].start, 0.0)
+        assertEquals(42.0, segments[0].end, 0.0)
+        assertEquals("chapter", segments[0].source)
+        assertEquals("credits", segments[1].kind)
+        assertEquals("manual", segments[1].source)
+
+        server.enqueue(jsonResponse(directJson()))
+        val withoutSegments = api().play(7)
+        assertTrue(withoutSegments is ApiResult.Success)
+        assertTrue((withoutSegments as ApiResult.Success).value.segments.isEmpty())
     }
 
     @Test

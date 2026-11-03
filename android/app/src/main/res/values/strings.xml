@@ -159,6 +159,8 @@
     <string name="player_disable_subtitles">Desactivar subtítulos</string>
     <string name="player_no_tracks">Sin pistas disponibles</string>
     <string name="player_track_selected">✓ %1$s</string>
+    <string name="player_skip_intro">Saltar intro</string>
+    <string name="player_skip_credits">Saltar créditos</string>
     <string name="update_section">Actualizaciones</string>
     <string name="update_auto">Actualizar automáticamente</string>
     <string name="update_check">Buscar actualizaciones</string>
