@@ -169,6 +169,14 @@ Las preferencias de audio, subtítulos y calidad se leen con `GET /api/v1/items/
 
 `GET /play` aplica esta precedencia: parámetro explícito > preferencia del ítem > perfil de la sesión > valor por defecto. El perfil de audio elige la primera pista de ese idioma; si no hay ninguna, se usa el comportamiento normal. El perfil de subtítulo elige la primera pista de texto (nunca una de imagen) de ese idioma, prefiriendo las no forzadas; `off` no muestra subtítulos por defecto. La calidad máxima solo actúa como tope en HLS: recorta las calidades ofrecidas y baja `auto`, `original` y las alturas superiores al límite; la reproducción directa no cambia.
 
+## Descarga para ver sin conexión
+
+`GET /api/v1/items/{id}/download` devuelve el archivo original de una película o un episodio. Requiere una sesión válida y acceso a la biblioteca del ítem; un ítem inexistente, oculto, de otro tipo o sin archivo responde `404`.
+
+La respuesta usa `http.ServeContent`: admite rangos (`206` e `If-Range`), envía `Last-Modified`, `Accept-Ranges: bytes`, `Content-Disposition` con `filename*=UTF-8''...` y el `Content-Type` según la extensión (`.mkv` es `video/x-matroska`, `.mp4` y `.m4v` son `video/mp4`, el resto `application/octet-stream`). No recodifica ni modifica el archivo. Una sesión ausente o no válida responde `401`, un rango fuera del archivo `416` y un error interno `500`.
+
+La app Android solo usa esta ruta cuando `/play` devuelve `mode: "direct"` con las capacidades del equipo. Si devuelve `remux`, no descarga y avisa de que el archivo necesita conversión; no se generan versiones recodificadas.
+
 ## Segmentos de intro y créditos
 
 `segments` es una lista, posiblemente vacía, de objetos `{kind, start, end, source}`. `kind` es `intro` o `credits`, `start` y `end` están en segundos y `source` es `chapter` o `manual`. Los segmentos manuales sustituyen a los detectados del mismo tipo. La detección usa los capítulos de la ficha técnica y los títulos normalizados (sin mayúsculas, acentos ni espacios sobrantes); también se pueden marcar a mano desde la ficha. No hay detección por audio. Si la ficha no se puede leer, la lista va vacía y la reproducción sigue igual.
@@ -221,7 +229,7 @@ Un contenedor no admitido en la reproducción responde `415`.
 
 ## Acceso por biblioteca
 
-El servidor ya filtra por las bibliotecas asignadas a la cuenta y por su rol. La app no necesita enviar identificadores de biblioteca para ocultar contenido: lo que no está permitido responde `404`, igual que un recurso inexistente. Esto se aplica también a la reproducción y a las miniaturas.
+El servidor ya filtra por las bibliotecas asignadas a la cuenta y por su rol. La app no necesita enviar identificadores de biblioteca para ocultar contenido: lo que no está permitido responde `404`, igual que un recurso inexistente. Esto se aplica también a la reproducción, la descarga y las miniaturas.
 
 ## Ejemplo con curl
 

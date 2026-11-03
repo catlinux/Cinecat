@@ -142,6 +142,16 @@ In the subtitle menu, embedded image tracks (PGS, VobSub and DVB) carry the " ·
 
 Progress is saved every 15 s and on exit. If 15 s or less remain, playback does not resume: it is treated as finished. When an episode ends and there is a next one, an 8-second countdown starts.
 
+## Offline downloads
+
+On Android, only on phones and tablets (TV does not offer them), the movie page and every episode have **Descargar**. It downloads only when the device can play the file directly; if it needs conversion, the message "Este archivo necesita conversión y no se puede descargar" is shown and nothing is downloaded or re-encoded.
+
+The download uses the system DownloadManager, is stored in the app's private folder (it asks for no storage permissions and is deleted when the app is uninstalled) and shows a notification while it runs and when it finishes. While it runs, the button shows **Descargando n %**, and pressing it offers to cancel. When it finishes it shows **Descargado**; pressing it lets you play the file or delete it.
+
+Under **Cuenta › Descargas** (phones and tablets only) you see the poster, title, size and progress of each download, and you can play, cancel or delete it. Playback is local and offline: it uses the original file and the subtitles embedded in that file, not the server subtitles, and starts where you left off. Progress is stored on the device and sent to the server when the app starts or when Descargas is opened; without a connection it stays pending.
+
+If there is no connection on startup and you have downloads, the error screen offers **Ver descargas** to get in without the server.
+
 ## Themes, menu and account
 
 The theme selector offers **Auto**, **Claro** and **Oscuro**. Auto follows the system theme. The preference is stored in that browser; if there is none, the server default is used.

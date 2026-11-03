@@ -142,6 +142,16 @@ En el menú de subtítulos, las pistas de imagen incrustadas (PGS, VobSub y DVB)
 
 El progreso se guarda cada 15 s y al salir. Si quedan 15 s o menos, no se reanuda: se considera terminado. Al acabar un episodio con siguiente, aparece una cuenta atrás de 8 s para reproducirlo.
 
+## Descargas sin conexión
+
+En Android, solo en móvil y tableta (la TV no las ofrece), la ficha de una película y cada episodio tienen **Descargar**. Solo descarga si el equipo puede reproducir el archivo en directo; si necesita conversión, aparece el aviso «Este archivo necesita conversión y no se puede descargar» y no se descarga ni se genera una versión recodificada.
+
+La descarga usa el DownloadManager del sistema, se guarda en la carpeta privada de la app (no pide permisos de almacenamiento y se borra al desinstalarla) y muestra una notificación durante la descarga y al terminar. Mientras baja, el botón muestra **Descargando n %** y al pulsarlo ofrece cancelar. Al terminar muestra **Descargado**; al pulsarlo puedes reproducir el archivo o borrarlo.
+
+En **Cuenta › Descargas** (solo móvil y tableta) ves el cartel, el título, el tamaño y el progreso de cada descarga, y puedes reproducir, cancelar o borrar. La reproducción es local, sin conexión: usa el archivo original y los subtítulos incrustados de ese archivo, no los subtítulos del servidor, y empieza donde la dejaste. El progreso se guarda en el dispositivo y se envía al servidor al arrancar la app o al abrir Descargas; si no hay conexión, queda pendiente.
+
+Si al arrancar no hay conexión y tienes descargas, la pantalla de error ofrece **Ver descargas** para entrar sin pasar por el servidor.
+
 ## Temas, menú y cuenta
 
 El selector de tema tiene **Auto**, **Claro** y **Oscuro**. Auto sigue el tema del sistema. La preferencia se guarda en ese navegador; si no hay ninguna, se usa el tema por defecto del servidor.

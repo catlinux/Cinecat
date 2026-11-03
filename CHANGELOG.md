@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.63.0] - 2026-11-03
+
+### Añadido
+
+- Servidor y Android: descargas sin conexión en el móvil y la tableta (no en la TV). Nueva ruta `GET /api/v1/items/{id}/download` con sesión y permisos; la app ofrece «Descargar» en películas y episodios que reproduce en directo, descarga con el gestor del sistema a su carpeta privada, tiene la pantalla «Descargas» en Cuenta, reproduce sin conexión (también si arranca sin servidor) y envía el progreso pendiente al volver la conexión. Los archivos que necesitan conversión no se pueden descargar. Cubierto por tests; aún no se ha probado en un dispositivo.
+
 ## [0.62.0] - 2026-11-03
 
 ### Añadido

@@ -169,6 +169,14 @@ Audio, subtitle and quality preferences are read with `GET /api/v1/items/{id}/pr
 
 `GET /play` applies this precedence: explicit parameter > item preference > session profile > default. The audio profile picks the first track in that language; if none exists, normal behaviour applies. The subtitle profile picks the first text track (never an image track) in that language, preferring non-forced tracks; `off` shows no subtitles by default. Maximum quality only acts as a cap for HLS: it trims the offered qualities and lowers `auto`, `original` and heights above the limit; direct playback is unchanged.
 
+## Downloading for offline viewing
+
+`GET /api/v1/items/{id}/download` returns the original file of a movie or an episode. It requires a valid session and access to the item's library; a missing or hidden item, an item of a different kind, or a file-less item returns `404`.
+
+The response uses `http.ServeContent`: it supports ranges (`206` and `If-Range`), sends `Last-Modified`, `Accept-Ranges: bytes`, `Content-Disposition` with `filename*=UTF-8''...` and the `Content-Type` for the extension (`.mkv` is `video/x-matroska`, `.mp4` and `.m4v` are `video/mp4`, everything else `application/octet-stream`). It does not re-encode or modify the file. A missing or invalid session returns `401`, a range outside the file `416` and an internal error `500`.
+
+The Android app only uses this route when `/play` returns `mode: "direct"` with the device's capabilities. If it returns `remux`, it does not download and warns that the file needs conversion; no re-encoded versions are generated.
+
 ## Intro and credits segments
 
 `segments` is a possibly empty list of `{kind, start, end, source}` objects. `kind` is `intro` or `credits`, `start` and `end` are in seconds and `source` is `chapter` or `manual`. Manual segments replace detected segments of the same type. Detection uses the technical file's chapters and their normalised titles (case, accents and extra spaces ignored); segments can also be marked by hand on the item page. There is no audio detection. If the file details cannot be read, the list is empty and playback continues unchanged.
@@ -221,7 +229,7 @@ An unsupported playback container returns `415`.
 
 ## Library access
 
-The server already filters by the libraries assigned to the account and by its role. The app does not need to send library identifiers to hide content: anything not allowed returns `404`, just like a missing resource. This also applies to playback and thumbnails.
+The server already filters by the libraries assigned to the account and by its role. The app does not need to send library identifiers to hide content: anything not allowed returns `404`, just like a missing resource. This also applies to playback, downloads and thumbnails.
 
 ## curl example
 

@@ -2,7 +2,7 @@
 
 [Español](../es/hoja-de-ruta.md) · [Back to README](../../README.en.md) · [Status](status.md)
 
-The current version is **0.62.0**. Feature details, versions and limits are in [status](status.md); this page only summarises the phases.
+The current version is **0.63.0**. Feature details, versions and limits are in [status](status.md); this page only summarises the phases.
 
 ## Phase 0: preparation (`0.0.x`) — done
 
@@ -26,7 +26,7 @@ TMDB, full detail pages, collections, series, hot settings, administration panel
 
 ## Next batches
 
-Favorites and watchlist, collections and their TMDB identification, libraries with multiple folders, upload and trash, users, sessions, activity, backups, history, per-user home rows, administrator-uploaded subtitles and embedded image subtitles, per-device profiles, deinterlacing and HDR-to-SDR, 5.1 AAC for TV, intro and credits segments and the Android and Android TV clients are done. Still pending: advanced playback (ABR and unsupported audio), plugins, DLNA/UPnP and verifying the GitHub Actions workflow. Details are in [status](status.md).
+Favorites and watchlist, collections and their TMDB identification, libraries with multiple folders, upload and trash, users, sessions, activity, backups, history, per-user home rows, administrator-uploaded subtitles and embedded image subtitles, per-device profiles, deinterlacing and HDR-to-SDR, 5.1 AAC for TV, intro and credits segments, offline downloads on phones and tablets and the Android and Android TV clients are done. Still pending: advanced playback (ABR and unsupported audio), plugins, DLNA/UPnP and verifying the GitHub Actions workflow. Details are in [status](status.md).
 
 ## Phase 4: Android and Android TV — done, with improvements pending
 

@@ -13,6 +13,7 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 - **Oír el audio 5.1 de 0.56.0 en un equipo 5.1:** probado el 2026-11-02 en la TV (Xiaomi MiTV-MSSP3) con un AC-3 5.1 de prueba: el HLS llega como AAC de 6 canales, ExoPlayer abre una pista de 6 canales (0x3f) y la TV la mezcla a estéreo por sus altavoces. Falta oírlo con un sistema 5.1 real.
 - **Probar en un dispositivo las bibliotecas de fotos de 0.61.0** (crear una biblioteca de tipo Fotos, escanear y abrir la sección en la web, el móvil y la TV).
 - **Probar en un dispositivo saltar intro y créditos de 0.62.0** (un episodio con capítulos «Intro»/«Créditos» o con marcas manuales, en la web, el móvil y la TV).
+- **Probar en el móvil las descargas sin conexión de 0.63.0** (descargar, ver en modo avión, borrar; comprobar que el progreso llega al servidor al volver la conexión).
 - **Verificar el flujo «Servidor y web» de GitHub Actions** (`.github/workflows/server-web.yml`, ejecuta los tests de Go con FFmpeg y los de la web): comprobar su primera ejecución en verde.
 
 ## 🟢 Más adelante
@@ -20,7 +21,7 @@ Este archivo contiene solo trabajo que sigue abierto. Lo ya publicado está en e
 - 🟢 **Copiar las copias de seguridad fuera del volumen** (otro disco o equipo): hoy están en `/data/backups`, junto a la base. El usuario no lo quiere por ahora.
 - **Complementos**, todavía en diseño.
 - **DLNA/UPnP**, todavía en diseño.
-- Televisión en directo y contenido de internet, descargas sin conexión y sincronización entre dispositivos.
+- Televisión en directo y contenido de internet y sincronización entre dispositivos.
 - Otras plataformas (Apple, televisores Samsung/LG).
 
 ## Descartado y por qué

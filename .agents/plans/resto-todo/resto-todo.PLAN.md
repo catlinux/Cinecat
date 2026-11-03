@@ -45,7 +45,7 @@ Diseño sin detección por huella de audio (cara y frágil):
 - Web y Android/TV: botón «Saltar intro» durante el segmento intro y «Siguiente episodio» (o «Saltar créditos» en películas) en el segmento de créditos; en TV, el botón recibe el foco al aparecer.
 - Pasos: 4a servidor (alto), 4b web (medio), 4c Android (medio), 4d docs.
 
-### 5. [ ] Descargas sin conexión en Android — 0.63.0 (menor)
+### 5. [x] Descargas sin conexión en Android — 0.63.0 (menor)
 
 - Solo archivos que la app reproduciría en directo (mismo criterio que `/play` con las capacidades de la app). Si el archivo necesita HLS, el botón explica que no se puede descargar (no se genera una versión recodificada en esta versión).
 - Descarga con el `DownloadManager` del sistema (sin dependencias nuevas; decidido en vez de `WorkManager`) a la carpeta privada de la app (`getExternalFilesDir`) usando la ruta autenticada `GET /api/v1/items/{id}/download` (paso 5a), con progreso, cancelar y borrar; pantalla «Descargas» en el móvil (no en TV). Reproducción local con el mismo reproductor; el progreso se guarda en local y se envía al servidor al volver la conexión.

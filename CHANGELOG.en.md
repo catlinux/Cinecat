@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.63.0] - 2026-11-03
+
+### Added
+
+- Server and Android: offline downloads on phones and tablets (not on TV). New `GET /api/v1/items/{id}/download` route with session and permissions; the app offers «Download» on movies and episodes it plays directly, downloads with the system manager to its private folder, has a «Downloads» screen in Account, plays offline (also when it starts without a server) and sends pending progress when the connection returns. Files that need conversion cannot be downloaded. Covered by tests; not yet tested on a device.
+
 ## [0.62.0] - 2026-11-03
 
 ### Added
