@@ -108,6 +108,26 @@ Estados del sondeo:
 
 `movies` es verdadero si hay alguna película accesible, `series` si hay alguna serie accesible y `collections` si hay alguna colección visible con al menos una película accesible. Los administradores reciben siempre los tres valores en verdadero. La web y las apps usan esta respuesta para ocultar las secciones vacías; si la llamada falla o un servidor antiguo responde `404`, deben mostrar todas.
 
+## Fotos
+
+`GET /api/v1/photos` devuelve las subcarpetas directas y las fotos de una biblioteca de tipo `photos`. Requiere `library_id` y acepta `folder` (ruta relativa a la raíz; vacía para la raíz), `sort` (`date` o `name`, por defecto `date`), `limit` (1–200; 50 por defecto) y `offset` (0 por defecto). `date` ordena por `taken_at` y, si falta, por la fecha de modificación. Solo se puede consultar una biblioteca de fotos a la que el usuario tenga acceso; si no existe o no es visible, responde `404`.
+
+La respuesta tiene la forma:
+
+```json
+{
+  "folders": ["2024", "Viajes"],
+  "items": [
+    {"id": 17, "name": "IMG_0017.jpg", "width": 4032, "height": 3024, "taken_at": 1600000000, "size": 2456789}
+  ],
+  "total": 42
+}
+```
+
+`folders` son los nombres de las subcarpetas directas de `folder`; `items` son las fotos de esa carpeta, paginadas; `total` es el número total de fotos de esa carpeta. `taken_at` es la fecha de captura EXIF en segundos Unix o `null` si no existe. Se indexan JPEG, PNG, WebP y GIF; HEIC y RAW no se admiten.
+
+`GET /api/v1/photos/{id}/thumb` devuelve una miniatura JPEG de 400 px de lado mayor, generada con FFmpeg y cacheada; admite `ETag` y responde `304` si no ha cambiado. `GET /api/v1/photos/{id}/original` sirve el original con su `Content-Type` y soporte de rangos HTTP (`206`). Ambas requieren sesión y acceso a la biblioteca; si la foto no existe o queda fuera de su biblioteca, responden `404`.
+
 ## Actividad (solo administradores)
 
 `GET /api/v1/activity` devuelve las últimas reproducciones de todos los usuarios. Combina el progreso y las marcas de visto en una entrada por usuario e ítem, con la fecha más reciente, e incluye usuario, título, serie, temporada, episodio, posición, duración y estado de visto. Acepta `limit` (máximo 200; por defecto 50) y `user_id` para filtrar. Requiere rol `admin`.

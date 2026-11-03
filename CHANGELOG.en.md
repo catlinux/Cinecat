@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.61.0] - 2026-11-03
+
+### Added
+
+- Server, web and Android: photo libraries. New «Photos» type in administration; scanning indexes JPEG, PNG, WebP and GIF with size and capture date (JPEG EXIF); thumbnails generated with FFmpeg; API `GET /api/v1/photos`, `/photos/{id}/thumb` and `/photos/{id}/original`; migration 0028. The web and the apps (phone and TV) add a «Photos» section with folders, sorting by date or name and a full-screen viewer with automatic slideshow. Covered by server, web and Android tests; not yet tested on a device.
+
 ## [0.60.1] - 2026-11-03
 
 ### Fixed

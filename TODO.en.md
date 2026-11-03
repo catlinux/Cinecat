@@ -11,6 +11,7 @@ This file contains only work that is still open. Published work is in the [CHANG
 - **Test the 0.59.0 device profiles on a device** (Account → "This device" on the TV and phone; the profile applies when playing a film with no saved choice).
 - **Advanced playback:** DTS and TrueHD are still converted to AAC in HLS (AC-3/E-AC-3 is copied since 0.60.0 for apps that declare it; still to be tested on an AC-3 device). The 0.58.0 image subtitles were tested on 2026-11-02 on the TV with a test VobSub (choosing one reloads over HLS with the subtitle burned in); still to see with a real PGS and on the phone. The 0.55.0 deinterlacing and SDR tone mapping are already tested with real FFmpeg in `hls_real_test.go`; still to see on an HDR/interlaced file from the library.
 - **Hear the 0.56.0 5.1 audio on a 5.1 system:** tested on 2026-11-02 on the TV (Xiaomi MiTV-MSSP3) with a test AC-3 5.1 file: the HLS arrives as 6-channel AAC, ExoPlayer opens a 6-channel track (0x3f) and the TV downmixes it to stereo on its speakers. Still to hear on a real 5.1 system.
+- **Test the 0.61.0 photo libraries on a device** (create a Photos library, scan it and open the section on the web, the phone and the TV).
 - **Verify the "Servidor y web" GitHub Actions workflow** (`.github/workflows/server-web.yml`, runs the Go tests with FFmpeg and the web tests): check its first run is green.
 
 ## 🟢 Later
@@ -18,9 +19,8 @@ This file contains only work that is still open. Published work is in the [CHANG
 - 🟢 **Copy backups outside the volume** (another disk or machine): today they live in `/data/backups`, next to the database. The user does not want it for now.
 - **Plugins**, still at the design stage.
 - **DLNA/UPnP**, still at the design stage.
-- **Library types** other than video (music, photos or others) when the model is addressed.
 - **Android and Android TV clients.** No code yet; plan in `.agents/plans/apps-android/apps-android.PLAN.md` (first device sessions, pairing by code, native capabilities and a stable API contract on the server).
-- Photos and slideshows, live TV and internet content, intro/credits segments, offline downloads and cross-device sync.
+- Live TV and internet content, intro/credits segments, offline downloads and cross-device sync.
 - Other platforms (Apple, Samsung/LG TVs).
 
 ## Discarded and why

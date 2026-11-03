@@ -26,7 +26,7 @@ Las filas se pueden desplazar con las flechas `‹` y `›`; con el dedo o el tr
 
 ## Navegar por la biblioteca
 
-El menú puede estar a la izquierda (**lateral**) o arriba (**superior**), según lo configure el administrador. Contiene **Inicio**, **Películas**, **Colecciones**, **Series**, **Vídeos** y **Música** cuando tu cuenta tiene acceso a una biblioteca de esos tipos, **Historial**, **Mi cuenta** y, si eres administrador, **Administración**.
+El menú puede estar a la izquierda (**lateral**) o arriba (**superior**), según lo configure el administrador. Contiene **Inicio**, **Películas**, **Colecciones**, **Series**, **Vídeos** y **Música** cuando tu cuenta tiene acceso a una biblioteca de esos tipos, **Fotos** cuando hay alguna biblioteca de fotos visible, **Historial**, **Mi cuenta** y, si eres administrador, **Administración**.
 
 ### Películas
 
@@ -68,6 +68,14 @@ La sección **Música** aparece cuando hay una biblioteca de ese tipo con pistas
 En **Música** puedes cambiar entre **Álbumes**, **Artistas** y **Pistas**, buscar por texto, filtrar por letra y ordenar los álbumes por título, artista, año o añadidos. La vista de pistas solo muestra resultados cuando escribes una búsqueda. Al abrir un álbum verás su carátula, año, número de pistas, duración total y la lista de pistas; con **Reproducir**, **Aleatorio** o **Añadir a la cola** puedes empezar a escuchar. En la página de un artista, **Reproducir todo** encola sus álbumes en orden.
 
 El reproductor de música es una barra fija en la parte inferior que sigue sonando al navegar por la web. Muestra la portada, el título y el artista, permite pausar, avanzar o retroceder, mover el progreso, cambiar el volumen o silenciar, activar el aleatorio y repetir (no, todas o una), y abrir la **Cola** para quitar pistas o vaciarla. La cola, el volumen, el aleatorio y el repetir se recuerdan al recargar; la reproducción se restaura en pausa. Si una pista falla o ha caducado su enlace, se reintenta una vez y, si sigue fallando, se salta con un aviso. Al reproducir un vídeo, la música se pausa automáticamente y no se reanuda sola. No hay atajos nuevos para la barra: usa sus botones, los controles multimedia del sistema y los botones de reproducción de las pistas.
+
+### Fotos
+
+La sección **Fotos** aparece en el menú cuando tu cuenta tiene alguna biblioteca de tipo Fotos visible. Para crearla, entra en **Administración → Bibliotecas**, elige el tipo «Fotos», añade sus carpetas y lanza el escaneo.
+
+Si solo hay una biblioteca de fotos, la sección abre directamente su raíz; si hay varias, muestra una lista con su nombre y el número de fotos. Dentro de una biblioteca, las **migas de pan** permiten volver a cualquier nivel. Primero aparecen las subcarpetas y después las fotos en una cuadrícula paginada; puedes cambiar el **Orden** entre Fecha y Nombre. Las miniaturas se cargan al acercarte a ellas.
+
+Pulsa una foto para abrir el visor a pantalla completa. Las flechas `←` y `→` cambian de foto y `Escape` cierra el visor; también puedes usar los botones **Anterior** y **Siguiente**. El visor muestra el contador y el nombre y la fecha de captura cuando existe, y **Presentación automática** avanza cada 5 segundos; **Abrir original en otra pestaña** muestra el archivo original.
 
 ## Favoritos y próximas a ver
 
@@ -142,7 +150,7 @@ En **Mi cuenta → Sesiones abiertas**, cada dispositivo de la lista tiene **Aju
 
 ## Glosario
 
-- **Biblioteca:** una carpeta del servidor que Cinecat recorre para encontrar vídeos.
+- **Biblioteca:** una carpeta del servidor que Cinecat recorre para encontrar contenido.
 - **Escaneo:** el proceso que busca archivos, analiza sus nombres y rellena fichas.
 - **Ficha:** la página con los datos de una película, serie o episodio.
 - **Identificar:** encontrar la ficha correcta en TMDB (o OMDb).

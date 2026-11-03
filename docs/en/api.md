@@ -108,6 +108,26 @@ Polling status codes:
 
 `movies` is true when there is at least one accessible movie, `series` when there is at least one accessible series and `collections` when there is at least one visible collection with an accessible movie. Administrators always receive all three as true. The web app and the apps use this response to hide empty sections; if the call fails or an older server returns `404`, they must show all of them.
 
+## Photos
+
+`GET /api/v1/photos` returns the direct subfolders and photos of a `photos` library. It requires `library_id` and accepts `folder` (path relative to the library root; empty for the root), `sort` (`date` or `name`, default `date`), `limit` (1–200; 50 by default) and `offset` (0 by default). `date` sorts by `taken_at` and, when it is missing, by the file modification date. Only a photos library the user can access can be queried; when it does not exist or is not visible, the route returns `404`.
+
+The response has this shape:
+
+```json
+{
+  "folders": ["2024", "Trips"],
+  "items": [
+    {"id": 17, "name": "IMG_0017.jpg", "width": 4032, "height": 3024, "taken_at": 1600000000, "size": 2456789}
+  ],
+  "total": 42
+}
+```
+
+`folders` are the names of the direct subfolders of `folder`; `items` are the photos in that folder, paginated; `total` is the total number of photos in that folder. `taken_at` is the EXIF capture date in Unix seconds or `null` when it does not exist. JPEG, PNG, WebP and GIF are indexed; HEIC and RAW are not supported.
+
+`GET /api/v1/photos/{id}/thumb` returns a JPEG thumbnail with a 400 px longest side, generated with FFmpeg and cached; it supports `ETag` and returns `304` when unchanged. `GET /api/v1/photos/{id}/original` serves the original with its `Content-Type` and HTTP range support (`206`). Both require a session and access to the library; when the photo does not exist or falls outside its library, they return `404`.
+
 ## Activity (administrators only)
 
 `GET /api/v1/activity` returns the latest playbacks from all users. It combines progress and watched marks into one entry per user and item, using the most recent date, and includes user, title, series, season, episode, position, duration and watched state. It accepts `limit` (maximum 200; 50 by default) and `user_id` to filter. It requires the `admin` role.

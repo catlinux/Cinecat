@@ -2,7 +2,7 @@
 
 [Español](../es/estado.md) · [Back to README](../../README.en.md)
 
-Current version: **0.60.1**. This page describes the real state of the code, not the original plan. Versions come from the [CHANGELOG](../../CHANGELOG.en.md).
+Current version: **0.61.0**. This page describes the real state of the code, not the original plan. Versions come from the [CHANGELOG](../../CHANGELOG.en.md).
 
 Legend: ✅ done · 🟨 awaiting testing · ⬜ pending.
 
@@ -14,9 +14,10 @@ Legend: ✅ done · 🟨 awaiting testing · ⬜ pending.
 | Server and library | Local libraries, create/delete | ✅ 0.1.2 | Since 0.17.0 they support several folders and a type; deleting a library removes its items. |
 | Server and library | Manual and automatic background scans | ✅ 0.11.0 | Scan returns 202/409 and reports progress; scheduled by `scan.interval` and at startup. |
 | Server and library | Technical file details through `ffprobe` | ✅ 0.11.0 | Container, size, tracks, subtitles and playback mode. |
-| Server and library | Multiple folders per library and folder browser | ✅ 0.17.0 | video, clips and music types |
+| Server and library | Multiple folders per library and folder browser | ✅ 0.17.0 | video, clips, music and photos types |
 | Server and library | Vídeos library (unidentified), folder browsing | ✅ 0.18.0 | with frame thumbnails |
 | Server and library | Music library: scan, API, screen and player | ✅ 0.19.0 | persistent player with queue |
+| Server and library | Photos library: scan, API, thumbnails and web/Android viewers | 🟨 0.61.0 | JPEG, PNG, WebP and GIF; EXIF date on JPEG; 400 px JPEG thumbnails in `cache/photos`; folders, sorting and viewer on the web app and apps. Migration 0028. Covered by tests; not yet tried on a real device. |
 | Music | Playlists | ⬜ | upcoming music step |
 | Music | Music favourites | ⬜ | will reuse the favourites system |
 | Music | Unsupported-format conversion | ⬜ | FFmpeg transcoding |
@@ -84,7 +85,6 @@ The order comes from the plans in `.agents/plans` and the open tasks; no dates o
 2. **Verify the "Servidor y web" GitHub Actions workflow** and its first green run.
 3. **Plugins**, still at the design stage.
 4. **DLNA/UPnP**, still at the design stage.
-5. **Library types** other than video when the model is addressed.
 
 ## Known limitations and risks
 

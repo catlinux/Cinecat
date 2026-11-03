@@ -24,7 +24,7 @@ Solo los usuarios con rol `admin` pueden entrar en `/admin`. El servidor comprue
 ## Crear una biblioteca
 
 1. Abre **Administración → Bibliotecas**.
-2. En «Nueva biblioteca», escribe un **Nombre** y elige el **Tipo**: «Películas y series», «Vídeos (videoclips, conciertos…)» o «Música».
+2. En «Nueva biblioteca», escribe un **Nombre** y elige el **Tipo**: «Películas y series», «Vídeos (videoclips, conciertos…)», «Música» o «Fotos».
 3. Escribe la ruta de la primera carpeta o pulsa **Elegir…** para navegar por las carpetas del servidor. Con **Añadir otra carpeta** puedes añadir más; todas se guardan en la misma biblioteca.
 4. Pulsa **Crear biblioteca**. Las rutas deben existir y ser directorios dentro de las raíces permitidas; por ejemplo `/media/Multimedia/Pelis`.
 5. En la tarjeta de cada biblioteca puedes **Renombrar**, **Añadir carpeta**, **Quitar** una carpeta, **Escanear** o **Borrar biblioteca**. Al borrar hay que escribir el nombre para confirmar.
@@ -33,7 +33,7 @@ El escaneo sigue en segundo plano aunque cierres la página. El botón **Escanea
 
 ### Varias carpetas por biblioteca
 
-Una biblioteca puede agrupar varias carpetas, incluso de discos distintos. La primera carpeta se conserva como carpeta principal por compatibilidad; al quitar la principal, pasa a serlo la siguiente más antigua. Una biblioteca puede ser de tipo `video` (películas y series), `clips` (vídeos sin identificar) o `music` (música). Los tres tipos se escanean; las pistas de Música usan tablas propias y nunca se mezclan con películas, series o vídeos.
+Una biblioteca puede agrupar varias carpetas, incluso de discos distintos. La primera carpeta se conserva como carpeta principal por compatibilidad; al quitar la principal, pasa a serlo la siguiente más antigua. Una biblioteca puede ser de tipo `video` (películas y series), `clips` (vídeos sin identificar), `music` (música) o `photos` (fotos). Los cuatro tipos se escanean; las pistas de Música usan tablas propias y nunca se mezclan con películas, series o vídeos. Las fotos también tienen su propia tabla y API y no se mezclan con el resto.
 
 ### Bibliotecas de Vídeos (sin identificar)
 
@@ -52,6 +52,14 @@ La carátula del álbum se toma del primer archivo `cover`, `folder`, `front` o 
 El escaneo no vuelve a inspeccionar una pista cuyo tamaño y fecha no han cambiado y limita a cuatro las lecturas simultáneas de `ffprobe`. Al quitar una carpeta o una biblioteca se borran también sus pistas, álbumes y artistas que se quedan sin contenido, pero nunca los archivos del disco.
 
 Las miniaturas se generan al verlas por primera vez y se guardan en `cache/thumbs`, junto a la base de datos y dentro del volumen persistente. Se pueden borrar sin riesgo: se volverán a generar. El servidor necesita FFmpeg y ffprobe instalados en el contenedor.
+
+### Bibliotecas de fotos
+
+Una biblioteca de tipo `photos` recorre sus carpetas y indexa JPEG (`.jpg`, `.jpeg`), PNG, WebP y GIF. No se admiten HEIC ni RAW. Guarda el ancho y el alto de JPEG, PNG y GIF; WebP se indexa sin dimensiones porque el servidor no incluye una dependencia para leerlas. En los JPEG lee la fecha de captura del EXIF `DateTimeOriginal`; si no existe, la foto queda sin fecha. El escaneo no vuelve a inspeccionar una foto cuyo tamaño y fecha de modificación no han cambiado.
+
+No se consulta ningún servicio externo ni se identifican las fotos: el nombre sale del archivo y la fecha, del EXIF. El orden Fecha usa la fecha de captura y, si falta, la de modificación del archivo. Las miniaturas son JPEG de 400 px de lado mayor, se generan con FFmpeg la primera vez que se piden y se guardan en `cache/photos`, junto a la base de datos; se pueden borrar sin riesgo porque se vuelven a generar. Hacen falta FFmpeg instalado en el contenedor.
+
+La sección **Fotos** de la web y la pestaña del mismo nombre en Android y Android TV solo aparecen si la cuenta tiene alguna biblioteca de fotos visible. Los permisos por biblioteca funcionan como en los demás tipos: lo que no está asignado no aparece en los listados y responde `404` si se pide directamente.
 
 El botón **Elegir…** abre un navegador de carpetas del servidor. Muestra las raíces permitidas, permite bajar por las subcarpetas, subir con **Subir**, moverse con las migas de pan y confirmar con **Elegir esta carpeta**. Solo lista directorios, no sigue enlaces que salgan de las raíces y limita el listado a 1000 entradas. También puedes escribir la ruta a mano sin usar JavaScript. El contenedor monta `CINECAT_MEDIA_PATH` completo en `/media`, en solo lectura salvo que se active la subida (ver «Subir archivos y papelera»).
 
@@ -149,7 +157,7 @@ Cada usuario tiene sus propias listas de **Favoritos** y **Próximas a ver**; no
 
 ## Usuarios y acceso por biblioteca
 
-Cada cuenta de usuario solo ve las bibliotecas que el administrador le haya asignado. El administrador ve siempre todas; una cuenta con la opción «todas las bibliotecas» ve también las que se creen en el futuro. El filtrado se aplica en el servidor a listados, fichas, series, colecciones, personas, música y elementos individuales.
+Cada cuenta de usuario solo ve las bibliotecas que el administrador le haya asignado. El administrador ve siempre todas; una cuenta con la opción «todas las bibliotecas» ve también las que se creen en el futuro. El filtrado se aplica en el servidor a listados, fichas, series, colecciones, personas, música, fotos y elementos individuales.
 
 Lo que queda fuera de las bibliotecas visibles responde igual que si no existiera: los listados no lo muestran y las rutas directas devuelven 404. Las colecciones y las fichas de personas solo cuentan el contenido visible. Las URLs de reproducción ya emitidas siguen funcionando hasta que caducan, 8 horas después, aunque se retire el acceso o se cierren las sesiones.
 
@@ -181,7 +189,7 @@ Desactivado por defecto. Para usarlo hacen falta dos cosas: montar la biblioteca
 - **Mover a la papelera:** en la ficha, **Mover a la papelera**. Nada se borra: el vídeo y sus subtítulos (o su carpeta, si es una película o un vídeo cuya carpeta no contiene otros vídeos) se mueven a `.cinecat-papelera`, en la raíz de la carpeta de la biblioteca y en el mismo disco. La ficha desaparece de los listados.
 - **Papelera:** Administración → Papelera. **Restaurar** devuelve los archivos a su sitio y la ficha con su visto, progreso, listas, colecciones y preferencias (si la ruta original está ocupada, no hace nada y lo avisa). **Eliminar definitivamente** borra del disco. Lo que supera **Días en la papelera** (14 por defecto) se borra solo cada día.
 - **Propietario:** el contenedor corre como root. Define `CINECAT_FILE_UID` y `CINECAT_FILE_GID` (los de `ls -ln /media`) para que lo subido y la papelera queden a nombre de tu usuario y grupo.
-- Solo vídeo: la música no se puede subir ni mover a la papelera desde Cinecat.
+- Solo vídeo: ni la música ni las fotos se pueden subir ni mover a la papelera desde Cinecat.
 
 ## Actualizar el servidor
 

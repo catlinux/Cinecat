@@ -26,7 +26,7 @@ Rows can be scrolled with the `‹` and `›` arrows; you can also swipe with a 
 
 ## Browsing the library
 
-The menu can be on the left (**lateral**) or at the top (**superior**), depending on the administrator's setting. It contains **Inicio**, **Películas**, **Colecciones**, **Series**, **Vídeos** and **Música** when your account has access to a library of those types, **Historial**, **Mi cuenta** and, for administrators, **Administración**.
+The menu can be on the left (**lateral**) or at the top (**superior**), depending on the administrator's setting. It contains **Inicio**, **Películas**, **Colecciones**, **Series**, **Vídeos** and **Música** when your account has access to a library of those types, **Fotos** when there is at least one visible photo library, **Historial**, **Mi cuenta** and, for administrators, **Administración**.
 
 ### Movies
 
@@ -68,6 +68,14 @@ The **Música** section appears when a library of that type has tracks. To creat
 In **Música** you can switch between **Álbumes**, **Artistas** and **Pistas**, search by text, filter by letter and sort albums by title, artist, year or recently added. The tracks view only shows results after you type a search. Opening an album shows its cover, year, track count, total duration and track list; **Reproducir**, **Aleatorio** or **Añadir a la cola** start listening. On an artist page, **Reproducir todo** queues its albums in order.
 
 The music player is a fixed bar at the bottom that keeps playing while you browse the site. It shows the cover, title and artist, and lets you pause, skip, seek, change or mute the volume, enable shuffle and repeat (off, all or one), and open the **Cola** to remove tracks or clear it. The queue, volume, shuffle and repeat settings are remembered after a reload; playback is restored paused. If a track fails or its link has expired, it is retried once and then skipped with a notice. Playing a video pauses the music automatically, and it does not resume on its own. There are no new keyboard shortcuts for the bar: use its buttons, the system media controls and the playback buttons on each track.
+
+### Photos
+
+The **Fotos** section appears in the menu when your account has at least one visible Photos library. To create one, open **Administración → Bibliotecas**, choose the "Fotos" type, add its folders and run a scan.
+
+If there is only one photo library, the section opens its root directly; if there are several, it shows a list with their names and photo counts. Inside a library, the **breadcrumbs** let you go back to any level. Subfolders come first, followed by the photos in a paginated grid; you can change the **Orden** between Fecha and Nombre. Thumbnails load as you approach them.
+
+Press a photo to open the full-screen viewer. The `←` and `→` arrows change photo and `Escape` closes the viewer; you can also use the **Anterior** and **Siguiente** buttons. The viewer shows the counter and the name and capture date when available, and **Presentación automática** advances every 5 seconds; **Abrir original en otra pestaña** shows the original file.
 
 ## Favorites and watchlist
 
@@ -142,7 +150,7 @@ Under **Mi cuenta → Open sessions**, each device in the list has **Ajustes**. 
 
 ## Glossary
 
-- **Biblioteca:** a server folder that Cinecat scans for videos.
+- **Biblioteca:** a server folder that Cinecat scans for content.
 - **Escaneo:** the process that finds files, parses their names and fills in metadata.
 - **Ficha:** the page with the data for a movie, series or episode.
 - **Identificar:** find the correct TMDB (or OMDb) record.

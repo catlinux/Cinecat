@@ -2,7 +2,7 @@
 
 [English](../en/status.md) · [Volver al README](../../README.md)
 
-Versión actual: **0.60.1**. Esta página resume el estado real del código, no el plan inicial. Las versiones salen del [CHANGELOG](../../CHANGELOG.md).
+Versión actual: **0.61.0**. Esta página resume el estado real del código, no el plan inicial. Las versiones salen del [CHANGELOG](../../CHANGELOG.md).
 
 Leyenda: ✅ hecho · 🟨 pendiente de probar · ⬜ pendiente.
 
@@ -14,9 +14,10 @@ Leyenda: ✅ hecho · 🟨 pendiente de probar · ⬜ pendiente.
 | Servidor y biblioteca | Bibliotecas locales, alta y borrado | ✅ 0.1.2 | Desde 0.17.0 admiten varias carpetas y tipo; el borrado limpia sus ítems. |
 | Servidor y biblioteca | Escaneo manual y automático en segundo plano | ✅ 0.11.0 | El escaneo responde 202/409 y muestra progreso; se programa cada `scan.interval` y al arrancar. |
 | Servidor y biblioteca | Ficha técnica del archivo con `ffprobe` | ✅ 0.11.0 | Contenedor, tamaño, pistas, subtítulos y modo de reproducción. |
-| Servidor y biblioteca | Varias carpetas por biblioteca y navegador de carpetas | ✅ 0.17.0 | tipos video, clips y music |
+| Servidor y biblioteca | Varias carpetas por biblioteca y navegador de carpetas | ✅ 0.17.0 | tipos video, clips, music y photos |
 | Servidor y biblioteca | Biblioteca de Vídeos (sin identificar), navegación por carpetas | ✅ 0.18.0 | con miniaturas de fotograma |
 | Servidor y biblioteca | Biblioteca de Música: escaneo, API, pantalla y reproductor | ✅ 0.19.0 | reproductor persistente con cola |
+| Servidor y biblioteca | Biblioteca de Fotos: escaneo, API, miniaturas y visores web y Android | 🟨 0.61.0 | JPEG, PNG, WebP y GIF; fecha EXIF en JPEG; miniaturas JPEG de 400 px en `cache/photos`; carpetas, orden y visor en web y apps. Migración 0028. Cubierto por tests; aún sin probar en un dispositivo real. |
 | Música | Listas de reproducción | ⬜ | siguiente paso de música |
 | Música | Favoritos de música | ⬜ | reutilizará el sistema de favoritos |
 | Música | Conversión de formatos no compatibles | ⬜ | transcodificación con FFmpeg |
@@ -84,7 +85,6 @@ El orden sale de los planes de `.agents/plans` y de las tareas abiertas; no hay 
 2. **Verificar el flujo «Servidor y web»** de GitHub Actions y su primera ejecución en verde.
 3. **Complementos**, todavía en fase de diseño.
 4. **DLNA/UPnP**, todavía en fase de diseño.
-5. **Tipos de biblioteca** distintos de vídeo cuando se aborde el modelo.
 
 ## Limitaciones y riesgos conocidos
 

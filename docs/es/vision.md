@@ -32,7 +32,7 @@ El servidor, la web, las fichas, las series, las colecciones, la administración
 ## Fuera de alcance por ahora
 
 - Televisión en directo y contenido de internet.
-- Fotos y presentaciones.
+- Presentaciones.
 - Plataformas distintas de web, Android y Android TV.
 
 ## Principios

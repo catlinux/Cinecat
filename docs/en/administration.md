@@ -24,7 +24,7 @@ Only users with the `admin` role can open `/admin`. The server checks the role o
 ## Creating a library
 
 1. Open **Administración → Bibliotecas**.
-2. Under "Nueva biblioteca", enter a **Nombre** and choose the **Tipo**: "Películas y series", "Vídeos (videoclips, conciertos…)" or "Música".
+2. Under "Nueva biblioteca", enter a **Nombre** and choose the **Tipo**: "Películas y series", "Vídeos (videoclips, conciertos…)", "Música" or "Fotos".
 3. Type the first folder path or press **Elegir…** to browse the server folders. With **Añadir otra carpeta** you can add more; all of them are stored in the same library.
 4. Press **Crear biblioteca**. The paths must exist and be directories inside the allowed roots; for example `/media/Multimedia/Pelis`.
 5. On each library card you can **Renombrar**, **Añadir carpeta**, **Quitar** a folder, **Escanear** or **Borrar biblioteca**. To delete one you must type its name to confirm.
@@ -33,7 +33,7 @@ The scan continues in the background even if you close the page. The **Escanear*
 
 ### Multiple folders per library
 
-A library can group several folders, even on different disks. The first folder is kept as the main folder for compatibility; if it is removed, the next oldest becomes the main one. A library can be `video` (movies and series), `clips` (unidentified videos) or `music`. All three types are scanned; Music tracks use their own tables and are never mixed with movies, series or videos.
+A library can group several folders, even on different disks. The first folder is kept as the main folder for compatibility; if it is removed, the next oldest becomes the main one. A library can be `video` (movies and series), `clips` (unidentified videos), `music` or `photos`. All four types are scanned; Music tracks use their own tables and are never mixed with movies, series or videos. Photos also have their own table and API and are not mixed with the rest.
 
 ### Vídeos libraries (unidentified)
 
@@ -52,6 +52,14 @@ The album cover comes from the first `cover`, `folder`, `front` or `album` file 
 The scan does not inspect a track again when its size and modification time have not changed, and limits concurrent `ffprobe` reads to four. Removing a folder or a library also removes its tracks, albums and artists that are left empty, but never the files on disk.
 
 Thumbnails are generated the first time they are viewed and stored in `cache/thumbs`, next to the database and inside the persistent volume. They can be deleted without risk: they will be generated again. The server needs FFmpeg and ffprobe installed in the container.
+
+### Photos libraries
+
+A `photos` library walks its folders and indexes JPEG (`.jpg`, `.jpeg`), PNG, WebP and GIF. HEIC and RAW are not supported. It stores width and height for JPEG, PNG and GIF; WebP is indexed without dimensions because the server does not include a dependency to read them. For JPEG it reads the capture date from EXIF `DateTimeOriginal`; without it the photo has no date. The scan does not inspect a photo again when its size and modification time have not changed.
+
+No external service is queried and photos are not identified: the name comes from the file and the date from EXIF. Date sorting uses the capture date and, when it is missing, the file modification date. Thumbnails are JPEG images with a 400 px longest side, generated with FFmpeg the first time they are requested and stored in `cache/photos`, next to the database; they can be deleted without risk because they are generated again. FFmpeg must be installed in the container.
+
+The **Fotos** section in the web app and the tab of the same name in Android and Android TV only appear when the account has at least one visible photo library. Per-library permissions work like the other types: anything not assigned does not appear in listings and returns `404` when requested directly.
 
 The **Elegir…** button opens a server folder browser. It shows the allowed roots, lets you go down into subfolders, go up with **Subir**, move through the breadcrumbs and confirm with **Elegir esta carpeta**. It only lists directories, does not follow links that leave the roots and limits the listing to 1000 entries. You can also type the path by hand without JavaScript. The container mounts `CINECAT_MEDIA_PATH` whole at `/media`, read-only unless uploads are enabled (see "Uploading files and trash").
 
@@ -149,7 +157,7 @@ Each user has their own **Favorites** and **Watchlist**; they are not shared bet
 
 ## Users and library access
 
-Each user account only sees the libraries assigned to it by the administrator. The administrator always sees every library; an account with the "all libraries" option also sees libraries created in the future. Filtering is enforced by the server for listings, item pages, series, collections, people, music and individual items.
+Each user account only sees the libraries assigned to it by the administrator. The administrator always sees every library; an account with the "all libraries" option also sees libraries created in the future. Filtering is enforced by the server for listings, item pages, series, collections, people, music, photos and individual items.
 
 Anything outside the visible libraries responds as if it did not exist: listings do not show it and direct routes return 404. Collections and people pages only count visible content. Playback URLs already issued keep working until they expire, 8 hours later, even if access is removed or sessions are closed.
 
@@ -181,7 +189,7 @@ Disabled by default. Two things are needed: mount the library read-write (`CINEC
 - **Move to trash:** on the item page, **Mover a la papelera**. Nothing is deleted: the video and its subtitles (or its folder, for a movie or video whose folder holds no other videos) are moved to `.cinecat-papelera`, at the root of the library folder and on the same disk. The entry disappears from listings.
 - **Trash:** Administration → Trash. **Restaurar** puts the files back and restores the entry with its watched state, progress, lists, collections and preferences (if the original path is taken, it does nothing and says so). **Eliminar definitivamente** deletes from disk. Anything older than **Días en la papelera** (14 by default) is deleted automatically every day.
 - **Owner:** the container runs as root. Set `CINECAT_FILE_UID` and `CINECAT_FILE_GID` (the ones shown by `ls -ln /media`) so uploads and the trash belong to your user and group.
-- Video only: music cannot be uploaded or moved to the trash from Cinecat.
+- Video only: neither music nor photos can be uploaded or moved to the trash from Cinecat.
 
 ## Updating the server
 

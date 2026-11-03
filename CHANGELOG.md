@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.61.0] - 2026-11-03
+
+### Añadido
+
+- Servidor, web y Android: bibliotecas de fotos. Nuevo tipo «Fotos» en administración; el escaneo indexa JPEG, PNG, WebP y GIF con tamaño y fecha de captura (EXIF de los JPEG); miniaturas generadas con FFmpeg; API `GET /api/v1/photos`, `/photos/{id}/thumb` y `/photos/{id}/original`; migración 0028. La web y las apps (móvil y TV) añaden la sección «Fotos» con carpetas, orden por fecha o nombre y visor a pantalla completa con presentación automática. Cubierto por tests de servidor, web y Android; aún no se ha probado en un dispositivo.
+
 ## [0.60.1] - 2026-11-03
 
 ### Corregido

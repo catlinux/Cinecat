@@ -32,7 +32,7 @@ The server, web app, metadata, series, collections, administration and updates a
 ## Out of scope for now
 
 - Live TV and internet content.
-- Photos and slideshows.
+- Slideshows.
 - Platforms other than web, Android and Android TV.
 
 ## Principles
