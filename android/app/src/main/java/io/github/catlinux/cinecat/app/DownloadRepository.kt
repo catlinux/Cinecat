@@ -1,6 +1,8 @@
 package io.github.catlinux.cinecat.app
 
 import android.content.Context
+import android.net.Uri
+import android.os.Environment
 import androidx.core.net.toUri
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
@@ -19,9 +21,15 @@ import io.github.catlinux.cinecat.core.data.SessionRepository
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -38,7 +46,8 @@ data class DownloadStatus(
     val phase: DownloadPhase,
     val downloadedBytes: Long = 0,
     val totalBytes: Long = 0,
-    val percentValue: Int? = null
+    val percentValue: Int? = null,
+    val waitingForServer: Boolean = false
 ) {
     val percent: Int?
         get() = percentValue ?: downloadPercent(downloadedBytes, totalBytes)
@@ -46,9 +55,10 @@ data class DownloadStatus(
 
 sealed interface DownloadStartResult {
     data class Started(val record: DownloadRecord) : DownloadStartResult
-    data class NotDownloadable(val reason: String?) : DownloadStartResult
     data class Failed(val message: String? = null) : DownloadStartResult
 }
+
+private const val STATUS_POLL_MS = 1_000L
 
 @UnstableApi
 class DownloadRepository(
@@ -70,6 +80,13 @@ class DownloadRepository(
     // Una sola re-firma por descarga y sesión: si el fallo no era la firma, no se entra en bucle.
     private val resigned = mutableSetOf<Long>()
 
+    // Cambia con cada evento de Media3 para despertar el sondeo cuando no hay nada activo.
+    private val changes = MutableStateFlow(0)
+
+    /** Estado de cada descarga por id de ficha; solo sondea mientras alguien lo observa. */
+    val statuses: StateFlow<Map<Long, DownloadStatus>> =
+        pollStatuses().stateIn(scope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
     init {
         manager.addListener(object : DownloadManager.Listener {
             override fun onDownloadChanged(
@@ -77,6 +94,7 @@ class DownloadRepository(
                 download: Download,
                 finalException: Exception?
             ) {
+                changes.value++
                 val itemId = download.request.id.toLongOrNull() ?: return
                 updateCompleted(itemId, download.state == Download.STATE_COMPLETED)
                 if (download.state == Download.STATE_COMPLETED) {
@@ -87,6 +105,7 @@ class DownloadRepository(
             }
 
             override fun onDownloadRemoved(downloadManager: DownloadManager, download: Download) {
+                changes.value++
                 download.request.id.toLongOrNull()?.let { updateCompleted(it, false) }
             }
         })
@@ -108,6 +127,7 @@ class DownloadRepository(
                 resign(it)
             }
         flushPending()
+        migrateLegacyDownloads()
     }
 
     suspend fun start(item: MediaItem, caps: String): DownloadStartResult {
@@ -118,14 +138,34 @@ class DownloadRepository(
         }
     }
 
-    suspend fun status(record: DownloadRecord): DownloadStatus = withContext(Dispatchers.IO) {
-        val download = manager.downloadIndex.getDownload(record.itemId.toString())
-            ?: return@withContext DownloadStatus(DownloadPhase.Failed)
-        DownloadStatus(
-            phase = downloadPhase(download.state),
-            downloadedBytes = download.bytesDownloaded,
-            percentValue = download.percentDownloaded.takeIf { it >= 0f }?.toInt()
-        )
+    private fun pollStatuses(): Flow<Map<Long, DownloadStatus>> = flow {
+        val lastBytes = mutableMapOf<Long, Long>()
+        val unchanged = mutableMapOf<Long, Int>()
+        while (true) {
+            val seen = changes.value
+            val downloads = withContext(Dispatchers.IO) { currentDownloads() }
+            val map = downloads.mapNotNull { download ->
+                val itemId = download.request.id.toLongOrNull() ?: return@mapNotNull null
+                val bytes = download.bytesDownloaded
+                unchanged[itemId] = if (lastBytes[itemId] == bytes) (unchanged[itemId] ?: 0) + 1 else 0
+                lastBytes[itemId] = bytes
+                val phase = downloadPhase(download.state)
+                itemId to DownloadStatus(
+                    phase = phase,
+                    downloadedBytes = bytes,
+                    percentValue = download.percentDownloaded.takeIf { it >= 0f }?.toInt(),
+                    waitingForServer = isWaitingForServer(phase, unchanged[itemId] ?: 0)
+                )
+            }.toMap()
+            lastBytes.keys.retainAll(map.keys)
+            unchanged.keys.retainAll(map.keys)
+            emit(map)
+            if (map.values.any { it.phase == DownloadPhase.Pending || it.phase == DownloadPhase.Running }) {
+                delay(STATUS_POLL_MS)
+            } else {
+                changes.first { it != seen }
+            }
+        }
     }
 
     suspend fun cancel(record: DownloadRecord) = delete(record)
@@ -165,6 +205,35 @@ class DownloadRepository(
 
     fun localUri(record: DownloadRecord): String =
         manager.downloadIndex.getDownload(record.itemId.toString())?.request?.uri?.toString().orEmpty()
+
+    /** Subtítulos de texto guardados con la descarga, como fuentes locales del reproductor. */
+    fun localSubtitles(itemId: Long): List<PlayerSubtitle> {
+        val data = manager.downloadIndex.getDownload(itemId.toString())?.request?.data
+        val dir = subtitlesDir(itemId)
+        return decodeOfflineMeta(data)?.toPlayerSubtitles { Uri.fromFile(File(dir, it)).toString() }
+            .orEmpty()
+    }
+
+    // Las descargas anteriores a la 0.67.0 eran el archivo original con el DownloadManager del
+    // sistema: se cancelan, se borra el archivo y se quita el registro.
+    private suspend fun migrateLegacyDownloads() {
+        val legacy = registry.state.value.downloads.filter { it.fileName.isNotBlank() }
+        if (legacy.isEmpty()) {
+            return
+        }
+        withContext(Dispatchers.IO) {
+            val system = context.getSystemService(android.app.DownloadManager::class.java)
+            val movies = context.getExternalFilesDir(Environment.DIRECTORY_MOVIES) ?: context.filesDir
+            legacy.forEach { record ->
+                if (record.downloadId != 0L) {
+                    runCatching { system?.remove(record.downloadId) }
+                }
+                File(movies, record.fileName).delete()
+                File(context.filesDir, record.fileName).delete()
+            }
+        }
+        legacy.forEach { registry.remove(it.itemId) }
+    }
 
     private fun currentDownloads(): List<Download> =
         manager.downloadIndex.getDownloads().use { cursor ->

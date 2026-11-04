@@ -68,4 +68,27 @@ class OfflineDownloadsTest {
         assertEquals(50, DownloadStatus(DownloadPhase.Running, 5, 10).percent)
         assertNull(DownloadStatus(DownloadPhase.Running).percent)
     }
+
+    @Test
+    fun sinAvanceSeConsideraEsperaDelServidor() {
+        assertEquals(false, isWaitingForServer(DownloadPhase.Running, 4))
+        assertEquals(true, isWaitingForServer(DownloadPhase.Running, 5))
+        assertEquals(false, isWaitingForServer(DownloadPhase.Completed, 9))
+        assertEquals(false, isWaitingForServer(DownloadPhase.Failed, 9))
+    }
+
+    @Test
+    fun losSubtitulosLocalesSeConviertenEnFuentesDelReproductor() {
+        val meta = OfflineMeta(
+            itemId = 7,
+            subtitles = listOf(OfflineSubtitle("es1", "Español", "es", "es1.vtt"))
+        )
+        val result = meta.toPlayerSubtitles { "file:///subs/$it" }
+        assertEquals(1, result.size)
+        assertEquals("file:///subs/es1.vtt", result[0].url)
+        assertEquals("es", result[0].language)
+        assertEquals("Español", result[0].label)
+        assertEquals("es1", result[0].id)
+        assertEquals(false, result[0].selected)
+    }
 }

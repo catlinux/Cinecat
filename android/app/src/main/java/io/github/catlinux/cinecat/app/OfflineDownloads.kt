@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.DataSpec
+import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.cache.Cache
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.CacheKeyFactory
@@ -73,6 +74,23 @@ fun offlineCacheKey(url: String): String {
     return builder.build().toString()
 }
 
+fun OfflineMeta.toPlayerSubtitles(fileUrl: (String) -> String): List<PlayerSubtitle> =
+    subtitles.map { subtitle ->
+        PlayerSubtitle(
+            url = fileUrl(subtitle.file),
+            language = subtitle.language,
+            label = subtitle.label,
+            selected = false,
+            id = subtitle.id
+        )
+    }
+
+private const val WAITING_POLLS = 5
+
+/** Media3 reintenta solo cuando el servidor responde 503: sin avance durante unos sondeos es espera. */
+fun isWaitingForServer(phase: DownloadPhase, unchangedPolls: Int): Boolean =
+    phase == DownloadPhase.Running && unchangedPolls >= WAITING_POLLS
+
 fun downloadPhase(state: Int): DownloadPhase = when (state) {
     Download.STATE_COMPLETED -> DownloadPhase.Completed
     Download.STATE_FAILED -> DownloadPhase.Failed
@@ -81,7 +99,7 @@ fun downloadPhase(state: Int): DownloadPhase = when (state) {
 }
 
 @UnstableApi
-class OfflineDownloads(context: Context, client: OkHttpClient) {
+class OfflineDownloads(private val context: Context, client: OkHttpClient) {
     private val databaseProvider = StandaloneDatabaseProvider(context)
     val cache: Cache = SimpleCache(
         File(context.filesDir, "offline-hls"),
@@ -97,7 +115,7 @@ class OfflineDownloads(context: Context, client: OkHttpClient) {
     val playbackDataSourceFactory: CacheDataSource.Factory = CacheDataSource.Factory()
         .setCache(cache)
         .setCacheKeyFactory(cacheKeyFactory)
-        .setUpstreamDataSourceFactory(upstreamFactory)
+        .setUpstreamDataSourceFactory(DefaultDataSource.Factory(context, upstreamFactory))
         .setCacheWriteDataSinkFactory(null)
         .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
 

@@ -95,13 +95,17 @@ fun PlayerScreen(
         context.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
     }
     val inPip = pictureInPicture.inPip
-    val exoPlayer = remember(client, context) {
+    val isLocal = viewModel.localUri != null
+    val exoPlayer = remember(client, context, isLocal) {
+        // Lo descargado se lee de la caché offline y solo cae a la red si falta algo.
+        val dataSourceFactory = if (isLocal) {
+            (context.applicationContext as CinecatApplication).container
+                .offlineDownloads.playbackDataSourceFactory
+        } else {
+            DefaultDataSource.Factory(context, OkHttpDataSource.Factory(client))
+        }
         ExoPlayer.Builder(context)
-            .setMediaSourceFactory(
-                DefaultMediaSourceFactory(
-                    DefaultDataSource.Factory(context, OkHttpDataSource.Factory(client))
-                )
-            )
+            .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory))
             .setSeekBackIncrementMs(SEEK_INCREMENT_MS)
             .setSeekForwardIncrementMs(SEEK_INCREMENT_MS)
             .build()

@@ -1,46 +1,28 @@
 package io.github.catlinux.cinecat.app
 
 import io.github.catlinux.cinecat.core.api.MediaItem
-import io.github.catlinux.cinecat.core.api.PlayResponse
-import java.net.URLDecoder
-import java.nio.charset.StandardCharsets
 import java.util.Locale
 
 enum class DownloadLabel {
     Download,
     Preparing,
+    Waiting,
     Downloading,
     Downloaded,
     Failed
 }
 
-// El servidor decide con la ficha del archivo; un servidor anterior no envía el
-// campo y la descarga queda bloqueada, como antes.
-fun canDownload(play: PlayResponse): Boolean = play.downloadDirect
-
-enum class DownloadBlockedKind {
-    Audio,
-    Video,
-    Container,
-    Other
-}
-
-fun downloadBlockedKind(reason: String?): DownloadBlockedKind = when (reason) {
-    "audio" -> DownloadBlockedKind.Audio
-    "video" -> DownloadBlockedKind.Video
-    "container" -> DownloadBlockedKind.Container
-    else -> DownloadBlockedKind.Other
-}
-
 fun downloadLabel(
     recordExists: Boolean,
     preparing: Boolean,
-    phase: DownloadPhase?
+    phase: DownloadPhase?,
+    waitingForServer: Boolean = false
 ): DownloadLabel = when {
     preparing -> DownloadLabel.Preparing
     !recordExists -> DownloadLabel.Download
     phase == DownloadPhase.Failed -> DownloadLabel.Failed
     phase == DownloadPhase.Completed -> DownloadLabel.Downloaded
+    waitingForServer -> DownloadLabel.Waiting
     else -> DownloadLabel.Downloading
 }
 
@@ -64,23 +46,6 @@ fun downloadEpisodeCode(season: Int?, episode: Int?): String {
     }
     return "T${season?.toString() ?: "?"}E${episode?.toString() ?: "?"}"
 }
-
-fun downloadExtension(disposition: String?, contentType: String?): String {
-    val name = filenameFromDisposition(disposition)
-    val extension = name?.substringAfterLast('.', "")?.lowercase(Locale.ROOT).orEmpty()
-    if (extension.matches(Regex("[a-z0-9]{1,8}"))) {
-        return extension
-    }
-    return when (contentType?.substringBefore(';')?.trim()?.lowercase(Locale.ROOT)) {
-        "video/x-matroska" -> "mkv"
-        "video/mp4" -> "mp4"
-        "video/quicktime" -> "mov"
-        else -> "bin"
-    }
-}
-
-fun downloadFileName(itemId: Long, disposition: String?, contentType: String?): String =
-    "$itemId.${downloadExtension(disposition, contentType)}"
 
 fun downloadPercent(downloaded: Long, total: Long): Int? {
     if (total <= 0L) {
@@ -107,22 +72,4 @@ fun formatDownloadSize(bytes: Long): String {
     } else {
         String.format(Locale.ROOT, "%.1f %s", value, units[unit])
     }
-}
-
-fun filenameFromDisposition(disposition: String?): String? {
-    if (disposition.isNullOrBlank()) {
-        return null
-    }
-    val extended = Regex("""filename\*\s*=\s*UTF-8''([^;]+)""", RegexOption.IGNORE_CASE)
-        .find(disposition)
-        ?.groupValues
-        ?.getOrNull(1)
-    val plain = Regex("""filename\s*=\s*"?([^";]+)"?""", RegexOption.IGNORE_CASE)
-        .find(disposition)
-        ?.groupValues
-        ?.getOrNull(1)
-    val raw = extended ?: plain ?: return null
-    return runCatching {
-        URLDecoder.decode(raw.replace("+", "%2B"), StandardCharsets.UTF_8.name())
-    }.getOrDefault(raw)
 }

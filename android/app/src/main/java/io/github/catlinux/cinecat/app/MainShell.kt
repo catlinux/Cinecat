@@ -422,6 +422,11 @@ fun MainShell(
                                 scope = container.appScope,
                                 serverUrl = { container.sessionRepository.currentServer() },
                                 localUri = route.localUri,
+                                localSubtitles = if (route.localUri != null) {
+                                    container.downloadRepository.localSubtitles(route.itemId)
+                                } else {
+                                    emptyList()
+                                },
                                 localProgress = if (route.localUri != null) {
                                     { position, duration ->
                                         container.downloadRepository.saveLocalProgress(

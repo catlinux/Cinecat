@@ -144,11 +144,11 @@ El progreso se guarda cada 15 s y al salir. Si quedan 15 s o menos, no se reanud
 
 ## Descargas sin conexión
 
-En Android, solo en móvil y tableta (la TV no las ofrece), la ficha de una película y cada episodio tienen **Descargar**. Descarga el archivo original (también MKV) si el equipo puede reproducir su vídeo y su audio; si no, aparece un aviso que dice si el problema es el audio, el vídeo o el formato, y no se descarga ni se genera una versión recodificada.
+En Android, solo en móvil y tableta (la TV no las ofrece), la ficha de una película y cada episodio tienen **Descargar**. Descarga la misma versión que ves en streaming: lo que se reproduce con conexión se reproduce sin ella, aunque el archivo original sea un MKV con audio que tu móvil no decodifica. El servidor la prepara y puede tardar si hay que convertirla; mientras tanto el botón dice **En espera del servidor…**.
 
-La descarga usa el DownloadManager del sistema, se guarda en la carpeta privada de la app (no pide permisos de almacenamiento y se borra al desinstalarla) y muestra una notificación durante la descarga y al terminar. Mientras baja, el botón muestra **Descargando n %** y al pulsarlo ofrece cancelar. Al terminar muestra **Descargado**; al pulsarlo puedes reproducir el archivo o borrarlo.
+La descarga se guarda en la carpeta privada de la app (se borra al desinstalarla) y muestra una notificación mientras baja; en Android 13 o posterior la app pide permiso para las notificaciones la primera vez, y si lo rechazas la descarga sigue igualmente. Mientras baja, el botón muestra **Descargando n %** y al pulsarlo ofrece cancelar. Si cierras la app, la descarga continúa o se reanuda al abrirla. Al terminar muestra **Descargado**; al pulsarlo puedes reproducirla o borrarla.
 
-En **Cuenta › Descargas** (solo móvil y tableta) ves el cartel, el título, el tamaño y el progreso de cada descarga, y puedes reproducir, cancelar o borrar. La reproducción es local, sin conexión: usa el archivo original y los subtítulos incrustados de ese archivo, no los subtítulos del servidor, y empieza donde la dejaste. El progreso se guarda en el dispositivo y se envía al servidor al arrancar la app o al abrir Descargas; si no hay conexión, queda pendiente.
+En **Cuenta › Descargas** (solo móvil y tableta) ves el cartel, el título, el tamaño y el progreso de cada descarga, y puedes reproducir, cancelar o borrar. La reproducción funciona sin conexión, con la misma pista de audio y los subtítulos de texto de la descarga, y empieza donde la dejaste. El progreso se guarda en el dispositivo y se envía al servidor al arrancar la app o al abrir Descargas; si no hay conexión, queda pendiente. Las descargas de versiones anteriores a la 0.67.0 se borran al actualizar y hay que volver a hacerlas.
 
 Si al arrancar no hay conexión y tienes descargas, la pantalla de error ofrece **Ver descargas** para entrar sin pasar por el servidor.
 

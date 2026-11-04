@@ -6,7 +6,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -33,16 +32,17 @@ class LocalPlaybackViewModelTest {
             },
             serverUrl = { null },
             scope = this,
-            localUri = "file:///descargas/7.mkv"
+            localUri = "https://cine.example/api/v1/stream/7/playlist.m3u8",
+            localSubtitles = listOf(PlayerSubtitle("file:///subs/es.vtt", "es", "Español", false, "es"))
         )
 
         advanceUntilIdle()
 
         val ready = viewModel.state.value as PlayerUiState.Ready
-        assertEquals("file:///descargas/7.mkv", ready.streamUrl)
+        assertEquals("https://cine.example/api/v1/stream/7/playlist.m3u8", ready.streamUrl)
         assertEquals(33.0, ready.initialPositionSeconds, 0.0)
-        assertFalse(ready.isHls)
-        assertTrue(ready.subtitles.isEmpty())
+        assertTrue(ready.isHls)
+        assertEquals(listOf("es"), ready.subtitles.map { it.id })
         assertNull(ready.nextEpisode)
         assertTrue(ready.autoplayNext)
         assertEquals(0, playbackCalls)

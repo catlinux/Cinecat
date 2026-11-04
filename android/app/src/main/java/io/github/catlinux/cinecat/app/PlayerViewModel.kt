@@ -147,7 +147,8 @@ class PlayerViewModel(
     },
     private val serverUrl: () -> HttpUrl?,
     private val scope: CoroutineScope,
-    private val localUri: String? = null
+    val localUri: String? = null,
+    private val localSubtitles: List<PlayerSubtitle> = emptyList()
 ) : ViewModel() {
     constructor(
         itemId: Long,
@@ -157,6 +158,7 @@ class PlayerViewModel(
         scope: CoroutineScope,
         serverUrl: () -> HttpUrl? = { null },
         localUri: String? = null,
+        localSubtitles: List<PlayerSubtitle> = emptyList(),
         localProgress: (suspend (Double, Double) -> Unit)? = null
     ) : this(
         itemId = itemId,
@@ -183,7 +185,8 @@ class PlayerViewModel(
         persistPreferences = { patch -> repository.saveItemPreferences(itemId, patch) },
         serverUrl = serverUrl,
         scope = scope,
-        localUri = localUri
+        localUri = localUri,
+        localSubtitles = localSubtitles
     )
 
     private val _state = MutableStateFlow<PlayerUiState>(PlayerUiState.Loading)
@@ -352,8 +355,8 @@ class PlayerViewModel(
 
     private fun localReadyState(): PlayerUiState.Ready = PlayerUiState.Ready(
         streamUrl = localUri.orEmpty(),
-        isHls = false,
-        subtitles = emptyList(),
+        isHls = true,
+        subtitles = localSubtitles,
         initialPositionSeconds = startSeconds.coerceAtLeast(0.0)
     )
 

@@ -7,6 +7,17 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.67.0] - 2026-11-04
+
+### Changed
+
+- Android: offline downloads (phones and tablets) now fetch the same HLS that plays in streaming (`/play?download=1`) with Media3 offline, instead of the original file: whatever plays in streaming plays offline, including MKVs whose audio the phone cannot decode. Offline playback reads the cache with the local text subtitles and starts at the saved position.
+- Android: the button and the Descargas screen show "En espera del servidor…" while the server is still preparing the version; the app asks for the notification permission when the first download starts on Android 13+ (the download continues if refused).
+
+### Removed
+
+- Android: the notice that a file cannot be downloaded because of its audio, video or format. Downloads from earlier versions (the original file with the system DownloadManager) are cancelled and deleted on the first start; they must be downloaded again.
+
 ## [0.66.0] - 2026-11-04
 
 ### Added

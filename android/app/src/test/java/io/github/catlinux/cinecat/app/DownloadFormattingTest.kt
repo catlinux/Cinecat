@@ -1,11 +1,8 @@
 package io.github.catlinux.cinecat.app
 
 import io.github.catlinux.cinecat.core.api.MediaItem
-import io.github.catlinux.cinecat.core.api.PlayResponse
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DownloadFormattingTest {
@@ -27,21 +24,6 @@ class DownloadFormattingTest {
     }
 
     @Test
-    fun obtieneLaExtensionDelNombreOdelTipoDeContenido() {
-        assertEquals(
-            "mkv",
-            downloadExtension(
-                "attachment; filename*=UTF-8''Pel%C3%ADcula%20(2020).MKV",
-                "application/octet-stream"
-            )
-        )
-        assertEquals("mp4", downloadExtension(null, "video/mp4"))
-        assertEquals("bin", downloadExtension("attachment; filename=sin-extension", null))
-        assertEquals("mkv", downloadExtension("attachment; filename=otra.mkv", null))
-        assertEquals("7.mkv", downloadFileName(7, null, "video/x-matroska"))
-    }
-
-    @Test
     fun calculaElPorcentajeYElTamano() {
         assertEquals(25, downloadPercent(25, 100))
         assertEquals(100, downloadPercent(150, 100))
@@ -51,26 +33,12 @@ class DownloadFormattingTest {
     }
 
     @Test
-    fun laDescargaDependeDeLoQueDiceElServidor() {
-        assertTrue(canDownload(PlayResponse(url = "/stream", mode = "remux", downloadDirect = true)))
-        assertFalse(canDownload(PlayResponse(url = "/stream", mode = "direct")))
-    }
-
-    @Test
-    fun traduceElMotivoDelBloqueo() {
-        assertEquals(DownloadBlockedKind.Audio, downloadBlockedKind("audio"))
-        assertEquals(DownloadBlockedKind.Video, downloadBlockedKind("video"))
-        assertEquals(DownloadBlockedKind.Container, downloadBlockedKind("container"))
-        assertEquals(DownloadBlockedKind.Other, downloadBlockedKind("client"))
-        assertEquals(DownloadBlockedKind.Other, downloadBlockedKind(null))
-    }
-
-    @Test
     fun etiquetaLosEstadosDeLaDescarga() {
         assertEquals(DownloadLabel.Download, downloadLabel(false, false, null))
         assertEquals(DownloadLabel.Preparing, downloadLabel(false, true, null))
         assertEquals(DownloadLabel.Downloading, downloadLabel(true, false, DownloadPhase.Running))
-        assertEquals(DownloadLabel.Downloaded, downloadLabel(true, false, DownloadPhase.Completed))
+        assertEquals(DownloadLabel.Waiting, downloadLabel(true, false, DownloadPhase.Running, true))
+        assertEquals(DownloadLabel.Downloaded, downloadLabel(true, false, DownloadPhase.Completed, true))
         assertEquals(DownloadLabel.Failed, downloadLabel(true, false, DownloadPhase.Failed))
     }
 }

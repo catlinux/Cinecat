@@ -21,10 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,7 +32,6 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import io.github.catlinux.cinecat.core.api.DownloadRecord
 import io.github.catlinux.cinecat.core.api.tmdbImage
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -48,29 +44,11 @@ fun DownloadsScreen(
         return
     }
     val state by downloads.records.collectAsState()
-    var statuses by remember { mutableStateOf<Map<Long, DownloadStatus>>(emptyMap()) }
+    val statuses by downloads.statuses.collectAsState()
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         downloads.flushPending()
-    }
-    LaunchedEffect(state.downloads.map { it.itemId to it.downloadId }) {
-        while (true) {
-            val current = state.downloads
-            if (current.isEmpty()) {
-                statuses = emptyMap()
-                break
-            }
-            val next = current.associate { record -> record.itemId to downloads.status(record) }
-            statuses = next
-            if (next.values.none {
-                    it.phase == DownloadPhase.Pending || it.phase == DownloadPhase.Running
-                }
-            ) {
-                break
-            }
-            delay(1000)
-        }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -169,7 +147,9 @@ private fun DownloadRow(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
-            val size = formatDownloadSize(status?.totalBytes ?: record.sizeBytes)
+            val size = formatDownloadSize(
+                status?.downloadedBytes?.takeIf { it > 0L } ?: record.sizeBytes
+            )
             if (size.isNotEmpty()) {
                 Text(
                     text = size,
@@ -191,7 +171,9 @@ private fun DownloadRow(
                 DownloadPhase.Pending, DownloadPhase.Running -> {
                     val percent = status?.percent
                     Text(
-                        text = if (percent == null) {
+                        text = if (status?.waitingForServer == true) {
+                            stringResource(R.string.download_waiting)
+                        } else if (percent == null) {
                             stringResource(R.string.download_in_progress)
                         } else {
                             stringResource(R.string.download_downloading, percent)

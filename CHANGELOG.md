@@ -7,6 +7,17 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.67.0] - 2026-11-04
+
+### Cambiado
+
+- Android: las descargas sin conexión (móvil y tableta) bajan ahora el mismo HLS que se ve en streaming (`/play?download=1`) con Media3 offline, en lugar del archivo original: lo que se reproduce en streaming se reproduce sin conexión, también los MKV con audio que el móvil no decodifica. La reproducción sin conexión lee la caché con los subtítulos de texto locales y empieza en la posición guardada.
+- Android: el botón y la pantalla Descargas muestran «En espera del servidor…» cuando el servidor aún prepara la versión; la app pide el permiso de notificaciones al iniciar la primera descarga en Android 13+ (la descarga sigue si se rechaza).
+
+### Eliminado
+
+- Android: el aviso de que un archivo no se puede descargar por su audio, vídeo o formato. Las descargas de versiones anteriores (archivo original con el DownloadManager del sistema) se cancelan y se borran en el primer arranque; hay que volver a descargarlas.
+
 ## [0.66.0] - 2026-11-04
 
 ### Añadido

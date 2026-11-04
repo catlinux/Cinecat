@@ -144,11 +144,11 @@ Progress is saved every 15 s and on exit. If 15 s or less remain, playback does 
 
 ## Offline downloads
 
-On Android, only on phones and tablets (TV does not offer them), the movie page and every episode have **Descargar**. It downloads the original file (MKV too) if the device can play its video and audio; otherwise a message says whether the problem is the audio, the video or the format, and nothing is downloaded or re-encoded.
+On Android, only on phones and tablets (TV does not offer them), the movie page and every episode have **Descargar**. It downloads the same version you watch in streaming: what plays online plays offline, even if the original file is an MKV with audio your phone cannot decode. The server prepares it and it may take a while if it has to be converted; meanwhile the button says **En espera del servidor…**.
 
-The download uses the system DownloadManager, is stored in the app's private folder (it asks for no storage permissions and is deleted when the app is uninstalled) and shows a notification while it runs and when it finishes. While it runs, the button shows **Descargando n %**, and pressing it offers to cancel. When it finishes it shows **Descargado**; pressing it lets you play the file or delete it.
+The download is stored in the app's private folder (deleted when the app is uninstalled) and shows a notification while it runs; on Android 13 or later the app asks for the notification permission the first time, and if you refuse, the download continues anyway. While it runs, the button shows **Descargando n %** and offers to cancel when pressed. If you close the app, the download continues or resumes when you open it. When done it shows **Descargado**; pressing it lets you play or delete it.
 
-Under **Cuenta › Descargas** (phones and tablets only) you see the poster, title, size and progress of each download, and you can play, cancel or delete it. Playback is local and offline: it uses the original file and the subtitles embedded in that file, not the server subtitles, and starts where you left off. Progress is stored on the device and sent to the server when the app starts or when Descargas is opened; without a connection it stays pending.
+Under **Cuenta › Descargas** (phones and tablets only) you see the poster, title, size and progress of each download, and you can play, cancel or delete it. Playback works offline, with the same audio track and the text subtitles of the download, and starts where you left off. Progress is saved on the device and sent to the server when the app starts or Descargas is opened; if there is no connection, it stays pending. Downloads from versions before 0.67.0 are deleted on update and must be made again.
 
 If there is no connection on startup and you have downloads, the error screen offers **Ver descargas** to get in without the server.
 
