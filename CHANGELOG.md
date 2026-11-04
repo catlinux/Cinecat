@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.67.3] - 2026-11-05
+
+### Corregido
+
+- Android: al descargar por primera vez en Android 13+, la descarga arranca tras aceptar el permiso de notificaciones (antes se cancelaba al recargarse la ficha y había que pulsar «Descargar» otra vez).
+
 ## [0.67.2] - 2026-11-04
 
 ### Cambiado

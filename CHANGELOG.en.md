@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.67.3] - 2026-11-05
+
+### Fixed
+
+- Android: on the first download on Android 13+, the download starts after accepting the notification permission (it used to be cancelled when the page reloaded, so "Download" had to be pressed again).
+
 ## [0.67.2] - 2026-11-04
 
 ### Changed

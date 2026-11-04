@@ -138,6 +138,11 @@ class DownloadRepository(
         }
     }
 
+    /** Como [start], pero en el ámbito de la app: sobrevive a que la pantalla se recargue (p. ej. tras el diálogo de permisos). */
+    fun startAsync(item: MediaItem, caps: String, onResult: (DownloadStartResult) -> Unit) {
+        scope.launch { onResult(start(item, caps)) }
+    }
+
     private fun pollStatuses(): Flow<Map<Long, DownloadStatus>> = flow {
         val lastBytes = mutableMapOf<Long, Long>()
         val unchanged = mutableMapOf<Long, Int>()

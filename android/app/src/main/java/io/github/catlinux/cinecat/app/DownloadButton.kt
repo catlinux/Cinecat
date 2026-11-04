@@ -51,8 +51,8 @@ fun DownloadButton(
 
     fun startDownload() {
         preparing = true
-        scope.launch {
-            when (val result = downloads.start(item, caps)) {
+        downloads.startAsync(item, caps) { result ->
+            when (result) {
                 is DownloadStartResult.Failed -> errorMessage = result.message
                 is DownloadStartResult.Started -> Unit
             }
