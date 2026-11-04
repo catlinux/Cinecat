@@ -29,7 +29,8 @@
 				<a href={`/items/${data.item.id}/play?t=0`}>Empezar desde el principio</a>
 			</p>
 		{/if}
-		<div class="player-stage">
+		<div class="player-stage" data-fullscreen-root>
+			{#key data.item.id}
 			<Player
 				src={data.playUrl}
 				mode={data.play.mode}
@@ -41,6 +42,7 @@
 				autoplayNext={data.play.autoplay_next ?? true}
 				autoplaySeriesId={data.item.series_id}
 			/>
+			{/key}
 		</div>
 	{:else}
 		<p class="error" role="alert">{data.playError}</p>

@@ -1,7 +1,9 @@
 import { render } from 'svelte/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { progressEnabled, resumeTarget } from '$lib/progress';
 import Player from './Player.svelte';
+
+vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
 
 describe('Player', () => {
 	it('renderiza un <video> nativo con controles y la URL en modo directo', () => {

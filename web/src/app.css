@@ -1663,6 +1663,22 @@ footer {
 	box-shadow: 0 1.8rem 3rem -1.6rem rgba(0, 0, 0, 0.45);
 }
 
+.player-stage:fullscreen {
+	display: grid;
+	place-items: center;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	border-radius: 0;
+	background: #000;
+}
+
+.player-stage:fullscreen .player {
+	height: 100%;
+	aspect-ratio: auto;
+	border-radius: 0;
+}
+
 .player {
 	display: grid;
 	gap: 0.8rem;

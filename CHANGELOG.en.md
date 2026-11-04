@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.65.2] - 2026-11-04
+
+### Fixed
+
+- Web: when moving to the next episode (countdown, «Reproducir ya» or the credits button) the player no longer reloads the page: the next episode starts by itself and the fullscreen or windowed state you were in is kept. Progress is saved before switching.
+
 ## [0.65.1] - 2026-11-04
 
 ### Fixed

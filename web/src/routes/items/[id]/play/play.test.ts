@@ -4,6 +4,8 @@ import type { MediaItem, PlayResponse } from '$lib/api';
 import PlayPage from './+page.svelte';
 import { load } from './+page.server';
 
+vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
+
 function jsonResponse(body: unknown, status = 200): Response {
 	return new Response(JSON.stringify(body), {
 		status,

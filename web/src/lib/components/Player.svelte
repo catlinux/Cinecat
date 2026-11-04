@@ -1,8 +1,10 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { onDestroy, onMount, tick } from 'svelte';
 	import type Hls from 'hls.js';
 	import type { PlayResponse } from '$lib/api';
 	import { chooseHlsStrategy } from '$lib/hls-strategy';
+	import { consumeContinuePlaying, markContinuePlaying } from '$lib/player-handoff';
 	import {
 		absoluteSubtitleURL,
 		activeSegmentButton,
@@ -54,6 +56,8 @@
 
 	let video: HTMLVideoElement;
 	let container: HTMLElement;
+	// Viene de «Siguiente episodio»: el vídeo debe arrancar sin pulsar play.
+	let startPlaying = consumeContinuePlaying();
 	let errorMessage = $state<string | null>(null);
 	let hls: Hls | null = null;
 	let destroyed = false;
@@ -289,6 +293,12 @@
 			return;
 		}
 		duration = Number.isFinite(video.duration) ? video.duration : 0;
+		if (startPlaying) {
+			startPlaying = false;
+			void video.play().catch(() => {
+				// Sin permiso del navegador queda en pausa y se pulsa play.
+			});
+		}
 		if (!resumeApplied) {
 			const target = resumeTarget(startAt, video.duration, resumeApplied);
 			resumeApplied = true;
@@ -427,9 +437,7 @@
 		activity();
 		if (button.action === 'next') {
 			clearCountdown();
-			if (nextEpisodeUrl) {
-				window.location.href = nextEpisodeUrl;
-			}
+			goToNextEpisode();
 			return;
 		}
 		seek(button.end);
@@ -613,7 +621,9 @@
 		if (!container) {
 			return;
 		}
-		const element = container as HTMLElement & {
+		// El escenario de la página (si existe) es el que se pone en pantalla
+		// completa: sobrevive al cambio de episodio, el propio reproductor no.
+		const element = (container.closest('[data-fullscreen-root]') ?? container) as HTMLElement & {
 			webkitRequestFullscreen?: () => Promise<void>;
 		};
 		const doc = document as Document & {
@@ -658,11 +668,20 @@
 			countdown -= 1;
 			if (countdown <= 0) {
 				clearCountdown();
-				if (nextEpisodeUrl) {
-					window.location.href = nextEpisodeUrl;
-				}
+				goToNextEpisode();
 			}
 		}, 1000);
+	}
+
+	// Navega sin recargar la página: así el navegador conserva la pantalla
+	// completa (el escenario sigue en el DOM) y permite arrancar el vídeo solo.
+	function goToNextEpisode() {
+		if (!nextEpisodeUrl) {
+			return;
+		}
+		sendBeaconProgress();
+		markContinuePlaying();
+		void goto(nextEpisodeUrl);
 	}
 
 	function clearCountdown() {
@@ -898,9 +917,8 @@
 					type="button"
 					class="button"
 					onclick={() => {
-						if (nextEpisodeUrl) {
-							window.location.href = nextEpisodeUrl;
-						}
+						clearCountdown();
+						goToNextEpisode();
 					}}>Reproducir ya</button
 				>
 			</div>

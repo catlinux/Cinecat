@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.65.2] - 2026-11-04
+
+### Corregido
+
+- Web: al pasar al siguiente episodio (cuenta atrás, «Reproducir ya» o el botón de los créditos) el reproductor ya no recarga la página: el siguiente episodio arranca solo y se conserva la pantalla completa o reducida en la que estabas. El progreso del episodio se guarda antes de cambiar.
+
 ## [0.65.1] - 2026-11-04
 
 ### Corregido
