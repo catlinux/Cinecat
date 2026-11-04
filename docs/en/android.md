@@ -108,7 +108,7 @@ Since 0.49.0, a partly watched movie page shows **Desde el principio** next to *
 
 ## Offline downloads
 
-They exist only on phones and tablets; TV shows neither the button nor the Descargas screen. On a movie page and on every episode, **Descargar** requests `/play` with the device capabilities. It downloads the original file, MKV, MP4 or MOV, only when the response has `download_direct: true`, that is, when the device plays its video (H.264, or HEVC if declared) and its audio (AAC, MP3, Opus, Vorbis, FLAC or declared AC-3/E-AC-3). Otherwise it explains the reason (`download_blocked`: audio, video or format) and generates no re-encoded version.
+They exist only on phones and tablets; TV shows neither the button nor the Descargas screen. On a movie page and on every episode, **Descargar** requests `/play` with the device capabilities. It downloads the original file, MKV, MP4 or MOV, only when the response has `download_direct: true`, that is, when the device declares it plays its container, video and audio directly (the same criteria as native direct playback). Otherwise it explains the reason (`download_blocked`: audio, video or format) and generates no re-encoded version.
 
 The system DownloadManager downloads from `GET /api/v1/items/{id}/download`, with the app session, into the app's private folder (`Environment.DIRECTORY_MOVIES`) as `<id>.<extension>`. It asks for no storage permissions and the file is deleted when the app is uninstalled. The system notification shows the movie title or `Serie · TxE · título` while it runs and when it finishes. While it runs, the button shows **Descargando n %** and offers to cancel; when it finishes it shows **Descargado** and offers to play or delete.
 

@@ -7,11 +7,17 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.65.1] - 2026-11-04
+
+### Corregido
+
+- Servidor: `download_direct` usa el mismo criterio que la reproducción directa nativa (`nativeVideo` y `nativeAudio`) en lugar del de la web, que rechazaba casi todos los MKV (HEVC sin etiqueta `hvc1`, H.264 de 10 bits, AV1, VP9, DTS declarado…). Ahora se puede descargar todo lo que el dispositivo declara que reproduce en directo.
+
 ## [0.65.0] - 2026-11-04
 
 ### Cambiado
 
-- Servidor y Android: las descargas sin conexión ya no dependen del contenedor. `GET /api/v1/items/{id}/play` devuelve `download_direct` y, si no se puede, `download_blocked` (`container`, `video`, `audio` o `client`); la app descarga el archivo original, MKV incluido, si el vídeo (H.264, o HEVC si el equipo lo declara) y el audio (AAC, MP3, Opus, Vorbis, FLAC o AC-3/E-AC-3 declarado) los reproduce el dispositivo, y si no explica el motivo en lugar de «necesita conversión». Cubierto por tests; aún no se ha probado una descarga real en un dispositivo.
+- Servidor y Android: las descargas sin conexión ya no dependen del contenedor. `GET /api/v1/items/{id}/play` devuelve `download_direct` y, si no se puede, `download_blocked` (`container`, `video`, `audio` o `client`); la app descarga el archivo original, MKV incluido, si el vídeo y el audio los reproduce el dispositivo (criterio corregido en 0.65.1), y si no explica el motivo en lugar de «necesita conversión». Cubierto por tests; aún no se ha probado una descarga real en un dispositivo.
 
 ## [0.64.0] - 2026-11-03
 

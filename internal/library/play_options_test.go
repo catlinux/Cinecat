@@ -122,7 +122,7 @@ func TestPlayInformaSiElOriginalEsDescargable(t *testing.T) {
 		},
 		{
 			name:    "mkv h264 dts",
-			caps:    "mkv,h264,dts",
+			caps:    "mkv,h264,aac",
 			audio:   playback.AudioStream{Codec: "dts", Channels: 6, Default: true},
 			blocked: "audio",
 		},

@@ -13,45 +13,33 @@ const (
 )
 
 // DownloadableFor indica si una app nativa puede reproducir el archivo
-// original tras descargarlo, sin depender de la decisión de HLS del servidor.
+// original tras descargarlo. Usa los mismos criterios que el directo nativo
+// (nativeVideo y nativeAudio) para que lo descargable coincida con lo que el
+// reproductor del dispositivo sabe leer, sea cual sea el contenedor.
 func DownloadableFor(info *FileInfo, caps Capabilities) (bool, string) {
 	if info == nil {
 		return false, DownloadBlockedVideo
 	}
+	var container nativeSet
 	switch strings.ToLower(filepath.Ext(info.FileName)) {
-	case ".mp4", ".m4v", ".mkv", ".mov":
+	case ".mp4", ".m4v", ".mov":
+		container = nativeMP4
+	case ".mkv":
+		container = nativeMKV
 	default:
 		return false, DownloadBlockedContainer
 	}
 	if !caps.Native() {
 		return false, DownloadBlockedClient
 	}
-	if !directVideo(info, caps) {
+	if !caps.native.has(container) {
+		return false, DownloadBlockedContainer
+	}
+	if !nativeVideo(info, caps) {
 		return false, DownloadBlockedVideo
 	}
-	if strings.EqualFold(strings.TrimSpace(info.Video[0].Codec), "h264") &&
-		!caps.native.has(nativeH264) {
-		return false, DownloadBlockedVideo
-	}
-	if !downloadableAudio(info, caps) {
+	if !nativeAudio(info, caps, -1) {
 		return false, DownloadBlockedAudio
 	}
 	return true, ""
-}
-
-func downloadableAudio(info *FileInfo, caps Capabilities) bool {
-	audio, ok := selectedAudio(info, -1)
-	if !ok {
-		return true
-	}
-	switch strings.ToLower(strings.TrimSpace(audio.Codec)) {
-	case "aac", "mp3", "opus", "vorbis", "flac":
-		return true
-	case "ac3":
-		return caps.native.has(nativeAC3)
-	case "eac3":
-		return caps.native.has(nativeEAC3)
-	default:
-		return false
-	}
 }
