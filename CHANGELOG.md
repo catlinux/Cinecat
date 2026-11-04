@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.65.0] - 2026-11-04
+
+### Cambiado
+
+- Servidor y Android: las descargas sin conexión ya no dependen del contenedor. `GET /api/v1/items/{id}/play` devuelve `download_direct` y, si no se puede, `download_blocked` (`container`, `video`, `audio` o `client`); la app descarga el archivo original, MKV incluido, si el vídeo (H.264, o HEVC si el equipo lo declara) y el audio (AAC, MP3, Opus, Vorbis, FLAC o AC-3/E-AC-3 declarado) los reproduce el dispositivo, y si no explica el motivo en lugar de «necesita conversión». Cubierto por tests; aún no se ha probado una descarga real en un dispositivo.
+
 ## [0.64.0] - 2026-11-03
 
 ### Añadido

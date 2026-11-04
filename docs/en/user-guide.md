@@ -144,7 +144,7 @@ Progress is saved every 15 s and on exit. If 15 s or less remain, playback does 
 
 ## Offline downloads
 
-On Android, only on phones and tablets (TV does not offer them), the movie page and every episode have **Descargar**. It downloads only when the device can play the file directly; if it needs conversion, the message "Este archivo necesita conversión y no se puede descargar" is shown and nothing is downloaded or re-encoded.
+On Android, only on phones and tablets (TV does not offer them), the movie page and every episode have **Descargar**. It downloads the original file (MKV too) if the device can play its video and audio; otherwise a message says whether the problem is the audio, the video or the format, and nothing is downloaded or re-encoded.
 
 The download uses the system DownloadManager, is stored in the app's private folder (it asks for no storage permissions and is deleted when the app is uninstalled) and shows a notification while it runs and when it finishes. While it runs, the button shows **Descargando n %**, and pressing it offers to cancel. When it finishes it shows **Descargado**; pressing it lets you play the file or delete it.
 

@@ -36,7 +36,7 @@ data class DownloadStatus(
 
 sealed interface DownloadStartResult {
     data class Started(val record: DownloadRecord) : DownloadStartResult
-    data object NeedsConversion : DownloadStartResult
+    data class NotDownloadable(val reason: String?) : DownloadStartResult
     data class Failed(val message: String? = null) : DownloadStartResult
 }
 
@@ -66,7 +66,7 @@ class DownloadRepository(
                 if (canDownload(playback.value)) {
                     enqueue(item)
                 } else {
-                    DownloadStartResult.NeedsConversion
+                    DownloadStartResult.NotDownloadable(playback.value.downloadBlocked)
                 }
             }
             is ApiResult.HttpError -> DownloadStartResult.Failed(playback.message)

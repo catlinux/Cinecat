@@ -181,7 +181,7 @@ El ajuste es por usuario y serie y, si no hay fila guardada, está activado. Se 
 
 La respuesta usa `http.ServeContent`: admite rangos (`206` e `If-Range`), envía `Last-Modified`, `Accept-Ranges: bytes`, `Content-Disposition` con `filename*=UTF-8''...` y el `Content-Type` según la extensión (`.mkv` es `video/x-matroska`, `.mp4` y `.m4v` son `video/mp4`, el resto `application/octet-stream`). No recodifica ni modifica el archivo. Una sesión ausente o no válida responde `401`, un rango fuera del archivo `416` y un error interno `500`.
 
-La app Android solo usa esta ruta cuando `/play` devuelve `mode: "direct"` con las capacidades del equipo. Si devuelve `remux`, no descarga y avisa de que el archivo necesita conversión; no se generan versiones recodificadas.
+La app Android solo usa esta ruta cuando `/play`, con las capacidades del equipo, devuelve `download_direct: true`: el contenedor da igual (`.mp4`, `.m4v`, `.mkv`, `.mov`) siempre que el dispositivo reproduzca el vídeo y el audio. Si es `false`, `download_blocked` dice por qué (`container`, `video`, `audio` o `client`) y no se descarga; no se generan versiones recodificadas.
 
 ## Segmentos de intro y créditos
 

@@ -17,7 +17,9 @@ data class PlayResponse(
     @SerialName("selected_subtitle") val selectedSubtitle: String? = null,
     val segments: List<PlaySegment> = emptyList(),
     @SerialName("autoplay_next") val autoplayNext: Boolean = true,
-    @SerialName("next_episode") val nextEpisode: NextEpisode? = null
+    @SerialName("next_episode") val nextEpisode: NextEpisode? = null,
+    @SerialName("download_direct") val downloadDirect: Boolean = false,
+    @SerialName("download_blocked") val downloadBlocked: String? = null
 )
 
 @Serializable

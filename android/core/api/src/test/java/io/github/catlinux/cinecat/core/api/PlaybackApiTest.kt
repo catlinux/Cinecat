@@ -73,6 +73,28 @@ class PlaybackApiTest {
     }
 
     @Test
+    fun parsesDownloadFlagsWithDefaults() = runTest {
+        server.enqueue(
+            jsonResponse(
+                """{"url":"/hls","mode":"remux","download_direct":false,"download_blocked":"audio"}"""
+            )
+        )
+        val blocked = api().play(7) as ApiResult.Success
+        assertFalse(blocked.value.downloadDirect)
+        assertEquals("audio", blocked.value.downloadBlocked)
+
+        server.enqueue(jsonResponse("""{"url":"/hls","mode":"remux","download_direct":true}"""))
+        val allowed = api().play(7) as ApiResult.Success
+        assertTrue(allowed.value.downloadDirect)
+        assertNull(allowed.value.downloadBlocked)
+
+        server.enqueue(jsonResponse(directJson()))
+        val oldServer = api().play(7) as ApiResult.Success
+        assertFalse(oldServer.value.downloadDirect)
+        assertNull(oldServer.value.downloadBlocked)
+    }
+
+    @Test
     fun parsesBurnInSubtitles() = runTest {
         server.enqueue(
             jsonResponse(

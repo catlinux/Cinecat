@@ -16,7 +16,8 @@ Ejecución secuencial. Misma metodología que `resto-todo.PLAN.md`: AgentRelay, 
 1. [x] **Servidor**: migración 0030, rutas, `autoplay_next`. AgentRelay, medio. Versión 0.64.0 (menor) se asigna al cerrar el paso 3.
 2. [x] **Web**: interruptor en la ficha de serie y en el reproductor; el reproductor respeta `autoplay_next`. AgentRelay, medio.
 3. [x] **Android/TV**: navegación al siguiente episodio desde el reproductor con cuenta atrás cancelable, botón «Siguiente episodio» en créditos, interruptor en la ficha de serie. Docs es/en. Cierra **0.64.0**. AgentRelay, medio.
-4. [ ] **Probar las descargas en el móvil** (Pixel por adb), corregir lo que falle y cerrar **0.64.1** o lo que toque.
+4. [x] **Probar las descargas en el móvil** (Pixel por adb), corregir lo que falle y cerrar **0.64.1** o lo que toque.
    - Prueba en el Pixel (app 0.64.0, servidor 0.64.0): Logan, El médico y Proyecto Power se rechazan con «necesita conversión» (solo `direct` = MP4/M4V compatible se puede descargar). No se ha visto aún una descarga real; la biblioteca parece ser casi toda MKV o incompatible. Pendiente decidir: descarga convertida a MP4 desde el servidor.
 
 Imprevistos de diseño:
+- Las descargas solo servían para MP4: se corrigió en 0.65.0 (`download_direct` en `/play`, MKV incluido). Falta ver una descarga real en el Pixel.

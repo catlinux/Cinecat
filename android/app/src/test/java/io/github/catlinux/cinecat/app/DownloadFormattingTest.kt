@@ -51,9 +51,18 @@ class DownloadFormattingTest {
     }
 
     @Test
-    fun soloSeDescargaLaReproduccionDirecta() {
-        assertTrue(canDownload(PlayResponse(url = "/stream", mode = "direct")))
-        assertFalse(canDownload(PlayResponse(url = "/stream", mode = "remux")))
+    fun laDescargaDependeDeLoQueDiceElServidor() {
+        assertTrue(canDownload(PlayResponse(url = "/stream", mode = "remux", downloadDirect = true)))
+        assertFalse(canDownload(PlayResponse(url = "/stream", mode = "direct")))
+    }
+
+    @Test
+    fun traduceElMotivoDelBloqueo() {
+        assertEquals(DownloadBlockedKind.Audio, downloadBlockedKind("audio"))
+        assertEquals(DownloadBlockedKind.Video, downloadBlockedKind("video"))
+        assertEquals(DownloadBlockedKind.Container, downloadBlockedKind("container"))
+        assertEquals(DownloadBlockedKind.Other, downloadBlockedKind("client"))
+        assertEquals(DownloadBlockedKind.Other, downloadBlockedKind(null))
     }
 
     @Test

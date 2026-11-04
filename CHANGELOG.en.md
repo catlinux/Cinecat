@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.65.0] - 2026-11-04
+
+### Changed
+
+- Server and Android: offline downloads no longer depend on the container. `GET /api/v1/items/{id}/play` returns `download_direct` and, when not possible, `download_blocked` (`container`, `video`, `audio` or `client`); the app downloads the original file, MKV included, when the device plays its video (H.264, or HEVC if the device declares it) and audio (AAC, MP3, Opus, Vorbis, FLAC or declared AC-3/E-AC-3), and otherwise explains why instead of «needs conversion». Covered by tests; a real download has not been tried on a device yet.
+
 ## [0.64.0] - 2026-11-03
 
 ### Added

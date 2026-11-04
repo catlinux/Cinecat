@@ -38,7 +38,7 @@ fun DownloadButton(
     var preparing by remember { mutableStateOf(false) }
     var cancelRecord by remember { mutableStateOf<DownloadRecord?>(null) }
     var actionRecord by remember { mutableStateOf<DownloadRecord?>(null) }
-    var needsConversion by remember { mutableStateOf(false) }
+    var blockedKind by remember { mutableStateOf<DownloadBlockedKind?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
@@ -81,7 +81,8 @@ fun DownloadButton(
                 preparing = true
                 scope.launch {
                     when (val result = downloads.start(item, caps)) {
-                        is DownloadStartResult.NeedsConversion -> needsConversion = true
+                        is DownloadStartResult.NotDownloadable ->
+                            blockedKind = downloadBlockedKind(result.reason)
                         is DownloadStartResult.Failed -> errorMessage = result.message
                         is DownloadStartResult.Started -> Unit
                     }
@@ -180,13 +181,24 @@ fun DownloadButton(
         )
     }
 
-    if (needsConversion) {
+    blockedKind?.let { kind ->
         AlertDialog(
-            onDismissRequest = { needsConversion = false },
+            onDismissRequest = { blockedKind = null },
             title = { Text(stringResource(R.string.download_dialog_title)) },
-            text = { Text(stringResource(R.string.download_needs_conversion)) },
+            text = {
+                Text(
+                    stringResource(
+                        when (kind) {
+                            DownloadBlockedKind.Audio -> R.string.download_blocked_audio
+                            DownloadBlockedKind.Video -> R.string.download_blocked_video
+                            DownloadBlockedKind.Container -> R.string.download_blocked_container
+                            DownloadBlockedKind.Other -> R.string.download_blocked_other
+                        }
+                    )
+                )
+            },
             confirmButton = {
-                TextButton(onClick = { needsConversion = false }) {
+                TextButton(onClick = { blockedKind = null }) {
                     Text(stringResource(R.string.download_close))
                 }
             }

@@ -14,7 +14,23 @@ enum class DownloadLabel {
     Failed
 }
 
-fun canDownload(play: PlayResponse): Boolean = play.mode == "direct"
+// El servidor decide con la ficha del archivo; un servidor anterior no envía el
+// campo y la descarga queda bloqueada, como antes.
+fun canDownload(play: PlayResponse): Boolean = play.downloadDirect
+
+enum class DownloadBlockedKind {
+    Audio,
+    Video,
+    Container,
+    Other
+}
+
+fun downloadBlockedKind(reason: String?): DownloadBlockedKind = when (reason) {
+    "audio" -> DownloadBlockedKind.Audio
+    "video" -> DownloadBlockedKind.Video
+    "container" -> DownloadBlockedKind.Container
+    else -> DownloadBlockedKind.Other
+}
 
 fun downloadLabel(
     recordExists: Boolean,

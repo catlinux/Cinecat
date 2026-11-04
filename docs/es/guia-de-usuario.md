@@ -144,7 +144,7 @@ El progreso se guarda cada 15 s y al salir. Si quedan 15 s o menos, no se reanud
 
 ## Descargas sin conexión
 
-En Android, solo en móvil y tableta (la TV no las ofrece), la ficha de una película y cada episodio tienen **Descargar**. Solo descarga si el equipo puede reproducir el archivo en directo; si necesita conversión, aparece el aviso «Este archivo necesita conversión y no se puede descargar» y no se descarga ni se genera una versión recodificada.
+En Android, solo en móvil y tableta (la TV no las ofrece), la ficha de una película y cada episodio tienen **Descargar**. Descarga el archivo original (también MKV) si el equipo puede reproducir su vídeo y su audio; si no, aparece un aviso que dice si el problema es el audio, el vídeo o el formato, y no se descarga ni se genera una versión recodificada.
 
 La descarga usa el DownloadManager del sistema, se guarda en la carpeta privada de la app (no pide permisos de almacenamiento y se borra al desinstalarla) y muestra una notificación durante la descarga y al terminar. Mientras baja, el botón muestra **Descargando n %** y al pulsarlo ofrece cancelar. Al terminar muestra **Descargado**; al pulsarlo puedes reproducir el archivo o borrarlo.
 

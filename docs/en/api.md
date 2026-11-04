@@ -181,7 +181,7 @@ The setting is per user and series and is enabled when no row has been saved. It
 
 The response uses `http.ServeContent`: it supports ranges (`206` and `If-Range`), sends `Last-Modified`, `Accept-Ranges: bytes`, `Content-Disposition` with `filename*=UTF-8''...` and the `Content-Type` for the extension (`.mkv` is `video/x-matroska`, `.mp4` and `.m4v` are `video/mp4`, everything else `application/octet-stream`). It does not re-encode or modify the file. A missing or invalid session returns `401`, a range outside the file `416` and an internal error `500`.
 
-The Android app only uses this route when `/play` returns `mode: "direct"` with the device's capabilities. If it returns `remux`, it does not download and warns that the file needs conversion; no re-encoded versions are generated.
+The Android app only uses this route when `/play`, with the device's capabilities, returns `download_direct: true`: the container does not matter (`.mp4`, `.m4v`, `.mkv`, `.mov`) as long as the device plays the video and the audio. If it is `false`, `download_blocked` says why (`container`, `video`, `audio` or `client`) and nothing is downloaded; no re-encoded versions are generated.
 
 ## Intro and credits segments
 

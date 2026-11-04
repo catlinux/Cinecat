@@ -108,7 +108,7 @@ Desde la 0.49.0, la ficha de una película a medias muestra **Desde el principio
 
 ## Descargas sin conexión
 
-Solo están en móvil y tableta; la TV no muestra el botón ni la pantalla de Descargas. En la ficha de una película y en cada episodio, **Descargar** consulta `/play` con las capacidades del equipo. Solo descarga si la respuesta es `direct`; si es `remux`, avisa «Este archivo necesita conversión y no se puede descargar» y no genera ninguna versión recodificada.
+Solo están en móvil y tableta; la TV no muestra el botón ni la pantalla de Descargas. En la ficha de una película y en cada episodio, **Descargar** consulta `/play` con las capacidades del equipo. Descarga el archivo original, sea MKV, MP4 o MOV, solo si la respuesta trae `download_direct: true`, es decir, si el dispositivo reproduce su vídeo (H.264, o HEVC si lo declara) y su audio (AAC, MP3, Opus, Vorbis, FLAC o AC-3/E-AC-3 declarado). Si no, explica el motivo (`download_blocked`: audio, vídeo o formato) y no genera ninguna versión recodificada.
 
 La descarga la hace el DownloadManager del sistema desde `GET /api/v1/items/{id}/download`, con la sesión de la app y a la carpeta privada de la app (`Environment.DIRECTORY_MOVIES`), con el nombre `<id>.<extensión>`. No pide permisos de almacenamiento y el archivo se borra al desinstalar la app. La notificación del sistema muestra el título de la película o `Serie · TxE · título` durante la descarga y al terminar. Mientras baja, el botón muestra **Descargando n %** y ofrece cancelar; al terminar muestra **Descargado** y ofrece reproducir o borrar.
 
