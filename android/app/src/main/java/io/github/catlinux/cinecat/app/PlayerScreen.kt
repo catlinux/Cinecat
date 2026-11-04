@@ -437,7 +437,9 @@ fun PlayerScreen(
             is PlayerUiState.Ready -> {
                 PlayerViewSurface(
                     exoPlayer = exoPlayer,
-                    showControls = !inPip,
+                    // Al acabar, el controlador de la PlayerView se muestra y se queda
+                    // con el foco; sin ocultarlo el mando no llega al panel.
+                    showControls = !inPip && countdownSeconds == null,
                     keepAwake = keepAwake,
                     onCreated = { playerView = it }
                 )

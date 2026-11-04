@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.67.1] - 2026-11-04
+
+### Fixed
+
+- Android TV: when an episode ends, the remote can again move around the next-episode panel and press "Play now" or "Cancel" (the player controller was keeping the focus).
+
 ## [0.67.0] - 2026-11-04
 
 ### Changed

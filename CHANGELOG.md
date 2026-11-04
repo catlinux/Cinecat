@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.67.1] - 2026-11-04
+
+### Corregido
+
+- Android TV: al terminar un episodio, el mando vuelve a poder moverse por el panel del siguiente episodio y pulsar «Reproducir ahora» o «Cancelar» (el controlador del reproductor se quedaba con el foco).
+
 ## [0.67.0] - 2026-11-04
 
 ### Cambiado
