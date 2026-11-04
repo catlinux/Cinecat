@@ -9136,6 +9136,7 @@ components:
         - segments
         - autoplay_next
         - next_episode
+        - download_direct
       properties:
         url:
           type: string
@@ -9194,6 +9195,15 @@ components:
           description: |
             Episodio inmediatamente posterior de la misma serie; `null` si no
             hay otro o si el ítem no es un episodio.
+        download_direct:
+          type: boolean
+          description: |
+            Indica si una app nativa puede reproducir el archivo original tras
+            descargarlo, sin depender del modo `direct` o `remux` de la sesión.
+        download_blocked:
+          type: string
+          enum: [container, video, audio, client]
+          description: Motivo por el que el archivo no se puede reproducir tal cual sin conexión; omitido si `download_direct` es `true`.
       additionalProperties: false
     NextEpisode:
       type: object

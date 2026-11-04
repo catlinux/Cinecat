@@ -100,6 +100,57 @@ func playJSON(t *testing.T, ts *playTestServer, id int64, query string) playResp
 	return response
 }
 
+func TestPlayInformaSiElOriginalEsDescargable(t *testing.T) {
+	tests := []struct {
+		name    string
+		caps    string
+		audio   playback.AudioStream
+		want    bool
+		blocked string
+	}{
+		{
+			name:  "mkv h264 aac",
+			caps:  "mkv,h264,aac",
+			audio: playback.AudioStream{Codec: "aac", Channels: 2, Default: true},
+			want:  true,
+		},
+		{
+			name:  "mkv h264 ac3 declarado",
+			caps:  "mkv,h264,ac3",
+			audio: playback.AudioStream{Codec: "ac3", Channels: 6, Default: true},
+			want:  true,
+		},
+		{
+			name:    "mkv h264 dts",
+			caps:    "mkv,h264,dts",
+			audio:   playback.AudioStream{Codec: "dts", Channels: 6, Default: true},
+			blocked: "audio",
+		},
+		{
+			name:    "web no nativa",
+			caps:    "h264,aac",
+			audio:   playback.AudioStream{Codec: "aac", Channels: 2, Default: true},
+			blocked: "client",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			info := fileInfoFixture()
+			info.FileName = "Episodio.mkv"
+			info.Container = "matroska"
+			info.Audio = []playback.AudioStream{test.audio}
+			ts := newPlayTestServer(t, info, nil)
+			id, _ := insertFileInfoItem(t, ts.libraryTestServer, "Episodio.mkv", true)
+
+			response := playJSON(t, ts, id, "caps="+test.caps)
+			if response.DownloadDirect != test.want || response.DownloadBlocked != test.blocked {
+				t.Fatalf("download_direct/download_blocked = %v/%q, se esperaba %v/%q",
+					response.DownloadDirect, response.DownloadBlocked, test.want, test.blocked)
+			}
+		})
+	}
+}
+
 func TestPlayConOpcionesYPreferencias(t *testing.T) {
 	info := fileInfoFixture()
 	info.Audio = []playback.AudioStream{

@@ -157,6 +157,7 @@ func TestDescargaTipoContenidoYNombre(t *testing.T) {
 		"peli.MKV":     "video/x-matroska",
 		"peli.mp4":     "video/mp4",
 		"peli.m4v":     "video/mp4",
+		"peli.mov":     "video/quicktime",
 		"peli.avi":     "application/octet-stream",
 		"sin-ext":      "application/octet-stream",
 		"peli.MP4 ":    "application/octet-stream",

@@ -430,6 +430,8 @@ type playResponse struct {
 	Segments         []playSegment   `json:"segments"`
 	AutoplayNext     bool            `json:"autoplay_next"`
 	NextEpisode      *nextEpisodeDTO `json:"next_episode"`
+	DownloadDirect   bool            `json:"download_direct"`
+	DownloadBlocked  string          `json:"download_blocked,omitempty"`
 }
 
 type mediaFile struct {
@@ -518,6 +520,7 @@ func (a *API) handlePlay(w http.ResponseWriter, r *http.Request) {
 	if nextErr != nil {
 		log.Printf("library: leer siguiente episodio del ítem %d: %v", id, nextErr)
 	}
+	downloadDirect, downloadBlocked := playback.DownloadableFor(infoPointer, caps)
 
 	target := "/api/v1/stream/" + strconv.FormatInt(id, 10)
 	if mode == playback.ModeRemux {
@@ -554,6 +557,8 @@ func (a *API) handlePlay(w http.ResponseWriter, r *http.Request) {
 		Segments:         segments,
 		AutoplayNext:     autoplayNext,
 		NextEpisode:      nextEpisode,
+		DownloadDirect:   downloadDirect,
+		DownloadBlocked:  downloadBlocked,
 	})
 }
 

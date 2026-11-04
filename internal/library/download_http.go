@@ -98,6 +98,8 @@ func downloadContentType(filename string) string {
 		return "video/x-matroska"
 	case ".mp4", ".m4v":
 		return "video/mp4"
+	case ".mov":
+		return "video/quicktime"
 	default:
 		return "application/octet-stream"
 	}
