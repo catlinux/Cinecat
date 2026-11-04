@@ -99,6 +99,8 @@ If the hardware process fails before generating the requested segment, it is log
 | Simultaneous copies | 6 |
 | HLS job cleanup | 1 h unused, checked every 15 min |
 
+Offline downloads (`/play?download=1`, URL with `dl=1`) use the same HLS with low priority: a playback evicts a download before another playback, and a download never evicts a playback. There is only **one** download re-encode at a time, within the "Simultaneous transcodes" cap; when there is no room, the segment answers `503` with `Retry-After: 30` and the client retries. Video copies of a download are not limited by this. If someone starts watching an entry that a download was generating, its process becomes a playback one.
+
 Copies **do not count** towards "Simultaneous transcodes". If more than 6 copies are requested, the oldest copy without recent requests is stopped. Idle and look-ahead stops apply to both copies and re-encodes.
 
 ## What the user sees

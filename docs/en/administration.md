@@ -144,6 +144,7 @@ Settings are stored in the database with per-type validation. They apply without
 | `playback.hardware` | Hardware acceleration | Uses the integrated Intel GPU through VA-API when available; requires `docker-compose.gpu.yml`. | `auto`, `off` | `auto` | Hot; new playbacks. |
 | `playback.preset` | Velocidad de codificación | x264 preset used for transcoding. | `veryfast`, `faster`, `fast` | `veryfast` | Hot; new transcodes. |
 | `playback.max_transcodes` | Transcodificaciones simultáneas | How many movies can be transcoded at once. More than the CPU can handle causes stalls when seeking. | Integer 1–8 | `2` | Hot; next process. |
+| `playback.download_url_ttl` | Validez de las descargas (horas) | How long the signed address of an offline download is valid. It must cover the wait until the server finishes preparing it. | Integer 1–720 | `72` | Hot; next downloads. |
 | `library.allow_file_changes` | Permitir cambiar archivos | Allows uploading files and moving them to the trash; requires mounting the library read-write. | Boolean | `false` | Hot. |
 | `trash.retention_days` | Días en la papelera | How long entries are kept before being purged for good. | Integer 1–90 | `14` | Hot; next daily purge. |
 | `library.upload_max_gb` | Tamaño máximo de subida (GB) | Maximum size of each uploaded file. | Integer 1–500 | `50` | Hot; next upload. |

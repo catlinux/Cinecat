@@ -152,6 +152,7 @@ La respuesta tiene la forma:
 | `audio` | Índice de la pista de audio elegida. |
 | `quality` | `auto`, `original`, `480`, `720` o `1080`. |
 | `subtitle` | Identificador de subtítulo; vacío para desactivarlo. Si es una pista de imagen incrustada (`e<N>`), pasa a HLS y se quema en el vídeo. |
+| `download` | `1` para preparar una descarga sin conexión; ver «Descarga para ver sin conexión». |
 
 Las apps declaran en `caps` lo que su equipo reproduce: contenedores `mkv` y `mp4`; vídeo `h264`, `h264hi10`, `hevc`, `hevc10`, `av1` y `vp9`; audio `aac`, `mp3`, `ac3`, `eac3`, `dts`, `truehd`, `opus` y `flac`; y `mch` si decodifica AAC multicanal. Cada token indica que el equipo puede decodificar ese contenedor, códec o formato; `hevc10` implica `hevc`, y `mch` solo hace falta para AAC de más de dos canales. Si una app nativa declara `mch` y la pista elegida tiene 6 o más canales, el HLS entrega AAC 5.1; en los demás casos entrega estéreo. Para que el servidor trate la petición como app nativa, `caps` debe incluir al menos `mkv` o `mp4`. La lista completa y su efecto están en [reproducción](reproduccion.md#apps-nativas-android-y-android-tv).
 
@@ -181,7 +182,9 @@ El ajuste es por usuario y serie y, si no hay fila guardada, está activado. Se 
 
 La respuesta usa `http.ServeContent`: admite rangos (`206` e `If-Range`), envía `Last-Modified`, `Accept-Ranges: bytes`, `Content-Disposition` con `filename*=UTF-8''...` y el `Content-Type` según la extensión (`.mkv` es `video/x-matroska`, `.mp4` y `.m4v` son `video/mp4`, el resto `application/octet-stream`). No recodifica ni modifica el archivo. Una sesión ausente o no válida responde `401`, un rango fuera del archivo `416` y un error interno `500`.
 
-La app Android solo usa esta ruta cuando `/play`, con las capacidades del equipo, devuelve `download_direct: true`: el contenedor da igual (`.mp4`, `.m4v`, `.mkv`, `.mov`) siempre que el dispositivo reproduzca el vídeo y el audio. Si es `false`, `download_blocked` dice por qué (`container`, `video`, `audio` o `client`) y no se descarga; no se generan versiones recodificadas.
+`GET /api/v1/items/{id}/play?download=1` prepara la descarga de la misma versión que se ve en streaming (Media3 offline en Android): fuerza `remux` aunque el archivo admitiera reproducción directa, con la pista de audio y la calidad que se elegirían al reproducir. La URL firmada vale `playback.download_url_ttl` horas (72 por defecto, en lugar de las 8 de la reproducción) y lleva `dl=1`, que se propaga a la playlist y a los segmentos. El servidor genera los segmentos bajo demanda y con prioridad baja (ver [reproducción](reproduccion.md)); si no hay cupo, el segmento responde `503` con `Retry-After: 30` y el cliente debe reintentar. Con una firma caducada, el cliente vuelve a pedir `/play?download=1` y sigue con la URL nueva. `download_direct` y `download_blocked` pasan a ser informativos.
+
+La ruta `/download` anterior se conserva. La app Android ya no la usa; antes solo la usaba cuando `/play`, con las capacidades del equipo, devuelve `download_direct: true`: el contenedor da igual (`.mp4`, `.m4v`, `.mkv`, `.mov`) siempre que el dispositivo reproduzca el vídeo y el audio. Si es `false`, `download_blocked` dice por qué (`container`, `video`, `audio` o `client`) y no se descarga; no se generan versiones recodificadas.
 
 ## Segmentos de intro y créditos
 

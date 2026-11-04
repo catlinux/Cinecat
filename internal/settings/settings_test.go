@@ -48,8 +48,8 @@ func raw(value string) json.RawMessage {
 
 func TestDefinitions(t *testing.T) {
 	definitions := Definitions()
-	if len(definitions) != 30 {
-		t.Fatalf("ajustes = %d, se esperaban 30", len(definitions))
+	if len(definitions) != 31 {
+		t.Fatalf("ajustes = %d, se esperaban 31", len(definitions))
 	}
 
 	seen := make(map[string]bool)

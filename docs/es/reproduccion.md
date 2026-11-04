@@ -99,6 +99,8 @@ Si el proceso con hardware falla antes de generar el segmento pedido, se registr
 | Copias simultáneas | 6 |
 | Limpieza de trabajos HLS | 1 h sin uso, revisión cada 15 min |
 
+Las descargas sin conexión (`/play?download=1`, URL con `dl=1`) usan el mismo HLS pero con prioridad baja: una reproducción expulsa primero a una descarga que a otra reproducción, y una descarga nunca expulsa a una reproducción. Solo hay **una** recodificación de descarga a la vez, dentro del tope de «Transcodificaciones simultáneas»; si no hay cupo, el segmento responde `503` con `Retry-After: 30` y el cliente reintenta. Las copias de vídeo de una descarga no están limitadas por esto. Si alguien empieza a ver una entrada que estaba generando una descarga, su proceso pasa a ser de reproducción.
+
 Las copias **no cuentan** para «Transcodificaciones simultáneas». Si se superan las 6 copias, se para la copia más antigua sin peticiones recientes. La parada por inactividad y por adelanto se aplica igual a copias y recodificaciones.
 
 ## Qué ve el usuario

@@ -3782,6 +3782,20 @@ paths:
             en el vídeo.
           schema:
             type: string
+        - name: download
+          in: query
+          required: false
+          description: |
+            Con `1` prepara una descarga sin conexión: fuerza HLS (la misma
+            versión que se ve en streaming) aunque el archivo admita directo,
+            firma la URL con `playback.download_url_ttl` horas (72 por defecto)
+            y añade `dl=1` a la URL, que se propaga a la playlist y a los
+            segmentos. Las descargas tienen prioridad baja: una reproducción
+            puede expulsarlas y, si no hay cupo, el segmento responde `503` con
+            `Retry-After`.
+          schema:
+            type: string
+            enum: ['1']
       responses:
         '200':
           description: URL de reproducción preparada
@@ -3858,6 +3872,15 @@ paths:
           schema:
             type: integer
             minimum: 0
+        - name: dl
+          in: query
+          required: false
+          description: |
+            `1` en las URLs de una descarga (`/play?download=1`): fuerza HLS y
+            da prioridad baja a los procesos que arranque.
+          schema:
+            type: string
+            enum: ['1']
         - $ref: '#/components/parameters/SignatureExp'
         - $ref: '#/components/parameters/Signature'
       responses:
@@ -3943,6 +3966,16 @@ paths:
           schema:
             type: integer
             minimum: 0
+        - name: dl
+          in: query
+          required: false
+          description: |
+            `1` en las URLs de una descarga: da prioridad baja al proceso que
+            genere el segmento. Sin cupo, el segmento responde `503` con
+            `Retry-After: 30`.
+          schema:
+            type: string
+            enum: ['1']
         - $ref: '#/components/parameters/SignatureExp'
         - $ref: '#/components/parameters/Signature'
       responses:

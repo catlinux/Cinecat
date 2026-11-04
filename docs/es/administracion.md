@@ -144,6 +144,7 @@ Los ajustes se guardan en la base de datos con validación por tipo. Se aplican 
 | `playback.hardware` | Aceleración por hardware | Usa la gráfica Intel integrada mediante VA-API si está disponible; exige `docker-compose.gpu.yml`. | `auto`, `off` | `auto` | En caliente; nuevas reproducciones. |
 | `playback.preset` | Velocidad de codificación | Preset de x264 usado al remuxear. | `veryfast`, `faster`, `fast` | `veryfast` | En caliente; nuevas transcodificaciones. |
 | `playback.max_transcodes` | Transcodificaciones simultáneas | Cuántas películas se pueden recodificar a la vez. Más de las que aguante el procesador provoca cortes al avanzar. | Entero 1–8 | `2` | En caliente; siguiente proceso. |
+| `playback.download_url_ttl` | Validez de las descargas (horas) | Cuánto tiempo vale la dirección firmada de una descarga sin conexión. Debe cubrir la espera hasta que el servidor termine de prepararla. | Entero 1–720 | `72` | En caliente; siguientes descargas. |
 | `library.allow_file_changes` | Permitir cambiar archivos | Permite subir archivos y moverlos a la papelera; exige montar la biblioteca en lectura y escritura. | Booleano | `false` | En caliente. |
 | `trash.retention_days` | Días en la papelera | Tiempo que se conservan antes de purgarlos definitivamente. | Entero 1–90 | `14` | En caliente; siguiente purga diaria. |
 | `library.upload_max_gb` | Tamaño máximo de subida (GB) | Tamaño máximo de cada archivo subido. | Entero 1–500 | `50` | En caliente; siguiente subida. |

@@ -22,6 +22,15 @@ import (
 // minutos la reproducción se cortaba a mitad.
 const DefaultURLTTL = 8 * time.Hour
 
+// DefaultDownloadURLTTL es la vida por defecto de la URL firmada de una
+// descarga sin conexión: el servidor puede tardar en prepararla y el cliente
+// reintenta mientras tanto.
+const DefaultDownloadURLTTL = 72 * time.Hour
+
+// maxDownloadTranscodes es cuántas recodificaciones de descarga pueden estar
+// vivas a la vez; las copias de vídeo no cuentan.
+const maxDownloadTranscodes = 1
+
 // hlsIdleTTL es el tiempo que se conserva un HLS ya generado sin usarse.
 const hlsIdleTTL = time.Hour
 
@@ -77,6 +86,9 @@ type StreamSelection struct {
 	// BurnSubtitle es la posición de la pista de imagen más uno; cero
 	// significa que no se quema ninguna.
 	BurnSubtitle int
+	// Download marca la petición como parte de una descarga sin conexión
+	// (dl=1): sus procesos tienen prioridad baja frente a la reproducción.
+	Download bool
 }
 
 func defaultTranscodeSettings() TranscodeSettings {
@@ -156,6 +168,9 @@ type Options struct {
 	// MaxTranscodesFunc permite consultar el límite en caliente; tiene
 	// prioridad sobre MaxTranscodes.
 	MaxTranscodesFunc func() int
+	// DownloadTTLFunc devuelve la vida de las URLs firmadas para descargas sin
+	// conexión. Si es nil o devuelve cero se usa DefaultDownloadURLTTL.
+	DownloadTTLFunc func() time.Duration
 	// RunIdleTimeout es cuánto se espera sin peticiones antes de detener un
 	// proceso. Cero usa hlsRunIdleTimeout.
 	RunIdleTimeout time.Duration
@@ -187,6 +202,7 @@ type Service struct {
 
 	maxTranscodes     int
 	maxTranscodesFunc func() int
+	downloadTTLFunc   func() time.Duration
 	runIdleTimeout    time.Duration
 	maxAheadSegments  int
 	monitorInterval   time.Duration
@@ -270,6 +286,9 @@ type hlsEntry struct {
 	run *hlsRun
 	// removed indica que la entrada ya se borró y no debe relanzar procesos.
 	removed bool
+	// requestDownload es si la petición que se está atendiendo (bajo Service.mu)
+	// es de descarga; el proceso que arranque hereda esa prioridad.
+	requestDownload bool
 }
 
 // hlsRun es un proceso FFmpeg que genera segmentos desde start.
@@ -292,6 +311,9 @@ type hlsRun struct {
 	copyCounted bool
 	// hardware indica que el proceso usa VA-API.
 	hardware bool
+	// download indica que lo arrancó una petición de descarga; en cuanto una
+	// reproducción pide algo a la misma entrada deja de serlo.
+	download bool
 }
 
 func (r *hlsRun) isCopy() bool {
@@ -389,6 +411,7 @@ func New(opts Options) (*Service, error) {
 		threads:           threads,
 		maxTranscodes:     maxTranscodes,
 		maxTranscodesFunc: opts.MaxTranscodesFunc,
+		downloadTTLFunc:   opts.DownloadTTLFunc,
 		runIdleTimeout:    runIdleTimeout,
 		maxAheadSegments:  maxAheadSegments,
 		monitorInterval:   monitorInterval,
@@ -505,6 +528,18 @@ func (s *Service) maxTranscodeLimit() int {
 // ítem indicado.
 func (s *Service) Sign(itemID int64) (string, time.Time) {
 	return s.SignResource("video", itemID)
+}
+
+// SignDownload es Sign con la vida larga de las descargas sin conexión.
+func (s *Service) SignDownload(itemID int64) (string, time.Time) {
+	ttl := DefaultDownloadURLTTL
+	if s.downloadTTLFunc != nil {
+		if value := s.downloadTTLFunc(); value > 0 {
+			ttl = value
+		}
+	}
+	expires := s.now().Add(ttl).UTC().Truncate(time.Second)
+	return s.signature("video", itemID, expires.Unix()), expires
 }
 
 // SignResource firma una URL dentro de un espacio de nombres. Así un id de

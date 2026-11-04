@@ -506,6 +506,16 @@ var definitions = []Definition{
 		Max:         8,
 	},
 	{
+		Key:         "playback.download_url_ttl",
+		Section:     "playback",
+		Label:       "Validez de las descargas (horas)",
+		Description: "Cuánto tiempo vale la dirección firmada de una descarga sin conexión. Debe cubrir la espera hasta que el servidor termine de prepararla.",
+		Type:        TypeInt,
+		Default:     72,
+		Min:         1,
+		Max:         720,
+	},
+	{
 		Key:         KeyAllowFileChanges,
 		Section:     "library",
 		Label:       "Permitir cambiar archivos",

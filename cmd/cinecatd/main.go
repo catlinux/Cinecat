@@ -134,6 +134,9 @@ func main() {
 		MaxTranscodesFunc: func() int {
 			return settingsStore.Int("playback.max_transcodes")
 		},
+		DownloadTTLFunc: func() time.Duration {
+			return time.Duration(settingsStore.Int("playback.download_url_ttl")) * time.Hour
+		},
 		KeyframeCacheDir: keyframeCacheDir(cfg.DatabasePath),
 		Key:              signingKey,
 	})

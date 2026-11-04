@@ -73,7 +73,14 @@ const ffmpegPlaylistFile = "ffmpeg.m3u8"
 var (
 	ErrHLSStartupTimeout = errors.New("playback: ffmpeg no generó la playlist HLS a tiempo")
 	ErrHLSSegmentTimeout = errors.New("playback: el segmento HLS no apareció a tiempo")
+	// ErrDownloadBusy indica que no hay cupo para otra recodificación de
+	// descarga; el cliente debe reintentar pasado DownloadRetryAfter.
+	ErrDownloadBusy = errors.New("playback: sin cupo para preparar la descarga")
 )
+
+// DownloadRetryAfter es lo que se indica al cliente de una descarga que espere
+// cuando no hay cupo.
+const DownloadRetryAfter = 30 * time.Second
 
 const (
 	deinterlaceVideoFilter = `yadif=mode=0:parity=-1:deint=1`
@@ -470,6 +477,9 @@ func (s *Service) ServeHLSFile(w http.ResponseWriter, r *http.Request, itemID in
 		if selections[0].BurnSubtitle > 0 {
 			extra = append(extra, "burnsub", strconv.Itoa(selections[0].BurnSubtitle-1))
 		}
+		if selections[0].Download {
+			extra = append(extra, "dl", "1")
+		}
 		query = signedQuery(exp, sig, extra...)
 	}
 
@@ -491,7 +501,8 @@ func (s *Service) ServeHLSFile(w http.ResponseWriter, r *http.Request, itemID in
 	if !ok {
 		return ErrFileNotFound
 	}
-	if err := s.waitForSegment(r.Context(), entry, index); err != nil {
+	download := len(selections) > 0 && selections[0].Download
+	if err := s.waitForSegmentAs(r.Context(), entry, index, download); err != nil {
 		return err
 	}
 
@@ -671,6 +682,7 @@ func (s *Service) prepare(ctx context.Context, itemID int64, inputPath string, s
 		return entry, nil
 	}
 
+	entry.requestDownload = selection.Download
 	if err := s.startRunLocked(entry, 0); err != nil {
 		_ = os.RemoveAll(dir)
 		return nil, err
@@ -828,8 +840,8 @@ func (s *Service) startRunLocked(entry *hlsEntry, start int) error {
 
 	if entry.mode == hlsModeCopy {
 		s.reserveCopySlotLocked(entry)
-	} else {
-		s.reserveTranscodeSlotLocked(entry)
+	} else if err := s.reserveTranscodeSlotLocked(entry); err != nil {
+		return err
 	}
 
 	// El proceso vive ligado al contexto del servicio, no al de la petición
@@ -885,6 +897,7 @@ func (s *Service) startRunLocked(entry *hlsEntry, start int) error {
 		mode:        entry.mode,
 		copyCounted: entry.mode == hlsModeCopy,
 		hardware:    entry.hardware,
+		download:    entry.requestDownload,
 	}
 	entry.run = run
 	if run.isCopy() {
@@ -942,18 +955,41 @@ func (s *Service) fallbackHardwareLocked(entry *hlsEntry, start int, reason stri
 }
 
 // reserveTranscodeSlotLocked deja sitio para un proceso nuevo. Si se alcanzó
-// el tope, para el proceso ajeno que lleve más tiempo sin recibir peticiones;
-// la entrada que se está lanzando nunca es la víctima.
-func (s *Service) reserveTranscodeSlotLocked(entry *hlsEntry) {
+// el tope, para el proceso ajeno que lleve más tiempo sin recibir peticiones,
+// empezando por los de descarga; la entrada que se está lanzando nunca es la
+// víctima. Una petición de descarga no expulsa a nadie: si no hay cupo (tope
+// general o un solo proceso de descarga) devuelve ErrDownloadBusy.
+func (s *Service) reserveTranscodeSlotLocked(entry *hlsEntry) error {
 	s.recountLiveTranscodesLocked()
 	limit := s.maxTranscodeLimit()
+	if entry.requestDownload {
+		if s.liveTranscodes >= limit || s.liveDownloadTranscodesLocked() >= maxDownloadTranscodes {
+			return ErrDownloadBusy
+		}
+		return nil
+	}
 	for s.liveTranscodes >= limit {
-		victim := s.oldestLiveRunLocked(entry)
+		victim := s.oldestLiveRunLocked(entry, true)
 		if victim == nil {
-			return
+			victim = s.oldestLiveRunLocked(entry, false)
+		}
+		if victim == nil {
+			return nil
 		}
 		s.stopRunLocked(victim, "límite de concurrencia")
 	}
+	return nil
+}
+
+// liveDownloadTranscodesLocked cuenta las recodificaciones de descarga vivas.
+func (s *Service) liveDownloadTranscodesLocked() int {
+	count := 0
+	for _, entry := range s.entries {
+		if run := entry.run; run != nil && !run.finished() && !run.isCopy() && run.download {
+			count++
+		}
+	}
+	return count
 }
 
 // reserveCopySlotLocked aplica el límite propio de las copias. Los procesos de
@@ -969,12 +1005,12 @@ func (s *Service) reserveCopySlotLocked(entry *hlsEntry) {
 	}
 }
 
-func (s *Service) oldestLiveRunLocked(except *hlsEntry) *hlsEntry {
+func (s *Service) oldestLiveRunLocked(except *hlsEntry, downloadsOnly bool) *hlsEntry {
 	var victim *hlsEntry
 	var victimTime time.Time
 	for _, candidate := range s.entries {
 		if candidate == except || candidate.run == nil || candidate.run.finished() ||
-			candidate.run.isCopy() {
+			candidate.run.isCopy() || (downloadsOnly && !candidate.run.download) {
 			continue
 		}
 		requested := candidate.lastRequest
@@ -1077,6 +1113,12 @@ func discardSegments(dir string, oldStart, newStart int) {
 // llegar pronto a él (salto adelante lejano, o salto atrás a un hueco), lo
 // relanza en ese segmento, como hace Jellyfin.
 func (s *Service) waitForSegment(ctx context.Context, entry *hlsEntry, index int) error {
+	return s.waitForSegmentAs(ctx, entry, index, false)
+}
+
+// waitForSegmentAs es waitForSegment indicando si la petición es de descarga,
+// lo que decide la prioridad del proceso que haya que arrancar.
+func (s *Service) waitForSegmentAs(ctx context.Context, entry *hlsEntry, index int, download bool) error {
 	ctx, cancel := context.WithTimeout(ctx, hlsSegmentWaitTimeout)
 	defer cancel()
 	ticker := time.NewTicker(hlsSegmentPoll)
@@ -1087,6 +1129,11 @@ func (s *Service) waitForSegment(ctx context.Context, entry *hlsEntry, index int
 		now := s.now()
 		entry.lastUsed = now
 		entry.lastRequest = now
+		entry.requestDownload = download
+		if !download && entry.run != nil {
+			// Alguien está viendo esta entrada: su proceso ya no es de descarga.
+			entry.run.download = false
+		}
 		if index > entry.highestRequested {
 			entry.highestRequested = index
 		}

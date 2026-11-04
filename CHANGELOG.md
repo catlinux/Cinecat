@@ -7,6 +7,13 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.66.0] - 2026-11-04
+
+### Añadido
+
+- Servidor: `GET /api/v1/items/{id}/play?download=1` prepara una descarga sin conexión con el mismo HLS que se ve en streaming, aunque el archivo admitiera reproducción directa. La URL firmada vale `playback.download_url_ttl` horas (72 por defecto, nuevo ajuste) y lleva `dl=1`, que se propaga a la playlist y a los segmentos.
+- Servidor: las descargas tienen prioridad baja. Una reproducción expulsa antes a una descarga que a otra reproducción; una descarga nunca expulsa a una reproducción, solo se prepara una recodificación de descarga a la vez (las copias de vídeo no cuentan) y, si no hay cupo, el segmento responde `503` con `Retry-After: 30`.
+
 ## [0.65.2] - 2026-11-04
 
 ### Corregido

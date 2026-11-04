@@ -484,6 +484,12 @@ func (a *API) handlePlay(w http.ResponseWriter, r *http.Request) {
 		mode = playback.ModeRemux
 		reason = playback.ReasonSubtitle
 	}
+	// download=1 pide la versión HLS que se vería en streaming, aunque el
+	// archivo admitiera reproducción directa; el motivo se deja como está.
+	download := r.URL.Query().Get("download") == "1"
+	if download {
+		mode = playback.ModeRemux
+	}
 	if mode == playback.ModeRemux {
 		if err := a.playback.CheckFFmpeg(); err != nil {
 			writeJSONError(w, http.StatusServiceUnavailable, "ffmpeg no está disponible en el servidor")
@@ -491,7 +497,13 @@ func (a *API) handlePlay(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	signature, expiresAt := a.playback.Sign(id)
+	var signature string
+	var expiresAt time.Time
+	if download {
+		signature, expiresAt = a.playback.SignDownload(id)
+	} else {
+		signature, expiresAt = a.playback.Sign(id)
+	}
 	expires := strconv.FormatInt(expiresAt.Unix(), 10)
 	options, optionsErr := a.playOptions(
 		id, mode, infoPointer, preferences, profile, r.URL.Query(), subtitles, expires, signature,
@@ -537,6 +549,9 @@ func (a *API) handlePlay(w http.ResponseWriter, r *http.Request) {
 		query.Set("q", options.Quality)
 		if subtitles.BurnSubtitle > 0 {
 			query.Set("burnsub", strconv.Itoa(subtitles.BurnSubtitle-1))
+		}
+		if download {
+			query.Set("dl", "1")
 		}
 	} else if caps.Native() {
 		// /stream vuelve a decidir: con la misma pista sale el mismo modo.
@@ -600,11 +615,17 @@ func (a *API) serveSigned(w http.ResponseWriter, r *http.Request, name string) {
 	if info.FileName != "" || len(info.Video) > 0 || len(info.Audio) > 0 || len(info.Subtitles) > 0 {
 		infoPointer = &info
 	}
+	// dl=1 viene de /play?download=1: la descarga es siempre el HLS.
+	download := r.URL.Query().Get("dl") == "1"
+	if download {
+		mode = playback.ModeRemux
+	}
 	selection, selectionErr := a.streamSelection(mode, infoPointer, r.URL.Query())
 	if selectionErr != nil {
 		writeJSONError(w, selectionErr.status, selectionErr.message)
 		return
 	}
+	selection.Download = download
 	if selection.BurnSubtitle > 0 {
 		mode = playback.ModeRemux
 	}
@@ -840,6 +861,9 @@ func (a *API) libraryRootFor(ctx context.Context, libraryID int64, mediaPath, fa
 func (a *API) writePlaybackError(w http.ResponseWriter, err error) {
 	log.Printf("library: reproducción: %v", err)
 	switch {
+	case errors.Is(err, playback.ErrDownloadBusy):
+		w.Header().Set("Retry-After", strconv.Itoa(int(playback.DownloadRetryAfter.Seconds())))
+		writeJSONError(w, http.StatusServiceUnavailable, "el servidor está ocupado; la descarga se reintentará")
 	case errors.Is(err, playback.ErrFFmpegNotFound):
 		writeJSONError(w, http.StatusServiceUnavailable, "ffmpeg no está disponible en el servidor")
 	case errors.Is(err, playback.ErrFileNotFound):

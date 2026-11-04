@@ -152,6 +152,7 @@ The response has this shape:
 | `audio` | Index of the selected audio track. |
 | `quality` | `auto`, `original`, `480`, `720` or `1080`. |
 | `subtitle` | Subtitle identifier; empty to disable it. If it is an embedded image track (`e<N>`), playback switches to HLS and the subtitle is burned into the video. |
+| `download` | `1` to prepare an offline download; see "Download for offline viewing". |
 
 The apps declare in `caps` what their device plays: containers `mkv` and `mp4`; video `h264`, `h264hi10`, `hevc`, `hevc10`, `av1` and `vp9`; audio `aac`, `mp3`, `ac3`, `eac3`, `dts`, `truehd`, `opus` and `flac`; and `mch` if it decodes multichannel AAC. Each token means the device can decode that container, codec or format; `hevc10` implies `hevc`, and `mch` is only needed for AAC with more than two channels. If a native app declares `mch` and the chosen track has 6 or more channels, HLS delivers 5.1 AAC; otherwise it delivers stereo. For the server to treat the request as a native app, `caps` must include at least `mkv` or `mp4`. The full list and its effect are in [playback](playback.md#native-apps-android-and-android-tv).
 
@@ -181,7 +182,9 @@ The setting is per user and series and is enabled when no row has been saved. It
 
 The response uses `http.ServeContent`: it supports ranges (`206` and `If-Range`), sends `Last-Modified`, `Accept-Ranges: bytes`, `Content-Disposition` with `filename*=UTF-8''...` and the `Content-Type` for the extension (`.mkv` is `video/x-matroska`, `.mp4` and `.m4v` are `video/mp4`, everything else `application/octet-stream`). It does not re-encode or modify the file. A missing or invalid session returns `401`, a range outside the file `416` and an internal error `500`.
 
-The Android app only uses this route when `/play`, with the device's capabilities, returns `download_direct: true`: the container does not matter (`.mp4`, `.m4v`, `.mkv`, `.mov`) as long as the device plays the video and the audio. If it is `false`, `download_blocked` says why (`container`, `video`, `audio` or `client`) and nothing is downloaded; no re-encoded versions are generated.
+`GET /api/v1/items/{id}/play?download=1` prepares the download of the same version that plays in streaming (Media3 offline on Android): it forces `remux` even if the file could be played directly, with the audio track and quality that playback would choose. The signed URL lasts `playback.download_url_ttl` hours (72 by default, instead of the 8 of playback) and carries `dl=1`, which is propagated to the playlist and the segments. The server generates segments on demand and with low priority (see [playback](playback.md)); when there is no room, the segment answers `503` with `Retry-After: 30` and the client must retry. With an expired signature, the client asks `/play?download=1` again and continues with the new URL. `download_direct` and `download_blocked` become informative.
+
+The previous `/download` route is kept. The Android app no longer uses it; it used to use it only when `/play`, with the device's capabilities, returns `download_direct: true`: the container does not matter (`.mp4`, `.m4v`, `.mkv`, `.mov`) as long as the device plays the video and the audio. If it is `false`, `download_blocked` says why (`container`, `video`, `audio` or `client`) and nothing is downloaded; no re-encoded versions are generated.
 
 ## Intro and credits segments
 

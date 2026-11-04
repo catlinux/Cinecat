@@ -7,6 +7,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.66.0] - 2026-11-04
+
+### Added
+
+- Server: `GET /api/v1/items/{id}/play?download=1` prepares an offline download with the same HLS that plays in streaming, even if the file could be played directly. The signed URL lasts `playback.download_url_ttl` hours (72 by default, new setting) and carries `dl=1`, which is propagated to the playlist and the segments.
+- Server: downloads have low priority. A playback evicts a download before another playback; a download never evicts a playback, only one download re-encode is prepared at a time (video copies do not count) and, when there is no room, the segment answers `503` with `Retry-After: 30`.
+
 ## [0.65.2] - 2026-11-04
 
 ### Fixed
