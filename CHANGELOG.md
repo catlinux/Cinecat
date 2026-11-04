@@ -7,6 +7,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 
 ## [Sin publicar]
 
+## [0.67.2] - 2026-11-04
+
+### Cambiado
+
+- Web: el botón «Nueva temporada» de la ficha de serie (administradores) está ahora arriba, junto a «Subir capítulo» y «Marcar temporada como vista», en lugar de al final de la lista de episodios.
+
 ## [0.67.1] - 2026-11-04
 
 ### Corregido

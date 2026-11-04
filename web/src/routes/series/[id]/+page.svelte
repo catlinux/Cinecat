@@ -271,6 +271,15 @@
 							season={data.season.season}
 							defaultEpisode={nextEpisode}
 						/>
+						<EpisodeUploadDialog
+							id="nueva-temporada"
+							mode="temporada-nueva"
+							seriesId={series.id}
+							seriesTitle={series.title}
+							defaultSeason={nextSeason}
+							defaultEpisode={1}
+							triggerLabel="Nueva temporada"
+						/>
 					{/if}
 					<form method="POST" action="?/watchedSeason" use:enhance>
 						<input type="hidden" name="season" value={data.season.season} />
@@ -307,7 +316,7 @@
 	</div>
 {/if}
 
-{#if data.isAdmin}
+{#if data.isAdmin && !(series.seasons.length > 0 && data.season)}
 	<div class="series-season-actions">
 		<EpisodeUploadDialog
 			id="nueva-temporada"

@@ -7,6 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and ver
 
 ## [Unreleased]
 
+## [0.67.2] - 2026-11-04
+
+### Changed
+
+- Web: the "Nueva temporada" (new season) button on the series page (admins) is now at the top, next to "Upload episode" and "Mark season as watched", instead of below the episode list.
+
 ## [0.67.1] - 2026-11-04
 
 ### Fixed
