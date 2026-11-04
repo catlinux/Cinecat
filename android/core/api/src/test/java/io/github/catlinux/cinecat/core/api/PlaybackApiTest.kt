@@ -45,6 +45,10 @@ class PlaybackApiTest {
         assertEquals("audio", remuxValue.reason)
         assertEquals("e0", remuxValue.selectedSubtitle)
         assertEquals("/api/v1/items/7/play", server.takeRequest().path)
+
+        server.enqueue(jsonResponse(directJson()))
+        api().play(7, download = true)
+        assertEquals("/api/v1/items/7/play?download=1", server.takeRequest().path)
     }
 
     @Test

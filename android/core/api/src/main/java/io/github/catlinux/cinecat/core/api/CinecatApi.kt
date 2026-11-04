@@ -136,9 +136,10 @@ class CinecatApi(
         caps: String? = null,
         audio: Int? = null,
         quality: String? = null,
-        subtitle: String? = null
+        subtitle: String? = null,
+        download: Boolean = false
     ): ApiResult<PlayResponse> = call {
-        service.play(id, caps, audio, quality, subtitle)
+        service.play(id, caps, audio, quality, subtitle, if (download) 1 else null)
     }
 
     suspend fun saveProgress(

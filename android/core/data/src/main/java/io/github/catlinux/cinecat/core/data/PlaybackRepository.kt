@@ -15,9 +15,10 @@ class PlaybackRepository(
         caps: String? = null,
         audio: Int? = null,
         quality: String? = null,
-        subtitle: String? = null
+        subtitle: String? = null,
+        download: Boolean = false
     ): ApiResult<PlayResponse> = withApi {
-        it.play(id, caps, audio, quality, subtitle)
+        it.play(id, caps, audio, quality, subtitle, download)
     }
 
     suspend fun saveProgress(

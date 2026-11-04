@@ -55,6 +55,7 @@ class AppContainer(context: Context) {
     val libraryRepository: LibraryRepository
     val playbackRepository: PlaybackRepository
     val deviceProfileRepository: DeviceProfileRepository
+    val offlineDownloads: OfflineDownloads
     val downloadRepository: DownloadRepository
     val imageLoader: ImageLoader
 
@@ -127,12 +128,16 @@ class AppContainer(context: Context) {
                 sessionRepository.currentServer()?.let { origin -> createApi(origin, client) }
             }
         )
+        offlineDownloads = OfflineDownloads(appContext, client)
         downloadRepository = DownloadRepository(
             context = appContext,
             registry = DownloadRegistry(File(appContext.filesDir, "downloads.json")),
             playbackRepository = playbackRepository,
             sessionRepository = sessionRepository,
-            client = client
+            client = client,
+            offline = offlineDownloads,
+            scope = appScope,
+            caps = { caps }
         )
         appScope.launch {
             sessionRepository.state.first { it !is SessionState.Loading }

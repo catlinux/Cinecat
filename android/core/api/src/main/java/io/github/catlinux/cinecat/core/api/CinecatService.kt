@@ -190,7 +190,8 @@ interface CinecatService {
         @Query("caps") caps: String?,
         @Query("audio") audio: Int?,
         @Query("quality") quality: String?,
-        @Query("subtitle") subtitle: String?
+        @Query("subtitle") subtitle: String?,
+        @Query("download") download: Int? = null
     ): PlayResponse
 
     @PUT("api/v1/items/{id}/progress")
